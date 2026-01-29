@@ -37,7 +37,6 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { PromptDialog } from '@/components/prompt-dialog'
 import { DocumentationPanel } from '@/features/api-explorer/components/documentation-panel'
 import { EndpointBrowser } from '@/features/api-explorer/components/endpoint-browser'
@@ -681,9 +680,6 @@ print(data)`
 
       {/* Main Content */}
       <div className='flex flex-1 flex-col'>
-        {/* Impersonation Banner */}
-        <ImpersonationBanner />
-
         <div className='flex-1 space-y-6 p-6'>
           {/* Toolbar */}
           <div className='flex items-center gap-2'>

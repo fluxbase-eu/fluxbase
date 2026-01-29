@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { Main } from '@/components/layout/main'
 import { TableSelector } from './components/table-selector'
 import { TableViewer } from './components/table-viewer'
@@ -34,10 +33,7 @@ export function Tables() {
   }
 
   return (
-    <>
-      <ImpersonationBanner />
-
-      <Main className='h-[calc(100vh-4rem)] p-0'>
+    <Main className='h-[calc(100vh-4rem)] p-0'>
         <PanelGroup direction='horizontal'>
           <Panel defaultSize={20} minSize={15} maxSize={40}>
             <TableSelector
@@ -66,6 +62,5 @@ export function Tables() {
           </Panel>
         </PanelGroup>
       </Main>
-    </>
   )
 }
