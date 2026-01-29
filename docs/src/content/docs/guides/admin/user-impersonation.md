@@ -5,7 +5,7 @@ title: "User Impersonation"
 User impersonation allows admins to view the database explorer as different user types to debug issues, test Row Level Security (RLS) policies, and provide customer support.
 
 :::note[Admin Dashboard Feature]
-This guide covers the **admin dashboard** impersonation feature. For programmatic access via the SDK, see the [SDK Impersonation Guide](/docs/sdk/impersonation).
+This guide covers the **admin dashboard** impersonation feature. For programmatic access via the SDK, see the [SDK Impersonation Guide](/sdk/impersonation).
 :::
 
 ## Overview
@@ -354,6 +354,6 @@ Use all three impersonation modes to thoroughly test:
 
 ## Related Documentation
 
-- [Authentication Guide](/docs/guides/authentication) - Learn about authentication and user roles
-- [API Cookbook](/docs/api-cookbook) - Examples of common API patterns
-- [Row-Level Security](/docs/guides/row-level-security) - Advanced RLS features and testing
+- [Authentication Guide](/guides/authentication) - Learn about authentication and user roles
+- [API Cookbook](/api-cookbook) - Examples of common API patterns
+- [Row-Level Security](/guides/row-level-security) - Advanced RLS features and testing

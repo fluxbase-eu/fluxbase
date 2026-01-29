@@ -374,7 +374,7 @@ Current user ID: {{user_id}}
 | `@fluxbase:rag-max-chunks`           | Maximum chunks to retrieve                 | `5`     |
 | `@fluxbase:rag-similarity-threshold` | Minimum similarity (0.0-1.0)               | `0.7`   |
 
-For detailed documentation on creating knowledge bases, adding documents, and configuring RAG, see the [Knowledge Bases & RAG](/docs/guides/knowledge-bases) guide.
+For detailed documentation on creating knowledge bases, adding documents, and configuring RAG, see the [Knowledge Bases & RAG](/guides/knowledge-bases) guide.
 
 ### MCP Tools
 
@@ -781,9 +781,9 @@ Restrict database operations to prevent data modification:
 
 ## Next Steps
 
-- [Knowledge Bases & RAG](/docs/guides/knowledge-bases) - Create knowledge bases for RAG-powered chatbots
-- [TypeScript SDK Reference](/docs/api/sdk) - Full SDK API documentation
-- [Row-Level Security](/docs/guides/row-level-security) - Secure your data access
-- [Authentication](/docs/guides/authentication) - User authentication setup
-- [Rate Limiting](/docs/guides/rate-limiting) - Configure rate limits
-- [Monitoring](/docs/guides/monitoring-observability) - Track chatbot usage
+- [Knowledge Bases & RAG](/guides/knowledge-bases) - Create knowledge bases for RAG-powered chatbots
+- [TypeScript SDK Reference](/api/sdk) - Full SDK API documentation
+- [Row-Level Security](/guides/row-level-security) - Secure your data access
+- [Authentication](/guides/authentication) - User authentication setup
+- [Rate Limiting](/guides/rate-limiting) - Configure rate limits
+- [Monitoring](/guides/monitoring-observability) - Track chatbot usage

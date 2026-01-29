@@ -157,7 +157,7 @@ See the [Row-Level Security Guide](/guides/row-level-security/).
 ## Learn More
 
 - [First API Tutorial](/guides/tutorials/first-api/) - Complete beginner walkthrough
-- [TypeScript SDK Guide](/guides/typescript-sdk/) - SDK reference and examples
+- [TypeScript SDK Reference](/api/sdk/) - SDK reference and examples
 - [Authentication Guide](/guides/authentication/) - User authentication options
 - [Edge Functions](/guides/edge-functions/) - Deploy serverless functions
 - [Configuration Reference](/reference/configuration/) - All configuration options

@@ -36,11 +36,13 @@ type Handler struct {
 	functionsDir           string
 	corsConfig             config.CORSConfig
 	publicURL              string
+	npmRegistry            string   // Custom npm registry URL for Deno bundling
+	jsrRegistry            string   // Custom JSR registry URL for Deno bundling
 	logCounters            sync.Map // map[uuid.UUID]*int for tracking log line numbers per execution
 }
 
 // NewHandler creates a new edge functions handler
-func NewHandler(db *database.Connection, functionsDir string, corsConfig config.CORSConfig, jwtSecret, publicURL string, authService *auth.Service, loggingService *logging.Service, secretsStorage *secrets.Storage) *Handler {
+func NewHandler(db *database.Connection, functionsDir string, corsConfig config.CORSConfig, jwtSecret, publicURL, npmRegistry, jsrRegistry string, authService *auth.Service, loggingService *logging.Service, secretsStorage *secrets.Storage) *Handler {
 	h := &Handler{
 		storage:        NewStorage(db),
 		runtime:        runtime.NewRuntime(runtime.RuntimeTypeFunction, jwtSecret, publicURL),
@@ -50,6 +52,8 @@ func NewHandler(db *database.Connection, functionsDir string, corsConfig config.
 		functionsDir:   functionsDir,
 		corsConfig:     corsConfig,
 		publicURL:      publicURL,
+		npmRegistry:    npmRegistry,
+		jsrRegistry:    jsrRegistry,
 	}
 
 	// Set up log callback to capture console.log output
@@ -76,6 +80,18 @@ func (h *Handler) GetRuntime() *runtime.DenoRuntime {
 // GetPublicURL returns the public URL configured for this handler
 func (h *Handler) GetPublicURL() string {
 	return h.publicURL
+}
+
+// createBundler creates a new bundler with the handler's registry configuration
+func (h *Handler) createBundler() (*Bundler, error) {
+	var opts []BundlerOption
+	if h.npmRegistry != "" {
+		opts = append(opts, WithNpmRegistry(h.npmRegistry))
+	}
+	if h.jsrRegistry != "" {
+		opts = append(opts, WithJsrRegistry(h.jsrRegistry))
+	}
+	return NewBundler(opts...)
 }
 
 // GetFunctionsDir returns the functions directory path
@@ -305,6 +321,8 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 		Name                 string  `json:"name"`
 		Description          *string `json:"description"`
 		Code                 string  `json:"code"`
+		OriginalCode         *string `json:"original_code"` // Original code if pre-bundled (for editing)
+		IsBundled            *bool   `json:"is_bundled"`    // If true, skip server-side bundling
 		Enabled              *bool   `json:"enabled"`
 		TimeoutSeconds       *int    `json:"timeout_seconds"`
 		MemoryLimitMB        *int    `json:"memory_limit_mb"`
@@ -428,59 +446,70 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 	}
 
 	// Bundle function code if it has imports
-	bundler, err := NewBundler()
 	bundledCode := req.Code
 	originalCode := &req.Code
 	isBundled := false
 	var bundleError *string
 
-	if err == nil {
-		// Check if code imports from _shared/ modules
-		hasSharedImports := strings.Contains(req.Code, "from \"_shared/") ||
-			strings.Contains(req.Code, "from '_shared/")
+	// If client sent pre-bundled code, skip server-side bundling
+	if req.IsBundled != nil && *req.IsBundled {
+		// Code is already bundled by the client
+		isBundled = true
+		// Use original_code if provided (for editing), otherwise use code as both
+		if req.OriginalCode != nil && *req.OriginalCode != "" {
+			originalCode = req.OriginalCode
+		}
+	} else {
+		// Bundle the function code server-side
+		bundler, err := h.createBundler()
+		if err == nil {
+			// Check if code imports from _shared/ modules
+			hasSharedImports := strings.Contains(req.Code, "from \"_shared/") ||
+				strings.Contains(req.Code, "from '_shared/")
 
-		var result *BundleResult
-		var bundleErr error
+			var result *BundleResult
+			var bundleErr error
 
-		if hasSharedImports {
-			// Load all shared modules from database
-			sharedModules, err := h.storage.ListSharedModules(c.Context())
-			if err != nil {
-				log.Warn().Err(err).Msg("Failed to load shared modules, proceeding with regular bundle")
-				result, bundleErr = bundler.Bundle(c.Context(), req.Code)
-			} else {
-				// Build map of shared module paths to content
-				sharedModulesMap := make(map[string]string)
-				for _, module := range sharedModules {
-					sharedModulesMap[module.ModulePath] = module.Content
+			if hasSharedImports {
+				// Load all shared modules from database
+				sharedModules, err := h.storage.ListSharedModules(c.Context())
+				if err != nil {
+					log.Warn().Err(err).Msg("Failed to load shared modules, proceeding with regular bundle")
+					result, bundleErr = bundler.Bundle(c.Context(), req.Code)
+				} else {
+					// Build map of shared module paths to content
+					sharedModulesMap := make(map[string]string)
+					for _, module := range sharedModules {
+						sharedModulesMap[module.ModulePath] = module.Content
+					}
+
+					// Bundle with shared modules (no supporting files for now)
+					supportingFiles := make(map[string]string)
+					result, bundleErr = bundler.BundleWithFiles(c.Context(), req.Code, supportingFiles, sharedModulesMap)
 				}
-
-				// Bundle with shared modules (no supporting files for now)
-				supportingFiles := make(map[string]string)
-				result, bundleErr = bundler.BundleWithFiles(c.Context(), req.Code, supportingFiles, sharedModulesMap)
+			} else {
+				// No shared imports - use regular bundling
+				result, bundleErr = bundler.Bundle(c.Context(), req.Code)
 			}
-		} else {
-			// No shared imports - use regular bundling
-			result, bundleErr = bundler.Bundle(c.Context(), req.Code)
-		}
 
-		if bundleErr != nil {
-			// Bundling failed - return error to user
-			errMsg := fmt.Sprintf("Failed to bundle function: %v", bundleErr)
-			return c.Status(400).JSON(fiber.Map{
-				"error":   "Bundle error",
-				"details": errMsg,
-			})
-		}
+			if bundleErr != nil {
+				// Bundling failed - return error to user
+				errMsg := fmt.Sprintf("Failed to bundle function: %v", bundleErr)
+				return c.Status(400).JSON(fiber.Map{
+					"error":   "Bundle error",
+					"details": errMsg,
+				})
+			}
 
-		// Bundling succeeded
-		bundledCode = result.BundledCode
-		isBundled = result.IsBundled
-		if result.Error != "" {
-			bundleError = &result.Error
+			// Bundling succeeded
+			bundledCode = result.BundledCode
+			isBundled = result.IsBundled
+			if result.Error != "" {
+				bundleError = &result.Error
+			}
 		}
+		// If bundler not available (Deno not installed), use unbundled code
 	}
-	// If bundler not available (Deno not installed), use unbundled code
 
 	// Create function
 	fn := &EdgeFunction{
@@ -635,7 +664,7 @@ func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
 
 	// If code is being updated, re-bundle with shared modules
 	if codeUpdate, ok := updates["code"].(string); ok && codeUpdate != "" {
-		bundler, err := NewBundler()
+		bundler, err := h.createBundler()
 		if err == nil {
 			// Check if code imports from _shared/ modules
 			hasSharedImports := strings.Contains(codeUpdate, "from \"_shared/") ||
@@ -1174,7 +1203,7 @@ func (h *Handler) bundleFunctionFromFilesystem(ctx context.Context, functionName
 	}
 
 	// Create bundler
-	bundler, bundlerErr := NewBundler()
+	bundler, bundlerErr := h.createBundler()
 	if bundlerErr != nil {
 		// No bundler available - return unbundled code
 		return mainCode, mainCode, false, nil, nil
@@ -1356,6 +1385,8 @@ func (h *Handler) SyncFunctions(c *fiber.Ctx) error {
 			Name                 string  `json:"name"`
 			Description          *string `json:"description"`
 			Code                 string  `json:"code"`
+			OriginalCode         *string `json:"original_code"` // Original code if pre-bundled (for editing)
+			IsBundled            *bool   `json:"is_bundled"`    // If true, skip server-side bundling
 			Enabled              *bool   `json:"enabled"`
 			TimeoutSeconds       *int    `json:"timeout_seconds"`
 			MemoryLimitMB        *int    `json:"memory_limit_mb"`
@@ -1498,8 +1529,32 @@ func (h *Handler) SyncFunctions(c *fiber.Ctx) error {
 
 			spec := req.Functions[i]
 
-			// Bundle the function code
-			bundler, err := NewBundler()
+			bundledCode := spec.Code
+			originalCode := spec.Code
+			isBundled := false
+			var bundleError *string
+
+			// If client sent pre-bundled code, skip server-side bundling
+			if spec.IsBundled != nil && *spec.IsBundled {
+				// Code is already bundled by the client
+				isBundled = true
+				// Use original_code if provided (for editing), otherwise use code as both
+				if spec.OriginalCode != nil && *spec.OriginalCode != "" {
+					originalCode = *spec.OriginalCode
+				}
+				resultsChan <- bundleResult{
+					Name:         spec.Name,
+					BundledCode:  bundledCode,
+					OriginalCode: originalCode,
+					IsBundled:    isBundled,
+					BundleError:  bundleError,
+					Err:          nil,
+				}
+				return
+			}
+
+			// Bundle the function code server-side
+			bundler, err := h.createBundler()
 			if err != nil {
 				resultsChan <- bundleResult{
 					Name: spec.Name,
@@ -1507,11 +1562,6 @@ func (h *Handler) SyncFunctions(c *fiber.Ctx) error {
 				}
 				return
 			}
-
-			bundledCode := spec.Code
-			originalCode := spec.Code
-			isBundled := false
-			var bundleError *string
 
 			// Check if code imports from _shared/ modules
 			hasSharedImports := strings.Contains(spec.Code, "from \"_shared/") ||

@@ -69,7 +69,7 @@ Promise with access_token, refresh_token, and user
 
 ### exchangeCodeForSession()
 
-> **exchangeCodeForSession**(`code`): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
+> **exchangeCodeForSession**(`code`, `state`?): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
 
 Exchange OAuth authorization code for session
 This is typically called in your OAuth callback handler
@@ -79,6 +79,7 @@ This is typically called in your OAuth callback handler
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `code` | `string` | Authorization code from OAuth callback |
+| `state`? | `string` | State parameter from OAuth callback (for CSRF protection) |
 
 #### Returns
 
@@ -113,6 +114,39 @@ Get the current access token
 
 ***
 
+### getAuthConfig()
+
+> **getAuthConfig**(): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AuthConfig`](/api/sdk/interfaces/authconfig/)\>\>
+
+Get comprehensive authentication configuration from the server
+Returns all public auth settings including signup status, OAuth providers,
+SAML providers, password requirements, and CAPTCHA config in a single request.
+
+Use this to:
+- Conditionally render signup forms based on signup_enabled
+- Display available OAuth/SAML provider buttons
+- Show password requirements to users
+- Configure CAPTCHA widgets
+
+#### Returns
+
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AuthConfig`](/api/sdk/interfaces/authconfig/)\>\>
+
+Promise with complete authentication configuration
+
+#### Example
+
+```typescript
+const { data, error } = await client.auth.getAuthConfig();
+if (data) {
+  console.log('Signup enabled:', data.signup_enabled);
+  console.log('OAuth providers:', data.oauth_providers);
+  console.log('Password min length:', data.password_min_length);
+}
+```
+
+***
+
 ### getCaptchaConfig()
 
 > **getCaptchaConfig**(): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`CaptchaConfig`](/api/sdk/interfaces/captchaconfig/)\>\>
@@ -137,6 +171,38 @@ Get the current user from the server
 #### Returns
 
 `Promise`\<[`UserResponse`](/api/sdk/type-aliases/userresponse/)\>
+
+***
+
+### getOAuthLogoutUrl()
+
+> **getOAuthLogoutUrl**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
+
+Get OAuth logout URL for a provider
+Use this to get the logout URL without automatically redirecting
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
+| `options`? | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
+
+#### Returns
+
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
+
+Promise with OAuth logout response including redirect URL if applicable
+
+#### Example
+
+```typescript
+const { data, error } = await client.auth.getOAuthLogoutUrl('google')
+if (!error && data.redirect_url) {
+  // Redirect user to complete logout at provider
+  window.location.href = data.redirect_url
+}
+```
 
 ***
 
@@ -530,8 +596,9 @@ Sends a password reset link to the provided email address
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `email` | `string` | Email address to send reset link to |
-| `options`? | `object` | Optional configuration including CAPTCHA token |
+| `options`? | `object` | Optional configuration including redirect URL and CAPTCHA token |
 | `options.captchaToken`? | `string` | - |
+| `options.redirectTo`? | `string` | - |
 
 #### Returns
 
@@ -737,6 +804,37 @@ Sign out the current user
 #### Returns
 
 `Promise`\<[`VoidResponse`](/api/sdk/type-aliases/voidresponse/)\>
+
+***
+
+### signOutWithOAuth()
+
+> **signOutWithOAuth**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
+
+Sign out with OAuth provider logout
+Revokes tokens at the OAuth provider and optionally redirects for OIDC logout
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
+| `options`? | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
+
+#### Returns
+
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
+
+Promise with OAuth logout response
+
+#### Example
+
+```typescript
+// This will revoke tokens and redirect to provider's logout page if supported
+await client.auth.signOutWithOAuth('google', {
+  redirect_url: 'https://myapp.com/logged-out'
+})
+```
 
 ***
 

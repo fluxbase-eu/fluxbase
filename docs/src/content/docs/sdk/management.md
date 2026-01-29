@@ -892,6 +892,6 @@ import type {
 
 ## Next Steps
 
-- [Admin SDK](./admin.md) - Instance administration
-- [OAuth](./oauth.md) - OAuth authentication
-- [Advanced Features](./advanced-features.md) - Advanced SDK features
+- [Admin SDK](/sdk/admin/) - Instance administration
+- [OAuth](/sdk/oauth/) - OAuth authentication
+- [Advanced Features](/sdk/advanced-features/) - Advanced SDK features

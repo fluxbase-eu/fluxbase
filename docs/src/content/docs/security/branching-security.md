@@ -13,15 +13,16 @@ When a user creates a branch, they automatically receive admin access. This cann
 
 ### Access Levels
 
-| Level | Permissions |
-|-------|-------------|
-| `read` | Query branch data |
+| Level   | Permissions                      |
+| ------- | -------------------------------- |
+| `read`  | Query branch data                |
 | `write` | Read + insert/update/delete data |
-| `admin` | Write + reset/delete branch |
+| `admin` | Write + reset/delete branch      |
 
 ### Service Keys
 
 Service keys have full access to all branches, including:
+
 - Creating and deleting any branch
 - Resetting any branch
 - Accessing any branch's data
@@ -47,6 +48,7 @@ PostgreSQL Server
 ```
 
 Benefits:
+
 - No accidental cross-branch data access
 - Independent connection pools
 - Complete schema isolation
@@ -83,13 +85,15 @@ curl -X POST http://localhost:8080/api/v1/admin/branches/github/configs \
 ### Unconfigured Repositories
 
 Webhooks from unconfigured repositories are rejected by default. This prevents:
+
 - Unauthorized branch creation
 - Resource exhaustion attacks
 - Abuse of the webhook endpoint
 
-### IP Whitelisting
+### IP Allowlisting
 
 For additional security, configure your firewall to only accept webhooks from GitHub's IP ranges:
+
 - `140.82.112.0/20`
 - `143.55.64.0/20`
 - `192.30.252.0/22`
@@ -100,16 +104,17 @@ Check [GitHub's documentation](https://docs.github.com/en/authentication/keeping
 
 ### Clone Modes
 
-| Mode | Data Copied | Use Case |
-|------|-------------|----------|
-| `schema_only` | Schema only | Development, testing |
-| `full_clone` | All data | Staging, data analysis |
+| Mode          | Data Copied | Use Case               |
+| ------------- | ----------- | ---------------------- |
+| `schema_only` | Schema only | Development, testing   |
+| `full_clone`  | All data    | Staging, data analysis |
 
 **Recommendation:** Use `schema_only` for PR previews to avoid copying sensitive production data.
 
 ### Data in Branches
 
 Data in branches:
+
 - Is isolated from other branches
 - Is deleted when the branch is deleted
 - Is not backed up separately (branches use PostgreSQL templates)
@@ -120,7 +125,7 @@ Avoid copying production data to preview branches:
 
 ```yaml
 branching:
-  default_data_clone_mode: schema_only  # Don't copy production data
+  default_data_clone_mode: schema_only # Don't copy production data
 ```
 
 If you need test data, use seed scripts instead of `full_clone`.
@@ -133,14 +138,15 @@ Configure limits to prevent resource exhaustion:
 
 ```yaml
 branching:
-  max_branches_per_user: 5    # Per user limit
-  max_total_branches: 50      # System-wide limit
-  auto_delete_after: 24h      # Auto-cleanup for preview branches
+  max_branches_per_user: 5 # Per user limit
+  max_total_branches: 50 # System-wide limit
+  auto_delete_after: 24h # Auto-cleanup for preview branches
 ```
 
 ### Connection Pools
 
 Each branch has its own connection pool:
+
 - Max 10 connections per branch
 - 30-minute connection lifetime
 - Pools are created on-demand
@@ -148,6 +154,7 @@ Each branch has its own connection pool:
 ### Database Resources
 
 Branch databases consume:
+
 - Disk space (schema + data if full_clone)
 - Connection slots
 - PostgreSQL resources
@@ -188,6 +195,7 @@ fluxbase branch activity feature-login
 ### 4. Separate Service Keys
 
 Use separate service keys for:
+
 - GitHub webhook integration
 - CI/CD pipelines
 - Administrative operations
@@ -204,6 +212,7 @@ branching:
 ```
 
 **Security recommendations:**
+
 - Use a dedicated PostgreSQL role with minimal privileges
 - Store credentials in environment variables or secrets manager
 - Don't use superuser credentials
@@ -217,6 +226,7 @@ GRANT CREATE ON DATABASE postgres TO branching_admin;
 ### Connection URLs
 
 Branch connection URLs are derived from the main database URL. They inherit:
+
 - Authentication credentials
 - SSL settings
 - Connection parameters
@@ -227,17 +237,18 @@ Branch connection URLs are derived from the main database URL. They inherit:
 
 All branch operations are logged to the `branching.activity_log` table:
 
-| Action | Description |
-|--------|-------------|
-| `created` | Branch was created |
-| `deleted` | Branch was deleted |
-| `reset` | Branch was reset to parent state |
-| `cloned` | Data was cloned from parent |
-| `migrated` | Migrations were applied |
-| `access_granted` | User was granted access |
-| `access_revoked` | User's access was revoked |
+| Action           | Description                      |
+| ---------------- | -------------------------------- |
+| `created`        | Branch was created               |
+| `deleted`        | Branch was deleted               |
+| `reset`          | Branch was reset to parent state |
+| `cloned`         | Data was cloned from parent      |
+| `migrated`       | Migrations were applied          |
+| `access_granted` | User was granted access          |
+| `access_revoked` | User's access was revoked        |
 
 Each activity includes:
+
 - `executed_by` - User ID who performed the action
 - `status` - started, success, or failed
 - `details` - JSON with additional context

@@ -1264,6 +1264,31 @@ touches('boundary', { type: 'LineString', coordinates: [[...]] })
 
 ***
 
+### truncate()
+
+> **truncate**(`length`): `this`
+
+Truncate text columns to specified length
+Useful for browsing tables with large text fields
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `length` | `number` |
+
+#### Returns
+
+`this`
+
+#### Example
+
+```ts
+truncate(500) // Truncate text columns to 500 characters
+```
+
+***
+
 ### update()
 
 > **update**(`data`): `this`

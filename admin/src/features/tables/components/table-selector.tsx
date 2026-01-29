@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import {
   Database,
   MoreVertical,
@@ -71,6 +72,7 @@ export function TableSelector({
   onTableSelect,
   onSchemaChange,
 }: TableSelectorProps) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showCreateSchema, setShowCreateSchema] = useState(false)
   const [newSchemaName, setNewSchemaName] = useState('')
@@ -446,7 +448,10 @@ export function TableSelector({
                         onClick={(e) => {
                           e.stopPropagation()
                           const [schema, tableName] = full.split('.')
-                          window.location.href = `/policies?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(tableName)}`
+                          navigate({
+                            to: '/policies',
+                            search: { schema, table: tableName },
+                          })
                         }}
                       >
                         <Shield className='mr-2 h-4 w-4' />

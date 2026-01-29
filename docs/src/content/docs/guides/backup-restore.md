@@ -468,8 +468,8 @@ groups:
 
 ## Learn More
 
-- [Deployment Overview](/docs/deployment/overview) - Production deployment guide
-- [Production Checklist](/docs/deployment/production-checklist) - Pre-production checklist
-- [Monitoring & Observability](/docs/guides/monitoring-observability) - Monitoring setup
-- [Scaling](/docs/deployment/scaling) - Scaling Fluxbase
+- [Deployment Overview](/deployment/overview) - Production deployment guide
+- [Production Checklist](/deployment/production-checklist) - Pre-production checklist
+- [Monitoring & Observability](/guides/monitoring-observability) - Monitoring setup
+- [Scaling](/deployment/scaling) - Scaling Fluxbase
 

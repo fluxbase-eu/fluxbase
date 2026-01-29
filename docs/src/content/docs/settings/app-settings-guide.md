@@ -552,6 +552,6 @@ settingsCache.InvalidateAll()
 
 ## Related Documentation
 
-- [Security Overview](../security/overview.md)
-- [Database Migrations](../guides/database-migrations.md)
-- [SDK Reference](../sdk/settings.md)
+- [Security Overview](/security/overview/)
+- [Database Migrations](/guides/database-migrations/)
+- [SDK Reference](/sdk/settings/)

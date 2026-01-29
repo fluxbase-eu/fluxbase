@@ -12,6 +12,8 @@ Authentication settings configuration
 | Property | Type | Description |
 | ------ | ------ | ------ |
 | `_overrides?` | `Record`\<`string`, `SettingOverride`\> | Settings overridden by environment variables (read-only, cannot be modified via API) |
+| `disable_app_password_login` | `boolean` | - |
+| `disable_dashboard_password_login` | `boolean` | - |
 | `enable_magic_link` | `boolean` | - |
 | `enable_signup` | `boolean` | - |
 | `max_sessions_per_user` | `number` | - |

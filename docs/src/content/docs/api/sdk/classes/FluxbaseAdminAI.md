@@ -67,6 +67,37 @@ if (data) {
 
 ***
 
+### clearEmbeddingProvider()
+
+> **clearEmbeddingProvider**(`id`): `Promise`\<`object`\>
+
+Clear explicit embedding provider preference (revert to default)
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `id` | `string` | Provider ID to clear |
+
+#### Returns
+
+`Promise`\<`object`\>
+
+Promise resolving to { data, error } tuple
+
+| Name | Type |
+| ------ | ------ |
+| `data` | `null` \| `object` |
+| `error` | `null` \| `Error` |
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.clearEmbeddingProvider('uuid')
+```
+
+***
+
 ### createKnowledgeBase()
 
 > **createKnowledgeBase**(`request`): `Promise`\<`object`\>
@@ -665,6 +696,37 @@ Promise resolving to { data, error } tuple with updated provider
 
 ```typescript
 const { data, error } = await client.admin.ai.setDefaultProvider('uuid')
+```
+
+***
+
+### setEmbeddingProvider()
+
+> **setEmbeddingProvider**(`id`): `Promise`\<`object`\>
+
+Set a provider as the embedding provider
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `id` | `string` | Provider ID |
+
+#### Returns
+
+`Promise`\<`object`\>
+
+Promise resolving to { data, error } tuple
+
+| Name | Type |
+| ------ | ------ |
+| `data` | `null` \| `object` |
+| `error` | `null` \| `Error` |
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.setEmbeddingProvider('uuid')
 ```
 
 ***

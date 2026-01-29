@@ -120,3 +120,5 @@ deploy/helm/fluxbase/charts/
 
 values.tmp.yml
 .mcp.json
+
+.lycheecache

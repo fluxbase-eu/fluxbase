@@ -470,6 +470,6 @@ if (config?.enabled && config.endpoints?.includes('signup')) {
 
 ## Next Steps
 
-- [Authentication](/docs/guides/authentication) - Authentication overview
-- [Rate Limiting](/docs/guides/rate-limiting) - Rate limiting configuration
-- [Row-Level Security](/docs/guides/row-level-security) - Data access control
+- [Authentication](/guides/authentication) - Authentication overview
+- [Rate Limiting](/guides/rate-limiting) - Rate limiting configuration
+- [Row-Level Security](/guides/row-level-security) - Data access control

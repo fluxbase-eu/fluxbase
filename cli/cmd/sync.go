@@ -447,6 +447,7 @@ func syncFunctionsFromDir(ctx context.Context, dir, namespace string, dryRun, de
 					return fmt.Errorf("failed to bundle %s: %w", fnName, err)
 				}
 				fmt.Printf(" %s → %s\n", formatBytes(len(code)), formatBytes(len(result.BundledCode)))
+				functions[i]["original_code"] = code
 				functions[i]["code"] = result.BundledCode
 				functions[i]["is_bundled"] = true
 			}
@@ -617,6 +618,7 @@ func syncJobsFromDir(ctx context.Context, dir, namespace string, dryRun, deleteM
 					return fmt.Errorf("failed to bundle %s: %w", jobName, err)
 				}
 				fmt.Printf(" %s → %s\n", formatBytes(len(code)), formatBytes(len(result.BundledCode)))
+				jobs[i]["original_code"] = code
 				jobs[i]["code"] = result.BundledCode
 				jobs[i]["is_bundled"] = true
 			}
@@ -763,6 +765,7 @@ func syncChatbotsFromDir(ctx context.Context, dir, namespace string, dryRun, del
 					return fmt.Errorf("failed to bundle %s: %w", cbName, err)
 				}
 				fmt.Printf(" %s → %s\n", formatBytes(len(code)), formatBytes(len(result.BundledCode)))
+				chatbots[i]["original_code"] = code
 				chatbots[i]["code"] = result.BundledCode
 				chatbots[i]["is_bundled"] = true
 			}

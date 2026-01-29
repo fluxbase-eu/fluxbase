@@ -160,7 +160,7 @@ Start a new chat session with a chatbot
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `chatbot` | `string` | Chatbot name |
-| `namespace`? | `string` | Optional namespace (defaults to 'default') |
+| `namespace`? | `string` | Optional namespace. If not provided and a lookup function is available, performs smart resolution: - If exactly one chatbot with this name exists, uses it - If multiple exist, tries "default" namespace - If ambiguous and not in default, throws error with available namespaces If no lookup function, falls back to "default" namespace. |
 | `conversationId`? | `string` | Optional conversation ID to resume |
 | `impersonateUserId`? | `string` | Optional user ID to impersonate (admin only) |
 

@@ -127,7 +127,7 @@ CREATE POLICY user_isolation ON public.user_data
   WITH CHECK (user_id = auth.uid());
 ```
 
-[Learn more about RLS →](../guides/row-level-security.md)
+[Learn more about RLS →](/guides/row-level-security/)
 
 ---
 
@@ -461,7 +461,7 @@ rate_limiting:
       per_hour: 5
 ```
 
-[Learn more about Rate Limiting →](../guides/rate-limiting.md)
+[Learn more about Rate Limiting →](/guides/rate-limiting/)
 
 ### 4. Configure CORS Properly
 
@@ -493,7 +493,7 @@ security:
     strict_transport_security: "max-age=31536000; includeSubDomains"
 ```
 
-[Learn more about Security Headers →](./security-headers.md)
+[Learn more about Security Headers →](/security/security-headers/)
 
 ---
 
@@ -524,24 +524,18 @@ trufflehog filesystem .
 
 ### 2. Use Environment Variables
 
-```yaml
-# fluxbase.yaml - reference environment variables
-database:
-  url: ${DATABASE_URL}
-
-auth:
-  jwt_secret: ${JWT_SECRET}
-
-email:
-  smtp_password: ${SMTP_PASSWORD}
-```
+Fluxbase automatically reads environment variables with the `FLUXBASE_` prefix. Set sensitive values via environment instead of config files:
 
 ```bash
-# .env (never commit!)
-DATABASE_URL=postgres://user:pass@host/db
-JWT_SECRET=your-super-secret-key-min-32-chars
-SMTP_PASSWORD=smtp-password-here
+# .env.local (never commit!)
+FLUXBASE_DATABASE_HOST=postgres.example.com
+FLUXBASE_DATABASE_PASSWORD=your-secure-password
+FLUXBASE_AUTH_JWT_SECRET=your-super-secret-key-min-32-chars
+FLUXBASE_EMAIL_SMTP_PASSWORD=smtp-password-here
+FLUXBASE_ENCRYPTION_KEY=32-byte-encryption-key-here
 ```
+
+Environment variables take precedence over `fluxbase.yaml` values, so you can keep safe defaults in config and override with secrets in production.
 
 ### 3. Use Secrets Management Services
 
@@ -1119,11 +1113,11 @@ external_contacts:
 
 ## Further Reading
 
-- [Security Overview](./overview.md)
-- [CSRF Protection](./csrf-protection.md)
-- [Security Headers](./security-headers.md)
-- [Row Level Security](../guides/row-level-security.md)
-- [Rate Limiting](../guides/rate-limiting.md)
+- [Security Overview](/security/overview/)
+- [CSRF Protection](/security/csrf-protection/)
+- [Security Headers](/security/security-headers/)
+- [Row Level Security](/guides/row-level-security/)
+- [Rate Limiting](/guides/rate-limiting/)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)
 

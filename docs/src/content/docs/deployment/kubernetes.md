@@ -985,6 +985,6 @@ kubectl describe certificate fluxbase-tls -n fluxbase
 
 ## Next Steps
 
-- [Production Checklist](production-checklist) - Pre-deployment verification
-- [Scaling Guide](scaling) - Performance optimization
-- [Docker Deployment](docker) - Alternative deployment method
+- [Production Checklist](/deployment/production-checklist/) - Pre-deployment verification
+- [Scaling Guide](/deployment/scaling/) - Performance optimization
+- [Docker Deployment](/deployment/docker/) - Alternative deployment method

@@ -5,6 +5,78 @@ description: "Model Context Protocol server for AI assistant integration"
 
 Fluxbase includes a built-in MCP (Model Context Protocol) server that enables AI assistants like Claude to interact with your database, storage, functions, and jobs.
 
+## Connect to Your IDE
+
+### Claude Desktop
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "fluxbase": {
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "X-Client-Key": "your-client-key"
+      }
+    }
+  }
+}
+```
+
+**Config file locations:**
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+### VS Code with Claude Extension
+
+Add to your VS Code settings (`settings.json`):
+
+```json
+{
+  "claude.mcpServers": {
+    "fluxbase": {
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "X-Client-Key": "your-client-key"
+      }
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to Cursor's MCP settings (Settings → Features → MCP Servers):
+
+```json
+{
+  "fluxbase": {
+    "url": "http://localhost:8080/mcp",
+    "headers": {
+      "X-Client-Key": "your-client-key"
+    }
+  }
+}
+```
+
+### Other MCP Clients
+
+Any MCP-compatible client can connect using:
+
+- **URL**: `http://your-server:8080/mcp`
+- **Auth Header**: `X-Client-Key: your-key` or `X-Service-Key: your-key`
+- **Protocol**: JSON-RPC 2.0 over HTTP POST
+
+:::tip[Create a Client Key]
+Generate a client key with appropriate scopes:
+```bash
+fluxbase clientkeys create --name "My IDE" \
+  --scopes "read:tables,write:tables,execute:functions,read:storage"
+```
+:::
+
 ## Overview
 
 The MCP server exposes Fluxbase functionality through a standardized JSON-RPC 2.0 protocol, allowing AI assistants to:

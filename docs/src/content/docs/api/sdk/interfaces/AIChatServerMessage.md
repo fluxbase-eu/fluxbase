@@ -23,5 +23,5 @@ AI chat server message
 | `row_count?` | `number` |
 | `step?` | `string` |
 | `summary?` | `string` |
-| `type` | `"error"` \| `"cancelled"` \| `"chat_started"` \| `"progress"` \| `"content"` \| `"query_result"` \| `"done"` |
+| `type` | `"error"` \| `"cancelled"` \| `"chat_started"` \| `"progress"` \| `"content"` \| `"query_result"` \| `"tool_result"` \| `"done"` |
 | `usage?` | [`AIUsageStats`](/api/sdk/interfaces/aiusagestats/) |

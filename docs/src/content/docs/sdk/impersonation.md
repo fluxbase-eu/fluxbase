@@ -656,7 +656,7 @@ interface ListImpersonationSessionsResponse {
 
 ## Related Resources
 
-- [User Management SDK](/docs/sdk/admin#user-management) - Manage users
-- [Authentication Guide](/docs/guides/authentication) - Learn about authentication
-- [Row Level Security](/docs/guides/row-level-security) - Configure RLS policies
-- [Admin Guide](/docs/guides/admin/user-impersonation) - Dashboard impersonation guide
+- [User Management SDK](/sdk/admin#user-management) - Manage users
+- [Authentication Guide](/guides/authentication) - Learn about authentication
+- [Row Level Security](/guides/row-level-security) - Configure RLS policies
+- [Admin Guide](/guides/admin/user-impersonation) - Dashboard impersonation guide

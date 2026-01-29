@@ -608,6 +608,18 @@ spec:
               value: {{ .Values.config.functions.max_memory_limit | quote }}
 
             # ===========================================
+            # Deno Runtime Configuration
+            # ===========================================
+            {{- if .Values.config.deno.npm_registry }}
+            - name: FLUXBASE_DENO_NPM_REGISTRY
+              value: {{ .Values.config.deno.npm_registry | quote }}
+            {{- end }}
+            {{- if .Values.config.deno.jsr_registry }}
+            - name: FLUXBASE_DENO_JSR_REGISTRY
+              value: {{ .Values.config.deno.jsr_registry | quote }}
+            {{- end }}
+
+            # ===========================================
             # Jobs Configuration
             # ===========================================
             - name: FLUXBASE_JOBS_ENABLED

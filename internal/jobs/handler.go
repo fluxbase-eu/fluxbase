@@ -230,9 +230,10 @@ func roleSatisfiesRequirements(userRole string, requiredRoles []string) bool {
 }
 
 // NewHandler creates a new jobs handler
-func NewHandler(db *database.Connection, cfg *config.JobsConfig, manager *Manager, authService *auth.Service, loggingService *logging.Service) (*Handler, error) {
+// npmRegistry and jsrRegistry are optional - if provided, they configure custom registries for Deno bundling
+func NewHandler(db *database.Connection, cfg *config.JobsConfig, manager *Manager, authService *auth.Service, loggingService *logging.Service, npmRegistry, jsrRegistry string) (*Handler, error) {
 	storage := NewStorage(db)
-	loader, err := NewLoader(storage, cfg)
+	loader, err := NewLoader(storage, cfg, npmRegistry, jsrRegistry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create loader: %w", err)
 	}
@@ -905,7 +906,7 @@ func (h *Handler) SyncJobs(c *fiber.Ctx) error {
 			Description            *string  `json:"description"`
 			Code                   string   `json:"code"`
 			OriginalCode           *string  `json:"original_code"`
-			IsPreBundled           bool     `json:"is_pre_bundled"`
+			IsBundled              *bool    `json:"is_bundled"` // If true, skip server-side bundling
 			Enabled                *bool    `json:"enabled"`
 			Schedule               *string  `json:"schedule"`
 			TimeoutSeconds         *int     `json:"timeout_seconds"`
@@ -1071,8 +1072,11 @@ func (h *Handler) SyncJobs(c *fiber.Ctx) error {
 			originalCode = *spec.OriginalCode
 		}
 
-		// Bundle if not pre-bundled
-		if !spec.IsPreBundled {
+		// If client sent pre-bundled code, skip server-side bundling
+		if spec.IsBundled != nil && *spec.IsBundled {
+			isBundled = true
+		} else {
+			// Bundle server-side
 			bundledCode, bundleErr := h.loader.BundleCode(ctx, spec.Code)
 			if bundleErr != nil {
 				errMsg := bundleErr.Error()
@@ -1082,8 +1086,6 @@ func (h *Handler) SyncJobs(c *fiber.Ctx) error {
 				code = bundledCode
 				isBundled = true
 			}
-		} else {
-			isBundled = true
 		}
 
 		// Parse annotations from original code

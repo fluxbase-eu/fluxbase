@@ -375,6 +375,164 @@ Common bundling errors:
 - **Bundle too large** - Limit is 5MB after bundling
 - **Blocked package** - Using a restricted security package
 
+### Air-Gapped / Private Registry Environments
+
+By default, Deno downloads packages from public registries:
+- **npm packages** (`npm:zod`) from `registry.npmjs.org`
+- **JSR packages** (`jsr:@std/path`) from `jsr.io`
+
+For air-gapped environments or private registries, you have several options:
+
+:::caution[Internet Dependency]
+When using `npm:` or `jsr:` specifiers, the Fluxbase server requires internet access to download packages during bundling. This is the only point where Fluxbase requires internet access at runtime.
+:::
+
+**Option 1: Configure server-wide registries (Recommended)**
+
+Set custom npm and/or JSR registries for all edge functions and jobs at the server level:
+
+```yaml
+# fluxbase.yaml
+deno:
+  npm_registry: "https://npm.your-company.com/"
+  jsr_registry: "https://jsr.your-company.com/"
+```
+
+Or via environment variables:
+
+```bash
+FLUXBASE_DENO_NPM_REGISTRY=https://npm.your-company.com/
+FLUXBASE_DENO_JSR_REGISTRY=https://jsr.your-company.com/
+```
+
+Or in Docker Compose:
+
+```yaml
+environment:
+  FLUXBASE_DENO_NPM_REGISTRY: "https://npm.your-company.com/"
+  FLUXBASE_DENO_JSR_REGISTRY: "https://jsr.your-company.com/"
+```
+
+Or in Helm values:
+
+```yaml
+config:
+  deno:
+    npm_registry: "https://npm.your-company.com/"
+    jsr_registry: "https://jsr.your-company.com/"
+```
+
+This applies to all edge functions and background jobs using `npm:` or `jsr:` specifiers.
+
+**Option 2: Use a `deno.json` per function (overrides server config)**
+
+Create a `deno.json` file in your function directory to configure a private npm registry:
+
+```json
+{
+  "npmRegistry": "https://npm.your-company.com/"
+}
+```
+
+Or with authentication:
+
+```json
+{
+  "npmRegistry": {
+    "url": "https://npm.your-company.com/",
+    "auth": "bearer <token>"
+  }
+}
+```
+
+Then your functions can use `npm:` specifiers as normal - Deno will fetch from your private registry.
+
+**Option 3: Use URL imports instead of npm specifiers**
+
+Import directly from ESM CDNs you control or mirror:
+
+```typescript
+// Instead of npm:zod
+import { z } from "https://your-cdn.example.com/zod@3.22.4/index.mjs";
+
+// Or use esm.sh, unpkg, skypack (if accessible)
+import { z } from "https://esm.sh/zod@3.22.4";
+```
+
+You can self-host [esm.sh](https://github.com/esm-dev/esm.sh) or mirror specific packages.
+
+**Option 4: Pre-bundle on a machine with internet access (Recommended for air-gapped)**
+
+Bundle your functions on a development machine with internet access, then deploy the pre-bundled code to your air-gapped server. The server will skip bundling when it receives pre-bundled code.
+
+**Method A: Use the CLI with Deno installed locally**
+
+The Fluxbase CLI automatically bundles locally when Deno is available:
+
+```bash
+# On machine with internet + Deno installed
+cd your-project/fluxbase/functions
+
+# Sync will bundle locally and send pre-bundled code
+fluxbase functions sync --namespace production
+
+# Output shows local bundling:
+# Bundling my-function... 2.5KB → 156KB
+# Synced functions: 3 created, 0 updated, 0 deleted.
+```
+
+The CLI sends `is_bundled: true` and `original_code` so the server stores both versions (bundled for execution, original for editing in the admin UI).
+
+**Method B: Bundle manually with Deno**
+
+```bash
+# On machine with internet access
+deno bundle my-function.ts bundled.ts
+
+# Deploy via API with is_bundled flag
+curl -X POST http://your-server:8080/api/v1/functions \
+  -H "X-Service-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-function",
+    "code": "'"$(cat bundled.ts)"'",
+    "original_code": "'"$(cat my-function.ts)"'",
+    "is_bundled": true,
+    "enabled": true
+  }'
+```
+
+**Method C: Build a deployment pipeline**
+
+For CI/CD pipelines, bundle in a container with internet access:
+
+```yaml
+# GitHub Actions example
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: denoland/setup-deno@v1
+      - name: Bundle and deploy
+        run: |
+          fluxbase functions sync --namespace production
+        env:
+          FLUXBASE_URL: ${{ secrets.FLUXBASE_URL }}
+          FLUXBASE_SERVICE_KEY: ${{ secrets.FLUXBASE_SERVICE_KEY }}
+```
+
+**Option 5: Avoid npm packages entirely**
+
+Use Deno's standard library and web APIs, which don't require network access:
+
+```typescript
+// Use Deno std library (bundled)
+import { crypto } from "https://deno.land/std@0.200.0/crypto/mod.ts";
+
+// Or rely on built-in web APIs
+const hash = await crypto.subtle.digest("SHA-256", data);
+```
+
 ## Shared Modules
 
 Shared modules allow you to reuse code across multiple edge functions, similar to Supabase's `_shared` directory pattern. Modules are stored with a `_shared/` prefix and can be imported by any function.
@@ -1335,7 +1493,7 @@ When a function calls `secrets.get("openai_api_key")`:
 
 ## REST API
 
-For direct HTTP access without the SDK, see the [SDK Documentation](/docs/api/sdk).
+For direct HTTP access without the SDK, see the [SDK Documentation](/api/sdk).
 
 ## Troubleshooting
 
@@ -1526,6 +1684,6 @@ async function handler(req) {
 
 ## Related Documentation
 
-- [Authentication](/docs/guides/authentication) - Secure function access
-- [Webhooks](/docs/guides/webhooks) - Trigger functions from events
-- [SDK Documentation](/docs/api/sdk) - Complete SDK documentation
+- [Authentication](/guides/authentication) - Secure function access
+- [Webhooks](/guides/webhooks) - Trigger functions from events
+- [SDK Documentation](/api/sdk) - Complete SDK documentation

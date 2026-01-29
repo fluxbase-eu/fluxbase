@@ -625,8 +625,8 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 
 ## Learn More
 
-- [Backup & Restore](/docs/guides/backup-restore) - Disaster recovery procedures
-- [Monitoring & Observability](/docs/guides/monitoring-observability) - Setting up monitoring
-- [Production Checklist](/docs/deployment/production-checklist) - Pre-production checklist
-- [Scaling](/docs/deployment/scaling) - Scaling strategies
+- [Backup & Restore](/guides/backup-restore) - Disaster recovery procedures
+- [Monitoring & Observability](/guides/monitoring-observability) - Setting up monitoring
+- [Production Checklist](/deployment/production-checklist) - Pre-production checklist
+- [Scaling](/deployment/scaling) - Scaling strategies
 

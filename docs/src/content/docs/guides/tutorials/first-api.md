@@ -372,4 +372,4 @@ Congratulations! You've built your first Fluxbase API. Here's what to explore ne
 - [Row-Level Security](/guides/row-level-security/) - Advanced RLS patterns
 - [Edge Functions](/guides/edge-functions/) - Add serverless business logic
 - [Realtime Subscriptions](/guides/realtime/) - Get live updates via WebSocket
-- [TypeScript SDK Guide](/guides/typescript-sdk/) - Complete SDK reference
+- [TypeScript SDK Reference](/api/sdk/) - Complete SDK reference

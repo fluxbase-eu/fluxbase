@@ -58,7 +58,7 @@ Create a new AI chat connection
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options` | `Omit`\<[`AIChatOptions`](/api/sdk/interfaces/aichatoptions/), `"wsUrl"`\> | Chat connection options |
+| `options` | `Omit`\<[`AIChatOptions`](/api/sdk/interfaces/aichatoptions/), `"wsUrl"` \| `"_lookupChatbot"`\> | Chat connection options |
 
 #### Returns
 
@@ -214,6 +214,48 @@ const { data, error } = await ai.listConversations({ chatbot: 'sql-assistant' })
 
 // With pagination
 const { data, error } = await ai.listConversations({ limit: 20, offset: 0 })
+```
+
+***
+
+### lookupChatbot()
+
+> **lookupChatbot**(`name`): `Promise`\<`object`\>
+
+Lookup a chatbot by name with smart namespace resolution
+
+Resolution logic:
+1. If exactly one chatbot with this name exists -> returns it
+2. If multiple exist -> tries "default" namespace first
+3. If multiple exist and none in "default" -> returns ambiguous=true with namespaces list
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `name` | `string` | Chatbot name |
+
+#### Returns
+
+`Promise`\<`object`\>
+
+Promise resolving to { data, error } tuple with lookup result
+
+| Name | Type |
+| ------ | ------ |
+| `data` | `null` \| [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) |
+| `error` | `null` \| `Error` |
+
+#### Example
+
+```typescript
+// Lookup chatbot by name
+const { data, error } = await ai.lookupChatbot('sql-assistant')
+if (data?.chatbot) {
+  console.log(`Found in namespace: ${data.chatbot.namespace}`)
+} else if (data?.ambiguous) {
+  console.log(`Chatbot exists in: ${data.namespaces?.join(', ')}`)
+}
 ```
 
 ***

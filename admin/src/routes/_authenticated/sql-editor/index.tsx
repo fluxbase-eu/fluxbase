@@ -21,7 +21,6 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { toast } from 'sonner'
 import { useImpersonationStore } from '@/stores/impersonation-store'
 import api from '@/lib/api'
-import { syncAuthToken } from '@/lib/fluxbase-client'
 import { useTheme } from '@/context/theme-provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,7 +40,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ImpersonationPopover } from '@/features/impersonation/components/impersonation-popover'
 import { useSchemaMetadata } from '@/features/sql-editor/hooks/use-schema-metadata'
 import { createGraphQLCompletionProvider } from '@/features/sql-editor/utils/graphql-completion-provider'
 import { createSqlCompletionProvider } from '@/features/sql-editor/utils/sql-completion-provider'
@@ -576,14 +574,6 @@ function SQLEditorPage() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-
-        {/* Impersonation UI */}
-        <ImpersonationPopover
-          contextLabel='Executing as'
-          defaultReason={`Testing RLS policies in ${editorMode === 'sql' ? 'SQL' : 'GraphQL'} Editor`}
-          onImpersonationStart={() => syncAuthToken()}
-          onImpersonationStop={() => syncAuthToken()}
-        />
 
         <div className='flex items-center gap-2'>
           {queryHistory.length > 0 && (

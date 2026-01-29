@@ -1,4 +1,4 @@
-.PHONY: help dev build clean test migrate-up migrate-down migrate-create db-reset db-reset-full deps setup-dev install-hooks uninstall-hooks docs docs-build version docker-build docker-push release cli cli-install cli-completions
+.PHONY: help dev build clean test migrate-up migrate-down migrate-create db-reset db-reset-full deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions
 
 # Variables
 BINARY_NAME=fluxbase-server
@@ -404,6 +404,18 @@ docs-build: ## Build static documentation site for production
 	@echo "${GREEN}Documentation built successfully!${NC}"
 	@echo "${YELLOW}Output:${NC} docs/dist/"
 	@echo "${YELLOW}To preview locally:${NC} cd docs && npm run preview"
+
+docs-check-links: docs-build ## Check documentation for broken links
+	@echo "${YELLOW}Checking documentation for broken links...${NC}"
+	@which lychee > /dev/null 2>&1 || { \
+		echo "${RED}Error: lychee is not installed${NC}"; \
+		echo "${YELLOW}Install with: cargo install lychee${NC}"; \
+		echo "${YELLOW}Or on macOS: brew install lychee${NC}"; \
+		echo "${YELLOW}Or download from: https://github.com/lycheeverse/lychee/releases${NC}"; \
+		exit 1; \
+	}
+	@lychee --config .lychee.toml docs/dist
+	@echo "${GREEN}Link check complete!${NC}"
 
 docker-build-docs: ## Build documentation Docker image
 	@echo "${YELLOW}Building documentation Docker image...${NC}"

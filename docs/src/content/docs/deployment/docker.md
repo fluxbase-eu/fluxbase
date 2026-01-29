@@ -6,7 +6,7 @@ Deploy Fluxbase using Docker and Docker Compose for simple production environmen
 
 ## Overview
 
-Fluxbase provides official Docker images (~110MB) with:
+Fluxbase provides official Docker images with:
 
 - Multi-stage build for minimal image size
 - Non-root user for security
@@ -751,6 +751,6 @@ docker run -d --name fluxbase ghcr.io/fluxbase-eu/fluxbase:0.0.1
 
 ## Next Steps
 
-- [Kubernetes Deployment](kubernetes) - Scale with Kubernetes
-- [Production Checklist](production-checklist) - Pre-deployment checklist
-- [Scaling Guide](scaling) - Optimize performance
+- [Kubernetes Deployment](/deployment/kubernetes/) - Scale with Kubernetes
+- [Production Checklist](/deployment/production-checklist/) - Pre-deployment checklist
+- [Scaling Guide](/deployment/scaling/) - Optimize performance

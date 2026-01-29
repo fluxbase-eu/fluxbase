@@ -899,6 +899,6 @@ This temporarily re-enables password login regardless of the database setting.
 
 ## Next Steps
 
-- [Authentication](/docs/guides/authentication) - Authentication overview
-- [OAuth Providers](/docs/guides/oauth-providers) - Social login configuration
-- [Row-Level Security](/docs/guides/row-level-security) - Data access control
+- [Authentication](/guides/authentication) - Authentication overview
+- [OAuth Providers](/guides/oauth-providers) - Social login configuration
+- [Row-Level Security](/guides/row-level-security) - Data access control

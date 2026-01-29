@@ -591,9 +591,9 @@ Never store CSRF tokens in:
 ## Further Reading
 
 - [OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
-- [Security Overview](./overview.md)
-- [Security Headers](./security-headers.md)
-- [Best Practices](./best-practices.md)
+- [Security Overview](/security/overview/)
+- [Security Headers](/security/security-headers/)
+- [Best Practices](/security/best-practices/)
 
 ---
 
