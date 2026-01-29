@@ -177,7 +177,7 @@ For detailed setup instructions, see the [Quick Start Guide](/getting-started/qu
 Fluxbase provides a similar developer experience to Supabase but runs as a **single binary** with **no external dependencies** besides PostgreSQL. Perfect for:
 
 - **Self-hosting** on your own infrastructure
-- **Air-gapped environments** without internet access
+- **Air-gapped deployments** - server runs offline, clients use [REST API](/api/http/) or [vendored SDK](#air-gapped-sdk)
 - **Edge deployments** where simplicity matters
 - **Cost-conscious** teams who want to avoid vendor lock-in
 
@@ -205,3 +205,38 @@ Manage your backend with a powerful built-in admin UI featuring database browsin
   <LinkCard title="Real-time" href="/guides/realtime/" description="WebSocket subscriptions for live updates" />
   <LinkCard title="Storage" href="/guides/storage/" description="File uploads and S3-compatible storage" />
 </CardGrid>
+
+<div class="section-divider"></div>
+
+## Air-Gapped SDK {#air-gapped-sdk}
+
+For environments without internet access, you have several options to use Fluxbase:
+
+**Option 1: Use the REST API directly**
+
+No SDK required - make HTTP requests to the [REST API](/api/http/) from any language.
+
+**Option 2: Vendor the npm package**
+
+On a machine with internet, download the SDK for offline use:
+
+```bash
+# Create a tarball of the package
+npm pack @fluxbase/sdk
+
+# Transfer fluxbase-sdk-x.x.x.tgz to your air-gapped environment
+# Then install from the local file
+npm install ./fluxbase-sdk-x.x.x.tgz
+```
+
+**Option 3: Use a private npm registry**
+
+Mirror `@fluxbase/sdk` to your internal registry (Verdaccio, Nexus, Artifactory, etc.).
+
+**Option 4: Use the Go client**
+
+For Go applications, import the client directly - it compiles into your binary with no runtime dependencies:
+
+```go
+import "github.com/fluxbase-eu/fluxbase/pkg/client"
+```
