@@ -10,8 +10,9 @@ Note: config values can be strings, numbers, or booleans - they will be converte
 
 ## Properties
 
-| Property | Type |
-| ------ | ------ |
-| `config?` | `Record`\<`string`, `string` \| `number` \| `boolean`\> |
-| `display_name?` | `string` |
-| `enabled?` | `boolean` |
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| `config?` | `Record`\<`string`, `string` \| `number` \| `boolean`\> | - |
+| `display_name?` | `string` | - |
+| `embedding_model?` | `null` \| `string` | Embedding model for this provider. null to reset to provider-specific default |
+| `enabled?` | `boolean` | - |

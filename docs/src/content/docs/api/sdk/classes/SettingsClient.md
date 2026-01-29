@@ -77,6 +77,35 @@ await client.settings.deleteSecret('openai_api_key')
 
 ***
 
+### deleteSetting()
+
+> **deleteSetting**(`key`): `Promise`\<`void`\>
+
+Delete a user setting
+
+Removes the user's own setting, reverting to system default (if any).
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `key` | `string` | Setting key to delete |
+
+#### Returns
+
+`Promise`\<`void`\>
+
+Promise<void>
+
+#### Example
+
+```typescript
+// Remove user's theme preference, revert to system default
+await client.settings.deleteSetting('theme')
+```
+
+***
+
 ### get()
 
 > **get**(`key`): `Promise`\<`any`\>
@@ -188,6 +217,125 @@ console.log(metadata.key, metadata.updated_at)
 
 ***
 
+### getSetting()
+
+> **getSetting**(`key`): `Promise`\<[`UserSettingWithSource`](/api/sdk/interfaces/usersettingwithsource/)\>
+
+Get a setting with user -> system fallback
+
+First checks for a user-specific setting, then falls back to system default.
+Returns both the value and the source ("user" or "system").
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `key` | `string` | Setting key (e.g., 'theme', 'notifications.email') |
+
+#### Returns
+
+`Promise`\<[`UserSettingWithSource`](/api/sdk/interfaces/usersettingwithsource/)\>
+
+Promise resolving to UserSettingWithSource with value and source
+
+#### Throws
+
+Error if setting doesn't exist in either user or system
+
+#### Example
+
+```typescript
+// Get theme with fallback to system default
+const { value, source } = await client.settings.getSetting('theme')
+console.log(value)   // { mode: 'dark' }
+console.log(source)  // 'system' (from system default)
+
+// After user sets their own theme
+const { value, source } = await client.settings.getSetting('theme')
+console.log(source)  // 'user' (user's own setting)
+```
+
+***
+
+### getSystemSetting()
+
+> **getSystemSetting**(`key`): `Promise`\<`object`\>
+
+Get a system-level setting (no user override)
+
+Returns the system default for this key, ignoring any user-specific value.
+Useful for reading default configurations.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `key` | `string` | Setting key |
+
+#### Returns
+
+`Promise`\<`object`\>
+
+Promise resolving to the setting value
+
+| Name | Type |
+| ------ | ------ |
+| `key` | `string` |
+| `value` | `Record`\<`string`, `unknown`\> |
+
+#### Throws
+
+Error if system setting doesn't exist
+
+#### Example
+
+```typescript
+// Get system default theme
+const { value } = await client.settings.getSystemSetting('theme')
+console.log('System default theme:', value)
+```
+
+***
+
+### getUserSetting()
+
+> **getUserSetting**(`key`): `Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)\>
+
+Get only the user's own setting (no fallback to system)
+
+Returns the user's own setting for this key, or throws if not found.
+Use this when you specifically want to check if the user has set a value.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `key` | `string` | Setting key |
+
+#### Returns
+
+`Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)\>
+
+Promise resolving to UserSetting
+
+#### Throws
+
+Error if user has no setting with this key
+
+#### Example
+
+```typescript
+// Check if user has set their own theme
+try {
+  const setting = await client.settings.getUserSetting('theme')
+  console.log('User theme:', setting.value)
+} catch (e) {
+  console.log('User has not set a theme')
+}
+```
+
+***
+
 ### listSecrets()
 
 > **listSecrets**(): `Promise`\<`SecretSettingMetadata`[]\>
@@ -205,6 +353,30 @@ Promise resolving to array of SecretSettingMetadata
 ```typescript
 const secrets = await client.settings.listSecrets()
 secrets.forEach(s => console.log(s.key, s.description))
+```
+
+***
+
+### listSettings()
+
+> **listSettings**(): `Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)[]\>
+
+List all user's own settings
+
+Returns all non-encrypted settings the current user has set.
+Does not include system defaults.
+
+#### Returns
+
+`Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)[]\>
+
+Promise resolving to array of UserSetting
+
+#### Example
+
+```typescript
+const settings = await client.settings.listSettings()
+settings.forEach(s => console.log(s.key, s.value))
 ```
 
 ***
@@ -241,5 +413,43 @@ Promise resolving to SecretSettingMetadata (never includes the value)
 // Store user's API key for a third-party service
 await client.settings.setSecret('openai_api_key', 'sk-abc123', {
   description: 'My OpenAI API key'
+})
+```
+
+***
+
+### setSetting()
+
+> **setSetting**(`key`, `value`, `options`?): `Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)\>
+
+Set a user setting (create or update)
+
+Creates or updates a non-encrypted user setting.
+This value will override any system default when using getSetting().
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `key` | `string` | Setting key |
+| `value` | `Record`\<`string`, `unknown`\> | Setting value (any JSON-serializable object) |
+| `options`? | `object` | Optional description |
+| `options.description`? | `string` | - |
+
+#### Returns
+
+`Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)\>
+
+Promise resolving to UserSetting
+
+#### Example
+
+```typescript
+// Set user's theme preference
+await client.settings.setSetting('theme', { mode: 'dark', accent: 'blue' })
+
+// Set with description
+await client.settings.setSetting('notifications', { email: true, push: false }, {
+  description: 'User notification preferences'
 })
 ```

@@ -11,9 +11,11 @@ SAML Identity Provider configuration
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
+| `display_name` | `string` | Display name for UI |
 | `enabled` | `boolean` | Whether the provider is enabled |
 | `entity_id` | `string` | Provider's entity ID (used for SP metadata) |
 | `id` | `string` | Unique provider identifier (slug name) |
 | `name` | `string` | Display name of the provider |
+| `provider` | `string` | Provider identifier |
 | `slo_url?` | `string` | Single Logout endpoint URL (optional) |
 | `sso_url` | `string` | SSO endpoint URL |
