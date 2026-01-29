@@ -607,7 +607,8 @@ func runFunctionsSync(cmd *cobra.Command, args []string) error {
 				bundledSize := len(result.BundledCode)
 				fmt.Printf(" %s → %s\n", formatBytes(originalSize), formatBytes(bundledSize))
 
-				// Replace code with bundled code
+				// Replace code with bundled code and preserve original
+				functions[i]["original_code"] = code
 				functions[i]["code"] = result.BundledCode
 				functions[i]["is_bundled"] = true
 			}

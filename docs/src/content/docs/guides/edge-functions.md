@@ -461,16 +461,64 @@ import { z } from "https://esm.sh/zod@3.22.4";
 
 You can self-host [esm.sh](https://github.com/esm-dev/esm.sh) or mirror specific packages.
 
-**Option 4: Pre-bundle dependencies**
+**Option 4: Pre-bundle on a machine with internet access (Recommended for air-gapped)**
 
-Bundle your function with all dependencies on a machine with internet access, then deploy the bundled code:
+Bundle your functions on a development machine with internet access, then deploy the pre-bundled code to your air-gapped server. The server will skip bundling when it receives pre-bundled code.
+
+**Method A: Use the CLI with Deno installed locally**
+
+The Fluxbase CLI automatically bundles locally when Deno is available:
+
+```bash
+# On machine with internet + Deno installed
+cd your-project/fluxbase/functions
+
+# Sync will bundle locally and send pre-bundled code
+fluxbase functions sync --namespace production
+
+# Output shows local bundling:
+# Bundling my-function... 2.5KB → 156KB
+# Synced functions: 3 created, 0 updated, 0 deleted.
+```
+
+The CLI sends `is_bundled: true` and `original_code` so the server stores both versions (bundled for execution, original for editing in the admin UI).
+
+**Method B: Bundle manually with Deno**
 
 ```bash
 # On machine with internet access
-deno bundle --import-map=import_map.json my-function.ts bundled.ts
+deno bundle my-function.ts bundled.ts
 
-# Deploy the bundled code
-fluxbase functions deploy bundled.ts --name my-function
+# Deploy via API with is_bundled flag
+curl -X POST http://your-server:8080/api/v1/functions \
+  -H "X-Service-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-function",
+    "code": "'"$(cat bundled.ts)"'",
+    "original_code": "'"$(cat my-function.ts)"'",
+    "is_bundled": true,
+    "enabled": true
+  }'
+```
+
+**Method C: Build a deployment pipeline**
+
+For CI/CD pipelines, bundle in a container with internet access:
+
+```yaml
+# GitHub Actions example
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: denoland/setup-deno@v1
+      - name: Bundle and deploy
+        run: |
+          fluxbase functions sync --namespace production
+        env:
+          FLUXBASE_URL: ${{ secrets.FLUXBASE_URL }}
+          FLUXBASE_SERVICE_KEY: ${{ secrets.FLUXBASE_SERVICE_KEY }}
 ```
 
 **Option 5: Avoid npm packages entirely**
