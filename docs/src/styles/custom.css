@@ -468,3 +468,18 @@
 .cta-pulse {
   animation: pulse-ring 2s infinite;
 }
+
+/* Light background for logo in dark mode */
+:root[data-theme='dark'] .site-title img {
+  background: rgba(255, 255, 255, 0.75);
+  padding: 0.5rem;
+  border-radius: 1rem;
+  backdrop-filter: blur(8px);
+}
+
+:root[data-theme='dark'] .hero img {
+  background: rgba(255, 255, 255, 0.75);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  backdrop-filter: blur(8px);
+}

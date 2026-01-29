@@ -55,7 +55,7 @@ export function AppSidebar() {
               <img
                 src='/admin/images/logo-icon.svg'
                 alt='Fluxbase'
-                className='size-8 rounded-lg'
+                className='size-8 rounded-2xl bg-white/80 p-2 backdrop-blur-sm dark:bg-white/80 dark:backdrop-blur-md'
               />
               <div className='grid flex-1 text-start text-sm leading-tight'>
                 <span className='flex items-center gap-2 truncate font-semibold'>
