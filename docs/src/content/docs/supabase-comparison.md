@@ -9,7 +9,7 @@ Fluxbase provides API-compatible alternatives to Supabase's core features in a s
 
 | Feature                | Fluxbase                      | Supabase                 | Firebase            |
 | ---------------------- | ----------------------------- | ------------------------ | ------------------- |
-| **Deployment**         | 1 binary / 1 container        | ~13 containers (~2.5GB)  | Cloud only          |
+| **Deployment**         | 1 binary / 1 container        | ~13 containers           | Cloud only          |
 | **Dependencies**       | PostgreSQL only               | PostgreSQL + 5+ services | Proprietary         |
 | **Self-hosting**       | ✅ Easy                       | ⚠️ Complex               | ❌ No               |
 | **REST API**           | ✅ Built-in                   | ✅ PostgREST             | ✅ Auto-generated   |
