@@ -111,6 +111,18 @@ auth:
 | `allow_dashboard_login` | Allow for admin dashboard SSO | false |
 | `allow_app_login` | Allow for app user authentication | true |
 
+### Via Admin Dashboard
+
+You can also configure OAuth providers through the admin UI at **Authentication → OAuth Providers**:
+
+![Add OAuth Provider in Admin Dashboard](../../assets/screenshot-add-oauth-provider.png)
+
+The admin dashboard supports:
+- Auto-discovery from OpenID Discovery URLs
+- Manual endpoint configuration for non-standard providers
+- Provider testing before enabling
+- Real-time validation of client credentials
+
 ### Environment Variables
 
 For deployment, use environment variables with the pattern `FLUXBASE_AUTH_OAUTH_PROVIDERS_*`:
