@@ -245,17 +245,17 @@ For Go applications, import the client directly - it compiles into your binary w
 import "github.com/fluxbase-eu/fluxbase/pkg/client"
 ```
 
-### Edge Functions with npm Packages
+### Edge Functions with External Packages
 
 :::caution[Edge Function Dependencies]
-If your edge functions use `npm:` specifiers, the **server** needs internet access during bundling to download packages from npmjs.org. This is the only runtime internet dependency.
+If your edge functions use `npm:` or `jsr:` specifiers, the **server** needs internet access during bundling to download packages. This is the only runtime internet dependency.
 :::
 
 For fully air-gapped edge functions:
 
-1. **Configure a server-wide npm registry** - Set `FLUXBASE_FUNCTIONS_NPM_REGISTRY` to your private registry URL
+1. **Configure server-wide registries** - Set `FLUXBASE_DENO_NPM_REGISTRY` and/or `FLUXBASE_DENO_JSR_REGISTRY`
 2. **Use a `deno.json` with private registry** - Per-function configuration via `npmRegistry` setting
 3. **Pre-bundle on a connected machine** - Bundle dependencies before deploying to the air-gapped server
-4. **Avoid npm packages** - Use Deno's standard library and web APIs instead
+4. **Avoid external packages** - Use Deno's standard library and web APIs instead
 
 See the [Edge Functions Air-Gapped Guide](/guides/edge-functions/#air-gapped--private-registry-environments) for detailed instructions.

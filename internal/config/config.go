@@ -26,6 +26,7 @@ type Config struct {
 	API           APIConfig        `mapstructure:"api"`
 	Migrations    MigrationsConfig `mapstructure:"migrations"`
 	Jobs          JobsConfig       `mapstructure:"jobs"`
+	Deno          DenoConfig       `mapstructure:"deno"`
 	Tracing       TracingConfig    `mapstructure:"tracing"`
 	Metrics       MetricsConfig    `mapstructure:"metrics"`
 	AI            AIConfig         `mapstructure:"ai"`
@@ -49,6 +50,12 @@ type Config struct {
 // AdminConfig contains admin dashboard settings
 type AdminConfig struct {
 	Enabled bool `mapstructure:"enabled"` // Enable admin dashboard UI (React app). API routes are always available when setup_token is set.
+}
+
+// DenoConfig contains Deno runtime settings for edge functions and background jobs
+type DenoConfig struct {
+	NpmRegistry string `mapstructure:"npm_registry"` // Custom npm registry URL (e.g., https://npm.your-company.com/)
+	JsrRegistry string `mapstructure:"jsr_registry"` // Custom JSR registry URL (e.g., https://jsr.your-company.com/)
 }
 
 // ScalingConfig contains horizontal scaling settings for multi-instance deployments
@@ -381,7 +388,6 @@ type FunctionsConfig struct {
 	MaxMemoryLimit      int      `mapstructure:"max_memory_limit"`       // MB
 	MaxOutputSize       int      `mapstructure:"max_output_size"`        // Max output size in bytes (0 = unlimited, default: 10MB)
 	SyncAllowedIPRanges []string `mapstructure:"sync_allowed_ip_ranges"` // IP CIDR ranges allowed to sync functions
-	NpmRegistry         string   `mapstructure:"npm_registry"`           // Custom npm registry URL for Deno bundling (e.g., https://npm.your-company.com/)
 }
 
 // APIConfig contains REST API settings

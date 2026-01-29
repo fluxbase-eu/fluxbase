@@ -68,6 +68,7 @@ type Bundler struct {
 	globalDenoConfig    string // Path to global deno.json
 	globalDenoConfigDev string // Path to global deno.dev.json
 	npmRegistry         string // Custom npm registry URL (e.g., https://npm.your-company.com/)
+	jsrRegistry         string // Custom JSR registry URL (e.g., https://jsr.your-company.com/)
 }
 
 // BundlerOption is a functional option for configuring the Bundler
@@ -77,6 +78,13 @@ type BundlerOption func(*Bundler)
 func WithNpmRegistry(url string) BundlerOption {
 	return func(b *Bundler) {
 		b.npmRegistry = url
+	}
+}
+
+// WithJsrRegistry sets a custom JSR registry URL for Deno bundling
+func WithJsrRegistry(url string) BundlerOption {
+	return func(b *Bundler) {
+		b.jsrRegistry = url
 	}
 }
 
@@ -242,8 +250,8 @@ func (b *Bundler) Bundle(ctx context.Context, code string) (*BundleResult, error
 	cmd := exec.CommandContext(bundleCtx, b.denoPath, args...)
 
 	// Build environment for Deno, ensuring DENO_DIR and HOME are set correctly
-	// Filter out existing DENO_DIR/HOME/NPM_CONFIG_REGISTRY and add them explicitly at the end
-	cmd.Env = filterEnvVars(os.Environ(), "DENO_DIR", "HOME", "NPM_CONFIG_REGISTRY")
+	// Filter out existing env vars we'll set explicitly
+	cmd.Env = filterEnvVars(os.Environ(), "DENO_DIR", "HOME", "NPM_CONFIG_REGISTRY", "DENO_JSR_URL")
 	denoDir := os.Getenv("DENO_DIR")
 	if denoDir == "" {
 		denoDir = "/tmp/deno"
@@ -258,6 +266,12 @@ func (b *Bundler) Bundle(ctx context.Context, code string) (*BundleResult, error
 	if b.npmRegistry != "" {
 		cmd.Env = append(cmd.Env, "NPM_CONFIG_REGISTRY="+b.npmRegistry)
 		log.Debug().Str("registry", b.npmRegistry).Msg("Using custom npm registry for bundling")
+	}
+
+	// Set custom JSR registry if configured
+	if b.jsrRegistry != "" {
+		cmd.Env = append(cmd.Env, "DENO_JSR_URL="+b.jsrRegistry)
+		log.Debug().Str("registry", b.jsrRegistry).Msg("Using custom JSR registry for bundling")
 	}
 
 	// Capture stdout and stderr
@@ -535,8 +549,8 @@ func (b *Bundler) BundleWithFiles(ctx context.Context, mainCode string, supporti
 	cmd.Dir = tmpDir
 
 	// Build environment for Deno, ensuring DENO_DIR and HOME are set correctly
-	// Filter out existing DENO_DIR/HOME/NPM_CONFIG_REGISTRY and add them explicitly at the end
-	cmd.Env = filterEnvVars(os.Environ(), "DENO_DIR", "HOME", "NPM_CONFIG_REGISTRY")
+	// Filter out existing env vars we'll set explicitly
+	cmd.Env = filterEnvVars(os.Environ(), "DENO_DIR", "HOME", "NPM_CONFIG_REGISTRY", "DENO_JSR_URL")
 	denoDir := os.Getenv("DENO_DIR")
 	if denoDir == "" {
 		denoDir = "/tmp/deno"
@@ -551,6 +565,12 @@ func (b *Bundler) BundleWithFiles(ctx context.Context, mainCode string, supporti
 	if b.npmRegistry != "" {
 		cmd.Env = append(cmd.Env, "NPM_CONFIG_REGISTRY="+b.npmRegistry)
 		log.Debug().Str("registry", b.npmRegistry).Msg("Using custom npm registry for multi-file bundling")
+	}
+
+	// Set custom JSR registry if configured
+	if b.jsrRegistry != "" {
+		cmd.Env = append(cmd.Env, "DENO_JSR_URL="+b.jsrRegistry)
+		log.Debug().Str("registry", b.jsrRegistry).Msg("Using custom JSR registry for multi-file bundling")
 	}
 
 	// Capture stdout and stderr

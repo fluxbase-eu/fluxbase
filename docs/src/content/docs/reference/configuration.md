@@ -322,9 +322,17 @@ Environment variables take precedence over configuration file values.
 | `FLUXBASE_FUNCTIONS_DEFAULT_MEMORY_LIMIT` | Default memory limit (MB) | `128` | `128` |
 | `FLUXBASE_FUNCTIONS_MAX_MEMORY_LIMIT` | Maximum memory limit (MB) | `1024` | `1024` |
 | `FLUXBASE_FUNCTIONS_MAX_OUTPUT_SIZE` | Maximum output size (bytes, 0=unlimited) | `10485760` | `10485760` |
-| `FLUXBASE_FUNCTIONS_NPM_REGISTRY` | Custom npm registry URL for Deno bundling | `""` | `https://npm.your-company.com/` |
 
-**Air-Gapped Environments:** Set `FLUXBASE_FUNCTIONS_NPM_REGISTRY` to your private npm registry URL for environments without internet access. See [Edge Functions Air-Gapped Guide](/guides/edge-functions/#air-gapped--private-registry-environments).
+### Deno Runtime
+
+Global settings for the Deno runtime used by edge functions and background jobs.
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `FLUXBASE_DENO_NPM_REGISTRY` | Custom npm registry URL for `npm:` specifiers | `""` | `https://npm.your-company.com/` |
+| `FLUXBASE_DENO_JSR_REGISTRY` | Custom JSR registry URL for `jsr:` specifiers | `""` | `https://jsr.your-company.com/` |
+
+**Air-Gapped Environments:** Set these to your private registry URLs for environments without internet access. See [Edge Functions Air-Gapped Guide](/guides/edge-functions/#air-gapped--private-registry-environments).
 
 ### RPC (Remote Procedures)
 

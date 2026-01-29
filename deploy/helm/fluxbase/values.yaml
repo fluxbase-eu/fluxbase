@@ -412,7 +412,6 @@ config:
   ## @param config.functions.default_memory_limit Default memory limit (MB)
   ## @param config.functions.max_memory_limit Maximum memory limit (MB)
   ## @param config.functions.sync_allowed_ip_ranges IP ranges allowed for function sync
-  ## @param config.functions.npm_registry Custom npm registry URL for Deno bundling (air-gapped environments)
   ##
   functions:
     enabled: true
@@ -423,7 +422,14 @@ config:
     default_memory_limit: 128
     max_memory_limit: 1024
     sync_allowed_ip_ranges: []
-    npm_registry: ""  # e.g., "https://npm.your-company.com/" for air-gapped environments
+
+  ## Deno Runtime configuration (for edge functions and background jobs)
+  ## @param config.deno.npm_registry Custom npm registry URL (air-gapped environments)
+  ## @param config.deno.jsr_registry Custom JSR registry URL (air-gapped environments)
+  ##
+  deno:
+    npm_registry: ""  # e.g., "https://npm.your-company.com/"
+    jsr_registry: ""  # e.g., "https://jsr.your-company.com/"
 
   ## Background Jobs configuration
   ## @param config.jobs.enabled Enable background jobs

@@ -37,11 +37,12 @@ type Handler struct {
 	corsConfig             config.CORSConfig
 	publicURL              string
 	npmRegistry            string   // Custom npm registry URL for Deno bundling
+	jsrRegistry            string   // Custom JSR registry URL for Deno bundling
 	logCounters            sync.Map // map[uuid.UUID]*int for tracking log line numbers per execution
 }
 
 // NewHandler creates a new edge functions handler
-func NewHandler(db *database.Connection, functionsDir string, corsConfig config.CORSConfig, jwtSecret, publicURL, npmRegistry string, authService *auth.Service, loggingService *logging.Service, secretsStorage *secrets.Storage) *Handler {
+func NewHandler(db *database.Connection, functionsDir string, corsConfig config.CORSConfig, jwtSecret, publicURL, npmRegistry, jsrRegistry string, authService *auth.Service, loggingService *logging.Service, secretsStorage *secrets.Storage) *Handler {
 	h := &Handler{
 		storage:        NewStorage(db),
 		runtime:        runtime.NewRuntime(runtime.RuntimeTypeFunction, jwtSecret, publicURL),
@@ -52,6 +53,7 @@ func NewHandler(db *database.Connection, functionsDir string, corsConfig config.
 		corsConfig:     corsConfig,
 		publicURL:      publicURL,
 		npmRegistry:    npmRegistry,
+		jsrRegistry:    jsrRegistry,
 	}
 
 	// Set up log callback to capture console.log output
@@ -80,11 +82,14 @@ func (h *Handler) GetPublicURL() string {
 	return h.publicURL
 }
 
-// createBundler creates a new bundler with the handler's npm registry configuration
+// createBundler creates a new bundler with the handler's registry configuration
 func (h *Handler) createBundler() (*Bundler, error) {
 	var opts []BundlerOption
 	if h.npmRegistry != "" {
 		opts = append(opts, WithNpmRegistry(h.npmRegistry))
+	}
+	if h.jsrRegistry != "" {
+		opts = append(opts, WithJsrRegistry(h.jsrRegistry))
 	}
 	return NewBundler(opts...)
 }

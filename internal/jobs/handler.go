@@ -230,10 +230,10 @@ func roleSatisfiesRequirements(userRole string, requiredRoles []string) bool {
 }
 
 // NewHandler creates a new jobs handler
-// npmRegistry is optional - if provided, it configures a custom npm registry for Deno bundling
-func NewHandler(db *database.Connection, cfg *config.JobsConfig, manager *Manager, authService *auth.Service, loggingService *logging.Service, npmRegistry string) (*Handler, error) {
+// npmRegistry and jsrRegistry are optional - if provided, they configure custom registries for Deno bundling
+func NewHandler(db *database.Connection, cfg *config.JobsConfig, manager *Manager, authService *auth.Service, loggingService *logging.Service, npmRegistry, jsrRegistry string) (*Handler, error) {
 	storage := NewStorage(db)
-	loader, err := NewLoader(storage, cfg, npmRegistry)
+	loader, err := NewLoader(storage, cfg, npmRegistry, jsrRegistry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create loader: %w", err)
 	}

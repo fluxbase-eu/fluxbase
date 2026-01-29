@@ -377,44 +377,52 @@ Common bundling errors:
 
 ### Air-Gapped / Private Registry Environments
 
-By default, Deno downloads npm packages from `registry.npmjs.org`. For air-gapped environments or private registries, you have several options:
+By default, Deno downloads packages from public registries:
+- **npm packages** (`npm:zod`) from `registry.npmjs.org`
+- **JSR packages** (`jsr:@std/path`) from `jsr.io`
+
+For air-gapped environments or private registries, you have several options:
 
 :::caution[Internet Dependency]
-When using `npm:` specifiers, the Fluxbase server requires internet access to download packages during bundling. This is the only point where Fluxbase requires internet access at runtime.
+When using `npm:` or `jsr:` specifiers, the Fluxbase server requires internet access to download packages during bundling. This is the only point where Fluxbase requires internet access at runtime.
 :::
 
-**Option 1: Configure a server-wide npm registry (Recommended)**
+**Option 1: Configure server-wide registries (Recommended)**
 
-Set a custom npm registry for all edge functions and jobs at the server level:
+Set custom npm and/or JSR registries for all edge functions and jobs at the server level:
 
 ```yaml
 # fluxbase.yaml
-functions:
+deno:
   npm_registry: "https://npm.your-company.com/"
+  jsr_registry: "https://jsr.your-company.com/"
 ```
 
-Or via environment variable:
+Or via environment variables:
 
 ```bash
-FLUXBASE_FUNCTIONS_NPM_REGISTRY=https://npm.your-company.com/
+FLUXBASE_DENO_NPM_REGISTRY=https://npm.your-company.com/
+FLUXBASE_DENO_JSR_REGISTRY=https://jsr.your-company.com/
 ```
 
 Or in Docker Compose:
 
 ```yaml
 environment:
-  FLUXBASE_FUNCTIONS_NPM_REGISTRY: "https://npm.your-company.com/"
+  FLUXBASE_DENO_NPM_REGISTRY: "https://npm.your-company.com/"
+  FLUXBASE_DENO_JSR_REGISTRY: "https://jsr.your-company.com/"
 ```
 
 Or in Helm values:
 
 ```yaml
 config:
-  functions:
+  deno:
     npm_registry: "https://npm.your-company.com/"
+    jsr_registry: "https://jsr.your-company.com/"
 ```
 
-This applies to all functions and jobs using `npm:` specifiers.
+This applies to all edge functions and background jobs using `npm:` or `jsr:` specifiers.
 
 **Option 2: Use a `deno.json` per function (overrides server config)**
 
