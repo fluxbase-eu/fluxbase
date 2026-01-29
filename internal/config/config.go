@@ -381,6 +381,7 @@ type FunctionsConfig struct {
 	MaxMemoryLimit      int      `mapstructure:"max_memory_limit"`       // MB
 	MaxOutputSize       int      `mapstructure:"max_output_size"`        // Max output size in bytes (0 = unlimited, default: 10MB)
 	SyncAllowedIPRanges []string `mapstructure:"sync_allowed_ip_ranges"` // IP CIDR ranges allowed to sync functions
+	NpmRegistry         string   `mapstructure:"npm_registry"`           // Custom npm registry URL for Deno bundling (e.g., https://npm.your-company.com/)
 }
 
 // APIConfig contains REST API settings

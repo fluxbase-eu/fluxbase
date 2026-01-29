@@ -606,6 +606,10 @@ spec:
               value: {{ .Values.config.functions.default_memory_limit | quote }}
             - name: FLUXBASE_FUNCTIONS_MAX_MEMORY_LIMIT
               value: {{ .Values.config.functions.max_memory_limit | quote }}
+            {{- if .Values.config.functions.npm_registry }}
+            - name: FLUXBASE_FUNCTIONS_NPM_REGISTRY
+              value: {{ .Values.config.functions.npm_registry | quote }}
+            {{- end }}
 
             # ===========================================
             # Jobs Configuration

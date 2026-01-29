@@ -253,8 +253,9 @@ If your edge functions use `npm:` specifiers, the **server** needs internet acce
 
 For fully air-gapped edge functions:
 
-1. **Use a `deno.json` with private registry** - Configure `npmRegistry` to point to your internal registry
-2. **Pre-bundle on a connected machine** - Bundle dependencies before deploying to the air-gapped server
-3. **Avoid npm packages** - Use Deno's standard library and web APIs instead
+1. **Configure a server-wide npm registry** - Set `FLUXBASE_FUNCTIONS_NPM_REGISTRY` to your private registry URL
+2. **Use a `deno.json` with private registry** - Per-function configuration via `npmRegistry` setting
+3. **Pre-bundle on a connected machine** - Bundle dependencies before deploying to the air-gapped server
+4. **Avoid npm packages** - Use Deno's standard library and web APIs instead
 
 See the [Edge Functions Air-Gapped Guide](/guides/edge-functions/#air-gapped--private-registry-environments) for detailed instructions.

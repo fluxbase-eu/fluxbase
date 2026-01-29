@@ -36,11 +36,12 @@ type Handler struct {
 	functionsDir           string
 	corsConfig             config.CORSConfig
 	publicURL              string
+	npmRegistry            string   // Custom npm registry URL for Deno bundling
 	logCounters            sync.Map // map[uuid.UUID]*int for tracking log line numbers per execution
 }
 
 // NewHandler creates a new edge functions handler
-func NewHandler(db *database.Connection, functionsDir string, corsConfig config.CORSConfig, jwtSecret, publicURL string, authService *auth.Service, loggingService *logging.Service, secretsStorage *secrets.Storage) *Handler {
+func NewHandler(db *database.Connection, functionsDir string, corsConfig config.CORSConfig, jwtSecret, publicURL, npmRegistry string, authService *auth.Service, loggingService *logging.Service, secretsStorage *secrets.Storage) *Handler {
 	h := &Handler{
 		storage:        NewStorage(db),
 		runtime:        runtime.NewRuntime(runtime.RuntimeTypeFunction, jwtSecret, publicURL),
@@ -50,6 +51,7 @@ func NewHandler(db *database.Connection, functionsDir string, corsConfig config.
 		functionsDir:   functionsDir,
 		corsConfig:     corsConfig,
 		publicURL:      publicURL,
+		npmRegistry:    npmRegistry,
 	}
 
 	// Set up log callback to capture console.log output
@@ -76,6 +78,15 @@ func (h *Handler) GetRuntime() *runtime.DenoRuntime {
 // GetPublicURL returns the public URL configured for this handler
 func (h *Handler) GetPublicURL() string {
 	return h.publicURL
+}
+
+// createBundler creates a new bundler with the handler's npm registry configuration
+func (h *Handler) createBundler() (*Bundler, error) {
+	var opts []BundlerOption
+	if h.npmRegistry != "" {
+		opts = append(opts, WithNpmRegistry(h.npmRegistry))
+	}
+	return NewBundler(opts...)
 }
 
 // GetFunctionsDir returns the functions directory path
@@ -428,7 +439,7 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 	}
 
 	// Bundle function code if it has imports
-	bundler, err := NewBundler()
+	bundler, err := h.createBundler()
 	bundledCode := req.Code
 	originalCode := &req.Code
 	isBundled := false
@@ -635,7 +646,7 @@ func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
 
 	// If code is being updated, re-bundle with shared modules
 	if codeUpdate, ok := updates["code"].(string); ok && codeUpdate != "" {
-		bundler, err := NewBundler()
+		bundler, err := h.createBundler()
 		if err == nil {
 			// Check if code imports from _shared/ modules
 			hasSharedImports := strings.Contains(codeUpdate, "from \"_shared/") ||
@@ -1174,7 +1185,7 @@ func (h *Handler) bundleFunctionFromFilesystem(ctx context.Context, functionName
 	}
 
 	// Create bundler
-	bundler, bundlerErr := NewBundler()
+	bundler, bundlerErr := h.createBundler()
 	if bundlerErr != nil {
 		// No bundler available - return unbundled code
 		return mainCode, mainCode, false, nil, nil
@@ -1499,7 +1510,7 @@ func (h *Handler) SyncFunctions(c *fiber.Ctx) error {
 			spec := req.Functions[i]
 
 			// Bundle the function code
-			bundler, err := NewBundler()
+			bundler, err := h.createBundler()
 			if err != nil {
 				resultsChan <- bundleResult{
 					Name: spec.Name,

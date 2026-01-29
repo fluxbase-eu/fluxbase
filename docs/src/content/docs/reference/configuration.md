@@ -310,6 +310,22 @@ Environment variables take precedence over configuration file values.
 | `FLUXBASE_AI_OLLAMA_ENDPOINT` | Ollama endpoint | `""` | `http://localhost:11434` |
 | `FLUXBASE_AI_OLLAMA_MODEL` | Ollama model name | `""` | `llama2`, `mistral` |
 
+### Edge Functions
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `FLUXBASE_FUNCTIONS_ENABLED` | Enable edge functions | `true` | `true`, `false` |
+| `FLUXBASE_FUNCTIONS_FUNCTIONS_DIR` | Directory for function files | `./functions` | `./functions` |
+| `FLUXBASE_FUNCTIONS_AUTO_LOAD_ON_BOOT` | Load functions from filesystem at boot | `true` | `true`, `false` |
+| `FLUXBASE_FUNCTIONS_DEFAULT_TIMEOUT` | Default function timeout (seconds) | `30` | `30` |
+| `FLUXBASE_FUNCTIONS_MAX_TIMEOUT` | Maximum function timeout (seconds) | `300` | `300` |
+| `FLUXBASE_FUNCTIONS_DEFAULT_MEMORY_LIMIT` | Default memory limit (MB) | `128` | `128` |
+| `FLUXBASE_FUNCTIONS_MAX_MEMORY_LIMIT` | Maximum memory limit (MB) | `1024` | `1024` |
+| `FLUXBASE_FUNCTIONS_MAX_OUTPUT_SIZE` | Maximum output size (bytes, 0=unlimited) | `10485760` | `10485760` |
+| `FLUXBASE_FUNCTIONS_NPM_REGISTRY` | Custom npm registry URL for Deno bundling | `""` | `https://npm.your-company.com/` |
+
+**Air-Gapped Environments:** Set `FLUXBASE_FUNCTIONS_NPM_REGISTRY` to your private npm registry URL for environments without internet access. See [Edge Functions Air-Gapped Guide](/guides/edge-functions/#air-gapped--private-registry-environments).
+
 ### RPC (Remote Procedures)
 
 | Variable | Description | Default | Example |

@@ -44,6 +44,10 @@ services:
 
       # Enable features
       FLUXBASE_ADMIN_ENABLED: "true"
+
+      # Edge Functions / Jobs (optional)
+      # FLUXBASE_FUNCTIONS_ENABLED: "true"
+      # FLUXBASE_FUNCTIONS_NPM_REGISTRY: "https://npm.your-company.com/"  # Custom npm registry for air-gapped environments
     volumes:
       - storage_data:/app/storage
     depends_on:

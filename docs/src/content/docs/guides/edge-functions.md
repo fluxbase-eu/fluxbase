@@ -380,10 +380,43 @@ Common bundling errors:
 By default, Deno downloads npm packages from `registry.npmjs.org`. For air-gapped environments or private registries, you have several options:
 
 :::caution[Internet Dependency]
-When using `npm:` specifiers, the Fluxbase server requires internet access to download packages during bundling. This is currently the only point where Fluxbase requires internet access at runtime.
+When using `npm:` specifiers, the Fluxbase server requires internet access to download packages during bundling. This is the only point where Fluxbase requires internet access at runtime.
 :::
 
-**Option 1: Use a `deno.json` with custom npm registry**
+**Option 1: Configure a server-wide npm registry (Recommended)**
+
+Set a custom npm registry for all edge functions and jobs at the server level:
+
+```yaml
+# fluxbase.yaml
+functions:
+  npm_registry: "https://npm.your-company.com/"
+```
+
+Or via environment variable:
+
+```bash
+FLUXBASE_FUNCTIONS_NPM_REGISTRY=https://npm.your-company.com/
+```
+
+Or in Docker Compose:
+
+```yaml
+environment:
+  FLUXBASE_FUNCTIONS_NPM_REGISTRY: "https://npm.your-company.com/"
+```
+
+Or in Helm values:
+
+```yaml
+config:
+  functions:
+    npm_registry: "https://npm.your-company.com/"
+```
+
+This applies to all functions and jobs using `npm:` specifiers.
+
+**Option 2: Use a `deno.json` per function (overrides server config)**
 
 Create a `deno.json` file in your function directory to configure a private npm registry:
 
@@ -406,7 +439,7 @@ Or with authentication:
 
 Then your functions can use `npm:` specifiers as normal - Deno will fetch from your private registry.
 
-**Option 2: Use URL imports instead of npm specifiers**
+**Option 3: Use URL imports instead of npm specifiers**
 
 Import directly from ESM CDNs you control or mirror:
 
@@ -420,7 +453,7 @@ import { z } from "https://esm.sh/zod@3.22.4";
 
 You can self-host [esm.sh](https://github.com/esm-dev/esm.sh) or mirror specific packages.
 
-**Option 3: Pre-bundle dependencies**
+**Option 4: Pre-bundle dependencies**
 
 Bundle your function with all dependencies on a machine with internet access, then deploy the bundled code:
 
@@ -432,7 +465,7 @@ deno bundle --import-map=import_map.json my-function.ts bundled.ts
 fluxbase functions deploy bundled.ts --name my-function
 ```
 
-**Option 4: Avoid npm packages entirely**
+**Option 5: Avoid npm packages entirely**
 
 Use Deno's standard library and web APIs, which don't require network access:
 
@@ -443,8 +476,6 @@ import { crypto } from "https://deno.land/std@0.200.0/crypto/mod.ts";
 // Or rely on built-in web APIs
 const hash = await crypto.subtle.digest("SHA-256", data);
 ```
-
-**Note:** Server-level npm registry configuration (`FLUXBASE_NPM_REGISTRY`) is not currently supported but is planned for a future release.
 
 ## Shared Modules
 
