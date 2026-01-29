@@ -2,6 +2,9 @@
 title: Fluxbase
 description: Lightweight Backend-as-a-Service Alternative to Supabase
 template: splash
+head:
+  - tag: title
+    content: Fluxbase - Lightweight Backend-as-a-Service
 hero:
   tagline: A lightweight, self-hosted Backend-as-a-Service with PostgreSQL, real-time subscriptions, authentication, storage, and edge functions.
   image:
@@ -16,76 +19,223 @@ hero:
       icon: external
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+<div class="tech-badges">
+  <span class="tech-badge">Go</span>
+  <span class="tech-badge">PostgreSQL</span>
+  <span class="tech-badge">Deno Runtime</span>
+  <span class="tech-badge">TypeScript SDK</span>
+  <span class="tech-badge">React Hooks</span>
+  <span class="tech-badge">Single Binary</span>
+</div>
 
 :::caution[Beta Software]
 Fluxbase is currently in beta. While the core features are stable, you may encounter breaking changes between versions. We welcome feedback and contributions!
 :::
 
-## Features
+<div class="section-divider"></div>
 
-<CardGrid stagger>
-  <Card title="PostgreSQL Database" icon="database">
-    Full PostgreSQL with PostgREST-compatible API, row-level security, and
-    real-time subscriptions.
-  </Card>
-  <Card title="Authentication" icon="user">
-    Built-in auth with JWT tokens, OAuth providers, 2FA support, and user
+## Core Features
+
+<div class="features-grid-enhanced">
+  <div class="feature-card-enhanced">
+    <div class="icon-wrapper">🗄️</div>
+    <h3>PostgreSQL Database</h3>
+    <p>Full PostgreSQL with PostgREST-compatible API, row-level security, and automatic migrations.</p>
+  </div>
+
+<div class="feature-card-enhanced">
+  <div class="icon-wrapper">🔐</div>
+  <h3>Authentication</h3>
+  <p>
+    JWT tokens, OAuth/OIDC, SAML SSO, magic links, 2FA, and complete user
     management.
-  </Card>
-  <Card title="Edge Functions" icon="lightning">
-    Deploy serverless JavaScript/TypeScript functions with Deno runtime.
-  </Card>
-  <Card title="Storage" icon="folder">
-    S3-compatible object storage with signed URLs, resumable uploads, and access
+  </p>
+</div>
+
+<div class="feature-card-enhanced">
+  <div class="icon-wrapper">⚡</div>
+  <h3>Edge Functions</h3>
+  <p>
+    Deploy serverless TypeScript/JavaScript functions with Deno runtime and cron
+    scheduling.
+  </p>
+</div>
+
+<div class="feature-card-enhanced">
+  <div class="icon-wrapper">📁</div>
+  <h3>File Storage</h3>
+  <p>
+    S3-compatible storage with signed URLs, image transforms, and access
     policies.
-  </Card>
-  <Card title="Real-time" icon="refresh">
-    WebSocket-based real-time subscriptions for database changes, broadcasts,
-    and presence.
-  </Card>
-  <Card title="Background Jobs" icon="hourglass">
-    Scheduled and queued background jobs with retry logic and monitoring.
-  </Card>
-  <Card title="AI Chatbots" icon="star">
-    Build natural language interfaces to your database with streaming AI responses
-    and custom chatbots.
-  </Card>
-  <Card title="Vector Search" icon="magnifier">
-    pgvector-powered semantic search with automatic embeddings and similarity
-    queries.
-  </Card>
-  <Card title="Self-Hosted" icon="server">
-    Single binary deployment with Docker support. Own your data.
-  </Card>
-</CardGrid>
+  </p>
+</div>
+
+<div class="feature-card-enhanced">
+  <div class="icon-wrapper">🔄</div>
+  <h3>Real-time</h3>
+  <p>WebSocket subscriptions for database changes with RLS-aware filtering.</p>
+</div>
+
+<div class="feature-card-enhanced">
+  <div class="icon-wrapper">⏱️</div>
+  <h3>Background Jobs</h3>
+  <p>
+    Scheduled and queued jobs with progress tracking, retries, and worker pools.
+  </p>
+</div>
+
+<div class="feature-card-enhanced">
+  <div class="icon-wrapper">🤖</div>
+  <h3>AI Chatbots</h3>
+  <p>
+    Natural language interfaces to your database with streaming AI responses.
+  </p>
+</div>
+
+<div class="feature-card-enhanced">
+  <div class="icon-wrapper">🔍</div>
+  <h3>Vector Search</h3>
+  <p>pgvector-powered semantic search with automatic embeddings.</p>
+</div>
+
+  <div class="feature-card-enhanced">
+    <div class="icon-wrapper">🏠</div>
+    <h3>Self-Hosted</h3>
+    <p>Single binary deployment. No vendor lock-in. Own your data.</p>
+  </div>
+</div>
+
+<div class="section-divider"></div>
 
 ## Quick Start
 
-```bash
-# Pull and run with Docker
-docker run -p 8080:8080 ghcr.io/fluxbase-eu/fluxbase:latest
+<ol class="quick-start-steps">
+<li>
 
-# Or use Docker Compose for production
-curl -O https://raw.githubusercontent.com/fluxbase-eu/fluxbase/main/docker-compose.yml
-docker compose up -d
+**Clone and generate secrets**
+
+```bash
+git clone https://github.com/fluxbase-eu/fluxbase.git
+cd fluxbase/deploy
+./generate-keys.sh  # Select option 1 (Docker Compose)
 ```
 
-Then connect with the TypeScript SDK:
+Save the **Setup Token** displayed - you'll need it for admin access.
+
+</li>
+<li>
+
+**Start Fluxbase**
+
+```bash
+docker compose -f docker-compose.minimal.yaml up -d
+```
+
+Then open [localhost:8080/admin/setup](http://localhost:8080/admin/setup), enter your setup token, and create your admin account.
+
+</li>
+<li>
+
+**Install the SDK and connect**
+
+```bash
+npm install @fluxbase/sdk
+```
 
 ```typescript
 import { createClient } from "@fluxbase/sdk";
 
-const client = createClient("http://localhost:8080", "your-api-key");
+// Get your API key from the admin dashboard → Client Keys
+const client = createClient("http://localhost:8080", "your-anon-key");
 
 // Query data
-const { data, error } = await client.from("posts").select("*");
+const { data } = await client
+  .from("posts")
+  .select("id, title, author:users(name)")
+  .eq("published", true);
+```
 
-// Subscribe to changes
-client
-  .channel("posts")
-  .on("postgres_changes", { event: "*", table: "posts" }, (payload) => {
-    console.log("Change:", payload);
+</li>
+<li>
+
+**Subscribe to real-time changes**
+
+```typescript
+client.realtime
+  .channel("table:public.posts")
+  .on("INSERT", (payload) => {
+    console.log("New post:", payload.new_record);
   })
   .subscribe();
 ```
+
+</li>
+</ol>
+
+For detailed setup instructions, see the [Quick Start Guide](/getting-started/quick-start/).
+
+<div class="section-divider"></div>
+
+## Why Fluxbase?
+
+<div class="comparison-highlight">
+
+### Supabase Alternative
+
+Fluxbase provides a similar developer experience to Supabase but runs as a **single binary** with **no external dependencies** besides PostgreSQL. Perfect for:
+
+- **Self-hosting** on your own infrastructure
+- **Air-gapped environments** with offline operation
+- **Edge deployments** where simplicity matters
+- **Cost-conscious** teams who want to avoid vendor lock-in
+
+[Compare with Supabase →](/supabase-comparison/)
+
+</div>
+
+<div class="section-divider"></div>
+
+## Admin Dashboard
+
+Manage your backend with a powerful built-in admin UI featuring database browsing, user management, real-time monitoring, and more.
+
+![Fluxbase Admin Dashboard](../../assets/screenshot-dashboard.png)
+
+<div class="section-divider"></div>
+
+## Explore the Docs
+
+<CardGrid>
+  <LinkCard
+    title="Introduction"
+    href="/intro/"
+    description="Learn what Fluxbase is and why it exists"
+  />
+  <LinkCard
+    title="Authentication"
+    href="/guides/authentication/"
+    description="Set up JWT, OAuth, and user management"
+  />
+  <LinkCard
+    title="Database Guide"
+    href="/guides/row-level-security/"
+    description="Row-level security and data access"
+  />
+  <LinkCard
+    title="Edge Functions"
+    href="/guides/edge-functions/"
+    description="Deploy serverless TypeScript functions"
+  />
+  <LinkCard
+    title="Real-time"
+    href="/guides/realtime/"
+    description="WebSocket subscriptions for live updates"
+  />
+  <LinkCard
+    title="Storage"
+    href="/guides/storage/"
+    description="File uploads and S3-compatible storage"
+  />
+</CardGrid>

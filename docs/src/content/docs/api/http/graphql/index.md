@@ -276,7 +276,7 @@ fluxbase graphql introspect
 fluxbase graphql introspect --types
 ```
 
-See the [CLI Command Reference](/docs/cli/commands#graphql-commands) for complete documentation.
+See the [CLI Command Reference](/cli/commands#graphql-commands) for complete documentation.
 
 ---
 

@@ -444,6 +444,6 @@ Fluxbase implements several security measures to protect against abuse:
 
 ## Next Steps
 
-- [Storage Guide](/docs/guides/storage) - Storage bucket management
-- [Row-Level Security](/docs/guides/row-level-security) - Secure file access
-- [Edge Functions](/docs/guides/edge-functions) - Custom processing logic
+- [Storage Guide](/guides/storage) - Storage bucket management
+- [Row-Level Security](/guides/row-level-security) - Secure file access
+- [Edge Functions](/guides/edge-functions) - Custom processing logic

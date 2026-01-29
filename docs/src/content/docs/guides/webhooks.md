@@ -563,6 +563,6 @@ const deliveries = await client.webhooks.getDeliveries(webhookId, { limit: 100 }
 
 ## Learn More
 
-- [Authentication](/docs/guides/authentication) - Authenticate to manage webhooks
-- [Row Level Security](/docs/guides/row-level-security) - Secure your data
-- [Realtime](/docs/guides/realtime) - Alternative to webhooks for client apps
+- [Authentication](/guides/authentication) - Authenticate to manage webhooks
+- [Row Level Security](/guides/row-level-security) - Secure your data
+- [Realtime](/guides/realtime) - Alternative to webhooks for client apps

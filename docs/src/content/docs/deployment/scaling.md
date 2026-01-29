@@ -84,7 +84,7 @@ To scale Fluxbase horizontally across multiple instances, you need to ensure all
 
 - Cannot use embedded/local PostgreSQL
 - Must be accessible by all Fluxbase instances
-- Configure with `DATABASE_URL` environment variable
+- Configure with `FLUXBASE_DATABASE_*` environment variables
 - **Note**: PostgreSQL also stores authentication sessions (shared across all instances)
 
 ✅ **S3-Compatible Object Storage (MinIO/AWS S3/DigitalOcean Spaces)**
@@ -122,7 +122,12 @@ Fluxbase supports **pluggable backends** for distributed state, enabling true ho
 
 ```bash
 # Fluxbase environment variables for horizontal scaling
-DATABASE_URL=postgres://user:pass@postgres.example.com:5432/fluxbase
+FLUXBASE_DATABASE_HOST=postgres.example.com
+FLUXBASE_DATABASE_PORT=5432
+FLUXBASE_DATABASE_USER=fluxbase
+FLUXBASE_DATABASE_PASSWORD=secure-password
+FLUXBASE_DATABASE_DATABASE=fluxbase
+FLUXBASE_DATABASE_SSL_MODE=require
 
 # S3 Storage (required)
 FLUXBASE_STORAGE_PROVIDER=s3
@@ -1278,6 +1283,6 @@ kubectl logs <pod> -n fluxbase | grep "connection pool"
 
 ## Next Steps
 
-- [Production Checklist](production-checklist) - Pre-deployment verification
-- [Monitoring Guide](../guides/monitoring-observability) - Set up observability
-- [Database Guide](../guides/typescript-sdk/database) - Database operations and best practices
+- [Production Checklist](/deployment/production-checklist/) - Pre-deployment verification
+- [Monitoring Guide](/guides/monitoring-observability/) - Set up observability
+- [API Reference](/api/sdk/) - SDK documentation and best practices

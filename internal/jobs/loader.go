@@ -28,8 +28,16 @@ type Loader struct {
 }
 
 // NewLoader creates a new job loader
-func NewLoader(storage *Storage, cfg *config.JobsConfig) (*Loader, error) {
-	bundler, err := functions.NewBundler()
+// npmRegistry and jsrRegistry are optional - if provided, they configure custom registries for Deno bundling
+func NewLoader(storage *Storage, cfg *config.JobsConfig, npmRegistry, jsrRegistry string) (*Loader, error) {
+	var opts []functions.BundlerOption
+	if npmRegistry != "" {
+		opts = append(opts, functions.WithNpmRegistry(npmRegistry))
+	}
+	if jsrRegistry != "" {
+		opts = append(opts, functions.WithJsrRegistry(jsrRegistry))
+	}
+	bundler, err := functions.NewBundler(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bundler: %w", err)
 	}

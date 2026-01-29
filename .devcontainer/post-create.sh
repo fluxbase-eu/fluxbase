@@ -44,6 +44,20 @@ go install -v github.com/cosmtrek/air@latest 2>/dev/null || true
 go install -v -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest 2>/dev/null || true
 go install -v github.com/vladopajic/go-test-coverage/v2@latest 2>/dev/null || true
 
+# Install lychee link checker for documentation
+echo "🔗 Installing lychee link checker..."
+LYCHEE_VERSION="lychee-v0.22.0"
+ARCH=$(uname -m)
+if [ "$ARCH" = "aarch64" ]; then
+  LYCHEE_ARCH="aarch64-unknown-linux-gnu"
+else
+  LYCHEE_ARCH="x86_64-unknown-linux-gnu"
+fi
+curl -sL "https://github.com/lycheeverse/lychee/releases/download/${LYCHEE_VERSION}/lychee-${LYCHEE_ARCH}.tar.gz" | tar -xz -C /tmp
+sudo mv /tmp/lychee /usr/local/bin/lychee
+sudo chmod +x /usr/local/bin/lychee
+echo "✅ lychee $(lychee --version) installed"
+
 # Create .env file if it doesn't exist
 if [ ! -f /workspace/.env ]; then
   echo "📝 Creating .env file from .env.example..."
@@ -281,6 +295,7 @@ echo ""
 echo "💡 Tips:"
 echo "  - Use 'make help' to see all available commands"
 echo "  - Rebuild CLI after changes: make cli && sudo cp build/fluxbase /usr/local/bin/fluxbase"
+echo "  - Check docs for broken links: make docs-check-links"
 echo "  - Read .claude/instructions.md for development guidelines"
 echo "  - Pre-commit hook runs golangci-lint automatically"
 echo ""

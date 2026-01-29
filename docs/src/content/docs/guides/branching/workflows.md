@@ -540,6 +540,6 @@ fluxbase migrations sync
 ## Next Steps
 
 - [Database Branching Overview](/guides/branching/) - Core concepts
-- [TypeScript SDK Branching](/guides/typescript-sdk/branching/) - SDK documentation
+- [Branching API](/guides/branching/api/) - API documentation
 - [GitHub Integration](/guides/branching/github-integration/) - Automated PR branches
 - [CLI Commands Reference](/cli/commands/#branch-commands) - All branch commands

@@ -44,6 +44,13 @@ services:
 
       # Enable features
       FLUXBASE_ADMIN_ENABLED: "true"
+
+      # Edge Functions / Jobs (optional)
+      # FLUXBASE_FUNCTIONS_ENABLED: "true"
+
+      # Deno Runtime (for air-gapped environments)
+      # FLUXBASE_DENO_NPM_REGISTRY: "https://npm.your-company.com/"  # Custom npm registry
+      # FLUXBASE_DENO_JSR_REGISTRY: "https://jsr.your-company.com/"  # Custom JSR registry
     volumes:
       - storage_data:/app/storage
     depends_on:

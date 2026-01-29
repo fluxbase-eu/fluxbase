@@ -613,9 +613,9 @@ try {
 
 ## Related Documentation
 
-- [Authentication Guide](/docs/guides/authentication)
-- [Database Queries](/docs/guides/typescript-sdk/database)
-- [Realtime](/docs/guides/realtime)
-- [Storage](/docs/guides/storage)
-- [Row-Level Security](/docs/guides/row-level-security)
-- [Edge Functions](/docs/guides/edge-functions)
+- [Authentication Guide](/guides/authentication)
+- [TypeScript SDK Reference](/api/sdk/)
+- [Realtime](/guides/realtime)
+- [Storage](/guides/storage)
+- [Row-Level Security](/guides/row-level-security)
+- [Edge Functions](/guides/edge-functions)

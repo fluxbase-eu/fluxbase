@@ -479,10 +479,10 @@ try {
 
 ## REST API
 
-For direct HTTP access without the SDK, see the [Storage SDK Documentation](/docs/api/sdk/classes/FluxbaseStorage).
+For direct HTTP access without the SDK, see the [Storage SDK Documentation](/api/sdk/classes/FluxbaseStorage).
 
 ## Related Documentation
 
-- [Authentication](/docs/guides/authentication) - Secure file access
-- [Row-Level Security](/docs/guides/row-level-security) - File access policies
-- [Configuration](/docs/reference/configuration) - All storage options
+- [Authentication](/guides/authentication) - Secure file access
+- [Row-Level Security](/guides/row-level-security) - File access policies
+- [Configuration](/reference/configuration) - All storage options

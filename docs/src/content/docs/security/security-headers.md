@@ -731,9 +731,9 @@ content_security_policy: >
 
 ## Further Reading
 
-- [Security Overview](./overview.md)
-- [CSRF Protection](./csrf-protection.md)
-- [Best Practices](./best-practices.md)
+- [Security Overview](/security/overview/)
+- [CSRF Protection](/security/csrf-protection/)
+- [Best Practices](/security/best-practices/)
 - [OWASP Secure Headers Project](https://owasp.org/www-project-secure-headers/)
 - [MDN: CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
 - [Content Security Policy Reference](https://content-security-policy.com/)

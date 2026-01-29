@@ -90,7 +90,7 @@ graph TB
 - External PostgreSQL (not embedded) - stores data + sessions
 - S3-compatible storage (MinIO/AWS S3) - stores files
 - Load balancer with session stickiness (for WebSocket/realtime)
-- See [Scaling Guide](scaling#horizontal-scaling-requirements) for detailed configuration
+- See [Scaling Guide](/deployment/scaling/#horizontal-scaling-requirements) for detailed configuration
 
 **Note**: Sessions are stored in PostgreSQL (shared across all instances). Rate limiting and CSRF are per-instance.
 
@@ -357,10 +357,10 @@ Target: < 5 minutes of data loss
 
 Choose your deployment method:
 
-- [Docker Deployment](docker) - Simple single-server deployment
-- [Kubernetes Deployment](kubernetes) - Production-grade Kubernetes with Helm
-- [Production Checklist](production-checklist) - Pre-deployment checklist
-- [Scaling Guide](scaling) - Scaling and performance optimization
+- [Docker Deployment](/deployment/docker/) - Simple single-server deployment
+- [Kubernetes Deployment](/deployment/kubernetes/) - Production-grade Kubernetes with Helm
+- [Production Checklist](/deployment/production-checklist/) - Pre-deployment checklist
+- [Scaling Guide](/deployment/scaling/) - Scaling and performance optimization
 
 ## Support
 

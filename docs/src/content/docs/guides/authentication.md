@@ -25,8 +25,8 @@ auth:
   refresh_expiry: 168h # 7 days
   password_min_length: 8
   bcrypt_cost: 12
-  enable_signup: true
-  enable_magic_link: false
+  signup_enabled: true
+  magic_link_enabled: false
 ```
 
 ### Password Requirements
@@ -306,7 +306,7 @@ const allUsers = await adminClient.from("users").select("*");
 
 ## REST API
 
-For direct HTTP access without the SDK, see the [API Reference](/docs/api/sdk/classes/FluxbaseAuth).
+For direct HTTP access without the SDK, see the [API Reference](/api/sdk/classes/FluxbaseAuth).
 
 ## Reference
 
@@ -379,6 +379,6 @@ This flow ensures that user identity is consistently available throughout the re
 
 ## Next Steps
 
-- [Row-Level Security](/docs/guides/row-level-security) - Secure data with RLS policies
-- [OAuth Providers](/docs/guides/oauth-providers) - Configure social login
-- [Email Services](/docs/guides/email-services) - Set up email for password reset
+- [Row-Level Security](/guides/row-level-security) - Secure data with RLS policies
+- [OAuth Providers](/guides/oauth-providers) - Configure social login
+- [Email Services](/guides/email-services) - Set up email for password reset

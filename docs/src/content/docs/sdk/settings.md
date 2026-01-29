@@ -232,7 +232,7 @@ await client.admin.settings.app.setRateLimiting(false)
 **Parameters:**
 - `enabled` (required): Boolean to enable/disable rate limiting
 
-**Note:** This controls the global rate limiter. Individual API key rate limits are managed separately through the [Management SDK](/docs/sdk/management).
+**Note:** This controls the global rate limiter. Individual API key rate limits are managed separately through the [Management SDK](/sdk/management).
 
 ---
 
@@ -1014,7 +1014,7 @@ console.log(secretMetadata.updated_at) // timestamp
 
 ## Next Steps
 
-- Learn about [Admin SDK](/docs/sdk/admin) for user management and authentication
-- Explore [Management SDK](/docs/sdk/management) for client keys and webhooks
-- Read about [Database](/docs/guides/typescript-sdk/database) operations
-- Check out [Authentication](/docs/guides/authentication) for user-facing auth flows
+- Learn about [Admin SDK](/sdk/admin) for user management and authentication
+- Explore [Management SDK](/sdk/management) for client keys and webhooks
+- Read about [SDK Reference](/api/sdk/) operations
+- Check out [Authentication](/guides/authentication) for user-facing auth flows

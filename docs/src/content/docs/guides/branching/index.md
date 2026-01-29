@@ -149,7 +149,7 @@ await client.branching.waitForReady('my-feature')
 await client.branching.delete('my-feature')
 ```
 
-See the [TypeScript SDK Branching Guide](/guides/typescript-sdk/branching) for complete documentation.
+See the [Branching API](/guides/branching/api/) for complete documentation.
 
 ## Using the REST API
 
@@ -250,5 +250,5 @@ Branch access is controlled by:
 
 - [Branching Workflows](/guides/branching/workflows) - Development workflow examples
 - [GitHub Integration](/guides/branching/github-integration) - Automatic PR branches
-- [TypeScript SDK Branching](/guides/typescript-sdk/branching) - SDK documentation
+- [Branching API](/guides/branching/api/) - API documentation
 - [Security Best Practices](/security/branching-security) - Security considerations

@@ -24,6 +24,7 @@ fluxbase clientkeys create --name "AI Writer" \
 ### Service Keys (Admin Only)
 
 Service keys bypass Row Level Security and have full access. Use only for:
+
 - Administrative operations
 - Trusted backend services
 - Development/debugging
@@ -58,20 +59,20 @@ CREATE POLICY user_isolation ON public.orders
 
 MCP queries execute within the user's security context.
 
-### 3. Tool Whitelisting
+### 3. Tool Allowlisting
 
 Restrict available tools in production:
 
 ```yaml
 mcp:
   allowed_tools:
-    - query_table      # Allow reads
-    - search_vectors   # Allow vector search
+    - query_table # Allow reads
+    - search_vectors # Allow vector search
     # - insert_record  # Block writes
     # - delete_record  # Block deletes
 ```
 
-### 4. Resource Whitelisting
+### 4. Resource Allowlisting
 
 Restrict available resources:
 
@@ -127,7 +128,7 @@ Configure per-client rate limits:
 
 ```yaml
 mcp:
-  rate_limit_per_min: 100  # 100 requests per minute per client
+  rate_limit_per_min: 100 # 100 requests per minute per client
 ```
 
 ## Audit Logging
@@ -214,13 +215,13 @@ mcp:
 
 ### Prevented Attacks
 
-| Attack | Prevention |
-|--------|------------|
-| SQL Injection | Parameterized queries, identifier validation |
-| Unauthorized Access | Scope-based access control |
-| Data Leakage | Row Level Security |
-| Bulk Deletion | Mandatory filters |
-| Resource Exhaustion | Query limits, rate limiting |
+| Attack              | Prevention                                   |
+| ------------------- | -------------------------------------------- |
+| SQL Injection       | Parameterized queries, identifier validation |
+| Unauthorized Access | Scope-based access control                   |
+| Data Leakage        | Row Level Security                           |
+| Bulk Deletion       | Mandatory filters                            |
+| Resource Exhaustion | Query limits, rate limiting                  |
 
 ### Configuration Mistakes to Avoid
 

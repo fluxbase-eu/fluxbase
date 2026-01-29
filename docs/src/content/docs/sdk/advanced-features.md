@@ -14,7 +14,7 @@ Core admin authentication and user management capabilities.
 - User management (list, invite, delete, role updates)
 - Password resets
 
-**Learn More:** [Admin SDK](/docs/sdk/admin)
+**Learn More:** [Admin SDK](/sdk/admin)
 ---
 
 ### 2. client keys & Webhooks
@@ -30,7 +30,7 @@ Programmatic access and event-driven integrations.
 - Filter by table and schema
 - View delivery history and retry failed deliveries
 
-**Learn More:** [Management SDK](/docs/sdk/management)
+**Learn More:** [Management SDK](/sdk/management)
 
 ---
 
@@ -48,7 +48,7 @@ Configure application behavior and store custom configuration.
 - Email service settings
 - Security and rate limiting options
 
-**Learn More:** [Settings SDK](/docs/sdk/settings)
+**Learn More:** [Settings SDK](/sdk/settings)
 
 ---
 
@@ -67,7 +67,7 @@ Programmatic database schema and table creation.
 - Database migrations
 - Test data setup
 
-**Learn More:** [DDL SDK](/docs/sdk/ddl)
+**Learn More:** [DDL SDK](/sdk/ddl)
 
 ---
 
@@ -86,7 +86,7 @@ Manage authentication providers and auth settings.
 - Email verification settings
 - Magic link authentication
 
-**Learn More:** [OAuth SDK](/docs/sdk/oauth)
+**Learn More:** [OAuth SDK](/sdk/oauth)
 
 ---
 
@@ -109,7 +109,7 @@ Debug issues and test RLS policies by viewing data as different users.
 - Customer support investigations
 - Verifying public data access
 
-**Learn More:** [Impersonation SDK](/docs/sdk/impersonation)
+**Learn More:** [Impersonation SDK](/sdk/impersonation)
 
 ---
 
@@ -631,11 +631,11 @@ await client.admin.settings.app.update({
 
 ## Related Resources
 
-- [Admin SDK](/docs/sdk/admin) - Admin authentication and user management
-- [Management SDK](/docs/sdk/management) - client keys, webhooks, and invitations
-- [Settings SDK](/docs/sdk/settings) - Application and system configuration
-- [DDL SDK](/docs/sdk/ddl) - Database schema operations
-- [OAuth SDK](/docs/sdk/oauth) - Authentication provider configuration
-- [Impersonation SDK](/docs/sdk/impersonation) - User impersonation and debugging
-- [TypeScript SDK Guide](/guides/typescript-sdk) - General SDK usage
-- [API Cookbook](/docs/api-cookbook) - Common API patterns
+- [Admin SDK](/sdk/admin) - Admin authentication and user management
+- [Management SDK](/sdk/management) - client keys, webhooks, and invitations
+- [Settings SDK](/sdk/settings) - Application and system configuration
+- [DDL SDK](/sdk/ddl) - Database schema operations
+- [OAuth SDK](/sdk/oauth) - Authentication provider configuration
+- [Impersonation SDK](/sdk/impersonation) - User impersonation and debugging
+- [TypeScript SDK Reference](/api/sdk/) - General SDK usage
+- [API Cookbook](/api-cookbook) - Common API patterns

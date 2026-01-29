@@ -423,6 +423,14 @@ config:
     max_memory_limit: 1024
     sync_allowed_ip_ranges: []
 
+  ## Deno Runtime configuration (for edge functions and background jobs)
+  ## @param config.deno.npm_registry Custom npm registry URL (air-gapped environments)
+  ## @param config.deno.jsr_registry Custom JSR registry URL (air-gapped environments)
+  ##
+  deno:
+    npm_registry: ""  # e.g., "https://npm.your-company.com/"
+    jsr_registry: ""  # e.g., "https://jsr.your-company.com/"
+
   ## Background Jobs configuration
   ## @param config.jobs.enabled Enable background jobs
   ## @param config.jobs.jobs_dir Jobs directory path

@@ -49,6 +49,7 @@ title: "@fluxbase/sdk-react"
 - [useAPIKeys](/api/sdk-react/functions/useapikeys/)
 - [useAppSettings](/api/sdk-react/functions/useappsettings/)
 - [useAuth](/api/sdk-react/functions/useauth/)
+- [useAuthConfig](/api/sdk-react/functions/useauthconfig/)
 - [useCaptcha](/api/sdk-react/functions/usecaptcha/)
 - [useCaptchaConfig](/api/sdk-react/functions/usecaptchaconfig/)
 - [useClientKeys](/api/sdk-react/functions/useclientkeys/)

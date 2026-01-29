@@ -36,6 +36,7 @@ Admin client for managing Fluxbase instance
 | `management` | `public` | [`FluxbaseManagement`](/api/sdk/classes/fluxbasemanagement/) | Management namespace for client keys, webhooks, and invitations |
 | `migrations` | `public` | [`FluxbaseAdminMigrations`](/api/sdk/classes/fluxbaseadminmigrations/) | Migrations manager for database migration operations (create, apply, rollback, sync) |
 | `oauth` | `public` | [`FluxbaseOAuth`](/api/sdk/classes/fluxbaseoauth/) | OAuth configuration manager for provider and auth settings |
+| `realtime` | `public` | [`FluxbaseAdminRealtime`](/api/sdk/classes/fluxbaseadminrealtime/) | Realtime manager for enabling/disabling realtime on tables |
 | `rpc` | `public` | [`FluxbaseAdminRPC`](/api/sdk/classes/fluxbaseadminrpc/) | RPC manager for procedure management (create, update, delete, sync, execution monitoring) |
 | `settings` | `public` | [`FluxbaseSettings`](/api/sdk/classes/fluxbasesettings/) | Settings manager for system and application settings |
 | `storage` | `public` | [`FluxbaseAdminStorage`](/api/sdk/classes/fluxbaseadminstorage/) | Storage manager for bucket and object management (list, create, delete, signed URLs) |

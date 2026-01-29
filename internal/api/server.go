@@ -380,7 +380,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	if functionsInternalURL == "" {
 		functionsInternalURL = "http://localhost" + cfg.Server.Address
 	}
-	functionsHandler := functions.NewHandler(db, cfg.Functions.FunctionsDir, cfg.CORS, cfg.Auth.JWTSecret, functionsInternalURL, authService, loggingService, secretsStorage)
+	functionsHandler := functions.NewHandler(db, cfg.Functions.FunctionsDir, cfg.CORS, cfg.Auth.JWTSecret, functionsInternalURL, cfg.Deno.NpmRegistry, cfg.Deno.JsrRegistry, authService, loggingService, secretsStorage)
 	functionsHandler.SetSettingsSecretsService(secretsService)
 	functionsScheduler := functions.NewScheduler(db, cfg.Auth.JWTSecret, functionsInternalURL, secretsStorage)
 	functionsHandler.SetScheduler(functionsScheduler)
@@ -404,7 +404,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		jobsManager = jobs.NewManager(&cfg.Jobs, db, cfg.Auth.JWTSecret, jobsInternalURL, secretsStorage)
 		jobsManager.SetSettingsSecretsService(secretsService)
 		var err error
-		jobsHandler, err = jobs.NewHandler(db, &cfg.Jobs, jobsManager, authService, loggingService)
+		jobsHandler, err = jobs.NewHandler(db, &cfg.Jobs, jobsManager, authService, loggingService, cfg.Deno.NpmRegistry, cfg.Deno.JsrRegistry)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to initialize jobs handler")
 		}
