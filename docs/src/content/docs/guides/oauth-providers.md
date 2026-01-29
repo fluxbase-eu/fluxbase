@@ -115,7 +115,7 @@ auth:
 
 You can also configure OAuth providers through the admin UI at **Authentication → OAuth Providers**:
 
-![Add OAuth Provider in Admin Dashboard](../../assets/screenshot-add-oauth-provider.png)
+![Add OAuth Provider in Admin Dashboard](../../../assets/screenshot-add-oauth-provider.png)
 
 The admin dashboard supports:
 - Auto-discovery from OpenID Discovery URLs

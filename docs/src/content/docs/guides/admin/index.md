@@ -6,7 +6,7 @@ The Fluxbase Admin Dashboard provides powerful tools for managing your Fluxbase 
 
 ## Overview
 
-![Fluxbase Admin Dashboard Overview](../../../assets/screenshot-dashboard.png)
+![Fluxbase Admin Dashboard Overview](../../../../assets/screenshot-dashboard.png)
 
 The dashboard provides at-a-glance status of your system including database health, user counts, table statistics, and API status.
 
@@ -16,7 +16,7 @@ The dashboard provides at-a-glance status of your system including database heal
 
 Browse, query, and edit your database tables directly from the web interface.
 
-![Table Editor](../../../assets/screenshot-table-editor.png)
+![Table Editor](../../../../assets/screenshot-table-editor.png)
 
 **Key features:**
 
@@ -30,7 +30,7 @@ Browse, query, and edit your database tables directly from the web interface.
 
 Visualize your database structure with an interactive ERD (Entity Relationship Diagram).
 
-![Schema Viewer with ERD](../../../assets/screenshot-schema-viewer.png)
+![Schema Viewer with ERD](../../../../assets/screenshot-schema-viewer.png)
 
 **Features:**
 
@@ -44,7 +44,7 @@ Visualize your database structure with an interactive ERD (Entity Relationship D
 
 Execute SQL and GraphQL queries directly against your database.
 
-![SQL Query Editor](../../../assets/screenshot-query-editor.png)
+![SQL Query Editor](../../../../assets/screenshot-query-editor.png)
 
 **Features:**
 
