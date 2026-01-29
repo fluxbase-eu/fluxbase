@@ -59,7 +59,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { ImpersonationPopover } from '@/features/impersonation/components/impersonation-popover'
 
 export const Route = createFileRoute('/_authenticated/storage/')({
@@ -812,7 +811,6 @@ function StorageBrowser() {
 
       {/* Main Content */}
       <div className='flex flex-1 flex-col'>
-        <ImpersonationBanner />
         {selectedBucket ? (
           <>
             {/* Toolbar */}

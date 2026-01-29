@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { UserCog, User, UserX, Shield } from 'lucide-react'
+import { UserCog, User, UserX, Shield, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useImpersonationStore,
   type ImpersonationType,
 } from '@/stores/impersonation-store'
+import { getAccessToken } from '@/lib/auth'
 import { setAuthToken as setSDKAuthToken } from '@/lib/fluxbase-client'
 import { impersonationApi } from '@/lib/impersonation-api'
 import { useAuth } from '@/hooks/use-auth'
@@ -32,10 +33,17 @@ import { UserSearch } from './user-search'
 
 export function ImpersonationSelector() {
   const { user } = useAuth()
-  const { isImpersonating, startImpersonation } = useImpersonationStore()
+  const {
+    isImpersonating,
+    startImpersonation,
+    stopImpersonation,
+    impersonatedUser,
+    impersonationType: activeImpersonationType,
+  } = useImpersonationStore()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [stopping, setStopping] = useState(false)
   const [impersonationType, setImpersonationType] =
     useState<ImpersonationType>('user')
   const [selectedUserId, setSelectedUserId] = useState<string>('')
@@ -115,6 +123,47 @@ export function ImpersonationSelector() {
     setSelectedUserId(userId)
   }
 
+  const handleStopImpersonation = async () => {
+    try {
+      setStopping(true)
+      await impersonationApi.stopImpersonation()
+      stopImpersonation()
+
+      // Reset SDK client token to admin token
+      const adminToken = getAccessToken()
+      if (adminToken) {
+        setSDKAuthToken(adminToken)
+      }
+
+      toast.success('Impersonation stopped')
+
+      // Invalidate all queries to refetch data with admin context
+      queryClient.invalidateQueries()
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error && 'response' in error
+          ? (error as { response?: { data?: { error?: string } } }).response
+              ?.data?.error
+          : undefined
+      toast.error(errorMessage || 'Failed to stop impersonation')
+    } finally {
+      setStopping(false)
+    }
+  }
+
+  const getDisplayLabel = () => {
+    switch (activeImpersonationType) {
+      case 'user':
+        return impersonatedUser?.email || 'User'
+      case 'anon':
+        return 'Anonymous'
+      case 'service':
+        return 'Service Role'
+      default:
+        return 'User'
+    }
+  }
+
   const getIcon = () => {
     switch (impersonationType) {
       case 'user':
@@ -137,15 +186,26 @@ export function ImpersonationSelector() {
     return null
   }
 
+  // Show cancel button when impersonating
+  if (isImpersonating) {
+    return (
+      <Button
+        variant='outline'
+        size='sm'
+        onClick={handleStopImpersonation}
+        disabled={stopping}
+        className='gap-2 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900'
+      >
+        <X className='h-4 w-4' />
+        {stopping ? 'Stopping...' : `Cancel: ${getDisplayLabel()}`}
+      </Button>
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant='outline'
-          size='sm'
-          disabled={isImpersonating}
-          className='gap-2'
-        >
+        <Button variant='outline' size='sm' className='gap-2'>
           <UserCog className='h-4 w-4' />
           Impersonate User
         </Button>

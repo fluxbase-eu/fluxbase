@@ -76,7 +76,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { ImpersonationPopover } from '@/features/impersonation/components/impersonation-popover'
 
 export const Route = createFileRoute('/_authenticated/jobs/')({
@@ -955,8 +954,6 @@ function JobsPage() {
 
   return (
     <div className='flex flex-1 flex-col gap-6 p-6'>
-      <ImpersonationBanner />
-
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-3xl font-bold'>Background Jobs</h1>
