@@ -195,3 +195,276 @@
 }
 
 /* Copy button fix is now in astro.config.mjs head section */
+
+/* =============================================
+   ENHANCED HOMEPAGE STYLES - Option B Design
+   ============================================= */
+
+/* Hero gradient text effect */
+.hero-gradient-text {
+  background: linear-gradient(135deg, #2c4689 0%, #5b7dc7 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Hero section enhancements for splash template */
+[data-page-type="splash"] .hero {
+  padding: 4rem 0;
+  position: relative;
+}
+
+[data-page-type="splash"] .hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(44, 70, 137, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Enhanced feature cards with icons */
+.feature-card-enhanced {
+  position: relative;
+  padding: 1.75rem;
+  border-radius: 1rem;
+  background: var(--sl-color-bg);
+  border: 1px solid var(--sl-color-gray-5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.feature-card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2c4689 0%, #5b7dc7 50%, #8b5cf6 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.feature-card-enhanced:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: var(--sl-color-accent);
+}
+
+.feature-card-enhanced:hover::before {
+  transform: scaleX(1);
+}
+
+.feature-card-enhanced .icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(44, 70, 137, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.feature-card-enhanced h3 {
+  color: var(--sl-color-text);
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.feature-card-enhanced p {
+  color: var(--sl-color-gray-2);
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Stats/badges row */
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  padding: 2rem 0;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--sl-color-accent);
+  display: block;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--sl-color-gray-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Quick start steps */
+.quick-start-steps {
+  counter-reset: step;
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0;
+}
+
+.quick-start-steps li {
+  position: relative;
+  padding-left: 3.5rem;
+  margin-bottom: 2rem;
+}
+
+.quick-start-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2c4689 0%, #5b7dc7 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* Section dividers */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--sl-color-gray-5) 50%, transparent 100%);
+  margin: 3rem 0;
+}
+
+/* Technology badge pills */
+.tech-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.tech-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-gray-1);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tech-badge:hover {
+  background: var(--sl-color-accent);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Feature grid with better responsiveness */
+.features-grid-enhanced {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+@media screen and (max-width: 1024px) {
+  .features-grid-enhanced {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .features-grid-enhanced {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    gap: 2rem;
+  }
+}
+
+/* Animated underline for links in hero */
+.hero-link {
+  position: relative;
+  text-decoration: none;
+}
+
+.hero-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--sl-color-accent);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.hero-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* Comparison highlight box */
+.comparison-highlight {
+  background: linear-gradient(135deg, rgba(44, 70, 137, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 1rem;
+  padding: 2rem;
+  margin: 2rem 0;
+}
+
+.comparison-highlight h3 {
+  margin-top: 0;
+  color: var(--sl-color-accent-high);
+}
+
+/* Code preview wrapper */
+.code-preview {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  margin: 2rem 0;
+}
+
+/* Animated pulse for primary CTA */
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(44, 70, 137, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(44, 70, 137, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(44, 70, 137, 0);
+  }
+}
+
+.cta-pulse {
+  animation: pulse-ring 2s infinite;
+}
