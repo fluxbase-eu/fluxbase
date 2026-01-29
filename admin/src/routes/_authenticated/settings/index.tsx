@@ -196,7 +196,7 @@ function SettingsPage() {
     onSuccess: () => {
       toast.success('Account deleted successfully')
       clearTokens()
-      window.location.href = '/login'
+      window.location.href = '/admin/login'
     },
     onError: (error: unknown) => {
       const errorMessage =
