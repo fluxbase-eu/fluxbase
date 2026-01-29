@@ -216,22 +216,24 @@ For environments without internet access, you have several options to use Fluxba
 
 No SDK required - make HTTP requests to the [REST API](/api/http/) from any language.
 
-**Option 2: Vendor the npm package**
+**Option 2: Download and vendor the SDK (no npm CLI required)**
 
-On a machine with internet, download the SDK for offline use:
+Download the package tarball directly and extract it - no npm CLI needed:
 
 ```bash
-# Create a tarball of the package
-npm pack @fluxbase/sdk
+# On a machine with internet, download directly from npm registry
+curl -O https://registry.npmjs.org/@fluxbase/sdk/-/sdk-1.0.0.tgz
 
-# Transfer fluxbase-sdk-x.x.x.tgz to your air-gapped environment
-# Then install from the local file
-npm install ./fluxbase-sdk-x.x.x.tgz
+# Transfer to your air-gapped environment, then extract
+tar -xzf sdk-1.0.0.tgz
+mv package node_modules/@fluxbase/sdk
 ```
 
-**Option 3: Use a private npm registry**
+Or use `npm pack` if available, then transfer the `.tgz` file.
 
-Mirror `@fluxbase/sdk` to your internal registry (Verdaccio, Nexus, Artifactory, etc.).
+**Option 3: Private registry (npm CLI optional)**
+
+Mirror `@fluxbase/sdk` to your internal registry (Verdaccio, Nexus, Artifactory). Your package manager (npm, yarn, pnpm) just needs to be configured to point to your internal registry URL - no external internet required.
 
 **Option 4: Use the Go client**
 
