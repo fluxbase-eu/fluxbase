@@ -121,7 +121,7 @@ function SetupPage() {
           <img
             src='/admin/images/logo-icon.svg'
             alt='Fluxbase'
-            className='mx-auto h-16 w-16'
+            className='mx-auto h-16 w-16 rounded-2xl bg-white/80 p-6 backdrop-blur-sm dark:bg-white/80 dark:backdrop-blur-md'
           />
           <h1 className='mt-6 text-3xl font-bold tracking-tight'>
             Welcome to Fluxbase
