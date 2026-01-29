@@ -375,6 +375,77 @@ Common bundling errors:
 - **Bundle too large** - Limit is 5MB after bundling
 - **Blocked package** - Using a restricted security package
 
+### Air-Gapped / Private Registry Environments
+
+By default, Deno downloads npm packages from `registry.npmjs.org`. For air-gapped environments or private registries, you have several options:
+
+:::caution[Internet Dependency]
+When using `npm:` specifiers, the Fluxbase server requires internet access to download packages during bundling. This is currently the only point where Fluxbase requires internet access at runtime.
+:::
+
+**Option 1: Use a `deno.json` with custom npm registry**
+
+Create a `deno.json` file in your function directory to configure a private npm registry:
+
+```json
+{
+  "npmRegistry": "https://npm.your-company.com/"
+}
+```
+
+Or with authentication:
+
+```json
+{
+  "npmRegistry": {
+    "url": "https://npm.your-company.com/",
+    "auth": "bearer <token>"
+  }
+}
+```
+
+Then your functions can use `npm:` specifiers as normal - Deno will fetch from your private registry.
+
+**Option 2: Use URL imports instead of npm specifiers**
+
+Import directly from ESM CDNs you control or mirror:
+
+```typescript
+// Instead of npm:zod
+import { z } from "https://your-cdn.example.com/zod@3.22.4/index.mjs";
+
+// Or use esm.sh, unpkg, skypack (if accessible)
+import { z } from "https://esm.sh/zod@3.22.4";
+```
+
+You can self-host [esm.sh](https://github.com/esm-dev/esm.sh) or mirror specific packages.
+
+**Option 3: Pre-bundle dependencies**
+
+Bundle your function with all dependencies on a machine with internet access, then deploy the bundled code:
+
+```bash
+# On machine with internet access
+deno bundle --import-map=import_map.json my-function.ts bundled.ts
+
+# Deploy the bundled code
+fluxbase functions deploy bundled.ts --name my-function
+```
+
+**Option 4: Avoid npm packages entirely**
+
+Use Deno's standard library and web APIs, which don't require network access:
+
+```typescript
+// Use Deno std library (bundled)
+import { crypto } from "https://deno.land/std@0.200.0/crypto/mod.ts";
+
+// Or rely on built-in web APIs
+const hash = await crypto.subtle.digest("SHA-256", data);
+```
+
+**Note:** Server-level npm registry configuration (`FLUXBASE_NPM_REGISTRY`) is not currently supported but is planned for a future release.
+
 ## Shared Modules
 
 Shared modules allow you to reuse code across multiple edge functions, similar to Supabase's `_shared` directory pattern. Modules are stored with a `_shared/` prefix and can be imported by any function.

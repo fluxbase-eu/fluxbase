@@ -208,9 +208,11 @@ Manage your backend with a powerful built-in admin UI featuring database browsin
 
 <div class="section-divider"></div>
 
-## Air-Gapped SDK {#air-gapped-sdk}
+## Air-Gapped Deployments {#air-gapped-sdk}
 
-For environments without internet access, you have several options to use Fluxbase:
+Fluxbase is designed to run in air-gapped environments. The **server** runs fully offline - PostgreSQL is the only external dependency. For **clients** without internet access, you have several options:
+
+### Client SDK Options
 
 **Option 1: Use the REST API directly**
 
@@ -242,3 +244,17 @@ For Go applications, import the client directly - it compiles into your binary w
 ```go
 import "github.com/fluxbase-eu/fluxbase/pkg/client"
 ```
+
+### Edge Functions with npm Packages
+
+:::caution[Edge Function Dependencies]
+If your edge functions use `npm:` specifiers, the **server** needs internet access during bundling to download packages from npmjs.org. This is the only runtime internet dependency.
+:::
+
+For fully air-gapped edge functions:
+
+1. **Use a `deno.json` with private registry** - Configure `npmRegistry` to point to your internal registry
+2. **Pre-bundle on a connected machine** - Bundle dependencies before deploying to the air-gapped server
+3. **Avoid npm packages** - Use Deno's standard library and web APIs instead
+
+See the [Edge Functions Air-Gapped Guide](/guides/edge-functions/#air-gapped--private-registry-environments) for detailed instructions.
