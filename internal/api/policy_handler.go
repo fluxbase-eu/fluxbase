@@ -671,52 +671,19 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check 7: RLS enabled but not forced (table owner can bypass) - excluding extension-owned tables
-	// Skip Fluxbase-managed schemas where table owner bypass is expected behavior
-	rows7, err := s.db.Query(ctx, `
-		SELECT n.nspname, c.relname
-		FROM pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
-		LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
-		WHERE c.relrowsecurity = true
-		AND c.relforcerowsecurity = false
-		AND c.relkind = 'r'
-		AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'auth', 'storage', 'jobs', 'functions', 'branching', 'realtime', 'dashboard', 'ai', 'rpc', 'app')
-		AND d.objid IS NULL
-	`)
-	if err == nil {
-		defer rows7.Close()
-		for rows7.Next() {
-			var schemaName, tableName string
-			if err := rows7.Scan(&schemaName, &tableName); err != nil {
-				continue
-			}
-			warnings = append(warnings, SecurityWarning{
-				ID:         fmt.Sprintf("no-force-rls-%s-%s", schemaName, tableName),
-				Severity:   "medium",
-				Category:   "rls",
-				Schema:     schemaName,
-				Table:      tableName,
-				Message:    fmt.Sprintf("Table '%s.%s' has RLS enabled but not forced - table owner can bypass policies", schemaName, tableName),
-				Suggestion: "Consider enabling FORCE ROW LEVEL SECURITY for complete protection",
-				FixSQL:     fmt.Sprintf("ALTER TABLE %s.%s FORCE ROW LEVEL SECURITY;", quoteIdentifier(schemaName), quoteIdentifier(tableName)),
-			})
-		}
-	}
-
-	// Check 8: Policies that grant access to PUBLIC role
+	// Check 7: Policies that grant access to PUBLIC role
 	// Excludes Fluxbase-managed schemas where PUBLIC access is intentional for internal operations
-	rows8, err := s.db.Query(ctx, `
+	rows7, err := s.db.Query(ctx, `
 		SELECT schemaname, tablename, policyname, cmd
 		FROM pg_policies
 		WHERE 'public' = ANY(roles)
 		AND schemaname NOT IN ('pg_catalog', 'information_schema', 'auth', 'storage', 'jobs', 'functions', 'branching', 'realtime', 'dashboard', 'ai', 'rpc', 'app')
 	`)
 	if err == nil {
-		defer rows8.Close()
-		for rows8.Next() {
+		defer rows7.Close()
+		for rows7.Next() {
 			var schemaName, tableName, policyName, cmd string
-			if err := rows8.Scan(&schemaName, &tableName, &policyName, &cmd); err != nil {
+			if err := rows7.Scan(&schemaName, &tableName, &policyName, &cmd); err != nil {
 				continue
 			}
 			warnings = append(warnings, SecurityWarning{
@@ -732,44 +699,8 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check 9: Tables with CASCADE delete rules that could expose data
-	rows9, err := s.db.Query(ctx, `
-		SELECT DISTINCT
-			tc.table_schema,
-			tc.table_name,
-			ccu.table_schema as ref_schema,
-			ccu.table_name as ref_table,
-			rc.delete_rule
-		FROM information_schema.table_constraints tc
-		JOIN information_schema.referential_constraints rc
-			ON tc.constraint_name = rc.constraint_name
-		JOIN information_schema.constraint_column_usage ccu
-			ON ccu.constraint_name = tc.constraint_name
-		WHERE tc.constraint_type = 'FOREIGN KEY'
-		AND rc.delete_rule = 'CASCADE'
-		AND tc.table_schema = 'public'
-	`)
-	if err == nil {
-		defer rows9.Close()
-		for rows9.Next() {
-			var schemaName, tableName, refSchema, refTable, deleteRule string
-			if err := rows9.Scan(&schemaName, &tableName, &refSchema, &refTable, &deleteRule); err != nil {
-				continue
-			}
-			warnings = append(warnings, SecurityWarning{
-				ID:         fmt.Sprintf("cascade-delete-%s-%s-%s-%s", schemaName, tableName, refSchema, refTable),
-				Severity:   "low",
-				Category:   "data-integrity",
-				Schema:     schemaName,
-				Table:      tableName,
-				Message:    fmt.Sprintf("Table '%s.%s' has CASCADE DELETE to '%s.%s' - deleting parent rows will delete child data", schemaName, tableName, refSchema, refTable),
-				Suggestion: "Review if CASCADE DELETE is appropriate; consider RESTRICT or SET NULL for better data protection",
-			})
-		}
-	}
-
-	// Check 10: Tables without user ownership pattern (no user_id/owner_id column) - excluding extension-owned tables
-	rows10, err := s.db.Query(ctx, `
+	// Check 8: Tables without user ownership pattern (no user_id/owner_id column) - excluding extension-owned tables
+	rows8, err := s.db.Query(ctx, `
 		SELECT t.table_schema, t.table_name
 		FROM information_schema.tables t
 		JOIN pg_class c ON c.relname = t.table_name
@@ -788,10 +719,10 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		AND d.objid IS NULL
 	`)
 	if err == nil {
-		defer rows10.Close()
-		for rows10.Next() {
+		defer rows8.Close()
+		for rows8.Next() {
 			var schemaName, tableName string
-			if err := rows10.Scan(&schemaName, &tableName); err != nil {
+			if err := rows8.Scan(&schemaName, &tableName); err != nil {
 				continue
 			}
 			warnings = append(warnings, SecurityWarning{
