@@ -524,24 +524,18 @@ trufflehog filesystem .
 
 ### 2. Use Environment Variables
 
-```yaml
-# fluxbase.yaml - reference environment variables
-database:
-  url: ${DATABASE_URL}
-
-auth:
-  jwt_secret: ${JWT_SECRET}
-
-email:
-  smtp_password: ${SMTP_PASSWORD}
-```
+Fluxbase automatically reads environment variables with the `FLUXBASE_` prefix. Set sensitive values via environment instead of config files:
 
 ```bash
-# .env (never commit!)
-DATABASE_URL=postgres://user:pass@host/db
-JWT_SECRET=your-super-secret-key-min-32-chars
-SMTP_PASSWORD=smtp-password-here
+# .env.local (never commit!)
+FLUXBASE_DATABASE_HOST=postgres.example.com
+FLUXBASE_DATABASE_PASSWORD=your-secure-password
+FLUXBASE_AUTH_JWT_SECRET=your-super-secret-key-min-32-chars
+FLUXBASE_EMAIL_SMTP_PASSWORD=smtp-password-here
+FLUXBASE_ENCRYPTION_KEY=32-byte-encryption-key-here
 ```
+
+Environment variables take precedence over `fluxbase.yaml` values, so you can keep safe defaults in config and override with secrets in production.
 
 ### 3. Use Secrets Management Services
 

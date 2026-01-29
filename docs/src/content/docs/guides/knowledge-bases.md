@@ -686,6 +686,6 @@ console.log('Linked KBs:', links)
 
 ## Next Steps
 
-- [AI Chatbots](/docs/guides/ai-chatbots) - Chatbot configuration and usage
-- [Vector Search](/docs/guides/vector-search) - Direct vector search operations
-- [TypeScript SDK](/docs/guides/typescript-sdk) - Full SDK documentation
+- [AI Chatbots](/guides/ai-chatbots) - Chatbot configuration and usage
+- [Vector Search](/guides/vector-search) - Direct vector search operations
+- [TypeScript SDK](/guides/typescript-sdk) - Full SDK documentation

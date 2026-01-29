@@ -60,7 +60,7 @@ A full GraphQL API auto-generated from your database schema.
 |--------|----------|-------------|
 | `POST` | `/graphql` | Execute GraphQL queries and mutations |
 
-See the [GraphQL API documentation](/docs/api/http/graphql) for complete details on queries, mutations, filtering, and SDK usage.
+See the [GraphQL API documentation](/api/http/graphql) for complete details on queries, mutations, filtering, and SDK usage.
 
 ### Database Tables
 

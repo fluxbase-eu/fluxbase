@@ -1335,7 +1335,7 @@ When a function calls `secrets.get("openai_api_key")`:
 
 ## REST API
 
-For direct HTTP access without the SDK, see the [SDK Documentation](/docs/api/sdk).
+For direct HTTP access without the SDK, see the [SDK Documentation](/api/sdk).
 
 ## Troubleshooting
 
@@ -1526,6 +1526,6 @@ async function handler(req) {
 
 ## Related Documentation
 
-- [Authentication](/docs/guides/authentication) - Secure function access
-- [Webhooks](/docs/guides/webhooks) - Trigger functions from events
-- [SDK Documentation](/docs/api/sdk) - Complete SDK documentation
+- [Authentication](/guides/authentication) - Secure function access
+- [Webhooks](/guides/webhooks) - Trigger functions from events
+- [SDK Documentation](/api/sdk) - Complete SDK documentation

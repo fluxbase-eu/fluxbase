@@ -319,7 +319,7 @@ When configured, broadcasts sent via `BroadcastGlobal()` are delivered to client
 - Requires external PostgreSQL (which also stores authentication sessions shared across instances)
 - With `postgres` or `redis` scaling backend, rate limiting is shared across instances
 
-See [Deployment: Scaling](/docs/deployment/scaling#horizontal-scaling) for configuration details.
+See [Deployment: Scaling](/deployment/scaling#horizontal-scaling) for configuration details.
 
 ## Connection Management
 
@@ -383,7 +383,7 @@ When authenticated, users receive realtime updates only for their own posts.
 
 ## Raw WebSocket Protocol
 
-For non-JavaScript environments, see the [Realtime SDK Documentation](/docs/api/sdk/classes/FluxbaseRealtime) for WebSocket protocol details.
+For non-JavaScript environments, see the [Realtime SDK Documentation](/api/sdk/classes/FluxbaseRealtime) for WebSocket protocol details.
 
 ## Troubleshooting
 
@@ -410,7 +410,7 @@ For non-JavaScript environments, see the [Realtime SDK Documentation](/docs/api/
 
 ## Next Steps
 
-- [Row-Level Security](/docs/guides/row-level-security) - Control data access
-- [Authentication](/docs/guides/authentication) - Secure subscriptions
-- [Monitoring](/docs/guides/monitoring-observability) - Track realtime performance
-- [Scaling Guide](/docs/deployment/scaling#horizontal-scaling) - Configure realtime for horizontal scaling
+- [Row-Level Security](/guides/row-level-security) - Control data access
+- [Authentication](/guides/authentication) - Secure subscriptions
+- [Monitoring](/guides/monitoring-observability) - Track realtime performance
+- [Scaling Guide](/deployment/scaling#horizontal-scaling) - Configure realtime for horizontal scaling

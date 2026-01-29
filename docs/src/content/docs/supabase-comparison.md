@@ -189,7 +189,7 @@ FLUXBASE_SCALING_BACKEND=redis
 FLUXBASE_SCALING_REDIS_URL=redis://dragonfly:6379
 ```
 
-See [Deployment: Scaling](/docs/deployment/scaling#horizontal-scaling) for full configuration details.
+See [Deployment: Scaling](/deployment/scaling#horizontal-scaling) for full configuration details.
 
 ## Resources
 
@@ -197,7 +197,7 @@ See [Deployment: Scaling](/docs/deployment/scaling#horizontal-scaling) for full 
 
 - [Documentation](/)
 - [GitHub](https://github.com/fluxbase-eu/fluxbase)
-- [API Reference](/docs/api/sdk/classes/FluxbaseClient)
+- [API Reference](/api/sdk/classes/FluxbaseClient)
 
 **Supabase:**
 

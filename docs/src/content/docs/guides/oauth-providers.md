@@ -852,6 +852,6 @@ Check logs for:
 
 ## Next Steps
 
-- [Authentication](/docs/guides/authentication) - Authentication overview
-- [SAML SSO](/docs/guides/saml-sso) - Enterprise SAML authentication
-- [Row-Level Security](/docs/guides/row-level-security) - Data access control
+- [Authentication](/guides/authentication) - Authentication overview
+- [SAML SSO](/guides/saml-sso) - Enterprise SAML authentication
+- [Row-Level Security](/guides/row-level-security) - Data access control

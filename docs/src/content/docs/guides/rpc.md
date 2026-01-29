@@ -482,7 +482,7 @@ OFFSET COALESCE($offset, 0);
 
 ## Next Steps
 
-- [Configuration Reference](/docs/reference/configuration) - All RPC configuration options
-- [Authentication](/docs/guides/authentication) - Configure user authentication
-- [Row-Level Security](/docs/guides/row-level-security) - Secure data access
-- [Background Jobs](/docs/guides/jobs) - Long-running tasks with progress tracking
+- [Configuration Reference](/reference/configuration) - All RPC configuration options
+- [Authentication](/guides/authentication) - Configure user authentication
+- [Row-Level Security](/guides/row-level-security) - Secure data access
+- [Background Jobs](/guides/jobs) - Long-running tasks with progress tracking

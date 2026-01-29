@@ -90,7 +90,7 @@ cors:
   allow_credentials: true
   max_age: 86400 # 24 hours
 
-# Rate Limiting (Upcoming)
+# Rate Limiting
 rate_limit:
   enabled: false
   requests_per_minute: 100
@@ -179,17 +179,19 @@ Environment variables take precedence over configuration file values.
 
 ### Storage
 
-| Variable                  | Description             | Default            | Example                                    |
-| ------------------------- | ----------------------- | ------------------ | ------------------------------------------ |
-| `STORAGE_PROVIDER`        | Storage backend         | `local`            | `local`, `s3`                              |
-| `STORAGE_LOCAL_PATH`      | Local storage path      | `./storage`        | `/var/lib/fluxbase/storage`                |
-| `STORAGE_MAX_UPLOAD_SIZE` | Max upload size (bytes) | `10485760`         | `10485760` (10MB)                          |
-| `STORAGE_S3_ENDPOINT`     | S3 endpoint             | `s3.amazonaws.com` | `s3.amazonaws.com`                         |
-| `STORAGE_S3_ACCESS_KEY`   | S3 access key           | -                  | `AKIAIOSFODNN7EXAMPLE`                     |
-| `STORAGE_S3_SECRET_KEY`   | S3 secret key           | -                  | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
-| `STORAGE_S3_REGION`       | S3 region               | `us-east-1`        | `us-west-2`                                |
-| `STORAGE_S3_BUCKET`       | S3 bucket name          | `fluxbase`         | `my-bucket`                                |
-| `STORAGE_S3_USE_SSL`      | Use SSL for S3          | `true`             | `true`, `false`                            |
+| Variable                              | Description                  | Default      | Example                                    |
+| ------------------------------------- | ---------------------------- | ------------ | ------------------------------------------ |
+| `FLUXBASE_STORAGE_ENABLED`            | Enable storage               | `true`       | `true`, `false`                            |
+| `FLUXBASE_STORAGE_PROVIDER`           | Storage backend              | `local`      | `local`, `s3`                              |
+| `FLUXBASE_STORAGE_LOCAL_PATH`         | Local storage path           | `./storage`  | `/var/lib/fluxbase/storage`                |
+| `FLUXBASE_STORAGE_MAX_UPLOAD_SIZE`    | Max upload size (bytes)      | `2147483648` | `2147483648` (2GB)                         |
+| `FLUXBASE_STORAGE_S3_ENDPOINT`        | S3 endpoint                  | -            | `s3.amazonaws.com`                         |
+| `FLUXBASE_STORAGE_S3_ACCESS_KEY`      | S3 access key                | -            | `AKIAIOSFODNN7EXAMPLE`                     |
+| `FLUXBASE_STORAGE_S3_SECRET_KEY`      | S3 secret key                | -            | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
+| `FLUXBASE_STORAGE_S3_REGION`          | S3 region                    | -            | `us-west-2`                                |
+| `FLUXBASE_STORAGE_S3_BUCKET`          | S3 bucket name               | -            | `my-bucket`                                |
+| `FLUXBASE_STORAGE_S3_FORCE_PATH_STYLE`| Use path-style S3 addressing | `true`       | `true`, `false`                            |
+| `FLUXBASE_STORAGE_DEFAULT_BUCKETS`    | Auto-create these buckets    | `["uploads", "temp-files", "public"]` | -               |
 
 **S3-Compatible Services:**
 
@@ -201,38 +203,48 @@ Environment variables take precedence over configuration file values.
 
 ### Realtime
 
-| Variable                      | Description               | Default | Example         |
-| ----------------------------- | ------------------------- | ------- | --------------- |
-| `REALTIME_ENABLED`            | Enable realtime           | `true`  | `true`, `false` |
-| `REALTIME_HEARTBEAT_INTERVAL` | Heartbeat interval        | `30s`   | `30s`           |
-| `REALTIME_MAX_CONNECTIONS`    | Max WebSocket connections | `1000`  | `1000`          |
-| `REALTIME_READ_BUFFER_SIZE`   | WebSocket read buffer     | `1024`  | `1024`          |
-| `REALTIME_WRITE_BUFFER_SIZE`  | WebSocket write buffer    | `1024`  | `1024`          |
+| Variable                                      | Description                    | Default  | Example         |
+| --------------------------------------------- | ------------------------------ | -------- | --------------- |
+| `FLUXBASE_REALTIME_ENABLED`                   | Enable realtime                | `true`   | `true`, `false` |
+| `FLUXBASE_REALTIME_MAX_CONNECTIONS`           | Max WebSocket connections      | `1000`   | `5000`          |
+| `FLUXBASE_REALTIME_MAX_CONNECTIONS_PER_USER`  | Max connections per user       | `10`     | `20`            |
+| `FLUXBASE_REALTIME_MAX_CONNECTIONS_PER_IP`    | Max connections per IP         | `20`     | `50`            |
+| `FLUXBASE_REALTIME_PING_INTERVAL`             | Ping interval                  | `30s`    | `30s`           |
+| `FLUXBASE_REALTIME_PONG_TIMEOUT`              | Pong timeout                   | `60s`    | `60s`           |
+| `FLUXBASE_REALTIME_READ_BUFFER_SIZE`          | WebSocket read buffer          | `1024`   | `2048`          |
+| `FLUXBASE_REALTIME_WRITE_BUFFER_SIZE`         | WebSocket write buffer         | `1024`   | `2048`          |
+| `FLUXBASE_REALTIME_MESSAGE_SIZE_LIMIT`        | Max message size (bytes)       | `524288` | `1048576`       |
+| `FLUXBASE_REALTIME_RLS_CACHE_SIZE`            | RLS permission cache entries   | `100000` | `200000`        |
+| `FLUXBASE_REALTIME_RLS_CACHE_TTL`             | RLS cache TTL                  | `30s`    | `60s`           |
 
 ### Admin UI
 
-| Variable        | Description     | Default  | Example                |
-| --------------- | --------------- | -------- | ---------------------- |
-| `ADMIN_ENABLED` | Enable Admin UI | `true`   | `true`, `false`        |
-| `ADMIN_PATH`    | Admin UI path   | `/admin` | `/admin`, `/dashboard` |
+| Variable               | Description     | Default  | Example         |
+| ---------------------- | --------------- | -------- | --------------- |
+| `FLUXBASE_ADMIN_ENABLED` | Enable Admin UI | `false`  | `true`, `false` |
 
 ### Logging
 
-| Variable     | Description | Default  | Example                                     |
-| ------------ | ----------- | -------- | ------------------------------------------- |
-| `LOG_LEVEL`  | Log level   | `info`   | `debug`, `info`, `warn`, `error`            |
-| `LOG_FORMAT` | Log format  | `json`   | `json`, `text`                              |
-| `LOG_OUTPUT` | Log output  | `stdout` | `stdout`, `stderr`, `/var/log/fluxbase.log` |
+| Variable                              | Description                    | Default    | Example                          |
+| ------------------------------------- | ------------------------------ | ---------- | -------------------------------- |
+| `FLUXBASE_LOGGING_CONSOLE_ENABLED`    | Enable console logging         | `true`     | `true`, `false`                  |
+| `FLUXBASE_LOGGING_CONSOLE_LEVEL`      | Console log level              | `info`     | `debug`, `info`, `warn`, `error` |
+| `FLUXBASE_LOGGING_CONSOLE_FORMAT`     | Console log format             | `console`  | `console`, `json`                |
+| `FLUXBASE_LOGGING_BACKEND`            | Log storage backend            | `postgres` | `postgres`, `s3`, `local`        |
+| `FLUXBASE_LOGGING_SYSTEM_RETENTION_DAYS`    | System log retention     | `7`        | `7`                              |
+| `FLUXBASE_LOGGING_HTTP_RETENTION_DAYS`      | HTTP log retention       | `30`       | `30`                             |
+| `FLUXBASE_LOGGING_SECURITY_RETENTION_DAYS`  | Security log retention   | `90`       | `90`                             |
+| `FLUXBASE_LOGGING_EXECUTION_RETENTION_DAYS` | Execution log retention  | `30`       | `30`                             |
 
 ### CORS
 
-| Variable                 | Description                       | Default | Example                                 |
-| ------------------------ | --------------------------------- | ------- | --------------------------------------- |
-| `CORS_ENABLED`           | Enable CORS                       | `true`  | `true`, `false`                         |
-| `CORS_ALLOWED_ORIGINS`   | Allowed origins (comma-separated) | `*`     | `http://localhost:3000,https://app.com` |
-| `CORS_ALLOWED_METHODS`   | Allowed HTTP methods              | All     | `GET,POST,PUT,DELETE`                   |
-| `CORS_ALLOW_CREDENTIALS` | Allow credentials                 | `true`  | `true`, `false`                         |
-| `CORS_MAX_AGE`           | Preflight cache time (seconds)    | `86400` | `86400`                                 |
+| Variable                       | Description                       | Default                                       | Example                                 |
+| ------------------------------ | --------------------------------- | --------------------------------------------- | --------------------------------------- |
+| `FLUXBASE_CORS_ALLOWED_ORIGINS`  | Allowed origins (comma-separated) | `http://localhost:5173,http://localhost:8080` | `http://localhost:3000,https://app.com` |
+| `FLUXBASE_CORS_ALLOWED_METHODS`  | Allowed HTTP methods              | `GET,POST,PUT,PATCH,DELETE,OPTIONS`           | `GET,POST,PUT,DELETE`                   |
+| `FLUXBASE_CORS_ALLOWED_HEADERS`  | Allowed headers                   | `Origin,Content-Type,Accept,Authorization,...`| `Authorization,Content-Type`            |
+| `FLUXBASE_CORS_ALLOW_CREDENTIALS`| Allow credentials                 | `true`                                        | `true`, `false`                         |
+| `FLUXBASE_CORS_MAX_AGE`          | Preflight cache time (seconds)    | `300`                                         | `86400`                                 |
 
 ### Security
 
@@ -391,6 +403,49 @@ FLUXBASE_SCALING_ENABLE_SCHEDULER_LEADER_ELECTION=true
 | `FLUXBASE_API_MAX_TOTAL_RESULTS` | Max total retrievable rows (-1 = unlimited) | `10000` | `10000` |
 | `FLUXBASE_API_DEFAULT_PAGE_SIZE` | Auto-applied limit when not specified (-1 = no default) | `1000` | `100` |
 
+### GraphQL
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `FLUXBASE_GRAPHQL_ENABLED` | Enable GraphQL API endpoint | `true` | `true`, `false` |
+| `FLUXBASE_GRAPHQL_MAX_DEPTH` | Maximum query depth | `10` | `15` |
+| `FLUXBASE_GRAPHQL_MAX_COMPLEXITY` | Maximum query complexity score | `1000` | `2000` |
+| `FLUXBASE_GRAPHQL_INTROSPECTION` | Enable GraphQL introspection | `true` | `false` |
+
+### Prometheus Metrics
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `FLUXBASE_METRICS_ENABLED` | Enable Prometheus metrics endpoint | `true` | `true`, `false` |
+| `FLUXBASE_METRICS_PORT` | Port for metrics server | `9090` | `9090` |
+| `FLUXBASE_METRICS_PATH` | Path for metrics endpoint | `/metrics` | `/metrics` |
+
+### MCP (Model Context Protocol)
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `FLUXBASE_MCP_ENABLED` | Enable MCP server | `true` | `true`, `false` |
+| `FLUXBASE_MCP_BASE_PATH` | Base path for MCP endpoints | `/mcp` | `/mcp` |
+| `FLUXBASE_MCP_SESSION_TIMEOUT` | Session timeout | `30m` | `1h` |
+| `FLUXBASE_MCP_MAX_MESSAGE_SIZE` | Max message size (bytes) | `10485760` | `10485760` |
+| `FLUXBASE_MCP_RATE_LIMIT_PER_MIN` | Rate limit per minute per client | `100` | `200` |
+| `FLUXBASE_MCP_ALLOWED_TOOLS` | Allowed tools (empty = all) | `[]` | `["query", "storage"]` |
+| `FLUXBASE_MCP_ALLOWED_RESOURCES` | Allowed resources (empty = all) | `[]` | `["schema", "functions"]` |
+| `FLUXBASE_MCP_TOOLS_DIR` | Directory for custom MCP tools | `/app/mcp-tools` | `./mcp-tools` |
+| `FLUXBASE_MCP_AUTO_LOAD_ON_BOOT` | Auto-load custom tools on startup | `true` | `true`, `false` |
+
+### Database Branching
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `FLUXBASE_BRANCHING_ENABLED` | Enable database branching | `false` | `true`, `false` |
+| `FLUXBASE_BRANCHING_MAX_BRANCHES_PER_USER` | Max branches per user | `5` | `10` |
+| `FLUXBASE_BRANCHING_MAX_TOTAL_BRANCHES` | Max total branches | `50` | `100` |
+| `FLUXBASE_BRANCHING_DEFAULT_DATA_CLONE_MODE` | Default data clone mode | `schema_only` | `schema_only`, `full_clone` |
+| `FLUXBASE_BRANCHING_AUTO_DELETE_AFTER` | Auto-delete branches after | `0` (never) | `24h`, `168h` |
+| `FLUXBASE_BRANCHING_DATABASE_PREFIX` | Prefix for branch database names | `branch_` | `branch_` |
+| `FLUXBASE_BRANCHING_SEEDS_PATH` | Path to seed data files | `./seeds` | `./seeds` |
+
 ### TLS/HTTPS (Upcoming)
 
 | Variable               | Description          | Default | Example              |
@@ -467,25 +522,26 @@ tls:
 
 ```bash
 # .env.production
-DATABASE_URL=postgres://fluxbase:${DB_PASSWORD}@postgres:5432/fluxbase?sslmode=require
-JWT_SECRET=${JWT_SECRET}
+FLUXBASE_DATABASE_HOST=postgres
+FLUXBASE_DATABASE_PORT=5432
+FLUXBASE_DATABASE_USER=fluxbase
+FLUXBASE_DATABASE_PASSWORD=${DB_PASSWORD}
+FLUXBASE_DATABASE_DATABASE=fluxbase
+FLUXBASE_DATABASE_SSL_MODE=require
 
-STORAGE_PROVIDER=s3
-STORAGE_S3_ACCESS_KEY=${S3_ACCESS_KEY}
-STORAGE_S3_SECRET_KEY=${S3_SECRET_KEY}
-STORAGE_S3_BUCKET=production-bucket
+FLUXBASE_AUTH_JWT_SECRET=${JWT_SECRET}
 
-LOG_LEVEL=info
-LOG_FORMAT=json
+FLUXBASE_STORAGE_PROVIDER=s3
+FLUXBASE_STORAGE_S3_ACCESS_KEY=${S3_ACCESS_KEY}
+FLUXBASE_STORAGE_S3_SECRET_KEY=${S3_SECRET_KEY}
+FLUXBASE_STORAGE_S3_BUCKET=production-bucket
 
-CORS_ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
+FLUXBASE_LOGGING_CONSOLE_LEVEL=info
+FLUXBASE_LOGGING_CONSOLE_FORMAT=json
 
-RATE_LIMIT_ENABLED=true
-RATE_LIMIT_REQUESTS_PER_MINUTE=1000
+FLUXBASE_CORS_ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
 
-TLS_ENABLED=true
-TLS_AUTO_CERT=true
-TLS_AUTO_CERT_DOMAIN=api.example.com
+FLUXBASE_SECURITY_ENABLE_GLOBAL_RATE_LIMIT=true
 ```
 
 ## Development Configuration
@@ -552,32 +608,37 @@ services:
     image: ghcr.io/fluxbase-eu/fluxbase:latest
     environment:
       # Database
-      DATABASE_URL: postgres://fluxbase:password@postgres:5432/fluxbase?sslmode=disable
+      FLUXBASE_DATABASE_HOST: postgres
+      FLUXBASE_DATABASE_PORT: 5432
+      FLUXBASE_DATABASE_USER: fluxbase
+      FLUXBASE_DATABASE_PASSWORD: password
+      FLUXBASE_DATABASE_DATABASE: fluxbase
+      FLUXBASE_DATABASE_SSL_MODE: disable
 
-      # JWT
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ACCESS_TOKEN_EXPIRY: 15m
-      JWT_REFRESH_TOKEN_EXPIRY: 7d
+      # Authentication
+      FLUXBASE_AUTH_JWT_SECRET: ${JWT_SECRET}
+      FLUXBASE_AUTH_JWT_EXPIRY: 15m
+      FLUXBASE_AUTH_REFRESH_EXPIRY: 168h
 
       # Storage (MinIO)
-      STORAGE_PROVIDER: s3
-      STORAGE_S3_ENDPOINT: http://minio:9000
-      STORAGE_S3_ACCESS_KEY: minioadmin
-      STORAGE_S3_SECRET_KEY: minioadmin
-      STORAGE_S3_BUCKET: fluxbase
-      STORAGE_S3_USE_SSL: false
-      STORAGE_S3_REGION: us-east-1
+      FLUXBASE_STORAGE_PROVIDER: s3
+      FLUXBASE_STORAGE_S3_ENDPOINT: http://minio:9000
+      FLUXBASE_STORAGE_S3_ACCESS_KEY: minioadmin
+      FLUXBASE_STORAGE_S3_SECRET_KEY: minioadmin
+      FLUXBASE_STORAGE_S3_BUCKET: fluxbase
+      FLUXBASE_STORAGE_S3_FORCE_PATH_STYLE: true
+      FLUXBASE_STORAGE_S3_REGION: us-east-1
 
       # Realtime
-      REALTIME_ENABLED: true
-      REALTIME_MAX_CONNECTIONS: 1000
+      FLUXBASE_REALTIME_ENABLED: true
+      FLUXBASE_REALTIME_MAX_CONNECTIONS: 1000
 
       # Logging
-      LOG_LEVEL: info
-      LOG_FORMAT: json
+      FLUXBASE_LOGGING_CONSOLE_LEVEL: info
+      FLUXBASE_LOGGING_CONSOLE_FORMAT: json
 
       # CORS
-      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      FLUXBASE_CORS_ALLOWED_ORIGINS: http://localhost:3000
 
     ports:
       - "8080:8080"

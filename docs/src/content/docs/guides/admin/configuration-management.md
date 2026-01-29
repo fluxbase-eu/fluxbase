@@ -144,6 +144,6 @@ To allow UI control of a setting:
 
 ## See Also
 
-- [Email Services Configuration](/docs/guides/email-services)
-- [Deployment Guide](/docs/deployment/overview)
-- [Configuration Reference](/docs/reference/configuration)
+- [Email Services Configuration](/guides/email-services)
+- [Deployment Guide](/deployment/overview)
+- [Configuration Reference](/reference/configuration)

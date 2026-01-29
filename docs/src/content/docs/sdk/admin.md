@@ -806,7 +806,7 @@ import type {
 
 ## Next Steps
 
-- [Authentication Guide](/docs/guides/authentication) - User authentication methods
-- [Database Guide](/docs/guides/typescript-sdk/database) - Query and manipulate data
-- [Storage Guide](/docs/guides/storage) - File upload and management
-- [Realtime Guide](/docs/guides/realtime) - WebSocket subscriptions
+- [Authentication Guide](/guides/authentication) - User authentication methods
+- [Database Guide](/guides/typescript-sdk/database) - Query and manipulate data
+- [Storage Guide](/guides/storage) - File upload and management
+- [Realtime Guide](/guides/realtime) - WebSocket subscriptions
