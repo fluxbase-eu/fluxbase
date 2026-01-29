@@ -139,12 +139,6 @@ const { data } = await client
   .from("posts")
   .select("id, title, author:users(name)")
   .eq("published", true);
-
-// Insert data
-await client.from("posts").insert({
-  title: "Hello World",
-  content: "My first post",
-});
 ```
 
 </li>
