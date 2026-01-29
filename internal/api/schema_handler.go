@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -71,6 +70,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 	}
 
 	// Query all tables with their columns, primary keys, RLS status, indexes, unique constraints, and comments
+	// Excludes extension-owned tables (like PostGIS spatial_ref_sys) via pg_depend check
 	tablesQuery := `
 		WITH table_info AS (
 			SELECT
@@ -83,8 +83,10 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 			FROM information_schema.tables t
 			JOIN pg_class c ON c.relname = t.table_name
 			JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = t.table_schema
+			LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
 			WHERE t.table_schema = ANY($1)
 			AND t.table_type = 'BASE TABLE'
+			AND d.objid IS NULL
 		),
 		columns_info AS (
 			SELECT
@@ -140,7 +142,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 			WHERE schemaname = ANY($1)
 		),
 		fk_columns AS (
-			SELECT DISTINCT
+			SELECT DISTINCT ON (tc.table_schema, tc.table_name, kcu.column_name)
 				tc.table_schema,
 				tc.table_name,
 				kcu.column_name,
@@ -153,6 +155,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 				AND tc.table_schema = kcu.table_schema
 			JOIN information_schema.constraint_column_usage ccu
 				ON ccu.constraint_name = tc.constraint_name
+				AND ccu.table_schema = tc.table_schema
 			WHERE tc.constraint_type = 'FOREIGN KEY'
 			AND tc.table_schema = ANY($1)
 		)
@@ -196,13 +199,14 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 
 	rows, err := s.db.Query(ctx, tablesQuery, schemaList)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "SCHEMA_QUERY_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer rows.Close()
 
 	// Build nodes map (keyed by schema.table)
 	nodesMap := make(map[string]*SchemaNode)
-	pkMap := make(map[string][]string) // schema.table -> primary key columns
+	pkMap := make(map[string][]string)    // schema.table -> primary key columns
+	seenCols := make(map[string]struct{}) // schema.table.column -> exists (for deduplication)
 
 	for rows.Next() {
 		var (
@@ -231,7 +235,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 			&isPrimaryKey, &isForeignKey, &isUnique, &isIndexed, &fkTarget,
 		)
 		if err != nil {
-			return SendError(c, fiber.StatusInternalServerError, "SCAN_FAILED", err.Error())
+			return SendError(c, fiber.StatusInternalServerError, err.Error())
 		}
 
 		key := tableSchema + "." + tableName
@@ -250,19 +254,23 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 			}
 		}
 
-		// Add column
-		nodesMap[key].Columns = append(nodesMap[key].Columns, SchemaNodeColumn{
-			Name:         columnName,
-			DataType:     dataType,
-			Nullable:     isNullable,
-			IsPrimaryKey: isPrimaryKey,
-			IsForeignKey: isForeignKey,
-			FKTarget:     fkTarget,
-			DefaultValue: defaultValue,
-			IsUnique:     isUnique,
-			IsIndexed:    isIndexed,
-			Comment:      columnComment,
-		})
+		// Add column (deduplicate by schema.table.column)
+		colKey := key + "." + columnName
+		if _, seen := seenCols[colKey]; !seen {
+			seenCols[colKey] = struct{}{}
+			nodesMap[key].Columns = append(nodesMap[key].Columns, SchemaNodeColumn{
+				Name:         columnName,
+				DataType:     dataType,
+				Nullable:     isNullable,
+				IsPrimaryKey: isPrimaryKey,
+				IsForeignKey: isForeignKey,
+				FKTarget:     fkTarget,
+				DefaultValue: defaultValue,
+				IsUnique:     isUnique,
+				IsIndexed:    isIndexed,
+				Comment:      columnComment,
+			})
+		}
 
 		// Track primary keys
 		if isPrimaryKey {
@@ -271,7 +279,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 	}
 
 	if err := rows.Err(); err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "ROWS_ERROR", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Set primary keys on nodes
@@ -287,39 +295,57 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 		nodes = append(nodes, *node)
 	}
 
-	// Query all foreign key relationships with cardinality info
-	// Cardinality is determined by: if source column has unique constraint -> one-to-one/one-to-many
+	// Query all foreign key relationships with cardinality info using pg_catalog
+	// pg_catalog is more reliable than information_schema for FK queries
 	relationsQuery := `
-		WITH fk_constraints AS (
+		WITH fk_info AS (
 			SELECT
-				tc.constraint_name || '_' || kcu.column_name as id,
-				tc.table_schema as source_schema,
-				tc.table_name as source_table,
-				kcu.column_name as source_column,
-				ccu.table_schema as target_schema,
-				ccu.table_name as target_table,
-				ccu.column_name as target_column,
-				tc.constraint_name,
-				COALESCE(rc.delete_rule, 'NO ACTION') as on_delete,
-				COALESCE(rc.update_rule, 'NO ACTION') as on_update
-			FROM information_schema.table_constraints tc
-			JOIN information_schema.key_column_usage kcu
-				ON tc.constraint_name = kcu.constraint_name
-				AND tc.table_schema = kcu.table_schema
-			JOIN information_schema.constraint_column_usage ccu
-				ON ccu.constraint_name = tc.constraint_name
-			LEFT JOIN information_schema.referential_constraints rc
-				ON rc.constraint_name = tc.constraint_name
-				AND rc.constraint_schema = tc.table_schema
-			WHERE tc.constraint_type = 'FOREIGN KEY'
-			AND tc.table_schema = ANY($1)
+				c.conname || '_' || a_src.attname as id,
+				ns_src.nspname as source_schema,
+				cl_src.relname as source_table,
+				a_src.attname as source_column,
+				ns_tgt.nspname as target_schema,
+				cl_tgt.relname as target_table,
+				a_tgt.attname as target_column,
+				c.conname as constraint_name,
+				CASE c.confdeltype
+					WHEN 'a' THEN 'NO ACTION'
+					WHEN 'r' THEN 'RESTRICT'
+					WHEN 'c' THEN 'CASCADE'
+					WHEN 'n' THEN 'SET NULL'
+					WHEN 'd' THEN 'SET DEFAULT'
+					ELSE 'NO ACTION'
+				END as on_delete,
+				CASE c.confupdtype
+					WHEN 'a' THEN 'NO ACTION'
+					WHEN 'r' THEN 'RESTRICT'
+					WHEN 'c' THEN 'CASCADE'
+					WHEN 'n' THEN 'SET NULL'
+					WHEN 'd' THEN 'SET DEFAULT'
+					ELSE 'NO ACTION'
+				END as on_update
+			FROM pg_constraint c
+			JOIN pg_class cl_src ON c.conrelid = cl_src.oid
+			JOIN pg_namespace ns_src ON cl_src.relnamespace = ns_src.oid
+			JOIN pg_class cl_tgt ON c.confrelid = cl_tgt.oid
+			JOIN pg_namespace ns_tgt ON cl_tgt.relnamespace = ns_tgt.oid
+			CROSS JOIN LATERAL unnest(c.conkey, c.confkey) WITH ORDINALITY AS cols(src_attnum, tgt_attnum, ord)
+			JOIN pg_attribute a_src ON a_src.attrelid = cl_src.oid AND a_src.attnum = cols.src_attnum
+			JOIN pg_attribute a_tgt ON a_tgt.attrelid = cl_tgt.oid AND a_tgt.attnum = cols.tgt_attnum
+			WHERE c.contype = 'f'
+			AND ns_src.nspname = ANY($1)
 		),
 		source_unique AS (
-			SELECT DISTINCT tc.table_schema, tc.table_name, kcu.column_name
-			FROM information_schema.table_constraints tc
-			JOIN information_schema.key_column_usage kcu
-				ON tc.constraint_name = kcu.constraint_name
-			WHERE tc.constraint_type IN ('UNIQUE', 'PRIMARY KEY')
+			SELECT DISTINCT
+				ns.nspname as table_schema,
+				cl.relname as table_name,
+				a.attname as column_name
+			FROM pg_constraint c
+			JOIN pg_class cl ON c.conrelid = cl.oid
+			JOIN pg_namespace ns ON cl.relnamespace = ns.oid
+			CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS cols(attnum, ord)
+			JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attnum = cols.attnum
+			WHERE c.contype IN ('u', 'p')
 		)
 		SELECT
 			fk.id,
@@ -336,7 +362,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 				WHEN su.column_name IS NOT NULL THEN 'one-to-one'
 				ELSE 'many-to-one'
 			END as cardinality
-		FROM fk_constraints fk
+		FROM fk_info fk
 		LEFT JOIN source_unique su
 			ON fk.source_schema = su.table_schema
 			AND fk.source_table = su.table_name
@@ -346,7 +372,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 
 	relRows, err := s.db.Query(ctx, relationsQuery, schemaList)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "RELATIONS_QUERY_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer relRows.Close()
 
@@ -359,13 +385,13 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 			&rel.ConstraintName, &rel.OnDelete, &rel.OnUpdate, &rel.Cardinality,
 		)
 		if err != nil {
-			return SendError(c, fiber.StatusInternalServerError, "REL_SCAN_FAILED", err.Error())
+			return SendError(c, fiber.StatusInternalServerError, err.Error())
 		}
 		edges = append(edges, rel)
 	}
 
 	if err := relRows.Err(); err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "REL_ROWS_ERROR", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Count relationships per table
@@ -395,7 +421,7 @@ func (s *Server) GetTableRelationships(c *fiber.Ctx) error {
 	table := c.Params("table")
 
 	if schema == "" || table == "" {
-		return SendBadRequest(c, "schema and table are required")
+		return SendBadRequest(c, "schema and table are required", "MISSING_PARAMS")
 	}
 
 	query := `
@@ -449,7 +475,7 @@ func (s *Server) GetTableRelationships(c *fiber.Ctx) error {
 
 	rows, err := s.db.Query(ctx, query, schema, table)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "QUERY_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer rows.Close()
 
@@ -475,7 +501,7 @@ func (s *Server) GetTableRelationships(c *fiber.Ctx) error {
 			&rel.DeleteRule, &rel.UpdateRule,
 		)
 		if err != nil {
-			return SendError(c, fiber.StatusInternalServerError, "SCAN_FAILED", err.Error())
+			return SendError(c, fiber.StatusInternalServerError, err.Error())
 		}
 
 		if rel.Direction == "outgoing" {

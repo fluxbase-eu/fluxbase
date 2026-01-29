@@ -13,6 +13,7 @@ import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { FluxbaseStats } from './components/fluxbase-stats'
+import { SecuritySummary } from './components/security-summary'
 
 const route = getRouteApi('/_authenticated/')
 
@@ -51,6 +52,9 @@ export function Dashboard() {
           <TabsContent value='overview' className='space-y-4'>
             {/* Fluxbase System Stats */}
             <FluxbaseStats />
+
+            {/* Security Summary */}
+            <SecuritySummary />
 
             {/* Quick Actions */}
             <Card>

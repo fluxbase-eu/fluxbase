@@ -2,14 +2,14 @@ import { useEffect } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { ConfigDrawer } from '@/components/config-drawer'
+import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { ImpersonationSelector } from '@/features/impersonation/components/impersonation-selector'
 import { TableSelector } from './components/table-selector'
 import { TableViewer } from './components/table-viewer'
-import { ImpersonationBanner } from '@/components/impersonation-banner'
-import { ImpersonationSelector } from '@/features/impersonation/components/impersonation-selector'
 
 const route = getRouteApi('/_authenticated/tables/')
 
@@ -61,11 +61,14 @@ export function Tables() {
               onSchemaChange={handleSchemaChange}
             />
           </Panel>
-          <PanelResizeHandle className='w-1 bg-border transition-colors hover:bg-primary' />
+          <PanelResizeHandle className='bg-border hover:bg-primary w-1 transition-colors' />
           <Panel>
             <main className='h-full overflow-auto'>
               {selectedTable ? (
-                <TableViewer tableName={selectedTable} schema={selectedSchema} />
+                <TableViewer
+                  tableName={selectedTable}
+                  schema={selectedSchema}
+                />
               ) : (
                 <div className='flex h-full items-center justify-center'>
                   <p className='text-muted-foreground'>

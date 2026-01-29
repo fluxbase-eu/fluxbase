@@ -2142,6 +2142,7 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 	// RLS Policy management routes
 	router.Get("/policies", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.ListPolicies)
 	router.Post("/policies", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.CreatePolicy)
+	router.Put("/policies/:schema/:table/:policy", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.UpdatePolicy)
 	router.Delete("/policies/:schema/:table/:policy", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.DeletePolicy)
 	router.Get("/policies/templates", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.GetPolicyTemplates)
 

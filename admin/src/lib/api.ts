@@ -3885,6 +3885,26 @@ export const policyApi = {
     return response.data
   },
 
+  // Update an existing policy
+  // Note: PostgreSQL's ALTER POLICY can only change roles, USING, and WITH CHECK.
+  // It cannot change the policy name, command type, or permissive/restrictive mode.
+  update: async (
+    schema: string,
+    table: string,
+    policyName: string,
+    data: {
+      roles?: string[]
+      using?: string | null
+      with_check?: string | null
+    }
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.put<{ success: boolean; message: string }>(
+      `/api/v1/admin/policies/${schema}/${table}/${policyName}`,
+      data
+    )
+    return response.data
+  },
+
   // Get security warnings
   getSecurityWarnings: async (): Promise<SecurityWarningsResponse> => {
     const response = await api.get<SecurityWarningsResponse>(

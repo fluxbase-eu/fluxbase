@@ -88,7 +88,7 @@ func (s *Server) ListPolicies(c *fiber.Ctx) error {
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "QUERY_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer rows.Close()
 
@@ -101,7 +101,7 @@ func (s *Server) ListPolicies(c *fiber.Ctx) error {
 			&roles, &p.Command, &p.Using, &p.WithCheck,
 		)
 		if err != nil {
-			return SendError(c, fiber.StatusInternalServerError, "SCAN_FAILED", err.Error())
+			return SendError(c, fiber.StatusInternalServerError, err.Error())
 		}
 		p.Roles = roles
 		policies = append(policies, p)
@@ -116,7 +116,7 @@ func (s *Server) GetTablesWithRLS(c *fiber.Ctx) error {
 	ctx := c.Context()
 	schema := c.Query("schema", "public")
 
-	// Get tables with RLS status
+	// Get tables with RLS status (excluding extension-owned tables like spatial_ref_sys)
 	tablesQuery := `
 		SELECT
 			n.nspname as schema,
@@ -125,15 +125,17 @@ func (s *Server) GetTablesWithRLS(c *fiber.Ctx) error {
 			c.relforcerowsecurity as rls_forced
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
 		WHERE n.nspname = $1
 		AND c.relkind = 'r'
 		AND c.relname NOT LIKE 'pg_%'
+		AND d.objid IS NULL
 		ORDER BY c.relname
 	`
 
 	tablesRows, err := s.db.Query(ctx, tablesQuery, schema)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "TABLES_QUERY_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer tablesRows.Close()
 
@@ -142,7 +144,7 @@ func (s *Server) GetTablesWithRLS(c *fiber.Ctx) error {
 		var t TableRLSStatus
 		err := tablesRows.Scan(&t.Schema, &t.Table, &t.RLSEnabled, &t.RLSForced)
 		if err != nil {
-			return SendError(c, fiber.StatusInternalServerError, "TABLES_SCAN_FAILED", err.Error())
+			return SendError(c, fiber.StatusInternalServerError, err.Error())
 		}
 		t.Policies = []Policy{}
 		tablesMap[t.Table] = &t
@@ -165,7 +167,7 @@ func (s *Server) GetTablesWithRLS(c *fiber.Ctx) error {
 
 	policyRows, err := s.db.Query(ctx, policiesQuery, schema)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "POLICIES_QUERY_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer policyRows.Close()
 
@@ -178,7 +180,7 @@ func (s *Server) GetTablesWithRLS(c *fiber.Ctx) error {
 			&roles, &p.Command, &p.Using, &p.WithCheck,
 		)
 		if err != nil {
-			return SendError(c, fiber.StatusInternalServerError, "POLICY_SCAN_FAILED", err.Error())
+			return SendError(c, fiber.StatusInternalServerError, err.Error())
 		}
 		p.Schema = schema
 		p.Table = tableName
@@ -241,7 +243,7 @@ func (s *Server) GetTableRLSStatus(c *fiber.Ctx) error {
 		ORDER BY policyname
 	`, schema, table)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "QUERY_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 	defer rows.Close()
 
@@ -274,7 +276,7 @@ func (s *Server) ToggleTableRLS(c *fiber.Ctx) error {
 		Enabled bool `json:"enabled"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		return SendBadRequest(c, "Invalid request body")
+		return SendBadRequest(c, "Invalid request body", "INVALID_BODY")
 	}
 
 	// Validate table exists
@@ -305,7 +307,7 @@ func (s *Server) ToggleTableRLS(c *fiber.Ctx) error {
 
 	_, err = s.db.Exec(ctx, sql)
 	if err != nil {
-		return SendError(c, fiber.StatusInternalServerError, "RLS_TOGGLE_FAILED", err.Error())
+		return SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(fiber.Map{
@@ -321,22 +323,22 @@ func (s *Server) CreatePolicy(c *fiber.Ctx) error {
 
 	var req CreatePolicyRequest
 	if err := c.BodyParser(&req); err != nil {
-		return SendBadRequest(c, "Invalid request body")
+		return SendBadRequest(c, "Invalid request body", "INVALID_BODY")
 	}
 
 	// Validate inputs
 	if req.Schema == "" || req.Table == "" || req.Name == "" {
-		return SendBadRequest(c, "schema, table, and name are required")
+		return SendBadRequest(c, "schema, table, and name are required", "MISSING_FIELDS")
 	}
 
 	// Validate policy name format
 	if !validPolicyNameRegex.MatchString(req.Name) {
-		return SendBadRequest(c, "Invalid policy name: must start with a letter or underscore, followed by letters, digits, or underscores")
+		return SendBadRequest(c, "Invalid policy name: must start with a letter or underscore, followed by letters, digits, or underscores", "INVALID_NAME")
 	}
 
 	validCommands := map[string]bool{"ALL": true, "SELECT": true, "INSERT": true, "UPDATE": true, "DELETE": true}
 	if !validCommands[strings.ToUpper(req.Command)] {
-		return SendBadRequest(c, "command must be ALL, SELECT, INSERT, UPDATE, or DELETE")
+		return SendBadRequest(c, "command must be ALL, SELECT, INSERT, UPDATE, or DELETE", "INVALID_COMMAND")
 	}
 
 	// Build CREATE POLICY statement
@@ -373,7 +375,7 @@ func (s *Server) CreatePolicy(c *fiber.Ctx) error {
 
 	_, err := s.db.Exec(ctx, sql)
 	if err != nil {
-		return SendError(c, fiber.StatusBadRequest, "POLICY_CREATE_FAILED", err.Error())
+		return SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -399,10 +401,79 @@ func (s *Server) DeletePolicy(c *fiber.Ctx) error {
 
 	_, err := s.db.Exec(ctx, sql)
 	if err != nil {
-		return SendError(c, fiber.StatusBadRequest, "POLICY_DELETE_FAILED", err.Error())
+		return SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+// UpdatePolicyRequest is the request body for updating a policy
+type UpdatePolicyRequest struct {
+	Roles     []string `json:"roles"`
+	Using     *string  `json:"using"`
+	WithCheck *string  `json:"with_check"`
+}
+
+// UpdatePolicy modifies an existing RLS policy
+// PUT /api/v1/admin/policies/:schema/:table/:policy
+// Note: PostgreSQL's ALTER POLICY can only change roles, USING, and WITH CHECK.
+// It cannot change the policy name, command type, or permissive/restrictive mode.
+func (s *Server) UpdatePolicy(c *fiber.Ctx) error {
+	ctx := c.Context()
+	schema := c.Params("schema")
+	table := c.Params("table")
+	policyName := c.Params("policy")
+
+	var req UpdatePolicyRequest
+	if err := c.BodyParser(&req); err != nil {
+		return SendBadRequest(c, "Invalid request body", "INVALID_BODY")
+	}
+
+	// Build ALTER POLICY statement
+	// ALTER POLICY can modify: TO (roles), USING, WITH CHECK
+	quotedSchema := quoteIdentifier(schema)
+	quotedTable := quoteIdentifier(table)
+	quotedPolicy := quoteIdentifier(policyName)
+
+	if quotedSchema == "" || quotedTable == "" || quotedPolicy == "" {
+		return SendBadRequest(c, "Invalid schema, table, or policy name", "INVALID_IDENTIFIER")
+	}
+
+	sql := fmt.Sprintf("ALTER POLICY %s ON %s.%s", quotedPolicy, quotedSchema, quotedTable)
+
+	// Handle TO clause (roles)
+	if len(req.Roles) > 0 {
+		quotedRoles := make([]string, len(req.Roles))
+		for i, r := range req.Roles {
+			quoted := quoteIdentifier(r)
+			if quoted == "" {
+				return SendBadRequest(c, fmt.Sprintf("Invalid role name: %s", r), "INVALID_ROLE")
+			}
+			quotedRoles[i] = quoted
+		}
+		sql += fmt.Sprintf(" TO %s", strings.Join(quotedRoles, ", "))
+	}
+
+	// Handle USING clause
+	if req.Using != nil {
+		sql += fmt.Sprintf(" USING (%s)", *req.Using)
+	}
+
+	// Handle WITH CHECK clause
+	if req.WithCheck != nil {
+		sql += fmt.Sprintf(" WITH CHECK (%s)", *req.WithCheck)
+	}
+
+	_, err := s.db.Exec(ctx, sql)
+	if err != nil {
+		return SendError(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": fmt.Sprintf("Policy '%s' updated successfully", policyName),
+		"sql":     sql,
+	})
 }
 
 // GetSecurityWarnings scans for security issues
@@ -411,22 +482,26 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 	ctx := c.Context()
 	warnings := []SecurityWarning{}
 
-	// Check 1: Tables in public schema without RLS
+	// Check 1: Tables in public schema without RLS (excluding extension-owned tables)
 	rows1, err := s.db.Query(ctx, `
 		SELECT c.relname
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
 		WHERE n.nspname = 'public'
 		AND c.relkind = 'r'
 		AND NOT c.relrowsecurity
 		AND c.relname NOT LIKE 'pg_%'
 		AND c.relname NOT LIKE '_pg_%'
+		AND d.objid IS NULL
 	`)
 	if err == nil {
 		defer rows1.Close()
 		for rows1.Next() {
 			var tableName string
-			rows1.Scan(&tableName)
+			if err := rows1.Scan(&tableName); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("no-rls-%s", tableName),
 				Severity:   "critical",
@@ -440,11 +515,12 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check 2: RLS enabled but no policies
+	// Check 2: RLS enabled but no policies (excluding extension-owned tables)
 	rows2, err := s.db.Query(ctx, `
 		SELECT n.nspname, c.relname
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
 		WHERE c.relrowsecurity = true
 		AND c.relkind = 'r'
 		AND NOT EXISTS (
@@ -452,12 +528,15 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 			WHERE p.schemaname = n.nspname AND p.tablename = c.relname
 		)
 		AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+		AND d.objid IS NULL
 	`)
 	if err == nil {
 		defer rows2.Close()
 		for rows2.Next() {
 			var schemaName, tableName string
-			rows2.Scan(&schemaName, &tableName)
+			if err := rows2.Scan(&schemaName, &tableName); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("no-policies-%s-%s", schemaName, tableName),
 				Severity:   "high",
@@ -471,17 +550,21 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 	}
 
 	// Check 3: Overly permissive policies (USING true for non-SELECT)
+	// Excludes service_role which intentionally bypasses RLS for system operations
 	rows3, err := s.db.Query(ctx, `
 		SELECT schemaname, tablename, policyname, cmd
 		FROM pg_policies
 		WHERE qual = 'true'
 		AND cmd != 'SELECT'
+		AND NOT ('service_role' = ANY(roles))
 	`)
 	if err == nil {
 		defer rows3.Close()
 		for rows3.Next() {
 			var schemaName, tableName, policyName, cmd string
-			rows3.Scan(&schemaName, &tableName, &policyName, &cmd)
+			if err := rows3.Scan(&schemaName, &tableName, &policyName, &cmd); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("permissive-%s-%s-%s", schemaName, tableName, policyName),
 				Severity:   "high",
@@ -506,7 +589,9 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		defer rows4.Close()
 		for rows4.Next() {
 			var schemaName, tableName, policyName, cmd string
-			rows4.Scan(&schemaName, &tableName, &policyName, &cmd)
+			if err := rows4.Scan(&schemaName, &tableName, &policyName, &cmd); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("anon-write-%s-%s-%s", schemaName, tableName, policyName),
 				Severity:   "high",
@@ -521,18 +606,24 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 	}
 
 	// Check 5: Missing WITH CHECK on INSERT/UPDATE policies
+	// Excludes service_role which intentionally has full access without restrictions
+	// Excludes Fluxbase-managed schemas where service-level policies don't need WITH CHECK
 	rows5, err := s.db.Query(ctx, `
 		SELECT schemaname, tablename, policyname, cmd
 		FROM pg_policies
 		WHERE cmd IN ('INSERT', 'UPDATE', 'ALL')
 		AND with_check IS NULL
 		AND permissive = 'PERMISSIVE'
+		AND NOT ('service_role' = ANY(roles))
+		AND schemaname NOT IN ('auth', 'storage', 'jobs', 'functions', 'branching', 'realtime', 'dashboard', 'ai', 'rpc', 'app')
 	`)
 	if err == nil {
 		defer rows5.Close()
 		for rows5.Next() {
 			var schemaName, tableName, policyName, cmd string
-			rows5.Scan(&schemaName, &tableName, &policyName, &cmd)
+			if err := rows5.Scan(&schemaName, &tableName, &policyName, &cmd); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("no-check-%s-%s-%s", schemaName, tableName, policyName),
 				Severity:   "medium",
@@ -546,23 +637,27 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check 6: Tables with sensitive columns but no RLS
+	// Check 6: Tables with sensitive columns but no RLS (excluding extension-owned tables)
 	rows6, err := s.db.Query(ctx, `
 		SELECT DISTINCT t.table_schema, t.table_name, c.column_name
 		FROM information_schema.columns c
 		JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name
 		JOIN pg_class pc ON pc.relname = t.table_name
 		JOIN pg_namespace pn ON pn.oid = pc.relnamespace AND pn.nspname = t.table_schema
+		LEFT JOIN pg_depend pd ON pd.objid = pc.oid AND pd.deptype = 'e'
 		WHERE t.table_schema = 'public'
 		AND t.table_type = 'BASE TABLE'
 		AND NOT pc.relrowsecurity
 		AND c.column_name ~* '(password|secret|token|api_key|apikey|private_key|credit_card|ssn|social_security)'
+		AND pd.objid IS NULL
 	`)
 	if err == nil {
 		defer rows6.Close()
 		for rows6.Next() {
 			var schemaName, tableName, columnName string
-			rows6.Scan(&schemaName, &tableName, &columnName)
+			if err := rows6.Scan(&schemaName, &tableName, &columnName); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("sensitive-no-rls-%s-%s-%s", schemaName, tableName, columnName),
 				Severity:   "critical",
@@ -576,21 +671,26 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check 7: RLS enabled but not forced (table owner can bypass)
+	// Check 7: RLS enabled but not forced (table owner can bypass) - excluding extension-owned tables
+	// Skip Fluxbase-managed schemas where table owner bypass is expected behavior
 	rows7, err := s.db.Query(ctx, `
 		SELECT n.nspname, c.relname
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
 		WHERE c.relrowsecurity = true
 		AND c.relforcerowsecurity = false
 		AND c.relkind = 'r'
-		AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'auth', 'storage')
+		AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'auth', 'storage', 'jobs', 'functions', 'branching', 'realtime', 'dashboard', 'ai', 'rpc', 'app')
+		AND d.objid IS NULL
 	`)
 	if err == nil {
 		defer rows7.Close()
 		for rows7.Next() {
 			var schemaName, tableName string
-			rows7.Scan(&schemaName, &tableName)
+			if err := rows7.Scan(&schemaName, &tableName); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("no-force-rls-%s-%s", schemaName, tableName),
 				Severity:   "medium",
@@ -605,17 +705,20 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 	}
 
 	// Check 8: Policies that grant access to PUBLIC role
+	// Excludes Fluxbase-managed schemas where PUBLIC access is intentional for internal operations
 	rows8, err := s.db.Query(ctx, `
 		SELECT schemaname, tablename, policyname, cmd
 		FROM pg_policies
 		WHERE 'public' = ANY(roles)
-		AND schemaname NOT IN ('pg_catalog', 'information_schema')
+		AND schemaname NOT IN ('pg_catalog', 'information_schema', 'auth', 'storage', 'jobs', 'functions', 'branching', 'realtime', 'dashboard', 'ai', 'rpc', 'app')
 	`)
 	if err == nil {
 		defer rows8.Close()
 		for rows8.Next() {
 			var schemaName, tableName, policyName, cmd string
-			rows8.Scan(&schemaName, &tableName, &policyName, &cmd)
+			if err := rows8.Scan(&schemaName, &tableName, &policyName, &cmd); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("public-access-%s-%s-%s", schemaName, tableName, policyName),
 				Severity:   "high",
@@ -650,7 +753,9 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		defer rows9.Close()
 		for rows9.Next() {
 			var schemaName, tableName, refSchema, refTable, deleteRule string
-			rows9.Scan(&schemaName, &tableName, &refSchema, &refTable, &deleteRule)
+			if err := rows9.Scan(&schemaName, &tableName, &refSchema, &refTable, &deleteRule); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("cascade-delete-%s-%s-%s-%s", schemaName, tableName, refSchema, refTable),
 				Severity:   "low",
@@ -663,12 +768,13 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check 10: Tables without user ownership pattern (no user_id/owner_id column)
+	// Check 10: Tables without user ownership pattern (no user_id/owner_id column) - excluding extension-owned tables
 	rows10, err := s.db.Query(ctx, `
 		SELECT t.table_schema, t.table_name
 		FROM information_schema.tables t
 		JOIN pg_class c ON c.relname = t.table_name
 		JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = t.table_schema
+		LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
 		WHERE t.table_schema = 'public'
 		AND t.table_type = 'BASE TABLE'
 		AND c.relrowsecurity = true
@@ -679,12 +785,15 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 			AND col.column_name ~* '(user_id|owner_id|created_by|author_id)'
 		)
 		AND t.table_name NOT IN ('_migrations', 'schema_migrations')
+		AND d.objid IS NULL
 	`)
 	if err == nil {
 		defer rows10.Close()
 		for rows10.Next() {
 			var schemaName, tableName string
-			rows10.Scan(&schemaName, &tableName)
+			if err := rows10.Scan(&schemaName, &tableName); err != nil {
+				continue
+			}
 			warnings = append(warnings, SecurityWarning{
 				ID:         fmt.Sprintf("no-owner-column-%s-%s", schemaName, tableName),
 				Severity:   "medium",
