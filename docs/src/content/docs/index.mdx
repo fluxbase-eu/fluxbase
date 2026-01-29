@@ -98,44 +98,47 @@ Fluxbase is currently in beta. While the core features are stable, you may encou
 <ol class="quick-start-steps">
 <li>
 
-**Start with Docker**
+**Clone and generate secrets**
 
 ```bash
-docker run -p 8080:8080 ghcr.io/fluxbase-eu/fluxbase:latest
+git clone https://github.com/fluxbase-eu/fluxbase.git
+cd fluxbase/deploy
+./generate-keys.sh  # Select option 1 (Docker Compose)
 ```
 
-Or use Docker Compose for production:
-
-```bash
-curl -O https://raw.githubusercontent.com/fluxbase-eu/fluxbase/main/docker-compose.yml
-docker compose up -d
-```
+Save the **Setup Token** displayed - you'll need it for admin access.
 
 </li>
 <li>
 
-**Install the SDK**
+**Start Fluxbase**
+
+```bash
+docker compose -f docker-compose.minimal.yaml up -d
+```
+
+Then open [localhost:8080/admin/setup](http://localhost:8080/admin/setup), enter your setup token, and create your admin account.
+
+</li>
+<li>
+
+**Install the SDK and connect**
 
 ```bash
 npm install @fluxbase/sdk
 ```
 
-</li>
-<li>
-
-**Connect and query**
-
 ```typescript
 import { createClient } from "@fluxbase/sdk";
 
-const client = createClient("http://localhost:8080", "your-api-key");
+// Get your API key from the admin dashboard → Client Keys
+const client = createClient("http://localhost:8080", "your-anon-key");
 
-// Query data with filters
-const { data, error } = await client
+// Query data
+const { data } = await client
   .from("posts")
   .select("id, title, author:users(name)")
-  .eq("published", true)
-  .order("created_at", { ascending: false });
+  .eq("published", true);
 
 // Insert data
 await client.from("posts").insert({
@@ -160,6 +163,8 @@ client.realtime
 
 </li>
 </ol>
+
+For detailed setup instructions, see the [Quick Start Guide](/getting-started/quick-start/).
 
 <div class="section-divider"></div>
 
