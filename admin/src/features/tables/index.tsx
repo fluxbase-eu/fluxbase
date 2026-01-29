@@ -1,13 +1,8 @@
 import { useEffect } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import { ConfigDrawer } from '@/components/config-drawer'
 import { ImpersonationBanner } from '@/components/impersonation-banner'
-import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { ImpersonationSelector } from '@/features/impersonation/components/impersonation-selector'
 import { TableSelector } from './components/table-selector'
 import { TableViewer } from './components/table-viewer'
 
@@ -40,15 +35,6 @@ export function Tables() {
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className='ms-auto flex items-center space-x-4'>
-          <ImpersonationSelector />
-          <ThemeSwitch />
-          <ConfigDrawer />
-        </div>
-      </Header>
-
       <ImpersonationBanner />
 
       <Main className='h-[calc(100vh-4rem)] p-0'>

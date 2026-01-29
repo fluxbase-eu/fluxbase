@@ -80,8 +80,11 @@ function UsersPage() {
         {/* Header */}
         <div className='flex items-center justify-between'>
           <div>
-            <h1 className='text-3xl font-bold'>Users</h1>
-            <p className='text-muted-foreground'>
+            <h1 className='flex items-center gap-2 text-3xl font-bold tracking-tight'>
+              <Users className='h-8 w-8' />
+              Users
+            </h1>
+            <p className='text-muted-foreground mt-2'>
               {activeTab === 'app'
                 ? 'Manage application users who access your app through the REST API'
                 : 'Manage Fluxbase dashboard administrators and operators'}

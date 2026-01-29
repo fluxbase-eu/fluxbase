@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import {
   AlertCircle,
   AlertTriangle,
@@ -56,7 +57,7 @@ export function SecuritySummary() {
           <h2 className='text-lg font-semibold'>Security Overview</h2>
         </div>
         <Button variant='outline' size='sm' asChild>
-          <a href='/policies'>View All Policies</a>
+          <Link to='/policies'>View All Policies</Link>
         </Button>
       </div>
 
