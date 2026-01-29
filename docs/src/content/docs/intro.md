@@ -208,11 +208,10 @@ graph TB
 
 ## Next Steps
 
-- [Quick Start](getting-started/quick-start) - Get Fluxbase running in 5 minutes
-- [AI Chatbots Guide](guides/ai-chatbots) - Build natural language interfaces to your database
-- [Configuration Reference](reference/configuration) - Customize Fluxbase for your needs
-- [SDK Documentation](api/sdk) - TypeScript SDK API reference
-- [TypeScript SDK Guide](/guides/typescript-sdk) - Learn how to use the TypeScript SDK
+- [Quick Start](/getting-started/quick-start/) - Get Fluxbase running in 5 minutes
+- [AI Chatbots Guide](/guides/ai-chatbots/) - Build natural language interfaces to your database
+- [Configuration Reference](/reference/configuration/) - Customize Fluxbase for your needs
+- [TypeScript SDK Reference](/api/sdk/) - Learn how to use the TypeScript SDK
 
 ## Community & Support
 

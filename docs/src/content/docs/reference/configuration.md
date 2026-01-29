@@ -792,5 +792,5 @@ If you see CORS errors in the browser:
 
 ## Next Steps
 
-- [Quick Start](../getting-started/quick-start.md) - Get Fluxbase running in 5 minutes
-- [Authentication](../guides/authentication.md) - Set up JWT authentication
+- [Quick Start](/getting-started/quick-start/) - Get Fluxbase running in 5 minutes
+- [Authentication](/guides/authentication/) - Set up JWT authentication

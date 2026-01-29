@@ -1283,6 +1283,6 @@ kubectl logs <pod> -n fluxbase | grep "connection pool"
 
 ## Next Steps
 
-- [Production Checklist](production-checklist) - Pre-deployment verification
-- [Monitoring Guide](../guides/monitoring-observability) - Set up observability
-- [Database Guide](../guides/typescript-sdk/database) - Database operations and best practices
+- [Production Checklist](/deployment/production-checklist/) - Pre-deployment verification
+- [Monitoring Guide](/guides/monitoring-observability/) - Set up observability
+- [API Reference](/api/sdk/) - SDK documentation and best practices

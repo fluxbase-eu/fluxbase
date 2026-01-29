@@ -67,7 +67,7 @@ Fluxbase implements multiple layers of security to protect your data and applica
 - Policy-based permissions
 - Multi-tenant data isolation
 
-[Learn more about RLS →](../guides/row-level-security.md)
+[Learn more about RLS →](/guides/row-level-security/)
 
 ---
 
@@ -87,7 +87,7 @@ Fluxbase implements multiple layers of security to protect your data and applica
 - Automatic token generation
 - SameSite cookie attributes
 
-[Learn more about CSRF Protection →](./csrf-protection.md)
+[Learn more about CSRF Protection →](/security/csrf-protection/)
 
 #### Security Headers
 
@@ -98,7 +98,7 @@ Fluxbase implements multiple layers of security to protect your data and applica
 - Referrer-Policy
 - Permissions-Policy
 
-[Learn more about Security Headers →](./security-headers.md)
+[Learn more about Security Headers →](/security/security-headers/)
 
 #### Rate Limiting
 
@@ -108,7 +108,7 @@ Fluxbase implements multiple layers of security to protect your data and applica
 - Distributed rate limiting with Redis
 - Configurable limits per endpoint
 
-[Learn more about Rate Limiting →](../guides/rate-limiting.md)
+[Learn more about Rate Limiting →](/guides/rate-limiting/)
 
 ---
 
@@ -466,12 +466,12 @@ If you discover a security vulnerability in Fluxbase, please report it responsib
 
 ### Internal Documentation
 
-- [Authentication Guide](../guides/authentication.md)
-- [Row Level Security Guide](../guides/row-level-security.md)
-- [Rate Limiting Guide](../guides/rate-limiting.md)
-- [CSRF Protection](./csrf-protection.md)
-- [Security Headers](./security-headers.md)
-- [Best Practices](./best-practices.md)
+- [Authentication Guide](/guides/authentication/)
+- [Row Level Security Guide](/guides/row-level-security/)
+- [Rate Limiting Guide](/guides/rate-limiting/)
+- [CSRF Protection](/security/csrf-protection/)
+- [Security Headers](/security/security-headers/)
+- [Best Practices](/security/best-practices/)
 
 ### External Resources
 

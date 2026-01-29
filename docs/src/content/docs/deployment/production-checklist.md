@@ -518,11 +518,11 @@ After completing this checklist:
 
 1. Review with your team
 2. Schedule deployment window
-3. Execute deployment following [Deployment Guide](overview)
+3. Execute deployment following [Deployment Guide](/deployment/overview/)
 4. Monitor closely for first 24-48 hours
 5. Document any issues for future improvements
 
 For ongoing operations, see:
 
-- [Scaling Guide](scaling) - Performance optimization
-- [Monitoring Guide](../guides/monitoring-observability) - Observability setup
+- [Scaling Guide](/deployment/scaling/) - Performance optimization
+- [Monitoring Guide](/guides/monitoring-observability/) - Observability setup

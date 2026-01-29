@@ -541,7 +541,7 @@ Each migration source (system and user) maintains its own version number indepen
 
 ## Related Resources
 
-- [Row-Level Security Guide](./row-level-security.md)
-- [Configuration Reference](../reference/configuration.md)
-- [Deployment Guides](../deployment/overview.md)
+- [Row-Level Security Guide](/guides/row-level-security/)
+- [Configuration Reference](/reference/configuration/)
+- [Deployment Guides](/deployment/overview/)
 - [golang-migrate Documentation](https://github.com/golang-migrate/migrate)

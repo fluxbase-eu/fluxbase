@@ -731,7 +731,7 @@ fluxbase settings secrets set webhook_secret "whsec_..."
 fluxbase settings secrets list
 ```
 
-See the [Edge Functions guide](./edge-functions.md#secrets) for full secrets API reference.
+See the [Edge Functions guide](/guides/edge-functions/#secrets) for full secrets API reference.
 
 :::note[SDK Configuration]
 The SDK clients are automatically configured using `FLUXBASE_URL`. If your `fluxbase` or `fluxbaseService` parameters are `null`, check that:
@@ -1380,7 +1380,7 @@ interface JobUtils {
 
 ## Next Steps
 
-- Explore the [Edge Functions guide](./edge-functions.md) for serverless functions
-- Learn about [Realtime subscriptions](./realtime.md) for live updates
-- Review [Row Level Security](./row-level-security.md) for data isolation
-- Check the [Admin Dashboard](./admin/index.md) for job management UI
+- Explore the [Edge Functions guide](/guides/edge-functions/) for serverless functions
+- Learn about [Realtime subscriptions](/guides/realtime/) for live updates
+- Review [Row Level Security](/guides/row-level-security/) for data isolation
+- Check the [Admin Dashboard](/guides/admin/) for job management UI

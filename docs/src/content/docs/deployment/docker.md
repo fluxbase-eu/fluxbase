@@ -751,6 +751,6 @@ docker run -d --name fluxbase ghcr.io/fluxbase-eu/fluxbase:0.0.1
 
 ## Next Steps
 
-- [Kubernetes Deployment](kubernetes) - Scale with Kubernetes
-- [Production Checklist](production-checklist) - Pre-deployment checklist
-- [Scaling Guide](scaling) - Optimize performance
+- [Kubernetes Deployment](/deployment/kubernetes/) - Scale with Kubernetes
+- [Production Checklist](/deployment/production-checklist/) - Pre-deployment checklist
+- [Scaling Guide](/deployment/scaling/) - Optimize performance

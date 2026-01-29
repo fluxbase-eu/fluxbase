@@ -614,7 +614,7 @@ try {
 ## Related Documentation
 
 - [Authentication Guide](/guides/authentication)
-- [Database Queries](/guides/typescript-sdk/database)
+- [TypeScript SDK Reference](/api/sdk/)
 - [Realtime](/guides/realtime)
 - [Storage](/guides/storage)
 - [Row-Level Security](/guides/row-level-security)
