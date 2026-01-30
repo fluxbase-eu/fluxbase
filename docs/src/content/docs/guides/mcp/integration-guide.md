@@ -47,8 +47,9 @@ curl http://localhost:8080/mcp/health
 ```
 
 Expected response:
+
 ```json
-{"status":"healthy","version":"1.0"}
+{ "status": "healthy", "version": "1.0" }
 ```
 
 ## Step 2: Create an MCP Client Key
@@ -84,11 +85,12 @@ fluxbase clientkeys create \
 ```
 
 :::caution[Key Security]
+
 - **Anon keys** respect Row Level Security - users only see their own data
 - **Service keys** bypass RLS and have full database access
 - For personal assistants, service keys are fine
 - For shared/production use, prefer anon keys with proper RLS
-:::
+  :::
 
 ## Step 3: Configure Claude Desktop
 
@@ -114,13 +116,24 @@ Add the Fluxbase MCP server using the native HTTP transport:
 }
 ```
 
+:::tip[Authentication Options]
+The `X-Service-Key` header accepts two formats:
+
+- **Service Role JWT** (`FLUXBASE_SERVICE_ROLE_KEY`): `eyJhbG...` - Full admin access, bypasses RLS
+- **Service Key** (`sk_...`): Database-stored keys with configurable scopes
+
+Both provide service-level access. Use the Service Role JWT from your `.env` file for quick setup.
+:::
+
 :::tip[Using Client Keys]
 If you want RLS enforcement (user-level access), use `X-Client-Key` instead of `X-Service-Key`:
+
 ```json
 "headers": {
   "X-Client-Key": "your-client-key-here"
 }
 ```
+
 :::
 
 ### For Remote Servers
@@ -194,7 +207,7 @@ Try some operations:
 
 **Claude**: I'll query the tasks table for incomplete tasks.
 
-*Uses `query_table` tool*
+_Uses `query_table` tool_
 
 Here are the incomplete tasks:
 | Title | Created At |
@@ -208,9 +221,10 @@ Here are the incomplete tasks:
 
 **Claude**: I'll create that task for you.
 
-*Uses `insert_record` tool*
+_Uses `insert_record` tool_
 
 Done! Created task with ID `abc123`:
+
 - Title: Prepare demo
 - Priority: high
 - Created: 2024-01-15
@@ -221,7 +235,7 @@ Done! Created task with ID `abc123`:
 
 **Claude**: I'll invoke that function.
 
-*Uses `invoke_function` tool*
+_Uses `invoke_function` tool_
 
 Function executed successfully. The welcome email has been sent to user@example.com.
 
@@ -231,9 +245,10 @@ Function executed successfully. The welcome email has been sent to user@example.
 
 **Claude**: Let me check the storage.
 
-*Uses `list_files` tool*
+_Uses `list_files` tool_
 
 Found 3 files in the uploads bucket:
+
 - report-2024.pdf (2.3 MB)
 - logo.png (45 KB)
 - data.csv (1.1 MB)
@@ -244,43 +259,44 @@ Found 3 files in the uploads bucket:
 
 **Claude**: I'll search your knowledge base.
 
-*Uses `vector_search` tool*
+_Uses `vector_search` tool_
 
 Found 3 relevant documents:
+
 1. "Authentication Patterns" (similarity: 0.92)
 2. "Security Guidelines" (similarity: 0.87)
 3. "OAuth Implementation" (similarity: 0.84)
 
 ## Available Tools
 
-| Tool | Scope Required | Description |
-|------|----------------|-------------|
-| `query_table` | `read:tables` | Query database tables |
-| `insert_record` | `write:tables` | Create new records |
-| `update_record` | `write:tables` | Update existing records |
-| `delete_record` | `write:tables` | Delete records |
-| `invoke_function` | `execute:functions` | Call edge functions |
-| `invoke_rpc` | `execute:rpc` | Execute SQL procedures |
-| `list_files` | `read:storage` | List storage files |
-| `download_file` | `read:storage` | Get file contents |
-| `upload_file` | `write:storage` | Upload files |
-| `delete_file` | `write:storage` | Remove files |
-| `submit_job` | `execute:jobs` | Start background jobs |
-| `get_job_status` | `execute:jobs` | Check job status |
-| `vector_search` | `read:vectors` | Similarity search |
+| Tool              | Scope Required      | Description             |
+| ----------------- | ------------------- | ----------------------- |
+| `query_table`     | `read:tables`       | Query database tables   |
+| `insert_record`   | `write:tables`      | Create new records      |
+| `update_record`   | `write:tables`      | Update existing records |
+| `delete_record`   | `write:tables`      | Delete records          |
+| `invoke_function` | `execute:functions` | Call edge functions     |
+| `invoke_rpc`      | `execute:rpc`       | Execute SQL procedures  |
+| `list_files`      | `read:storage`      | List storage files      |
+| `download_file`   | `read:storage`      | Get file contents       |
+| `upload_file`     | `write:storage`     | Upload files            |
+| `delete_file`     | `write:storage`     | Remove files            |
+| `submit_job`      | `execute:jobs`      | Start background jobs   |
+| `get_job_status`  | `execute:jobs`      | Check job status        |
+| `vector_search`   | `read:vectors`      | Similarity search       |
 
 ## Available Resources
 
 Resources provide context information to the AI:
 
-| Resource | Description |
-|----------|-------------|
-| `schema://tables` | Database schema information |
-| `schema://tables/{table}` | Specific table structure |
-| `functions://list` | Deployed edge functions |
-| `functions://{name}` | Function details |
-| `storage://buckets` | Storage bucket list |
-| `rpc://list` | Available RPC procedures |
+| Resource                  | Description                 |
+| ------------------------- | --------------------------- |
+| `schema://tables`         | Database schema information |
+| `schema://tables/{table}` | Specific table structure    |
+| `functions://list`        | Deployed edge functions     |
+| `functions://{name}`      | Function details            |
+| `storage://buckets`       | Storage bucket list         |
+| `rpc://list`              | Available RPC procedures    |
 
 ## Troubleshooting
 
