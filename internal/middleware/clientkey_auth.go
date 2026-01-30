@@ -283,7 +283,32 @@ func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.C
 		}
 
 		if serviceKey != "" {
-			// Validate service key
+			// Check if this is a JWT (service role token) instead of a service key
+			// This allows users to use FLUXBASE_SERVICE_ROLE_KEY JWT with X-Service-Key header
+			if strings.HasPrefix(serviceKey, "eyJ") {
+				claims, err := authService.ValidateServiceRoleToken(serviceKey)
+				if err == nil {
+					// Valid service role JWT
+					c.Locals("user_role", claims.Role)
+					c.Locals("auth_type", "service_role_jwt")
+					c.Locals("jwt_claims", claims)
+					c.Locals("rls_role", claims.Role)
+
+					log.Debug().
+						Str("role", claims.Role).
+						Str("issuer", claims.Issuer).
+						Msg("Authenticated with service role JWT via X-Service-Key header")
+
+					return c.Next()
+				}
+				// JWT validation failed
+				log.Debug().Err(err).Msg("X-Service-Key JWT validation failed")
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"error": "Invalid service role token",
+				})
+			}
+
+			// Validate as service key (sk_... format)
 			if validateServiceKey(c, db, serviceKey) {
 				return c.Next()
 			}
@@ -453,7 +478,7 @@ func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.C
 // Supports Supabase-compatible authentication:
 // - clientkey header containing a JWT with role claim (anon, service_role, authenticated)
 // - Authorization: Bearer <jwt> with role claim
-// - X-Service-Key header with hashed service key
+// - X-Service-Key header with hashed service key or service role JWT
 // - Dashboard admin JWT tokens (when jwtManager is provided)
 func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.ClientKeyService, db *pgxpool.Pool, jwtManager ...*auth.JWTManager) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -466,7 +491,32 @@ func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.
 		}
 
 		if serviceKey != "" {
-			// Validate service key
+			// Check if this is a JWT (service role token) instead of a service key
+			// This allows users to use FLUXBASE_SERVICE_ROLE_KEY JWT with X-Service-Key header
+			if strings.HasPrefix(serviceKey, "eyJ") {
+				claims, err := authService.ValidateServiceRoleToken(serviceKey)
+				if err == nil {
+					// Valid service role JWT
+					c.Locals("user_role", claims.Role)
+					c.Locals("auth_type", "service_role_jwt")
+					c.Locals("jwt_claims", claims)
+					c.Locals("rls_role", claims.Role)
+
+					log.Debug().
+						Str("role", claims.Role).
+						Str("issuer", claims.Issuer).
+						Msg("Authenticated with service role JWT via X-Service-Key header")
+
+					return c.Next()
+				}
+				// JWT validation failed
+				log.Debug().Err(err).Msg("X-Service-Key JWT validation failed")
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"error": "Invalid service role token",
+				})
+			}
+
+			// Validate as service key (sk_... format)
 			if validateServiceKey(c, db, serviceKey) {
 				return c.Next()
 			}

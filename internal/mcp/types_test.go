@@ -183,10 +183,10 @@ func TestNewResult(t *testing.T) {
 			name: "result with complex structure",
 			id:   1,
 			result: InitializeResult{
-				ProtocolVersion: "2024-11-05",
+				ProtocolVersion: "2026-01-30",
 				ServerInfo: ServerInfo{
 					Name:    "Fluxbase MCP",
-					Version: "1.0.0",
+					Version: "2026.1.22",
 				},
 			},
 		},

@@ -44,6 +44,7 @@ services:
 
       # Enable features
       FLUXBASE_ADMIN_ENABLED: "true"
+      # MCP Server is enabled by default with OAuth support
 
       # Edge Functions / Jobs (optional)
       # FLUXBASE_FUNCTIONS_ENABLED: "true"

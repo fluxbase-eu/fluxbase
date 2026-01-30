@@ -57,7 +57,12 @@ echo ""
 echo -e "${YELLOW}[2/5] Running golangci-lint...${NC}"
 
 if [ -n "$STAGED_GO_FILES" ]; then
-    if command -v golangci-lint &> /dev/null; then
+    if ! command -v golangci-lint &> /dev/null; then
+        echo -e "${RED}✗ golangci-lint is not installed${NC}"
+        echo -e "${YELLOW}  Install v2.7.1 with:${NC}"
+        echo -e "${YELLOW}  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b \$(go env GOPATH)/bin v2.7.1${NC}"
+        CHECKS_FAILED=1
+    else
         echo "  Running: golangci-lint run ./..."
         if ! golangci-lint run ./... 2>&1 | head -100; then
             echo -e "${RED}✗ golangci-lint found issues${NC}"
@@ -66,10 +71,6 @@ if [ -n "$STAGED_GO_FILES" ]; then
         else
             echo -e "${GREEN}✓ golangci-lint passed${NC}"
         fi
-    else
-        echo -e "${YELLOW}⚠ Skipping (golangci-lint not installed)${NC}"
-        echo -e "${YELLOW}  Install v2.7.1 with:${NC}"
-        echo -e "${YELLOW}  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b \$(go env GOPATH)/bin v2.7.1${NC}"
     fi
 else
     echo -e "${GREEN}✓ No Go files to lint${NC}"

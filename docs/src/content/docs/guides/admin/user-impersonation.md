@@ -173,7 +173,6 @@ Every impersonation session is logged in the `auth.impersonation_sessions` table
 
 ### Visual Indicators
 
-- 🟠 Bright orange warning banner (cannot be dismissed)
 - 📝 Shows impersonation type and target user
 - 🔒 Impersonate button disabled while already impersonating
 
