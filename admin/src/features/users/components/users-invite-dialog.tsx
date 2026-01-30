@@ -235,15 +235,17 @@ export function UsersInviteDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <SelectDropdown
-                    defaultValue={field.value}
-                    onValueChange={field.onChange}
-                    placeholder='Select a role'
-                    items={roles.map(({ label, value }) => ({
-                      label,
-                      value,
-                    }))}
-                  />
+                  <FormControl>
+                    <SelectDropdown
+                      defaultValue={field.value}
+                      onValueChange={field.onChange}
+                      placeholder='Select a role'
+                      items={roles.map(({ label, value }) => ({
+                        label,
+                        value,
+                      }))}
+                    />
+                  </FormControl>
                   <FormDescription>
                     Defines what actions the user can perform
                   </FormDescription>

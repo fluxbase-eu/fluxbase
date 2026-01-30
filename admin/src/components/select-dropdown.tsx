@@ -1,6 +1,6 @@
+import * as React from 'react'
 import { Loader } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FormControl } from '@/components/ui/form'
 import {
   Select,
   SelectContent,
@@ -18,28 +18,46 @@ type SelectDropdownProps = {
   disabled?: boolean
   className?: string
   isControlled?: boolean
+  // Form control props (passed through from FormControl via Slot)
+  id?: string
+  'aria-describedby'?: string
+  'aria-invalid'?: boolean
 }
 
-export function SelectDropdown({
-  defaultValue,
-  onValueChange,
-  isPending,
-  items,
-  placeholder,
-  disabled,
-  className = '',
-  isControlled = false,
-}: SelectDropdownProps) {
+export const SelectDropdown = React.forwardRef<
+  HTMLButtonElement,
+  SelectDropdownProps
+>(function SelectDropdown(
+  {
+    defaultValue,
+    onValueChange,
+    isPending,
+    items,
+    placeholder,
+    disabled,
+    className = '',
+    isControlled = false,
+    id,
+    'aria-describedby': ariaDescribedBy,
+    'aria-invalid': ariaInvalid,
+  },
+  ref
+) {
   const defaultState = isControlled
     ? { value: defaultValue, onValueChange }
     : { defaultValue, onValueChange }
   return (
     <Select {...defaultState}>
-      <FormControl>
-        <SelectTrigger disabled={disabled} className={cn(className)}>
-          <SelectValue placeholder={placeholder ?? 'Select'} />
-        </SelectTrigger>
-      </FormControl>
+      <SelectTrigger
+        ref={ref}
+        disabled={disabled}
+        className={cn(className)}
+        id={id}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid}
+      >
+        <SelectValue placeholder={placeholder ?? 'Select'} />
+      </SelectTrigger>
       <SelectContent>
         {isPending ? (
           <SelectItem disabled value='loading' className='h-14'>
@@ -59,4 +77,4 @@ export function SelectDropdown({
       </SelectContent>
     </Select>
   )
-}
+})

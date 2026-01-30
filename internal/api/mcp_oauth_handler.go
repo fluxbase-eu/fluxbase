@@ -776,8 +776,8 @@ func (h *MCPOAuthHandler) extractUserFromRequest(c *fiber.Ctx) *string {
 		}
 	}
 
-	// Try access_token cookie
-	accessToken := c.Cookies("access_token")
+	// Try access_token cookie (using the standard Fluxbase cookie name)
+	accessToken := c.Cookies(AccessTokenCookieName)
 	if accessToken != "" && h.authService != nil {
 		claims, err := h.authService.ValidateToken(accessToken)
 		if err == nil {
