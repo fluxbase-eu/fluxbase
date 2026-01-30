@@ -111,12 +111,14 @@ func (h *Handler) Server() *Server {
 	return h.server
 }
 
-// RegisterRoutes registers the MCP routes
+// RegisterPublicRoutes registers public MCP routes that don't require authentication
+func (h *Handler) RegisterPublicRoutes(app fiber.Router) {
+	app.Get("/health", h.handleHealth)
+}
+
+// RegisterRoutes registers the authenticated MCP routes
 // Auth middleware should be applied before calling this
 func (h *Handler) RegisterRoutes(app fiber.Router) {
-	// Health check endpoint (no auth required)
-	app.Get("/health", h.handleHealth)
-
 	// Main MCP endpoint - Streamable HTTP transport
 	// POST: Send JSON-RPC requests
 	// GET: Initiate SSE stream for server notifications (optional)

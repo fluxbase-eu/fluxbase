@@ -106,7 +106,7 @@ USER root
 # Install Go tools
 RUN go install -v golang.org/x/tools/gopls@latest \
     && go install -v github.com/go-delve/delve/cmd/dlv@latest \
-    && go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@latest \
+    && go install -v github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.1 \
     && go install -v github.com/air-verse/air@latest \
     && go install -v -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
     && go install -v github.com/swaggo/swag/cmd/swag@latest \

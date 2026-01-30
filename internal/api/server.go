@@ -1442,8 +1442,13 @@ func (s *Server) setupRoutes() {
 	s.setupStorageRoutes(storage)
 
 	// MCP routes - Model Context Protocol for AI assistants
-	// Requires authentication via client key or service key
+	// Health endpoint is public, other routes require authentication
 	if s.config.MCP.Enabled && s.mcpHandler != nil {
+		// Public MCP routes (no auth required)
+		mcpPublic := s.app.Group(s.config.MCP.BasePath)
+		s.mcpHandler.RegisterPublicRoutes(mcpPublic)
+
+		// Authenticated MCP routes
 		mcpGroup := s.app.Group(s.config.MCP.BasePath,
 			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
 		)

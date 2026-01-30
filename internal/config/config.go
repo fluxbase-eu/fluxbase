@@ -896,15 +896,19 @@ func setDefaults() {
 	viper.SetDefault("graphql.introspection", true)  // Enable introspection (disable in production for security)
 
 	// MCP defaults (Model Context Protocol server for AI assistants)
-	viper.SetDefault("mcp.enabled", true)                  // Enabled by default
-	viper.SetDefault("mcp.base_path", "/mcp")              // Default MCP endpoint path
-	viper.SetDefault("mcp.session_timeout", "30m")         // 30 minute session timeout
-	viper.SetDefault("mcp.max_message_size", 10*1024*1024) // 10MB max message size
-	viper.SetDefault("mcp.allowed_tools", []string{})      // Empty = all tools enabled
-	viper.SetDefault("mcp.allowed_resources", []string{})  // Empty = all resources enabled
-	viper.SetDefault("mcp.rate_limit_per_min", 100)        // 100 requests per minute per client
-	viper.SetDefault("mcp.tools_dir", "/app/mcp-tools")    // Default custom MCP tools directory
-	viper.SetDefault("mcp.auto_load_on_boot", true)        // Auto-load custom tools on startup
+	viper.SetDefault("mcp.enabled", true)                      // Enabled by default
+	viper.SetDefault("mcp.base_path", "/mcp")                  // Default MCP endpoint path
+	viper.SetDefault("mcp.session_timeout", "30m")             // 30 minute session timeout
+	viper.SetDefault("mcp.max_message_size", 10*1024*1024)     // 10MB max message size
+	viper.SetDefault("mcp.allowed_tools", []string{})          // Empty = all tools enabled
+	viper.SetDefault("mcp.allowed_resources", []string{})      // Empty = all resources enabled
+	viper.SetDefault("mcp.rate_limit_per_min", 100)            // 100 requests per minute per client
+	viper.SetDefault("mcp.tools_dir", "/app/mcp-tools")        // Default custom MCP tools directory
+	viper.SetDefault("mcp.auto_load_on_boot", true)            // Auto-load custom tools on startup
+	viper.SetDefault("mcp.oauth.enabled", true)                // OAuth enabled by default for zero-config MCP clients
+	viper.SetDefault("mcp.oauth.dcr_enabled", true)            // Dynamic Client Registration enabled by default
+	viper.SetDefault("mcp.oauth.token_expiry", "1h")           // 1 hour access token expiry
+	viper.SetDefault("mcp.oauth.refresh_token_expiry", "168h") // 7 days refresh token expiry
 
 	// Branching defaults (database branching for isolated environments)
 	viper.SetDefault("branching.enabled", false)                         // Disabled by default
