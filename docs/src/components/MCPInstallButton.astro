@@ -60,8 +60,18 @@ const { hostname = "http://localhost:8080" } = Astro.props;
       Add to VS Code
     </a>
     <a id="vscode-insiders-install-btn" class="mcp-button" href="#" target="_blank">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.583 2.196L8.064 10.5l-4.48-3.43-.876.47v8.92l.876.47 4.48-3.43 9.519 8.304 3.417-1.44V3.636l-3.417-1.44zM3.708 14.64V9.36l2.29 1.76v1.76l-2.29 1.76zm13.875 4.72l-8.75-7.64v-1.44l8.75-7.64v16.72z"/>
+      </svg>
       Add to VS Code Insiders
     </a>
+    <button id="copy-cli-btn" class="mcp-button mcp-button-fixed">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4 17 10 11 4 5"></polyline>
+        <line x1="12" y1="19" x2="20" y2="19"></line>
+      </svg>
+      <span>Claude CLI</span>
+    </button>
     <button id="copy-config-btn" class="mcp-button">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -84,10 +94,11 @@ const { hostname = "http://localhost:8080" } = Astro.props;
     const apiKeyInput = document.getElementById('mcp-api-key') as HTMLInputElement;
     const vscodeBtn = document.getElementById('vscode-install-btn') as HTMLAnchorElement;
     const vscodeInsidersBtn = document.getElementById('vscode-insiders-install-btn') as HTMLAnchorElement;
+    const copyCliBtn = document.getElementById('copy-cli-btn') as HTMLButtonElement;
     const copyBtn = document.getElementById('copy-config-btn') as HTMLButtonElement;
     const configPreview = document.getElementById('mcp-config-preview') as HTMLPreElement;
 
-    if (!hostnameInput || !authTypeSelect || !apiKeyInput || !vscodeBtn || !vscodeInsidersBtn || !copyBtn || !configPreview) {
+    if (!hostnameInput || !authTypeSelect || !apiKeyInput || !vscodeBtn || !vscodeInsidersBtn || !copyCliBtn || !copyBtn || !configPreview) {
       return;
     }
 
@@ -136,6 +147,17 @@ const { hostname = "http://localhost:8080" } = Astro.props;
       };
     }
 
+    function generateCliCommand() {
+      const hostname = hostnameInput.value.trim() || 'http://localhost:8080';
+      const authType = authTypeSelect.value;
+      const apiKey = apiKeyInput.value.trim();
+      const headerKey = authType === 'service' ? 'X-Service-Key' : 'X-Client-Key';
+      const keyValue = apiKey || '<YOUR_API_KEY>';
+
+      return `claude mcp add --transport http fluxbase ${hostname}/mcp \\
+  --header "${headerKey}: ${keyValue}"`;
+    }
+
     function updateButtons() {
       const config = generateInstallConfig();
       const encodedConfig = encodeURIComponent(JSON.stringify(config));
@@ -154,6 +176,28 @@ const { hostname = "http://localhost:8080" } = Astro.props;
     hostnameInput.addEventListener('input', updateButtons);
     authTypeSelect.addEventListener('change', updateButtons);
     apiKeyInput.addEventListener('input', updateButtons);
+
+    copyCliBtn.addEventListener('click', async () => {
+      const cliCommand = generateCliCommand();
+      try {
+        await navigator.clipboard.writeText(cliCommand);
+        const svg = copyCliBtn.querySelector('svg');
+        const span = copyCliBtn.querySelector('span');
+        if (svg && span) {
+          const originalSvg = svg.outerHTML;
+          const originalText = span.textContent;
+          svg.outerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          span.textContent = 'Copied!';
+          setTimeout(() => {
+            const newSvg = copyCliBtn.querySelector('svg');
+            if (newSvg) newSvg.outerHTML = originalSvg;
+            span.textContent = originalText;
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    });
 
     copyBtn.addEventListener('click', async () => {
       const displayConfig = generateDisplayConfig();
@@ -288,6 +332,7 @@ const { hostname = "http://localhost:8080" } = Astro.props;
     justify-content: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
+    height: 42px;
     border-radius: 0.5rem;
     font-weight: 500;
     font-size: 0.875rem;
@@ -297,6 +342,7 @@ const { hostname = "http://localhost:8080" } = Astro.props;
     background: var(--sl-color-bg);
     color: var(--sl-color-text);
     transition: all 0.15s ease;
+    box-sizing: border-box;
   }
 
   .mcp-button:hover {
@@ -314,6 +360,16 @@ const { hostname = "http://localhost:8080" } = Astro.props;
   .mcp-button-primary:hover {
     background: var(--sl-color-accent-high);
     border-color: var(--sl-color-accent-high);
+  }
+
+  .mcp-button-fixed {
+    min-width: 120px;
+  }
+
+  .mcp-button-fixed span {
+    min-width: 70px;
+    display: inline-block;
+    text-align: left;
   }
 
   .mcp-config-details {
