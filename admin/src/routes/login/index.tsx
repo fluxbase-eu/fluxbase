@@ -263,8 +263,15 @@ function LoginPage() {
         description: 'You have successfully logged in.',
       })
 
-      // Redirect to dashboard
-      navigate({ to: '/' })
+      // Redirect to return_to URL (e.g., MCP OAuth flow) or dashboard
+      const params = new URLSearchParams(window.location.search)
+      const returnTo = params.get('return_to')
+      if (returnTo) {
+        // Use window.location.href for external URLs (like MCP OAuth authorize)
+        window.location.href = returnTo
+      } else {
+        navigate({ to: '/' })
+      }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error && 'response' in error

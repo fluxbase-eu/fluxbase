@@ -329,9 +329,9 @@ func (h *MCPOAuthHandler) handleAuthorize(c *fiber.Ctx) error {
 		// Build the authorization URL to return to after login
 		authURL := h.getIssuer() + h.config.BasePath + "/oauth/authorize?" + string(c.Request().URI().QueryString())
 
-		// Redirect to the login page with return_to parameter
+		// Redirect to the admin login page with return_to parameter
 		// After login, user will be redirected back to complete the OAuth flow
-		loginURL := h.getIssuer() + "/login?return_to=" + url.QueryEscape(authURL)
+		loginURL := h.getIssuer() + "/admin/login?return_to=" + url.QueryEscape(authURL)
 		return c.Redirect(loginURL, fiber.StatusFound)
 	}
 
