@@ -98,42 +98,30 @@ Locate your Claude Desktop configuration file:
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-Add the Fluxbase MCP server:
+Add the Fluxbase MCP server using the native HTTP transport:
 
 ```json
 {
   "mcpServers": {
     "fluxbase": {
-      "command": "curl",
-      "args": [
-        "-X", "POST",
-        "http://localhost:8080/mcp",
-        "-H", "Content-Type: application/json",
-        "-H", "X-Client-Key: your-client-key-here"
-      ]
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "X-Service-Key": "your-service-key-here"
+      }
     }
   }
 }
 ```
 
-### Alternative: Use a Local Proxy
-
-For better performance, you can use an MCP proxy:
-
+:::tip[Using Client Keys]
+If you want RLS enforcement (user-level access), use `X-Client-Key` instead of `X-Service-Key`:
 ```json
-{
-  "mcpServers": {
-    "fluxbase": {
-      "command": "npx",
-      "args": [
-        "@anthropic/mcp-proxy",
-        "http://localhost:8080/mcp",
-        "--header", "X-Client-Key: your-client-key-here"
-      ]
-    }
-  }
+"headers": {
+  "X-Client-Key": "your-client-key-here"
 }
 ```
+:::
 
 ### For Remote Servers
 
@@ -143,11 +131,31 @@ If your Fluxbase instance is remote (not localhost):
 {
   "mcpServers": {
     "fluxbase": {
+      "type": "http",
+      "url": "https://api.your-domain.com/mcp",
+      "headers": {
+        "X-Service-Key": "your-service-key-here"
+      }
+    }
+  }
+}
+```
+
+### Legacy Clients (stdio transport)
+
+If your MCP client only supports stdio transport, use the mcp-remote proxy:
+
+```json
+{
+  "mcpServers": {
+    "fluxbase": {
       "command": "npx",
       "args": [
-        "@anthropic/mcp-proxy",
-        "https://api.your-domain.com/mcp",
-        "--header", "X-Client-Key: your-client-key-here"
+        "mcp-remote@latest",
+        "--http",
+        "http://localhost:8080/mcp",
+        "--header",
+        "X-Service-Key: your-service-key-here"
       ]
     }
   }

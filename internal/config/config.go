@@ -905,6 +905,10 @@ func setDefaults() {
 	viper.SetDefault("mcp.rate_limit_per_min", 100)        // 100 requests per minute per client
 	viper.SetDefault("mcp.tools_dir", "/app/mcp-tools")    // Default custom MCP tools directory
 	viper.SetDefault("mcp.auto_load_on_boot", true)        // Auto-load custom tools on startup
+	viper.SetDefault("mcp.oauth.enabled", true)            // OAuth enabled by default for zero-config MCP clients
+	viper.SetDefault("mcp.oauth.dcr_enabled", true)        // Dynamic Client Registration enabled by default
+	viper.SetDefault("mcp.oauth.token_expiry", "1h")       // 1 hour access token expiry
+	viper.SetDefault("mcp.oauth.refresh_token_expiry", "168h") // 7 days refresh token expiry
 
 	// Branching defaults (database branching for isolated environments)
 	viper.SetDefault("branching.enabled", false)                         // Disabled by default

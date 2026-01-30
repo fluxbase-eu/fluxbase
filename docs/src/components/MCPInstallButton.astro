@@ -1,0 +1,344 @@
+---
+interface Props {
+  hostname?: string;
+}
+
+const { hostname = "http://localhost:8080" } = Astro.props;
+---
+
+<div class="mcp-install-wrapper">
+  <div class="mcp-install-header">
+    <h4>Quick Setup</h4>
+    <p class="mcp-install-description">
+      Configure your MCP client to connect with your Fluxbase instance.
+    </p>
+  </div>
+
+  <div class="mcp-config-form">
+    <div class="mcp-form-row">
+      <label for="mcp-hostname">Fluxbase URL</label>
+      <input
+        type="text"
+        id="mcp-hostname"
+        class="mcp-input"
+        value={hostname}
+        placeholder="http://localhost:8080"
+      />
+    </div>
+
+    <div class="mcp-form-row">
+      <label for="mcp-auth-type">Authentication</label>
+      <select id="mcp-auth-type" class="mcp-select">
+        <option value="service">Service Key (bypasses RLS - admin use)</option>
+        <option value="client">Client Key (respects RLS - user-level)</option>
+      </select>
+    </div>
+
+    <div class="mcp-form-row">
+      <label for="mcp-api-key">API Key <span class="mcp-optional">(optional)</span></label>
+      <input
+        type="password"
+        id="mcp-api-key"
+        class="mcp-input"
+        placeholder="Leave empty to enter in IDE"
+      />
+    </div>
+  </div>
+
+  <p class="mcp-auth-note">
+    <strong>Service Key</strong> bypasses Row Level Security and has full database access.
+    Use <strong>Client Key</strong> for user-level access that respects RLS policies.
+    <br/><br/>
+    <strong>Tip:</strong> Enter your API key above for one-click setup, or leave it empty to be prompted in your IDE.
+  </p>
+
+  <div class="mcp-buttons">
+    <a id="vscode-install-btn" class="mcp-button mcp-button-primary" href="#" target="_blank">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.583 2.196L8.064 10.5l-4.48-3.43-.876.47v8.92l.876.47 4.48-3.43 9.519 8.304 3.417-1.44V3.636l-3.417-1.44zM3.708 14.64V9.36l2.29 1.76v1.76l-2.29 1.76zm13.875 4.72l-8.75-7.64v-1.44l8.75-7.64v16.72z"/>
+      </svg>
+      Add to VS Code
+    </a>
+    <a id="vscode-insiders-install-btn" class="mcp-button" href="#" target="_blank">
+      Add to VS Code Insiders
+    </a>
+    <button id="copy-config-btn" class="mcp-button">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      Copy Config
+    </button>
+  </div>
+
+  <details class="mcp-config-details">
+    <summary>View configuration JSON</summary>
+    <pre id="mcp-config-preview" class="mcp-config-preview"></pre>
+  </details>
+</div>
+
+<script>
+  function initMCPInstallButton() {
+    const hostnameInput = document.getElementById('mcp-hostname') as HTMLInputElement;
+    const authTypeSelect = document.getElementById('mcp-auth-type') as HTMLSelectElement;
+    const apiKeyInput = document.getElementById('mcp-api-key') as HTMLInputElement;
+    const vscodeBtn = document.getElementById('vscode-install-btn') as HTMLAnchorElement;
+    const vscodeInsidersBtn = document.getElementById('vscode-insiders-install-btn') as HTMLAnchorElement;
+    const copyBtn = document.getElementById('copy-config-btn') as HTMLButtonElement;
+    const configPreview = document.getElementById('mcp-config-preview') as HTMLPreElement;
+
+    if (!hostnameInput || !authTypeSelect || !apiKeyInput || !vscodeBtn || !vscodeInsidersBtn || !copyBtn || !configPreview) {
+      return;
+    }
+
+    // Load saved hostname from localStorage
+    const savedHostname = localStorage.getItem('fluxbase-mcp-hostname');
+    if (savedHostname) {
+      hostnameInput.value = savedHostname;
+    }
+
+    function generateInstallConfig() {
+      const hostname = hostnameInput.value.trim() || 'http://localhost:8080';
+      const authType = authTypeSelect.value;
+      const apiKey = apiKeyInput.value.trim();
+      const headerKey = authType === 'service' ? 'X-Service-Key' : 'X-Client-Key';
+      const inputName = authType === 'service' ? 'fluxbase-service-key' : 'fluxbase-client-key';
+
+      // Use actual key if provided, otherwise use input prompt syntax
+      const headerValue = apiKey || `\${input:${inputName}}`;
+
+      return {
+        name: 'fluxbase',
+        type: 'http',
+        url: `${hostname}/mcp`,
+        headers: {
+          [headerKey]: headerValue
+        }
+      };
+    }
+
+    function generateDisplayConfig() {
+      const hostname = hostnameInput.value.trim() || 'http://localhost:8080';
+      const authType = authTypeSelect.value;
+      const apiKey = apiKeyInput.value.trim();
+      const headerKey = authType === 'service' ? 'X-Service-Key' : 'X-Client-Key';
+
+      return {
+        mcpServers: {
+          fluxbase: {
+            type: 'http',
+            url: `${hostname}/mcp`,
+            headers: {
+              [headerKey]: apiKey || 'your-key-here'
+            }
+          }
+        }
+      };
+    }
+
+    function updateButtons() {
+      const config = generateInstallConfig();
+      const encodedConfig = encodeURIComponent(JSON.stringify(config));
+
+      vscodeBtn.href = `vscode:mcp/install?${encodedConfig}`;
+      vscodeInsidersBtn.href = `vscode-insiders:mcp/install?${encodedConfig}`;
+
+      // Update preview with display config
+      const displayConfig = generateDisplayConfig();
+      configPreview.textContent = JSON.stringify(displayConfig, null, 2);
+
+      // Save hostname preference
+      localStorage.setItem('fluxbase-mcp-hostname', hostnameInput.value);
+    }
+
+    hostnameInput.addEventListener('input', updateButtons);
+    authTypeSelect.addEventListener('change', updateButtons);
+    apiKeyInput.addEventListener('input', updateButtons);
+
+    copyBtn.addEventListener('click', async () => {
+      const displayConfig = generateDisplayConfig();
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(displayConfig, null, 2));
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Copied!
+        `;
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    });
+
+    // Initialize
+    updateButtons();
+  }
+
+  // Run on page load
+  initMCPInstallButton();
+
+  // Re-run on Astro page transitions
+  document.addEventListener('astro:page-load', initMCPInstallButton);
+</script>
+
+<style>
+  .mcp-install-wrapper {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    background: var(--sl-color-bg-nav);
+  }
+
+  .mcp-install-header h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .mcp-install-description {
+    margin: 0 0 1rem 0;
+    color: var(--sl-color-gray-2);
+    font-size: 0.9rem;
+  }
+
+  .mcp-config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .mcp-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  @media (min-width: 640px) {
+    .mcp-form-row {
+      flex-direction: row;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .mcp-form-row label {
+      min-width: 120px;
+    }
+
+    .mcp-form-row .mcp-input,
+    .mcp-form-row .mcp-select {
+      flex: 1;
+    }
+  }
+
+  .mcp-form-row label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--sl-color-white);
+  }
+
+  .mcp-optional {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--sl-color-gray-3);
+  }
+
+  .mcp-input,
+  .mcp-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.375rem;
+    background: var(--sl-color-bg);
+    color: var(--sl-color-text);
+    font-family: var(--sl-font-mono);
+    font-size: 0.875rem;
+  }
+
+  .mcp-input:focus,
+  .mcp-select:focus {
+    outline: none;
+    border-color: var(--sl-color-accent);
+    box-shadow: 0 0 0 2px var(--sl-color-accent-low);
+  }
+
+  .mcp-auth-note {
+    margin: 0 0 1rem 0;
+    padding: 0.75rem;
+    background: var(--sl-color-bg);
+    border-radius: 0.375rem;
+    font-size: 0.8rem;
+    color: var(--sl-color-gray-2);
+  }
+
+  .mcp-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .mcp-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-text);
+    transition: all 0.15s ease;
+  }
+
+  .mcp-button:hover {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent-low);
+    text-decoration: none;
+  }
+
+  .mcp-button-primary {
+    background: var(--sl-color-accent);
+    color: var(--sl-color-bg);
+    border-color: var(--sl-color-accent);
+  }
+
+  .mcp-button-primary:hover {
+    background: var(--sl-color-accent-high);
+    border-color: var(--sl-color-accent-high);
+  }
+
+  .mcp-config-details {
+    margin-top: 0.5rem;
+  }
+
+  .mcp-config-details summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--sl-color-gray-2);
+    padding: 0.25rem 0;
+  }
+
+  .mcp-config-details summary:hover {
+    color: var(--sl-color-accent);
+  }
+
+  .mcp-config-preview {
+    margin: 0.5rem 0 0 0;
+    padding: 1rem;
+    background: var(--sl-color-bg);
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+</style>

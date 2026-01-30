@@ -3,9 +3,13 @@ title: "Overview"
 description: "Model Context Protocol server for AI assistant integration"
 ---
 
+import MCPInstallButton from '../../../../components/MCPInstallButton.astro';
+
 Fluxbase includes a built-in MCP (Model Context Protocol) server that enables AI assistants like Claude to interact with your database, storage, functions, and jobs.
 
-## Connect to Your IDE
+<MCPInstallButton />
+
+## Manual Configuration
 
 ### Claude Desktop
 
@@ -15,9 +19,10 @@ Add this to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "fluxbase": {
+      "type": "http",
       "url": "http://localhost:8080/mcp",
       "headers": {
-        "X-Client-Key": "your-client-key"
+        "X-Service-Key": "your-service-key"
       }
     }
   }
@@ -31,15 +36,16 @@ Add this to your `claude_desktop_config.json`:
 
 ### VS Code with Claude Extension
 
-Add to your VS Code settings (`settings.json`):
+Add to your VS Code settings (`settings.json`) or use the "Add to VS Code" button above:
 
 ```json
 {
   "claude.mcpServers": {
     "fluxbase": {
+      "type": "http",
       "url": "http://localhost:8080/mcp",
       "headers": {
-        "X-Client-Key": "your-client-key"
+        "X-Service-Key": "your-service-key"
       }
     }
   }
@@ -53,12 +59,20 @@ Add to Cursor's MCP settings (Settings → Features → MCP Servers):
 ```json
 {
   "fluxbase": {
+    "type": "http",
     "url": "http://localhost:8080/mcp",
     "headers": {
-      "X-Client-Key": "your-client-key"
+      "X-Service-Key": "your-service-key"
     }
   }
 }
+```
+
+### Claude Code CLI
+
+```bash
+claude mcp add --transport http fluxbase http://localhost:8080/mcp \
+  --header "X-Service-Key: your-service-key"
 ```
 
 ### Other MCP Clients
@@ -66,15 +80,53 @@ Add to Cursor's MCP settings (Settings → Features → MCP Servers):
 Any MCP-compatible client can connect using:
 
 - **URL**: `http://your-server:8080/mcp`
-- **Auth Header**: `X-Client-Key: your-key` or `X-Service-Key: your-key`
+- **Type**: `http`
+- **Auth Header**: `X-Service-Key: your-key` or `X-Client-Key: your-key`
 - **Protocol**: JSON-RPC 2.0 over HTTP POST
 
-:::tip[Create a Client Key]
-Generate a client key with appropriate scopes:
+## Authentication
+
+The MCP server requires authentication for all requests. Two authentication methods are available:
+
+### Service Keys (Admin Access)
+
+Service keys **bypass Row Level Security (RLS)** and have full database access. Recommended for:
+- Administrative automation
+- CI/CD pipelines
+- Development and testing
+- Backend service integration
+
 ```bash
-fluxbase clientkeys create --name "My IDE" \
-  --scopes "read:tables,write:tables,execute:functions,read:storage"
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-Service-Key: your-service-key" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
+
+:::danger[Production Warning]
+Service keys grant full database access. Never expose them in client-side code or public repositories.
+:::
+
+### Client Keys (User-Level Access)
+
+Client keys **respect Row Level Security** - users only see data they're authorized to access. Create a client key with specific scopes:
+
+```bash
+fluxbase clientkeys create --name "AI Assistant" \
+  --scopes "read:tables,write:tables,execute:functions"
+```
+
+Use the key in requests:
+
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-Client-Key: your-client-key" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+```
+
+:::tip[When to use Client Keys]
+Use client keys when you need RLS enforcement, such as in multi-tenant applications or when the AI assistant should only access user-specific data.
 :::
 
 ## Overview
@@ -113,39 +165,6 @@ mcp:
 | `rate_limit_per_min` | `100` | Requests per minute per client |
 | `allowed_tools` | `[]` | Whitelist of allowed tools |
 | `allowed_resources` | `[]` | Whitelist of allowed resources |
-
-## Authentication
-
-The MCP server requires authentication for all requests. Supported methods:
-
-### Client Keys
-
-Create a client key with specific MCP scopes:
-
-```bash
-fluxbase clientkeys create --name "AI Assistant" \
-  --scopes "read:tables,write:tables,execute:functions"
-```
-
-Use the key in requests:
-
-```bash
-curl -X POST http://localhost:8080/mcp \
-  -H "Content-Type: application/json" \
-  -H "X-Client-Key: your-client-key" \
-  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
-```
-
-### Service Keys
-
-Service keys have full access and bypass Row Level Security:
-
-```bash
-curl -X POST http://localhost:8080/mcp \
-  -H "Content-Type: application/json" \
-  -H "X-Service-Key: your-service-key" \
-  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
-```
 
 ## Available Scopes
 
@@ -218,14 +237,35 @@ The MCP server implements JSON-RPC 2.0 with the following methods:
 
 ## Security
 
-- All database operations respect Row Level Security (RLS) policies
+- All database operations respect Row Level Security (RLS) policies when using Client Keys
 - Service keys bypass RLS for administrative operations
 - Internal schemas (auth, storage, functions, jobs) are hidden from non-admins
 - SQL injection is prevented through parameterized queries and identifier validation
 - File downloads are limited to 10MB to prevent memory issues
 
+## Legacy Configuration (stdio transport)
+
+If your MCP client only supports stdio transport (older clients), use the mcp-remote proxy:
+
+```json
+{
+  "mcpServers": {
+    "fluxbase": {
+      "command": "npx",
+      "args": [
+        "mcp-remote@latest",
+        "--http",
+        "http://localhost:8080/mcp",
+        "--header",
+        "X-Service-Key: your-service-key"
+      ]
+    }
+  }
+}
+```
+
 ## Next Steps
 
-- [Available Tools](/guides/mcp/tools) - Complete tool reference
-- [Available Resources](/guides/mcp/resources) - Resource reference
-- [Security Best Practices](/security/mcp-security) - Security guidelines
+- [Available Tools](/guides/mcp/tools/) - Complete tool reference
+- [Available Resources](/guides/mcp/resources/) - Resource reference
+- [Security Best Practices](/security/mcp-security/) - Security guidelines

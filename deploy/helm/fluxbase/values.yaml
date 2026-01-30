@@ -670,6 +670,26 @@ config:
     rate_limit_per_min: 100
     tools_dir: "/app/mcp-tools"
     auto_load_on_boot: true
+    ## OAuth 2.1 configuration for zero-config MCP client integration (like Claude Desktop)
+    ## @param config.mcp.oauth.enabled Enable OAuth for MCP
+    ## @param config.mcp.oauth.dcr_enabled Enable Dynamic Client Registration (RFC 7591)
+    ## @param config.mcp.oauth.token_expiry Access token expiry duration
+    ## @param config.mcp.oauth.refresh_token_expiry Refresh token expiry duration
+    ## @param config.mcp.oauth.allowed_redirect_uris Allowed OAuth redirect URIs for MCP clients
+    oauth:
+      enabled: true
+      dcr_enabled: true
+      token_expiry: "1h"
+      refresh_token_expiry: "168h"
+      allowed_redirect_uris:
+        - "https://claude.ai/api/mcp/auth_callback"
+        - "https://claude.com/api/mcp/auth_callback"
+        - "cursor://anysphere.cursor-mcp/oauth/*/callback"
+        - "http://127.0.0.1:33418"
+        - "https://vscode.dev/redirect"
+        - "http://127.0.0.1:19876/mcp/oauth/callback"
+        - "http://localhost:6274/oauth/callback"
+        - "https://chatgpt.com/connector_platform_oauth_redirect"
 
   ## Database Branching configuration
   ## @param config.branching.enabled Enable database branching feature
