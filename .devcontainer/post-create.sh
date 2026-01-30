@@ -39,7 +39,7 @@ go mod tidy
 echo "🔧 Ensuring Go tools are installed..."
 go install -v golang.org/x/tools/gopls@latest 2>/dev/null || true
 go install -v github.com/go-delve/delve/cmd/dlv@latest 2>/dev/null || true
-go install -v github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2 2>/dev/null || true
+go install -v github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.1 2>/dev/null || true
 go install -v github.com/cosmtrek/air@latest 2>/dev/null || true
 go install -v -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest 2>/dev/null || true
 go install -v github.com/vladopajic/go-test-coverage/v2@latest 2>/dev/null || true
@@ -210,29 +210,10 @@ mkdir -p /home/vscode/.local/bin
 chmod +x /home/vscode/.local/bin/configure-claude-mcp
 echo "✅ Claude MCP configuration helper installed (run 'configure-claude-mcp' after starting Fluxbase)"
 
-# Set up git pre-commit hook
+# Set up git pre-commit hook (uses comprehensive scripts/pre-commit)
 echo "🪝 Setting up git pre-commit hook..."
-cat > /workspace/.git/hooks/pre-commit << 'HOOK'
-#!/bin/bash
-
-# Pre-commit hook for Fluxbase
-# Runs linting checks before allowing commits
-
-set -e
-
-echo "Running pre-commit checks..."
-
-# Run golangci-lint on Go files
-echo "Running golangci-lint..."
-if ! golangci-lint run ./...; then
-    echo ""
-    echo "❌ golangci-lint failed. Please fix the issues above before committing."
-    exit 1
-fi
-
-echo "✅ All pre-commit checks passed!"
-HOOK
-chmod +x /workspace/.git/hooks/pre-commit
+cd /workspace
+make install-hooks
 echo "✅ Git pre-commit hook configured"
 
 # SQLTools configuration for PostgreSQL
