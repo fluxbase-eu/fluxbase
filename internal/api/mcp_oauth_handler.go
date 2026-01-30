@@ -829,3 +829,79 @@ func hashToken(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
 }
+
+// matchRedirectURI checks if a URI matches a pattern (standalone version for testing)
+// Supports exact matches, wildcard ports (e.g., "http://localhost:*"),
+// and wildcard path segments (e.g., "cursor://host/oauth/*/callback")
+func matchRedirectURI(pattern, uri string) bool {
+	// Exact match
+	if uri == pattern {
+		return true
+	}
+
+	// Scheme-only match (e.g., "vscode://")
+	if strings.HasSuffix(pattern, "://") {
+		return strings.HasPrefix(uri, pattern)
+	}
+
+	// Wildcard port match (e.g., "http://localhost:*")
+	if strings.Contains(pattern, ":*") {
+		prefix := strings.Split(pattern, ":*")[0]
+		if strings.HasPrefix(uri, prefix+":") {
+			// Check that everything after the port is a valid path
+			parsedURI, err := url.Parse(uri)
+			if err != nil {
+				return false
+			}
+			parsedPattern, err := url.Parse(strings.Replace(pattern, ":*", ":1234", 1))
+			if err != nil {
+				return false
+			}
+			return parsedURI.Hostname() == parsedPattern.Hostname()
+		}
+	}
+
+	// Wildcard path match (e.g., "cursor://anysphere.cursor-mcp/oauth/*/callback")
+	if strings.Contains(pattern, "*") {
+		parts := strings.Split(pattern, "*")
+		if len(parts) == 2 {
+			return strings.HasPrefix(uri, parts[0]) && strings.HasSuffix(uri, parts[1])
+		}
+	}
+
+	return false
+}
+
+// verifyPKCE verifies a PKCE code verifier against a challenge (standalone version for testing)
+func verifyPKCE(verifier, challenge, method string) bool {
+	if method != "S256" {
+		return false
+	}
+
+	// S256: BASE64URL(SHA256(code_verifier)) == code_challenge
+	hash := sha256.Sum256([]byte(verifier))
+	computed := base64.RawURLEncoding.EncodeToString(hash[:])
+
+	return computed == challenge
+}
+
+// generateRandomString generates a random alphanumeric string of the specified length
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return ""
+	}
+	for i := range bytes {
+		bytes[i] = charset[bytes[i]%byte(len(charset))]
+	}
+	return string(bytes)
+}
+
+// nullIfEmpty returns nil if the string is empty, otherwise a pointer to the string
+func nullIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
