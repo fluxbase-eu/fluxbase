@@ -785,6 +785,25 @@ func (h *MCPOAuthHandler) extractUserFromRequest(c *fiber.Ctx) *string {
 		}
 	}
 
+	// Try admin dashboard token cookie (set by frontend JavaScript)
+	// The admin dashboard stores tokens in a cookie named "fluxbase_admin_token"
+	// The value is JSON-encoded, so we need to parse it
+	adminToken := c.Cookies("fluxbase_admin_token")
+	if adminToken != "" && h.authService != nil {
+		// The admin token is JSON-encoded (wrapped in quotes), so remove them
+		token := adminToken
+		if len(token) >= 2 && token[0] == '"' && token[len(token)-1] == '"' {
+			token = token[1 : len(token)-1]
+		}
+		claims, err := h.authService.ValidateToken(token)
+		if err == nil {
+			isRevoked, err := h.authService.IsTokenRevoked(c.Context(), claims.ID)
+			if err == nil && !isRevoked {
+				return &claims.UserID
+			}
+		}
+	}
+
 	return nil
 }
 

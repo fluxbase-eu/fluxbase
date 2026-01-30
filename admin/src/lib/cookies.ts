@@ -3,7 +3,8 @@
  * Replaces js-cookie dependency for better consistency
  *
  * Security notes:
- * - SameSite=Strict prevents CSRF attacks by not sending cookies on cross-site requests
+ * - SameSite=Lax allows cookies on top-level navigations (needed for OAuth flows)
+ *   while still protecting against CSRF on POST/PUT/DELETE requests
  * - Secure ensures cookies are only sent over HTTPS (disabled in development)
  * - Note: httpOnly cannot be set via JavaScript - for maximum security,
  *   sensitive tokens should be set by the server as httpOnly cookies
@@ -41,7 +42,8 @@ export function getCookie(name: string): string | undefined {
 /**
  * Set a cookie with name, value, and optional max age
  * Includes security attributes:
- * - SameSite=Strict: Prevents CSRF by only sending cookie for same-site requests
+ * - SameSite=Lax: Allows cookie on top-level navigations (needed for OAuth flows)
+ *   while still protecting against CSRF on POST requests
  * - Secure: Only sent over HTTPS (except in local development)
  */
 export function setCookie(
@@ -52,7 +54,9 @@ export function setCookie(
   if (typeof document === 'undefined') return
 
   // Build cookie string with security attributes
-  let cookieString = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Strict`
+  // SameSite=Lax allows the cookie to be sent during top-level navigation
+  // which is required for OAuth flows (e.g., MCP OAuth with Claude Desktop)
+  let cookieString = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`
 
   // Add Secure flag in production (HTTPS) but allow HTTP in development
   if (isSecureContext() && window.location.protocol === 'https:') {
@@ -68,5 +72,5 @@ export function setCookie(
 export function removeCookie(name: string): void {
   if (typeof document === 'undefined') return
 
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Strict`
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`
 }
