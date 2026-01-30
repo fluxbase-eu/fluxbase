@@ -83,6 +83,8 @@ type SAMLProviderPublic struct {
 // setAuthCookies sets httpOnly cookies for access and refresh tokens
 func (h *AuthHandler) setAuthCookies(c *fiber.Ctx, accessToken, refreshToken string, expiresIn int64) {
 	// Access token cookie - shorter expiry
+	// SameSite=Lax allows the cookie to be sent during top-level navigation
+	// which is required for OAuth authorization flows from external clients
 	c.Cookie(&fiber.Cookie{
 		Name:     AccessTokenCookieName,
 		Value:    accessToken,
@@ -90,7 +92,7 @@ func (h *AuthHandler) setAuthCookies(c *fiber.Ctx, accessToken, refreshToken str
 		MaxAge:   int(expiresIn), // seconds
 		Secure:   h.secureCookie,
 		HTTPOnly: true,
-		SameSite: "Strict",
+		SameSite: "Lax",
 	})
 
 	// Refresh token cookie - longer expiry (7 days default)
@@ -114,7 +116,7 @@ func (h *AuthHandler) clearAuthCookies(c *fiber.Ctx) {
 		MaxAge:   -1, // Expire immediately
 		Secure:   h.secureCookie,
 		HTTPOnly: true,
-		SameSite: "Strict",
+		SameSite: "Lax",
 	})
 
 	c.Cookie(&fiber.Cookie{

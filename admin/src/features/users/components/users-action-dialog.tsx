@@ -313,16 +313,18 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>Role</FormLabel>
-                    <SelectDropdown
-                      defaultValue={field.value}
-                      onValueChange={field.onChange}
-                      placeholder='Select a role'
-                      className='col-span-4'
-                      items={roles.map(({ label, value }) => ({
-                        label,
-                        value,
-                      }))}
-                    />
+                    <FormControl>
+                      <SelectDropdown
+                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                        placeholder='Select a role'
+                        className='col-span-4'
+                        items={roles.map(({ label, value }) => ({
+                          label,
+                          value,
+                        }))}
+                      />
+                    </FormControl>
                     <FormDescription className='col-span-4 col-start-3'>
                       Defines the user's permissions and access level
                     </FormDescription>
