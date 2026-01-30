@@ -66,7 +66,7 @@ type OAuthServerMetadata struct {
 func (h *MCPOAuthHandler) handleDiscovery(c *fiber.Ctx) error {
 	if !h.config.OAuth.Enabled {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "oauth_disabled",
+			"error":             "oauth_disabled",
 			"error_description": "OAuth is not enabled for this MCP server",
 		})
 	}
@@ -118,20 +118,20 @@ type DCRRequest struct {
 
 // DCR Response
 type DCRResponse struct {
-	ClientID          string   `json:"client_id"`
-	ClientName        string   `json:"client_name"`
-	RedirectURIs      []string `json:"redirect_uris"`
-	GrantTypes        []string `json:"grant_types"`
-	ResponseTypes     []string `json:"response_types"`
-	Scope             string   `json:"scope,omitempty"`
-	ClientIDIssuedAt  int64    `json:"client_id_issued_at"`
+	ClientID         string   `json:"client_id"`
+	ClientName       string   `json:"client_name"`
+	RedirectURIs     []string `json:"redirect_uris"`
+	GrantTypes       []string `json:"grant_types"`
+	ResponseTypes    []string `json:"response_types"`
+	Scope            string   `json:"scope,omitempty"`
+	ClientIDIssuedAt int64    `json:"client_id_issued_at"`
 }
 
 // handleRegister handles POST /mcp/oauth/register (Dynamic Client Registration)
 func (h *MCPOAuthHandler) handleRegister(c *fiber.Ctx) error {
 	if !h.config.OAuth.Enabled || !h.config.OAuth.DCREnabled {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "registration_not_supported",
+			"error":             "registration_not_supported",
 			"error_description": "Dynamic Client Registration is not enabled",
 		})
 	}
@@ -139,7 +139,7 @@ func (h *MCPOAuthHandler) handleRegister(c *fiber.Ctx) error {
 	var req DCRRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_client_metadata",
+			"error":             "invalid_client_metadata",
 			"error_description": "Invalid request body",
 		})
 	}
@@ -147,14 +147,14 @@ func (h *MCPOAuthHandler) handleRegister(c *fiber.Ctx) error {
 	// Validate required fields
 	if req.ClientName == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_client_metadata",
+			"error":             "invalid_client_metadata",
 			"error_description": "client_name is required",
 		})
 	}
 
 	if len(req.RedirectURIs) == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_redirect_uri",
+			"error":             "invalid_redirect_uri",
 			"error_description": "At least one redirect_uri is required",
 		})
 	}
@@ -163,7 +163,7 @@ func (h *MCPOAuthHandler) handleRegister(c *fiber.Ctx) error {
 	for _, uri := range req.RedirectURIs {
 		if !h.isRedirectURIAllowed(uri) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid_redirect_uri",
+				"error":             "invalid_redirect_uri",
 				"error_description": fmt.Sprintf("Redirect URI not allowed: %s", uri),
 			})
 		}
@@ -196,7 +196,7 @@ func (h *MCPOAuthHandler) handleRegister(c *fiber.Ctx) error {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to register MCP OAuth client")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "server_error",
+			"error":             "server_error",
 			"error_description": "Failed to register client",
 		})
 	}
@@ -216,7 +216,7 @@ func (h *MCPOAuthHandler) handleRegister(c *fiber.Ctx) error {
 func (h *MCPOAuthHandler) handleAuthorize(c *fiber.Ctx) error {
 	if !h.config.OAuth.Enabled {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "oauth_disabled",
+			"error":             "oauth_disabled",
 			"error_description": "OAuth is not enabled",
 		})
 	}
@@ -233,21 +233,21 @@ func (h *MCPOAuthHandler) handleAuthorize(c *fiber.Ctx) error {
 	// Validate required parameters
 	if clientID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "client_id is required",
 		})
 	}
 
 	if redirectURI == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "redirect_uri is required",
 		})
 	}
 
 	if responseType != "code" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "unsupported_response_type",
+			"error":             "unsupported_response_type",
 			"error_description": "Only 'code' response type is supported",
 		})
 	}
@@ -255,14 +255,14 @@ func (h *MCPOAuthHandler) handleAuthorize(c *fiber.Ctx) error {
 	// PKCE is required (OAuth 2.1)
 	if codeChallenge == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "code_challenge is required (PKCE)",
 		})
 	}
 
 	if codeChallengeMethod != "S256" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "Only S256 code_challenge_method is supported",
 		})
 	}
@@ -277,7 +277,7 @@ func (h *MCPOAuthHandler) handleAuthorize(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_client",
+			"error":             "invalid_client",
 			"error_description": "Client not found",
 		})
 	}
@@ -292,7 +292,7 @@ func (h *MCPOAuthHandler) handleAuthorize(c *fiber.Ctx) error {
 	}
 	if !uriValid {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_redirect_uri",
+			"error":             "invalid_redirect_uri",
 			"error_description": "Redirect URI does not match registered URIs",
 		})
 	}
@@ -404,7 +404,7 @@ func (h *MCPOAuthHandler) handleToken(c *fiber.Ctx) error {
 	var req TokenRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "Invalid request body",
 		})
 	}
@@ -416,7 +416,7 @@ func (h *MCPOAuthHandler) handleToken(c *fiber.Ctx) error {
 		return h.handleRefreshTokenGrant(c, &req)
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "unsupported_grant_type",
+			"error":             "unsupported_grant_type",
 			"error_description": "Only authorization_code and refresh_token grants are supported",
 		})
 	}
@@ -425,7 +425,7 @@ func (h *MCPOAuthHandler) handleToken(c *fiber.Ctx) error {
 func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenRequest) error {
 	if req.Code == "" || req.ClientID == "" || req.RedirectURI == "" || req.CodeVerifier == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "Missing required parameters",
 		})
 	}
@@ -445,7 +445,7 @@ func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenR
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Invalid authorization code",
 		})
 	}
@@ -459,7 +459,7 @@ func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenR
 		`, storedClientID, userID)
 
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Authorization code already used",
 		})
 	}
@@ -470,7 +470,7 @@ func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenR
 	// Check expiration
 	if time.Now().After(expiresAt) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Authorization code expired",
 		})
 	}
@@ -478,7 +478,7 @@ func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenR
 	// Validate client_id
 	if storedClientID != req.ClientID {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Client ID mismatch",
 		})
 	}
@@ -486,7 +486,7 @@ func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenR
 	// Validate redirect_uri
 	if storedRedirectURI != req.RedirectURI {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Redirect URI mismatch",
 		})
 	}
@@ -494,7 +494,7 @@ func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenR
 	// Verify PKCE code_verifier
 	if !verifyPKCE(req.CodeVerifier, codeChallenge, codeChallengeMethod) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Invalid code_verifier",
 		})
 	}
@@ -537,7 +537,7 @@ func (h *MCPOAuthHandler) handleAuthorizationCodeGrant(c *fiber.Ctx, req *TokenR
 func (h *MCPOAuthHandler) handleRefreshTokenGrant(c *fiber.Ctx, req *TokenRequest) error {
 	if req.RefreshToken == "" || req.ClientID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "Missing required parameters",
 		})
 	}
@@ -559,7 +559,7 @@ func (h *MCPOAuthHandler) handleRefreshTokenGrant(c *fiber.Ctx, req *TokenReques
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Invalid refresh token",
 		})
 	}
@@ -567,7 +567,7 @@ func (h *MCPOAuthHandler) handleRefreshTokenGrant(c *fiber.Ctx, req *TokenReques
 	// Check if revoked
 	if revokedAt != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Refresh token has been revoked",
 		})
 	}
@@ -575,7 +575,7 @@ func (h *MCPOAuthHandler) handleRefreshTokenGrant(c *fiber.Ctx, req *TokenReques
 	// Check expiration
 	if time.Now().After(refreshExpiresAt) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Refresh token expired",
 		})
 	}
@@ -583,7 +583,7 @@ func (h *MCPOAuthHandler) handleRefreshTokenGrant(c *fiber.Ctx, req *TokenReques
 	// Validate client_id
 	if storedClientID != req.ClientID {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_grant",
+			"error":             "invalid_grant",
 			"error_description": "Client ID mismatch",
 		})
 	}
@@ -637,7 +637,7 @@ func (h *MCPOAuthHandler) handleRevoke(c *fiber.Ctx) error {
 
 	if token == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid_request",
+			"error":             "invalid_request",
 			"error_description": "token parameter is required",
 		})
 	}
@@ -664,11 +664,11 @@ func (h *MCPOAuthHandler) handleRevoke(c *fiber.Ctx) error {
 	}
 
 	if result == 0 && tokenTypeHint != "refresh_token" {
-		res, _ := h.db.Exec(ctx, `
+		// Try revoking by refresh token hash as fallback
+		_, _ = h.db.Exec(ctx, `
 			UPDATE auth.mcp_oauth_tokens SET revoked_at = NOW()
 			WHERE refresh_token_hash = $1 AND revoked_at IS NULL
 		`, tokenHash)
-		result = res.RowsAffected()
 	}
 
 	// RFC 7009: Always return 200 OK, even if token was not found

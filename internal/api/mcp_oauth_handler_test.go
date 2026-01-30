@@ -76,33 +76,33 @@ func TestMCPOAuthHandler_matchRedirectURI(t *testing.T) {
 
 func TestMCPOAuthHandler_verifyPKCE(t *testing.T) {
 	tests := []struct {
-		name         string
-		codeVerifier string
+		name          string
+		codeVerifier  string
 		codeChallenge string
-		method       string
-		expected     bool
+		method        string
+		expected      bool
 	}{
 		{
 			name:         "valid PKCE S256",
 			codeVerifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
 			// SHA256("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk") base64url encoded
 			codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
-			method:       "S256",
-			expected:     true,
+			method:        "S256",
+			expected:      true,
 		},
 		{
-			name:         "invalid code verifier",
-			codeVerifier: "wrong-verifier",
+			name:          "invalid code verifier",
+			codeVerifier:  "wrong-verifier",
 			codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
-			method:       "S256",
-			expected:     false,
+			method:        "S256",
+			expected:      false,
 		},
 		{
-			name:         "unsupported method",
-			codeVerifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+			name:          "unsupported method",
+			codeVerifier:  "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
 			codeChallenge: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
-			method:       "plain",
-			expected:     false,
+			method:        "plain",
+			expected:      false,
 		},
 	}
 
