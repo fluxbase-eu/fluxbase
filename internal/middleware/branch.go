@@ -41,6 +41,7 @@ type BranchContextConfig struct {
 
 // BranchContext creates a middleware that extracts branch context from requests
 // and sets up the appropriate connection pool
+// Precedence: Header > Query param > API-set default > Config default > "main"
 func BranchContext(config BranchContextConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract branch slug from header or query param
@@ -49,9 +50,14 @@ func BranchContext(config BranchContextConfig) fiber.Handler {
 			branchSlug = c.Query(BranchQueryParam)
 		}
 
-		// Default to main branch
+		// If no per-request branch specified, use the router's default branch
+		// This considers: API-set active branch > Config default > "main"
 		if branchSlug == "" {
-			branchSlug = "main"
+			if config.Router != nil {
+				branchSlug = config.Router.GetDefaultBranch()
+			} else {
+				branchSlug = "main"
+			}
 		}
 
 		// Get user ID from context (if authenticated)

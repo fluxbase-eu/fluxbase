@@ -49,6 +49,9 @@ type Profile struct {
 
 	// OutputFormat default for this profile
 	OutputFormat string `yaml:"output_format,omitempty"`
+
+	// DefaultBranch for database branching (auto-sends X-Fluxbase-Branch header)
+	DefaultBranch string `yaml:"default_branch,omitempty"`
 }
 
 // Credentials stores authentication tokens

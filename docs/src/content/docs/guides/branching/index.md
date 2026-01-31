@@ -38,7 +38,7 @@ fluxbase branch delete my-feature
 fluxbase branch create my-feature
 
 # Create a branch with full data copy
-fluxbase branch create my-feature --clone-mode full_clone
+fluxbase branch create my-feature --clone-data full_clone
 
 # List all branches
 fluxbase branch list
@@ -128,6 +128,57 @@ When you create a branch, the server:
 4. Tracks the branch metadata in the `branching.branches` table
 
 The server never needs separate admin credentials - it uses the same PostgreSQL user it already has.
+
+### Branch Creation Process
+
+The following diagram shows how database branching works, including what happens to the `public` schema:
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f8f9fa', 'primaryTextColor': '#333', 'primaryBorderColor': '#dee2e6', 'lineColor': '#6c757d', 'secondaryColor': '#e9ecef', 'tertiaryColor': '#f8f9fa' }}}%%
+flowchart TB
+    subgraph Request["Branch Creation Request"]
+        API["POST /admin/branches<br/>{name: 'my-feature',<br/>dataCloneMode: 'schema_only'}"]
+    end
+
+    subgraph MainDB["Main Database (fluxbase)"]
+        direction TB
+        BranchingSchema["<b>branching schema</b><br/>━━━━━━━━━━━━━━━━<br/>branches<br/>activity_log<br/>branch_access"]
+        PublicSchema["<b>public schema</b><br/>━━━━━━━━━━━━━━━━<br/>users (100 rows)<br/>orders (500 rows)<br/>products (50 rows)"]
+    end
+
+    subgraph Process["Branch Creation Process"]
+        direction TB
+        Step1["1️⃣ Validate request<br/>Check limits & permissions"]
+        Step2["2️⃣ Create metadata<br/>status = 'creating'"]
+        Step3["3️⃣ CREATE DATABASE<br/>branch_my_feature<br/>TEMPLATE fluxbase"]
+        Step4["4️⃣ Update status<br/>status = 'ready'"]
+        Step1 --> Step2 --> Step3 --> Step4
+    end
+
+    subgraph BranchDB["Branch Database (branch_my_feature)"]
+        direction TB
+        PublicSchemaCopy["<b>public schema</b> (CLONED)<br/>━━━━━━━━━━━━━━━━<br/>users (0 rows) ⬅ schema only<br/>orders (0 rows) ⬅ schema only<br/>products (0 rows) ⬅ schema only"]
+        Note["❌ No branching schema<br/>(metadata stays in main DB)"]
+    end
+
+    API --> Step1
+    BranchingSchema -.-> |"stores metadata"| Step2
+    PublicSchema --> |"schema copied via<br/>PostgreSQL TEMPLATE"| PublicSchemaCopy
+    Step4 --> BranchDB
+
+    style MainDB fill:#e8f4e8,stroke:#28a745
+    style BranchDB fill:#e8e8f4,stroke:#6f42c1
+    style PublicSchema fill:#d4edda,stroke:#28a745
+    style PublicSchemaCopy fill:#e2d9f3,stroke:#6f42c1
+    style Note fill:#fff3cd,stroke:#ffc107
+```
+
+**Key points:**
+
+- **Database-level isolation**: Each branch is a separate PostgreSQL database, not just a schema within the same database
+- **Branching metadata stays in main**: The `branching` schema (which tracks all branches) only exists in the main database
+- **Public schema is cloned**: Your application tables in the `public` schema are copied to the new database
+- **Data depends on clone mode**: With `schema_only`, tables are created but empty. With `full_clone`, all data is copied too
 
 ## Using TypeScript SDK
 

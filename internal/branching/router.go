@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
@@ -14,18 +15,19 @@ import (
 
 // Router manages connection pools for database branches
 type Router struct {
-	storage     *Storage
-	config      config.BranchingConfig
-	mainPool    *pgxpool.Pool
-	mainDBURL   string
-	pools       map[string]*pgxpool.Pool // slug -> pool
-	poolsMu     sync.RWMutex
-	poolConfigs map[string]*pgxpool.Config // slug -> config (for recreating pools)
+	storage      *Storage
+	config       config.BranchingConfig
+	mainPool     *pgxpool.Pool
+	mainDBURL    string
+	pools        map[string]*pgxpool.Pool // slug -> pool
+	poolsMu      sync.RWMutex
+	poolConfigs  map[string]*pgxpool.Config // slug -> config (for recreating pools)
+	activeBranch atomic.Value               // Thread-safe active branch slug (set via API)
 }
 
 // NewRouter creates a new branch router
 func NewRouter(storage *Storage, cfg config.BranchingConfig, mainPool *pgxpool.Pool, mainDBURL string) *Router {
-	return &Router{
+	r := &Router{
 		storage:     storage,
 		config:      cfg,
 		mainPool:    mainPool,
@@ -33,6 +35,9 @@ func NewRouter(storage *Storage, cfg config.BranchingConfig, mainPool *pgxpool.P
 		pools:       make(map[string]*pgxpool.Pool),
 		poolConfigs: make(map[string]*pgxpool.Config),
 	}
+	// Initialize active branch from config (empty string means "main")
+	r.activeBranch.Store(cfg.DefaultBranch)
+	return r
 }
 
 // GetPool returns the connection pool for a branch
@@ -269,4 +274,51 @@ func (r *Router) WarmupPool(ctx context.Context, slug string) error {
 // GetStorage returns the storage instance
 func (r *Router) GetStorage() *Storage {
 	return r.storage
+}
+
+// SetActiveBranch sets the server-wide active branch (via API)
+// Pass empty string to reset to config default
+func (r *Router) SetActiveBranch(slug string) {
+	r.activeBranch.Store(slug)
+	if slug == "" {
+		log.Info().Msg("Active branch reset to default")
+	} else {
+		log.Info().Str("branch", slug).Msg("Active branch set")
+	}
+}
+
+// GetActiveBranch returns the current API-set active branch
+// Returns empty string if not set via API
+func (r *Router) GetActiveBranch() string {
+	if v := r.activeBranch.Load(); v != nil {
+		return v.(string)
+	}
+	return ""
+}
+
+// GetDefaultBranch returns the effective default branch considering all sources
+// Precedence: API-set > Config > "main"
+func (r *Router) GetDefaultBranch() string {
+	// First check API-set active branch
+	if active := r.GetActiveBranch(); active != "" {
+		return active
+	}
+	// Then check config default
+	if r.config.DefaultBranch != "" {
+		return r.config.DefaultBranch
+	}
+	// Fall back to "main"
+	return "main"
+}
+
+// GetActiveBranchSource returns the source of the current default branch
+// Returns "api", "config", or "default"
+func (r *Router) GetActiveBranchSource() string {
+	if active := r.GetActiveBranch(); active != "" {
+		return "api"
+	}
+	if r.config.DefaultBranch != "" {
+		return "config"
+	}
+	return "default"
 }
