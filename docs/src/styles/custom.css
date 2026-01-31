@@ -158,34 +158,82 @@
 }
 */
 
-/* Mermaid diagram styling */
+/* Mermaid diagram styling - always light background */
 .mermaid {
   display: flex;
   justify-content: center;
   margin: 1.5rem 0;
   padding: 1rem;
-  background: #ffffff;
+  background: #ffffff !important;
   border-radius: 0.5rem;
-  border: 1px solid var(--sl-color-gray-5);
+  border: 1px solid #e5e7eb;
 }
 
 .mermaid svg {
   max-width: 100%;
   height: auto;
-  background: #ffffff;
+  background: #ffffff !important;
 }
 
-/* Mermaid diagrams inside Expressive Code wrappers */
+/* Ensure Mermaid stays light in dark mode */
+:root[data-theme='dark'] .mermaid {
+  background: #ffffff !important;
+  border-color: #d1d5db;
+}
+
+:root[data-theme='dark'] .mermaid svg {
+  background: #ffffff !important;
+}
+
+/* Mermaid diagrams inside Expressive Code wrappers - force light background */
 .expressive-code:has(.mermaid) {
-  /* Remove the code block background/border styling */
-  background: transparent;
-  border: none;
+  --ec-codeBg: #ffffff !important;
+  --ec-frm-edBg: #ffffff !important;
+  --ec-frm-termBg: #ffffff !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: none !important;
+  border-radius: 0.5rem;
+}
+
+.expressive-code:has(.mermaid) > figure,
+.expressive-code:has(.mermaid) figure,
+.expressive-code:has(.mermaid) .frame,
+.expressive-code:has(.mermaid) pre,
+.expressive-code:has(.mermaid) code,
+.expressive-code:has(.mermaid) .ec-line {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: none !important;
+}
+
+:root[data-theme='dark'] .expressive-code:has(.mermaid) {
+  --ec-codeBg: #ffffff !important;
+  --ec-frm-edBg: #ffffff !important;
+  --ec-frm-termBg: #ffffff !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:root[data-theme='dark'] .expressive-code:has(.mermaid) > figure,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) figure,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) .frame,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) pre,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) code,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) .ec-line {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
 }
 
 .expressive-code .mermaid {
   /* Ensure diagram fills the space properly */
   min-height: 200px;
   padding: 2rem 1rem;
+  background: #ffffff !important;
+}
+
+:root[data-theme='dark'] .expressive-code .mermaid {
+  background: #ffffff !important;
 }
 
 /* Adjust copy button positioning for Mermaid diagrams */
