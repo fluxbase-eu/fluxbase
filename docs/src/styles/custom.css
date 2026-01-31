@@ -185,16 +185,44 @@
   background: #ffffff !important;
 }
 
-/* Mermaid diagrams inside Expressive Code wrappers */
+/* Mermaid diagrams inside Expressive Code wrappers - force light background */
 .expressive-code:has(.mermaid) {
-  /* Remove the code block background/border styling */
+  --ec-codeBg: #ffffff !important;
+  --ec-frm-edBg: #ffffff !important;
+  --ec-frm-termBg: #ffffff !important;
   background: #ffffff !important;
-  border: none;
+  background-color: #ffffff !important;
+  border: none !important;
   border-radius: 0.5rem;
 }
 
-:root[data-theme='dark'] .expressive-code:has(.mermaid) {
+.expressive-code:has(.mermaid) > figure,
+.expressive-code:has(.mermaid) figure,
+.expressive-code:has(.mermaid) .frame,
+.expressive-code:has(.mermaid) pre,
+.expressive-code:has(.mermaid) code,
+.expressive-code:has(.mermaid) .ec-line {
   background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: none !important;
+}
+
+:root[data-theme='dark'] .expressive-code:has(.mermaid) {
+  --ec-codeBg: #ffffff !important;
+  --ec-frm-edBg: #ffffff !important;
+  --ec-frm-termBg: #ffffff !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:root[data-theme='dark'] .expressive-code:has(.mermaid) > figure,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) figure,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) .frame,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) pre,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) code,
+:root[data-theme='dark'] .expressive-code:has(.mermaid) .ec-line {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
 }
 
 .expressive-code .mermaid {

@@ -16,14 +16,84 @@ CAPTCHA protection can be enabled on specific authentication endpoints:
 
 When enabled, clients must include a valid CAPTCHA token with their authentication requests.
 
+## How It Works
+
+The CAPTCHA verification flow involves three parties: the client (browser), the Fluxbase server, and the CAPTCHA provider.
+
+### Verification Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as Client (Browser)
+    participant Fluxbase as Fluxbase Server
+    participant Provider as CAPTCHA Provider<br/>(hCaptcha/reCAPTCHA/Turnstile/Cap)
+
+    Note over Client,Provider: 1. Configuration Phase
+    Client->>Fluxbase: GET /api/v1/auth/captcha/config
+    Fluxbase-->>Client: { enabled, provider, site_key, endpoints[] }
+
+    Note over Client,Provider: 2. Challenge Phase
+    Client->>Provider: Load widget with site_key
+    Provider-->>Client: Display challenge
+    Client->>Provider: User solves challenge
+    Provider-->>Client: Return captcha_token
+
+    Note over Client,Provider: 3. Verification Phase
+    Client->>Fluxbase: POST /api/v1/auth/signup<br/>{ email, password, captcha_token }
+
+    alt CAPTCHA enabled for endpoint
+        Fluxbase->>Provider: Verify token with secret_key
+        Provider-->>Fluxbase: { success: true/false, score, error_code }
+
+        alt Verification successful
+            Fluxbase->>Fluxbase: Process auth request
+            Fluxbase-->>Client: 201 Created (user data)
+        else Verification failed
+            Fluxbase-->>Client: 400 CAPTCHA_INVALID
+        end
+    else CAPTCHA not enabled
+        Fluxbase->>Fluxbase: Skip verification
+        Fluxbase->>Fluxbase: Process auth request
+        Fluxbase-->>Client: 201 Created (user data)
+    end
+```
+
+### Server-Side Decision Flow
+
+```mermaid
+flowchart TD
+    A[Request arrives at protected endpoint] --> B{captchaService != nil?}
+    B -->|No| C[Skip CAPTCHA verification]
+    B -->|Yes| D{IsEnabledForEndpoint?}
+    D -->|No| C
+    D -->|Yes| E{Token provided?}
+    E -->|No| F[Return 400 CAPTCHA_REQUIRED]
+    E -->|Yes| G{TestBypassToken match?}
+    G -->|Yes| C
+    G -->|No| H[Call provider.Verify]
+    H --> I{Verification successful?}
+    I -->|Yes| C
+    I -->|No| J[Return 400 CAPTCHA_INVALID]
+    C --> K[Continue with auth action]
+```
+
+### Key Points
+
+1. **Client fetches config first** - The client calls `/api/v1/auth/captcha/config` to know which provider and endpoints require CAPTCHA
+2. **Widget generates token** - The CAPTCHA widget (hCaptcha, reCAPTCHA, etc.) generates a one-time token when the user completes the challenge
+3. **Token included in request** - The client includes `captcha_token` in the request body to protected endpoints
+4. **Server-side verification** - Fluxbase verifies the token with the provider's API using the secret key
+5. **Endpoint-specific** - CAPTCHA is only required for endpoints listed in the `endpoints` configuration
+
 ## Supported Providers
 
-| Provider | Type | Self-Hosted | Best For |
-|----------|------|-------------|----------|
-| [hCaptcha](https://www.hcaptcha.com/) | Visual challenge | No | Privacy-focused applications |
-| [reCAPTCHA v3](https://www.google.com/recaptcha/) | Invisible (score-based) | No | Seamless user experience |
-| [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) | Invisible | No | Cloudflare users, free tier |
-| [Cap](https://capjs.js.org/) | Proof-of-work | Yes | Self-hosted, privacy-first |
+| Provider                                                               | Type                    | Self-Hosted | Best For                     |
+| ---------------------------------------------------------------------- | ----------------------- | ----------- | ---------------------------- |
+| [hCaptcha](https://www.hcaptcha.com/)                                  | Visual challenge        | No          | Privacy-focused applications |
+| [reCAPTCHA v3](https://www.google.com/recaptcha/)                      | Invisible (score-based) | No          | Seamless user experience     |
+| [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) | Invisible               | No          | Cloudflare users, free tier  |
+| [Cap](https://capjs.js.org/)                                           | Proof-of-work           | Yes         | Self-hosted, privacy-first   |
 
 ## Configuration
 
@@ -33,10 +103,10 @@ When enabled, clients must include a valid CAPTCHA token with their authenticati
 security:
   captcha:
     enabled: true
-    provider: hcaptcha  # hcaptcha, recaptcha_v3, turnstile, cap
+    provider: hcaptcha # hcaptcha, recaptcha_v3, turnstile, cap
     site_key: "your-site-key"
     secret_key: "your-secret-key"
-    score_threshold: 0.5  # reCAPTCHA v3 only (0.0-1.0)
+    score_threshold: 0.5 # reCAPTCHA v3 only (0.0-1.0)
     endpoints:
       - signup
       - login
@@ -46,14 +116,14 @@ security:
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `FLUXBASE_SECURITY_CAPTCHA_ENABLED` | Enable CAPTCHA verification (`true`/`false`) |
-| `FLUXBASE_SECURITY_CAPTCHA_PROVIDER` | Provider name |
-| `FLUXBASE_SECURITY_CAPTCHA_SITE_KEY` | Public site key |
-| `FLUXBASE_SECURITY_CAPTCHA_SECRET_KEY` | Secret key for verification |
-| `FLUXBASE_SECURITY_CAPTCHA_SCORE_THRESHOLD` | Score threshold (reCAPTCHA v3 only) |
-| `FLUXBASE_SECURITY_CAPTCHA_ENDPOINTS` | Comma-separated list of endpoints |
+| Variable                                    | Description                                  |
+| ------------------------------------------- | -------------------------------------------- |
+| `FLUXBASE_SECURITY_CAPTCHA_ENABLED`         | Enable CAPTCHA verification (`true`/`false`) |
+| `FLUXBASE_SECURITY_CAPTCHA_PROVIDER`        | Provider name                                |
+| `FLUXBASE_SECURITY_CAPTCHA_SITE_KEY`        | Public site key                              |
+| `FLUXBASE_SECURITY_CAPTCHA_SECRET_KEY`      | Secret key for verification                  |
+| `FLUXBASE_SECURITY_CAPTCHA_SCORE_THRESHOLD` | Score threshold (reCAPTCHA v3 only)          |
+| `FLUXBASE_SECURITY_CAPTCHA_ENDPOINTS`       | Comma-separated list of endpoints            |
 
 ### Cap Provider Configuration
 
@@ -64,17 +134,17 @@ security:
   captcha:
     enabled: true
     provider: cap
-    cap_server_url: "http://localhost:3000"  # Your Cap server URL
+    cap_server_url: "http://localhost:3000" # Your Cap server URL
     cap_api_key: "your-api-key"
     endpoints:
       - signup
       - login
 ```
 
-| Variable | Description |
-|----------|-------------|
+| Variable                                   | Description            |
+| ------------------------------------------ | ---------------------- |
 | `FLUXBASE_SECURITY_CAPTCHA_CAP_SERVER_URL` | URL of your Cap server |
-| `FLUXBASE_SECURITY_CAPTCHA_CAP_API_KEY` | Cap API key |
+| `FLUXBASE_SECURITY_CAPTCHA_CAP_API_KEY`    | Cap API key            |
 
 ## Provider Setup
 
@@ -89,8 +159,8 @@ security:
   captcha:
     enabled: true
     provider: hcaptcha
-    site_key: "10000000-ffff-ffff-ffff-000000000001"  # Test key
-    secret_key: "0x0000000000000000000000000000000000000000"  # Test key
+    site_key: "10000000-ffff-ffff-ffff-000000000001" # Test key
+    secret_key: "0x0000000000000000000000000000000000000000" # Test key
 ```
 
 ### reCAPTCHA v3
@@ -106,7 +176,7 @@ security:
     provider: recaptcha_v3
     site_key: "your-recaptcha-site-key"
     secret_key: "your-recaptcha-secret-key"
-    score_threshold: 0.5  # Reject scores below this (0.0 = bot, 1.0 = human)
+    score_threshold: 0.5 # Reject scores below this (0.0 = bot, 1.0 = human)
 ```
 
 ### Cloudflare Turnstile
@@ -152,8 +222,10 @@ security:
 First, fetch the CAPTCHA configuration from your Fluxbase server:
 
 ```typescript
-const response = await fetch('http://localhost:8080/api/v1/auth/captcha/config')
-const config = await response.json()
+const response = await fetch(
+  "http://localhost:8080/api/v1/auth/captcha/config",
+);
+const config = await response.json();
 
 // {
 //   "enabled": true,
@@ -176,20 +248,20 @@ const config = await response.json()
 </form>
 
 <script>
-document.getElementById('signup-form').onsubmit = async (e) => {
-  e.preventDefault();
-  const token = hcaptcha.getResponse();
+  document.getElementById("signup-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const token = hcaptcha.getResponse();
 
-  await fetch('/api/v1/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: e.target.email.value,
-      password: e.target.password.value,
-      captcha_token: token
-    })
-  });
-};
+    await fetch("/api/v1/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: e.target.email.value,
+        password: e.target.password.value,
+        captcha_token: token,
+      }),
+    });
+  };
 </script>
 ```
 
@@ -199,26 +271,32 @@ document.getElementById('signup-form').onsubmit = async (e) => {
 <script src="https://www.google.com/recaptcha/api.js?render=YOUR_SITE_KEY"></script>
 
 <script>
-async function signUp(email, password) {
-  const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'signup' });
+  async function signUp(email, password) {
+    const token = await grecaptcha.execute("YOUR_SITE_KEY", {
+      action: "signup",
+    });
 
-  await fetch('/api/v1/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      password,
-      captcha_token: token
-    })
-  });
-}
+    await fetch("/api/v1/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password,
+        captcha_token: token,
+      }),
+    });
+  }
 </script>
 ```
 
 ### Cloudflare Turnstile Widget
 
 ```html
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script
+  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  async
+  defer
+></script>
 
 <form id="signup-form">
   <input type="email" name="email" required />
@@ -228,20 +306,22 @@ async function signUp(email, password) {
 </form>
 
 <script>
-document.getElementById('signup-form').onsubmit = async (e) => {
-  e.preventDefault();
-  const token = document.querySelector('[name="cf-turnstile-response"]').value;
+  document.getElementById("signup-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const token = document.querySelector(
+      '[name="cf-turnstile-response"]',
+    ).value;
 
-  await fetch('/api/v1/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: e.target.email.value,
-      password: e.target.password.value,
-      captcha_token: token
-    })
-  });
-};
+    await fetch("/api/v1/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: e.target.email.value,
+        password: e.target.password.value,
+        captcha_token: token,
+      }),
+    });
+  };
 </script>
 ```
 
@@ -260,10 +340,10 @@ document.getElementById('signup-form').onsubmit = async (e) => {
 </form>
 
 <script>
-// Cap widget will populate the token when solved
-window.onCapComplete = (token) => {
-  document.getElementById('captcha_token').value = token;
-};
+  // Cap widget will populate the token when solved
+  window.onCapComplete = (token) => {
+    document.getElementById("captcha_token").value = token;
+  };
 </script>
 ```
 
@@ -272,38 +352,38 @@ window.onCapComplete = (token) => {
 ### TypeScript SDK
 
 ```typescript
-import { FluxbaseClient } from '@fluxbase/sdk'
+import { FluxbaseClient } from "@fluxbase/sdk";
 
-const client = new FluxbaseClient({ url: 'http://localhost:8080' })
+const client = new FluxbaseClient({ url: "http://localhost:8080" });
 
 // Get CAPTCHA configuration
-const { data: config } = await client.auth.getCaptchaConfig()
+const { data: config } = await client.auth.getCaptchaConfig();
 
 if (config?.enabled) {
-  console.log('CAPTCHA provider:', config.provider)
-  console.log('Site key:', config.site_key)
-  console.log('Protected endpoints:', config.endpoints)
+  console.log("CAPTCHA provider:", config.provider);
+  console.log("Site key:", config.site_key);
+  console.log("Protected endpoints:", config.endpoints);
 }
 
 // Sign up with CAPTCHA token
 const { data, error } = await client.auth.signUp({
-  email: 'user@example.com',
-  password: 'SecurePassword123',
-  captchaToken: 'token-from-widget'
-})
+  email: "user@example.com",
+  password: "SecurePassword123",
+  captchaToken: "token-from-widget",
+});
 
 // Sign in with CAPTCHA token
 const { data: session, error } = await client.auth.signIn({
-  email: 'user@example.com',
-  password: 'SecurePassword123',
-  captchaToken: 'token-from-widget'
-})
+  email: "user@example.com",
+  password: "SecurePassword123",
+  captchaToken: "token-from-widget",
+});
 
 // Request password reset with CAPTCHA
 await client.auth.resetPassword({
-  email: 'user@example.com',
-  captchaToken: 'token-from-widget'
-})
+  email: "user@example.com",
+  captchaToken: "token-from-widget",
+});
 ```
 
 ### React SDK
@@ -313,30 +393,30 @@ import {
   useCaptchaConfig,
   useCaptcha,
   useSignUp,
-  isCaptchaRequiredForEndpoint
-} from '@fluxbase/sdk-react'
+  isCaptchaRequiredForEndpoint,
+} from "@fluxbase/sdk-react";
 
 function SignUpForm() {
-  const { data: config } = useCaptchaConfig()
-  const captcha = useCaptcha(config?.provider)
-  const signUp = useSignUp()
+  const { data: config } = useCaptchaConfig();
+  const captcha = useCaptcha(config?.provider);
+  const signUp = useSignUp();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    let captchaToken: string | undefined
+    let captchaToken: string | undefined;
 
     // Check if CAPTCHA is required for signup
-    if (isCaptchaRequiredForEndpoint(config, 'signup')) {
-      captchaToken = await captcha.execute()
+    if (isCaptchaRequiredForEndpoint(config, "signup")) {
+      captchaToken = await captcha.execute();
     }
 
     await signUp.mutateAsync({
       email,
       password,
-      captchaToken
-    })
-  }
+      captchaToken,
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit}>
@@ -355,7 +435,7 @@ function SignUpForm() {
         Sign Up
       </button>
     </form>
-  )
+  );
 }
 ```
 
@@ -364,18 +444,18 @@ function SignUpForm() {
 The `useCaptcha` hook provides a unified interface for all CAPTCHA providers:
 
 ```tsx
-const captcha = useCaptcha(provider)
+const captcha = useCaptcha(provider);
 
 // Properties
-captcha.token      // Current token (string | null)
-captcha.isReady    // Widget loaded and ready (boolean)
-captcha.isLoading  // Widget is loading (boolean)
-captcha.error      // Any error during loading (Error | null)
+captcha.token; // Current token (string | null)
+captcha.isReady; // Widget loaded and ready (boolean)
+captcha.isLoading; // Widget is loading (boolean)
+captcha.error; // Any error during loading (Error | null)
 
 // Methods
-captcha.execute()  // Execute CAPTCHA and get token (Promise<string>)
-captcha.reset()    // Reset the widget
-captcha.setToken() // Manually set token (for widget callbacks)
+captcha.execute(); // Execute CAPTCHA and get token (Promise<string>)
+captcha.reset(); // Reset the widget
+captcha.setToken(); // Manually set token (for widget callbacks)
 ```
 
 ## REST API
@@ -423,12 +503,12 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 ### Error Responses
 
-| Status | Error | Description |
-|--------|-------|-------------|
-| 400 | `captcha_required` | CAPTCHA token is required but missing |
-| 400 | `captcha_invalid` | CAPTCHA verification failed |
-| 400 | `captcha_expired` | CAPTCHA token has expired |
-| 400 | `captcha_score_too_low` | reCAPTCHA v3 score below threshold |
+| Status | Error                   | Description                           |
+| ------ | ----------------------- | ------------------------------------- |
+| 400    | `captcha_required`      | CAPTCHA token is required but missing |
+| 400    | `captcha_invalid`       | CAPTCHA verification failed           |
+| 400    | `captcha_expired`       | CAPTCHA token has expired             |
+| 400    | `captcha_score_too_low` | reCAPTCHA v3 score below threshold    |
 
 ## Troubleshooting
 
@@ -454,9 +534,9 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 ```typescript
 // Always check if CAPTCHA is required before rendering
-const { data: config } = await client.auth.getCaptchaConfig()
+const { data: config } = await client.auth.getCaptchaConfig();
 
-if (config?.enabled && config.endpoints?.includes('signup')) {
+if (config?.enabled && config.endpoints?.includes("signup")) {
   // Render CAPTCHA widget
 }
 ```
@@ -468,6 +548,70 @@ if (config?.enabled && config.endpoints?.includes('signup')) {
 3. **Combine with rate limiting** - CAPTCHA doesn't replace rate limiting
 4. **Monitor verification failures** - High failure rates may indicate attacks
 5. **Token single-use** - Each token should only be used once
+
+## Architecture
+
+The CAPTCHA system is implemented with a clean provider abstraction:
+
+```mermaid
+classDiagram
+    class CaptchaService {
+        -provider CaptchaProvider
+        -config CaptchaConfig
+        -enabledEndpoints map
+        +IsEnabled() bool
+        +IsEnabledForEndpoint(endpoint) bool
+        +Verify(ctx, token, remoteIP) error
+        +VerifyForEndpoint(ctx, endpoint, token, remoteIP) error
+        +GetConfig() CaptchaConfigResponse
+    }
+
+    class CaptchaProvider {
+        <<interface>>
+        +Verify(ctx, token, remoteIP) CaptchaResult
+        +Name() string
+    }
+
+    class HCaptchaProvider {
+        -secretKey string
+        -httpClient *http.Client
+    }
+
+    class ReCaptchaProvider {
+        -secretKey string
+        -scoreThreshold float64
+        -httpClient *http.Client
+    }
+
+    class TurnstileProvider {
+        -secretKey string
+        -httpClient *http.Client
+    }
+
+    class CapProvider {
+        -serverURL string
+        -apiKey string
+        -httpClient *http.Client
+    }
+
+    CaptchaService --> CaptchaProvider
+    CaptchaProvider <|.. HCaptchaProvider
+    CaptchaProvider <|.. ReCaptchaProvider
+    CaptchaProvider <|.. TurnstileProvider
+    CaptchaProvider <|.. CapProvider
+```
+
+### Key Implementation Files
+
+| File                                 | Description                                                 |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `internal/auth/captcha.go`           | Main CaptchaService, provider interface, verification logic |
+| `internal/auth/captcha_hcaptcha.go`  | hCaptcha provider implementation                            |
+| `internal/auth/captcha_recaptcha.go` | reCAPTCHA v3 provider with score threshold                  |
+| `internal/auth/captcha_turnstile.go` | Cloudflare Turnstile provider                               |
+| `internal/auth/captcha_cap.go`       | Self-hosted Cap provider with SSRF protection               |
+| `internal/api/auth_handler.go`       | Auth endpoint handlers with CAPTCHA verification            |
+| `internal/config/config.go`          | CAPTCHA configuration structures                            |
 
 ## Next Steps
 

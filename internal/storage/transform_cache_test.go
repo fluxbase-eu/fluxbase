@@ -254,8 +254,8 @@ func TestNewTransformCache_DefaultOptions(t *testing.T) {
 	cache, err := NewTransformCache(ctx, provider, TransformCacheOptions{})
 
 	require.NoError(t, err)
-	assert.Equal(t, 24*time.Hour, cache.ttl)                   // Default TTL
-	assert.Equal(t, int64(1024*1024*1024), cache.maxSize)      // Default 1GB
+	assert.Equal(t, 24*time.Hour, cache.ttl)              // Default TTL
+	assert.Equal(t, int64(1024*1024*1024), cache.maxSize) // Default 1GB
 }
 
 func TestNewTransformCache_ExistingBucket(t *testing.T) {

@@ -160,7 +160,7 @@ func TestStorageTransform_GetConfigDisabled(t *testing.T) {
 
 func TestStorageTransform_CanTransformFunction(t *testing.T) {
 	tests := []struct {
-		contentType string
+		contentType  string
 		canTransform bool
 	}{
 		{"image/jpeg", true},
@@ -473,14 +473,14 @@ func TestStorageTransform_BucketDimension(t *testing.T) {
 		bucketSize int
 		expected   int
 	}{
-		{100, 50, 100},  // Exact bucket
-		{126, 50, 150},  // Round up
-		{124, 50, 100},  // Round down
-		{125, 50, 150},  // Midpoint rounds up
-		{0, 50, 0},      // Zero dimension
-		{-10, 50, -10},  // Negative dimension
-		{100, 0, 100},   // Zero bucket size
-		{123, 1, 123},   // No bucketing
+		{100, 50, 100}, // Exact bucket
+		{126, 50, 150}, // Round up
+		{124, 50, 100}, // Round down
+		{125, 50, 150}, // Midpoint rounds up
+		{0, 50, 0},     // Zero dimension
+		{-10, 50, -10}, // Negative dimension
+		{100, 0, 100},  // Zero bucket size
+		{123, 1, 123},  // No bucketing
 	}
 
 	for _, tt := range tests {
