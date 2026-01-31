@@ -918,7 +918,7 @@ func setDefaults() {
 	viper.SetDefault("mcp.oauth.allowed_redirect_uris", []string{}) // Empty = use defaults
 
 	// Branching defaults (database branching for isolated environments)
-	viper.SetDefault("branching.enabled", false)                         // Disabled by default
+	viper.SetDefault("branching.enabled", true)                          // Enabled by default
 	viper.SetDefault("branching.max_branches_per_user", 5)               // Max 5 branches per user
 	viper.SetDefault("branching.max_total_branches", 50)                 // Max 50 branches total
 	viper.SetDefault("branching.default_data_clone_mode", "schema_only") // Clone schema only by default

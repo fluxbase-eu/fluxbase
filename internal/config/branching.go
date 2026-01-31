@@ -14,6 +14,7 @@ type BranchingConfig struct {
 	AutoDeleteAfter      time.Duration `mapstructure:"auto_delete_after"`       // Auto-delete preview branches after this duration (0 = never)
 	DatabasePrefix       string        `mapstructure:"database_prefix"`         // Prefix for branch database names (default: "branch_")
 	SeedsPath            string        `mapstructure:"seeds_path"`              // Path to seed data files directory (default: "./seeds")
+	DefaultBranch        string        `mapstructure:"default_branch"`          // Default branch for all requests (default: "main")
 }
 
 // DataCloneModes are the valid values for DefaultDataCloneMode

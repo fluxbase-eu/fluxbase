@@ -30,6 +30,14 @@ func NewBranchHandler(manager *branching.Manager, router *branching.Router, cfg 
 func (h *BranchHandler) RegisterRoutes(api fiber.Router) {
 	branches := api.Group("/admin/branches")
 
+	// Active branch management (must be before /:id routes to avoid conflict)
+	branches.Get("/active", h.GetActiveBranch)
+	branches.Post("/active", h.SetActiveBranch)
+	branches.Delete("/active", h.ResetActiveBranch)
+
+	// Pool stats (for debugging/monitoring)
+	branches.Get("/stats/pools", h.GetPoolStats)
+
 	branches.Post("/", h.CreateBranch)
 	branches.Get("/", h.ListBranches)
 	branches.Get("/:id", h.GetBranch)
@@ -47,9 +55,6 @@ func (h *BranchHandler) RegisterRoutes(api fiber.Router) {
 	github.Get("/configs", h.ListGitHubConfigs)
 	github.Post("/configs", h.UpsertGitHubConfig)
 	github.Delete("/configs/:repository", h.DeleteGitHubConfig)
-
-	// Pool stats (for debugging/monitoring)
-	branches.Get("/stats/pools", h.GetPoolStats)
 }
 
 // CreateBranchRequest represents the request body for creating a branch
@@ -487,6 +492,95 @@ func (h *BranchHandler) GetPoolStats(c *fiber.Ctx) error {
 	stats := h.router.GetPoolStats()
 	return c.JSON(fiber.Map{
 		"pools": stats,
+	})
+}
+
+// GetActiveBranch handles GET /admin/branches/active
+func (h *BranchHandler) GetActiveBranch(c *fiber.Ctx) error {
+	branch := h.router.GetDefaultBranch()
+	source := h.router.GetActiveBranchSource()
+
+	return c.JSON(fiber.Map{
+		"branch": branch,
+		"source": source,
+	})
+}
+
+// SetActiveBranchRequest represents the request body for setting the active branch
+type SetActiveBranchRequest struct {
+	Branch string `json:"branch" validate:"required"`
+}
+
+// SetActiveBranch handles POST /admin/branches/active
+func (h *BranchHandler) SetActiveBranch(c *fiber.Ctx) error {
+	if !h.config.Enabled {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error":   "branching_disabled",
+			"message": "Database branching is not enabled",
+		})
+	}
+
+	var req SetActiveBranchRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "invalid_request",
+			"message": "Failed to parse request body: " + err.Error(),
+		})
+	}
+
+	if req.Branch == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "validation_error",
+			"message": "Branch slug is required",
+		})
+	}
+
+	// Verify the branch exists (unless it's "main")
+	if req.Branch != "main" {
+		_, err := h.manager.GetStorage().GetBranchBySlug(c.Context(), req.Branch)
+		if err != nil {
+			if err == branching.ErrBranchNotFound {
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"error":   "branch_not_found",
+					"message": "Branch not found: " + req.Branch,
+				})
+			}
+			log.Error().Err(err).Str("branch", req.Branch).Msg("Failed to verify branch")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "verification_failed",
+				"message": "Failed to verify branch exists",
+			})
+		}
+	}
+
+	// Get previous branch for response
+	previous := h.router.GetDefaultBranch()
+
+	// Set the active branch
+	h.router.SetActiveBranch(req.Branch)
+
+	return c.JSON(fiber.Map{
+		"branch":   req.Branch,
+		"previous": previous,
+		"message":  "Active branch set successfully",
+	})
+}
+
+// ResetActiveBranch handles DELETE /admin/branches/active
+func (h *BranchHandler) ResetActiveBranch(c *fiber.Ctx) error {
+	// Get current branch for response
+	previous := h.router.GetDefaultBranch()
+
+	// Reset to default (empty string clears API-set value)
+	h.router.SetActiveBranch("")
+
+	// Get new default branch
+	newBranch := h.router.GetDefaultBranch()
+
+	return c.JSON(fiber.Map{
+		"branch":   newBranch,
+		"previous": previous,
+		"message":  "Active branch reset to default",
 	})
 }
 
