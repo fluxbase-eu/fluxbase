@@ -1123,6 +1123,8 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 		toolRegistry.Register(mcptools.NewResetBranchTool(s.branchManager, branchStorage))
 		toolRegistry.Register(mcptools.NewGrantBranchAccessTool(branchStorage))
 		toolRegistry.Register(mcptools.NewRevokeBranchAccessTool(branchStorage))
+		toolRegistry.Register(mcptools.NewGetActiveBranchTool(s.branchRouter))
+		toolRegistry.Register(mcptools.NewSetActiveBranchTool(s.branchRouter, branchStorage))
 	}
 
 	// Register MCP Resources
@@ -1501,8 +1503,10 @@ func (s *Server) setupRoutes() {
 	// Admin endpoints require service key or dashboard admin
 	if s.config.Branching.Enabled && s.branchHandler != nil {
 		// Create API group with auth for branch management
+		// RequireAdmin ensures only dashboard_admins and service_role can access
 		branchAPI := s.app.Group("/api/v1",
 			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+			middleware.RequireAdmin(),
 		)
 		s.branchHandler.RegisterRoutes(branchAPI)
 

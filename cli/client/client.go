@@ -125,6 +125,11 @@ func (c *Client) RequestWithQuery(ctx context.Context, method, path string, body
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", c.UserAgent)
 
+	// Add branch header if configured (for database branching)
+	if c.Profile != nil && c.Profile.DefaultBranch != "" && c.Profile.DefaultBranch != "main" {
+		req.Header.Set("X-Fluxbase-Branch", c.Profile.DefaultBranch)
+	}
+
 	// Add authentication
 	if err := c.addAuth(req); err != nil {
 		return nil, err

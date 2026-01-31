@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	cliconfig "github.com/fluxbase-eu/fluxbase/cli/config"
 	"github.com/fluxbase-eu/fluxbase/cli/output"
 )
 
@@ -30,7 +31,8 @@ Use branches to:
 
 var (
 	branchDataCloneMode string
-	branchType          string
+	branchListType      string // Separate variable for list command
+	branchCreateType    string // Separate variable for create command
 	branchExpiresIn     string
 	branchParent        string
 	branchGitHubPR      int
@@ -156,15 +158,44 @@ Examples:
 	RunE:    runBranchStats,
 }
 
+var branchUseCmd = &cobra.Command{
+	Use:   "use [branch-name]",
+	Short: "Set the default branch for CLI commands",
+	Long: `Set the default branch for all subsequent CLI commands.
+
+This saves the branch to your profile config and automatically sends
+the X-Fluxbase-Branch header with every API request.
+
+Use 'main' to reset to the main branch.
+
+Examples:
+  fluxbase branch use my-feature
+  fluxbase branch use pr-123
+  fluxbase branch use main`,
+	Args:    cobra.ExactArgs(1),
+	PreRunE: requireAuth,
+	RunE:    runBranchUse,
+}
+
+var branchCurrentCmd = &cobra.Command{
+	Use:   "current",
+	Short: "Show the current default branch",
+	Long: `Show the current default branch set for CLI commands.
+
+Examples:
+  fluxbase branch current`,
+	RunE: runBranchCurrent,
+}
+
 func init() {
 	// List command flags
-	branchListCmd.Flags().StringVar(&branchType, "type", "", "Filter by branch type (main, preview, persistent)")
+	branchListCmd.Flags().StringVar(&branchListType, "type", "", "Filter by branch type (main, preview, persistent)")
 	branchListCmd.Flags().BoolP("mine", "m", false, "Show only branches created by me")
 
 	// Create command flags
 	branchCreateCmd.Flags().StringVar(&branchDataCloneMode, "clone-data", "schema_only",
 		"Data clone mode: schema_only, full_clone, seed_data")
-	branchCreateCmd.Flags().StringVar(&branchType, "type", "preview",
+	branchCreateCmd.Flags().StringVar(&branchCreateType, "type", "preview",
 		"Branch type: preview, persistent")
 	branchCreateCmd.Flags().StringVar(&branchExpiresIn, "expires-in", "",
 		"Auto-delete after duration (e.g., 24h, 7d)")
@@ -197,6 +228,8 @@ func init() {
 	branchCmd.AddCommand(branchStatusCmd)
 	branchCmd.AddCommand(branchActivityCmd)
 	branchCmd.AddCommand(branchStatsCmd)
+	branchCmd.AddCommand(branchUseCmd)
+	branchCmd.AddCommand(branchCurrentCmd)
 }
 
 // Branch represents a database branch
@@ -234,8 +267,8 @@ func runBranchList(cmd *cobra.Command, args []string) error {
 	// Build query parameters
 	query := url.Values{}
 	query.Set("limit", "100")
-	if branchType != "" {
-		query.Set("type", branchType)
+	if branchListType != "" {
+		query.Set("type", branchListType)
 	}
 	if mine, _ := cmd.Flags().GetBool("mine"); mine {
 		query.Set("mine", "true")
@@ -335,7 +368,7 @@ func runBranchCreate(cmd *cobra.Command, args []string) error {
 	body := map[string]any{
 		"name":            name,
 		"data_clone_mode": branchDataCloneMode,
-		"type":            branchType,
+		"type":            branchCreateType,
 	}
 
 	if branchExpiresIn != "" {
@@ -590,4 +623,97 @@ func formatTime(t time.Time) string {
 		return "-"
 	}
 	return t.Format("2006-01-02 15:04:05")
+}
+
+func runBranchUse(cmd *cobra.Command, args []string) error {
+	branchName := args[0]
+
+	// If not "main", validate the branch exists
+	if branchName != "main" {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		var branch Branch
+		if err := apiClient.DoGet(ctx, "/api/v1/admin/branches/"+url.PathEscape(branchName), nil, &branch); err != nil {
+			return fmt.Errorf("branch '%s' not found: %w", branchName, err)
+		}
+	}
+
+	// Load config
+	configPath := GetConfigPath()
+	cfg, err := cliconfig.LoadOrCreate(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Get current profile name
+	pName := profileName
+	if pName == "" {
+		pName = cfg.CurrentProfile
+	}
+	if pName == "" {
+		return fmt.Errorf("no profile configured - run 'fluxbase auth login' first")
+	}
+
+	// Get profile
+	profile, err := cfg.GetProfile(pName)
+	if err != nil {
+		return fmt.Errorf("profile '%s' not found", pName)
+	}
+
+	// Update default branch
+	if branchName == "main" {
+		profile.DefaultBranch = "" // Clear to use main
+	} else {
+		profile.DefaultBranch = branchName
+	}
+
+	// Save config
+	if err := cfg.Save(configPath); err != nil {
+		return fmt.Errorf("failed to save config: %w", err)
+	}
+
+	if branchName == "main" {
+		fmt.Println("Now using branch: main (default)")
+	} else {
+		fmt.Printf("Now using branch: %s\n", branchName)
+	}
+	fmt.Println("All CLI commands will now use this branch.")
+
+	return nil
+}
+
+func runBranchCurrent(cmd *cobra.Command, args []string) error {
+	// Load config
+	configPath := GetConfigPath()
+	cfg, err := cliconfig.LoadOrCreate(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Get current profile name
+	pName := profileName
+	if pName == "" {
+		pName = cfg.CurrentProfile
+	}
+	if pName == "" {
+		fmt.Println("Current branch: main (no profile configured)")
+		return nil
+	}
+
+	// Get profile
+	profile, err := cfg.GetProfile(pName)
+	if err != nil {
+		fmt.Println("Current branch: main (profile not found)")
+		return nil
+	}
+
+	// Show current branch
+	if profile.DefaultBranch == "" {
+		fmt.Println("Current branch: main (default)")
+	} else {
+		fmt.Printf("Current branch: %s\n", profile.DefaultBranch)
+	}
+
+	return nil
 }

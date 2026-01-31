@@ -880,3 +880,153 @@ func (t *RevokeBranchAccessTool) Execute(ctx context.Context, args map[string]an
 		Content: []mcp.Content{mcp.TextContent(string(resultJSON))},
 	}, nil
 }
+
+// ============================================================================
+// GET ACTIVE BRANCH TOOL
+// ============================================================================
+
+// GetActiveBranchTool implements the get_active_branch MCP tool
+type GetActiveBranchTool struct {
+	router *branching.Router
+}
+
+// NewGetActiveBranchTool creates a new get_active_branch tool
+func NewGetActiveBranchTool(router *branching.Router) *GetActiveBranchTool {
+	return &GetActiveBranchTool{router: router}
+}
+
+func (t *GetActiveBranchTool) Name() string {
+	return "get_active_branch"
+}
+
+func (t *GetActiveBranchTool) Description() string {
+	return `Get the current server-wide active/default branch.
+
+Returns the active branch and its source (api, config, or default).
+The active branch is used when no per-request branch is specified via header or query param.`
+}
+
+func (t *GetActiveBranchTool) InputSchema() map[string]any {
+	return map[string]any{
+		"type":       "object",
+		"properties": map[string]any{},
+	}
+}
+
+func (t *GetActiveBranchTool) RequiredScopes() []string {
+	return []string{mcp.ScopeBranchRead}
+}
+
+func (t *GetActiveBranchTool) Execute(ctx context.Context, args map[string]any, authCtx *mcp.AuthContext) (*mcp.ToolResult, error) {
+	branch := t.router.GetDefaultBranch()
+	source := t.router.GetActiveBranchSource()
+
+	result := map[string]any{
+		"branch": branch,
+		"source": source,
+	}
+
+	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	return &mcp.ToolResult{
+		Content: []mcp.Content{mcp.TextContent(string(resultJSON))},
+	}, nil
+}
+
+// ============================================================================
+// SET ACTIVE BRANCH TOOL
+// ============================================================================
+
+// SetActiveBranchTool implements the set_active_branch MCP tool
+type SetActiveBranchTool struct {
+	router  *branching.Router
+	storage *branching.Storage
+}
+
+// NewSetActiveBranchTool creates a new set_active_branch tool
+func NewSetActiveBranchTool(router *branching.Router, storage *branching.Storage) *SetActiveBranchTool {
+	return &SetActiveBranchTool{router: router, storage: storage}
+}
+
+func (t *SetActiveBranchTool) Name() string {
+	return "set_active_branch"
+}
+
+func (t *SetActiveBranchTool) Description() string {
+	return `Set the server-wide active/default branch.
+
+This sets the branch that will be used for all requests that don't specify a branch
+via the X-Fluxbase-Branch header or ?branch= query parameter.
+
+Parameters:
+  - branch: Branch slug to set as active (use "main" for the main branch, or empty string to reset to default)
+
+Returns the new active branch and previous branch.`
+}
+
+func (t *SetActiveBranchTool) InputSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"branch": map[string]any{
+				"type":        "string",
+				"description": "Branch slug to set as active (empty string to reset to default)",
+			},
+		},
+		"required": []string{"branch"},
+	}
+}
+
+func (t *SetActiveBranchTool) RequiredScopes() []string {
+	return []string{mcp.ScopeBranchWrite}
+}
+
+func (t *SetActiveBranchTool) Execute(ctx context.Context, args map[string]any, authCtx *mcp.AuthContext) (*mcp.ToolResult, error) {
+	branch, _ := args["branch"].(string)
+
+	// Get previous branch for response
+	previous := t.router.GetDefaultBranch()
+
+	// If branch is not empty or "main", verify it exists
+	if branch != "" && branch != "main" {
+		_, err := t.storage.GetBranchBySlug(ctx, branch)
+		if err != nil {
+			if err == branching.ErrBranchNotFound {
+				return &mcp.ToolResult{
+					Content: []mcp.Content{mcp.ErrorContent("Branch not found: " + branch)},
+					IsError: true,
+				}, nil
+			}
+			return &mcp.ToolResult{
+				Content: []mcp.Content{mcp.ErrorContent(fmt.Sprintf("Failed to verify branch: %v", err))},
+				IsError: true,
+			}, nil
+		}
+	}
+
+	// Set the active branch
+	t.router.SetActiveBranch(branch)
+
+	// Get new default branch (in case we reset to empty)
+	newBranch := t.router.GetDefaultBranch()
+
+	log.Info().
+		Str("previous", previous).
+		Str("new", newBranch).
+		Msg("MCP: set_active_branch - changed")
+
+	result := map[string]any{
+		"branch":   newBranch,
+		"previous": previous,
+	}
+
+	if branch == "" {
+		result["message"] = "Active branch reset to default"
+	} else {
+		result["message"] = "Active branch set successfully"
+	}
+
+	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	return &mcp.ToolResult{
+		Content: []mcp.Content{mcp.TextContent(string(resultJSON))},
+	}, nil
+}

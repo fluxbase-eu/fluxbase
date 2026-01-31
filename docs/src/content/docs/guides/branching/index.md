@@ -38,7 +38,7 @@ fluxbase branch delete my-feature
 fluxbase branch create my-feature
 
 # Create a branch with full data copy
-fluxbase branch create my-feature --clone-mode full_clone
+fluxbase branch create my-feature --clone-data full_clone
 
 # List all branches
 fluxbase branch list
@@ -51,7 +51,40 @@ fluxbase branch reset my-feature
 
 # Delete a branch
 fluxbase branch delete my-feature
+
+# Set default branch for all CLI commands
+fluxbase branch use my-feature
+
+# Check which branch is currently active
+fluxbase branch current
+
+# Switch back to main branch
+fluxbase branch use main
 ```
+
+### Setting a Default Branch
+
+Use `fluxbase branch use` to set a default branch for all CLI commands. This saves the branch to your profile and automatically includes the `X-Fluxbase-Branch` header in every request.
+
+```bash
+# Set CLI to use a specific branch
+fluxbase branch use my-feature
+# Output: Now using branch: my-feature
+#         All CLI commands will now use this branch.
+
+# All subsequent commands automatically use this branch
+fluxbase data list users    # Uses my-feature branch
+fluxbase function deploy    # Uses my-feature branch
+
+# Check current branch
+fluxbase branch current
+# Output: Current branch: my-feature
+
+# Switch back to main
+fluxbase branch use main
+```
+
+This is useful when you're working on a feature branch for an extended period and don't want to specify the branch with every command.
 
 ### Creating Nested Branches
 
@@ -93,30 +126,30 @@ That's it! The server will use its existing database credentials to create and m
 ```yaml
 branching:
   enabled: true
-  max_total_branches: 50       # Maximum total branches across all users
-  max_branches_per_user: 5     # Maximum branches per user (default: 5)
+  max_total_branches: 50 # Maximum total branches across all users
+  max_branches_per_user: 5 # Maximum branches per user (default: 5)
   default_data_clone_mode: schema_only
   auto_delete_after: 24h
   database_prefix: branch_
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `enabled` | `false` | Enable database branching |
-| `max_total_branches` | `50` | Maximum total branches across all users |
-| `default_data_clone_mode` | `schema_only` | Default cloning mode (schema_only, full_clone, seed_data) |
-| `auto_delete_after` | `0` | Auto-delete preview branches after this duration (0 = disabled) |
-| `database_prefix` | `branch_` | Prefix for branch database names |
+| Option                    | Default       | Description                                                     |
+| ------------------------- | ------------- | --------------------------------------------------------------- |
+| `enabled`                 | `false`       | Enable database branching                                       |
+| `max_total_branches`      | `50`          | Maximum total branches across all users                         |
+| `default_data_clone_mode` | `schema_only` | Default cloning mode (schema_only, full_clone, seed_data)       |
+| `auto_delete_after`       | `0`           | Auto-delete preview branches after this duration (0 = disabled) |
+| `database_prefix`         | `branch_`     | Prefix for branch database names                                |
 
 **Note:** When `auto_delete_after` is set (e.g., `24h`, `7d`), a background cleanup scheduler runs automatically to delete expired branches.
 
 ### Data Clone Modes
 
-| Mode | Description |
-|------|-------------|
-| `schema_only` | Copy schema only, no data (fast) |
-| `full_clone` | Copy schema and all data (slower, useful for testing with real data) |
-| `seed_data` | Copy schema with seed data (coming soon) |
+| Mode          | Description                                                          |
+| ------------- | -------------------------------------------------------------------- |
+| `schema_only` | Copy schema only, no data (fast)                                     |
+| `full_clone`  | Copy schema and all data (slower, useful for testing with real data) |
+| `seed_data`   | Copy schema with seed data (coming soon)                             |
 
 ### How It Works
 
@@ -129,24 +162,75 @@ When you create a branch, the server:
 
 The server never needs separate admin credentials - it uses the same PostgreSQL user it already has.
 
+### Branch Creation Process
+
+The following diagram shows how database branching works, including what happens to the `public` schema:
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f8f9fa', 'primaryTextColor': '#333', 'primaryBorderColor': '#dee2e6', 'lineColor': '#6c757d', 'secondaryColor': '#e9ecef', 'tertiaryColor': '#f8f9fa' }}}%%
+flowchart TB
+    subgraph Request["Branch Creation Request"]
+        API["POST /admin/branches<br/>{name: 'my-feature',<br/>dataCloneMode: 'schema_only'}"]
+    end
+
+    subgraph MainDB["Main Database (fluxbase)"]
+        direction TB
+        BranchingSchema["<b>branching schema</b><br/>━━━━━━━━━━━━━━━━<br/>branches<br/>activity_log<br/>branch_access"]
+        PublicSchema["<b>public schema</b><br/>━━━━━━━━━━━━━━━━<br/>users (100 rows)<br/>orders (500 rows)<br/>products (50 rows)"]
+    end
+
+    subgraph Process["Branch Creation Process"]
+        direction TB
+        Step1["1️⃣ Validate request<br/>Check limits & permissions"]
+        Step2["2️⃣ Create metadata<br/>status = 'creating'"]
+        Step3["3️⃣ CREATE DATABASE<br/>branch_my_feature<br/>TEMPLATE fluxbase"]
+        Step4["4️⃣ Update status<br/>status = 'ready'"]
+        Step1 --> Step2 --> Step3 --> Step4
+    end
+
+    subgraph BranchDB["Branch Database (branch_my_feature)"]
+        direction TB
+        PublicSchemaCopy["<b>public schema</b> (CLONED)<br/>━━━━━━━━━━━━━━━━<br/>users (0 rows) ⬅ schema only<br/>orders (0 rows) ⬅ schema only<br/>products (0 rows) ⬅ schema only"]
+        Note["❌ No branching schema<br/>(metadata stays in main DB)"]
+    end
+
+    API --> Step1
+    BranchingSchema -.-> |"stores metadata"| Step2
+    PublicSchema --> |"schema copied via<br/>PostgreSQL TEMPLATE"| PublicSchemaCopy
+    Step4 --> BranchDB
+
+    style MainDB fill:#e8f4e8,stroke:#28a745
+    style BranchDB fill:#e8e8f4,stroke:#6f42c1
+    style PublicSchema fill:#d4edda,stroke:#28a745
+    style PublicSchemaCopy fill:#e2d9f3,stroke:#6f42c1
+    style Note fill:#fff3cd,stroke:#ffc107
+```
+
+**Key points:**
+
+- **Database-level isolation**: Each branch is a separate PostgreSQL database, not just a schema within the same database
+- **Branching metadata stays in main**: The `branching` schema (which tracks all branches) only exists in the main database
+- **Public schema is cloned**: Your application tables in the `public` schema are copied to the new database
+- **Data depends on clone mode**: With `schema_only`, tables are created but empty. With `full_clone`, all data is copied too
+
 ## Using TypeScript SDK
 
 ```typescript
-import { createClient } from '@fluxbase/sdk'
+import { createClient } from "@fluxbase/sdk";
 
-const client = createClient('http://localhost:8080', 'your-key')
+const client = createClient("http://localhost:8080", "your-key");
 
 // Create a branch
-const { data: branch } = await client.branching.create('my-feature', {
-  dataCloneMode: 'schema_only',
-  expiresIn: '7d'
-})
+const { data: branch } = await client.branching.create("my-feature", {
+  dataCloneMode: "schema_only",
+  expiresIn: "7d",
+});
 
 // Wait for it to be ready
-await client.branching.waitForReady('my-feature')
+await client.branching.waitForReady("my-feature");
 
 // Delete when done
-await client.branching.delete('my-feature')
+await client.branching.delete("my-feature");
 ```
 
 See the [Branching API](/guides/branching/api/) for complete documentation.
@@ -170,11 +254,11 @@ curl http://localhost:8080/api/v1/tables/users \
 
 ## Branch Types
 
-| Type | Description | Auto-Delete |
-|------|-------------|-------------|
-| `main` | Primary database | Never |
-| `preview` | Temporary environments | After `auto_delete_after` |
-| `persistent` | Long-lived branches | Never |
+| Type         | Description            | Auto-Delete               |
+| ------------ | ---------------------- | ------------------------- |
+| `main`       | Primary database       | Never                     |
+| `preview`    | Temporary environments | After `auto_delete_after` |
+| `persistent` | Long-lived branches    | Never                     |
 
 ## Connecting to Branches
 
@@ -220,14 +304,14 @@ fluxbase branch get my-feature --output json | jq -r .connection_url
 
 ### States
 
-| State | Description |
-|-------|-------------|
-| `creating` | Database is being created |
-| `ready` | Branch is available for use |
-| `migrating` | Migrations are running |
-| `error` | An error occurred |
-| `deleting` | Branch is being deleted |
-| `deleted` | Branch has been deleted |
+| State       | Description                 |
+| ----------- | --------------------------- |
+| `creating`  | Database is being created   |
+| `ready`     | Branch is available for use |
+| `migrating` | Migrations are running      |
+| `error`     | An error occurred           |
+| `deleting`  | Branch is being deleted     |
+| `deleted`   | Branch has been deleted     |
 
 ## Access Control
 
@@ -240,10 +324,10 @@ Branch access is controlled by:
 
 ### Access Levels
 
-| Level | Permissions |
-|-------|-------------|
-| `read` | View branch, query data |
-| `write` | Read + modify data |
+| Level   | Permissions                 |
+| ------- | --------------------------- |
+| `read`  | View branch, query data     |
+| `write` | Read + modify data          |
 | `admin` | Write + delete/reset branch |
 
 ## Next Steps

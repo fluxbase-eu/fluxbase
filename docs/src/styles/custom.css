@@ -164,14 +164,15 @@
   justify-content: center;
   margin: 1.5rem 0;
   padding: 1rem;
-  background: var(--sl-color-gray-1);
+  background: #ffffff;
   border-radius: 0.5rem;
-  border: 1px solid var(--sl-color-gray-2);
+  border: 1px solid var(--sl-color-gray-5);
 }
 
 .mermaid svg {
   max-width: 100%;
   height: auto;
+  background: #ffffff;
 }
 
 /* Mermaid diagrams inside Expressive Code wrappers */
@@ -237,6 +238,11 @@
   border: 1px solid var(--sl-color-gray-5);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 100%;
+  gap: 0;
 }
 
 .feature-card-enhanced::before {
@@ -263,6 +269,10 @@
   transform: scaleX(1);
 }
 
+.feature-card-enhanced > * {
+  margin-top: 0 !important;
+}
+
 .feature-card-enhanced .icon-wrapper {
   display: inline-flex;
   align-items: center;
@@ -271,8 +281,9 @@
   height: 3rem;
   border-radius: 0.75rem;
   background: linear-gradient(135deg, rgba(44, 70, 137, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-  margin-bottom: 1rem;
+  margin: 0 0 1rem 0;
   font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
 .feature-card-enhanced h3 {
