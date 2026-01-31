@@ -140,6 +140,15 @@ export default defineConfig({
                 container.className = 'mermaid';
                 container.textContent = text;
                 pre.replaceWith(container);
+                // Force light background on wrapper for Mermaid diagrams
+                wrapper.style.setProperty('background', '#ffffff', 'important');
+                wrapper.style.setProperty('border-radius', '0.5rem');
+                wrapper.style.setProperty('border', '1px solid #e5e7eb');
+                const figure = wrapper.querySelector('figure');
+                if (figure) {
+                  figure.style.setProperty('background', '#ffffff', 'important');
+                  figure.style.setProperty('margin', '0');
+                }
               });
               mermaid.run();
             });
