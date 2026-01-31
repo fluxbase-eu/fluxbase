@@ -158,34 +158,54 @@
 }
 */
 
-/* Mermaid diagram styling */
+/* Mermaid diagram styling - always light background */
 .mermaid {
   display: flex;
   justify-content: center;
   margin: 1.5rem 0;
   padding: 1rem;
-  background: #ffffff;
+  background: #ffffff !important;
   border-radius: 0.5rem;
-  border: 1px solid var(--sl-color-gray-5);
+  border: 1px solid #e5e7eb;
 }
 
 .mermaid svg {
   max-width: 100%;
   height: auto;
-  background: #ffffff;
+  background: #ffffff !important;
+}
+
+/* Ensure Mermaid stays light in dark mode */
+:root[data-theme='dark'] .mermaid {
+  background: #ffffff !important;
+  border-color: #d1d5db;
+}
+
+:root[data-theme='dark'] .mermaid svg {
+  background: #ffffff !important;
 }
 
 /* Mermaid diagrams inside Expressive Code wrappers */
 .expressive-code:has(.mermaid) {
   /* Remove the code block background/border styling */
-  background: transparent;
+  background: #ffffff !important;
   border: none;
+  border-radius: 0.5rem;
+}
+
+:root[data-theme='dark'] .expressive-code:has(.mermaid) {
+  background: #ffffff !important;
 }
 
 .expressive-code .mermaid {
   /* Ensure diagram fills the space properly */
   min-height: 200px;
   padding: 2rem 1rem;
+  background: #ffffff !important;
+}
+
+:root[data-theme='dark'] .expressive-code .mermaid {
+  background: #ffffff !important;
 }
 
 /* Adjust copy button positioning for Mermaid diagrams */
