@@ -1,4 +1,4 @@
-.PHONY: help dev build clean test migrate-up migrate-down migrate-create db-reset db-reset-full deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions
+.PHONY: help dev build clean test migrate-up migrate-down migrate-create db-reset db-reset-full deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions viz-deps viz-deps-svg viz-internal viz-callgraph viz-callgraph-svg viz-uml viz-uml-api viz-uml-auth viz-module-deps viz-all
 
 # Variables
 BINARY_NAME=fluxbase-server
@@ -526,3 +526,68 @@ cli-cross-compile: ## Cross-compile CLI for multiple platforms
 	@GOOS=linux GOARCH=arm64 go build -ldflags="-X github.com/fluxbase-eu/fluxbase/cli/cmd.Version=$(VERSION)" -o build/dist/fluxbase-linux-arm64 ${CLI_MAIN_PATH}
 	@GOOS=windows GOARCH=amd64 go build -ldflags="-X github.com/fluxbase-eu/fluxbase/cli/cmd.Version=$(VERSION)" -o build/dist/fluxbase-windows-amd64.exe ${CLI_MAIN_PATH}
 	@echo "${GREEN}Cross-compilation complete! Binaries in build/dist/${NC}"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CODEBASE VISUALIZATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+viz-deps: ## Generate package dependency graph (PNG)
+	@echo "${YELLOW}Generating package dependency graph...${NC}"
+	@mkdir -p build/viz
+	@godepgraph -s ./... 2>/dev/null | dot -Tpng -o build/viz/deps.png
+	@echo "${GREEN}Dependency graph: build/viz/deps.png${NC}"
+
+viz-deps-svg: ## Generate package dependency graph (SVG, interactive)
+	@echo "${YELLOW}Generating package dependency graph (SVG)...${NC}"
+	@mkdir -p build/viz
+	@godepgraph -s ./... 2>/dev/null | dot -Tsvg -o build/viz/deps.svg
+	@echo "${GREEN}Dependency graph: build/viz/deps.svg${NC}"
+
+viz-internal: ## Generate internal package dependency graph
+	@echo "${YELLOW}Generating internal package dependencies...${NC}"
+	@mkdir -p build/viz
+	@goda graph ./internal/... 2>/dev/null | dot -Tsvg -o build/viz/internal-deps.svg
+	@echo "${GREEN}Internal dependencies: build/viz/internal-deps.svg${NC}"
+
+viz-callgraph: ## Generate call graph (opens in browser)
+	@echo "${YELLOW}Generating call graph visualization...${NC}"
+	@echo "${BLUE}This will open a browser window. Press Ctrl+C to stop.${NC}"
+	@go-callvis -group pkg,type -focus github.com/fluxbase-eu/fluxbase ./cmd/fluxbase
+
+viz-callgraph-svg: ## Generate call graph as SVG file
+	@echo "${YELLOW}Generating call graph SVG...${NC}"
+	@mkdir -p build/viz
+	@go-callvis -group pkg,type -format svg -file build/viz/callgraph -focus github.com/fluxbase-eu/fluxbase ./cmd/fluxbase 2>/dev/null || true
+	@echo "${GREEN}Call graph: build/viz/callgraph.svg${NC}"
+
+viz-uml: ## Generate UML class diagrams (PlantUML format)
+	@echo "${YELLOW}Generating UML diagrams...${NC}"
+	@mkdir -p build/viz
+	@goplantuml -recursive -show-aggregations -show-compositions -show-implementations ./internal > build/viz/internal.puml
+	@echo "${GREEN}UML diagram: build/viz/internal.puml${NC}"
+	@echo "${YELLOW}View at: https://www.plantuml.com/plantuml/uml/ or use PlantUML extension${NC}"
+
+viz-uml-api: ## Generate UML diagram for API package only
+	@echo "${YELLOW}Generating API UML diagram...${NC}"
+	@mkdir -p build/viz
+	@goplantuml -show-aggregations -show-compositions -show-implementations ./internal/api > build/viz/api.puml
+	@echo "${GREEN}API UML diagram: build/viz/api.puml${NC}"
+
+viz-uml-auth: ## Generate UML diagram for Auth package only
+	@echo "${YELLOW}Generating Auth UML diagram...${NC}"
+	@mkdir -p build/viz
+	@goplantuml -show-aggregations -show-compositions -show-implementations ./internal/auth > build/viz/auth.puml
+	@echo "${GREEN}Auth UML diagram: build/viz/auth.puml${NC}"
+
+viz-module-deps: ## Show module-level dependencies
+	@echo "${YELLOW}Analyzing module dependencies...${NC}"
+	@echo ""
+	@echo "${BLUE}Direct dependencies:${NC}"
+	@go list -m -f '{{if not .Indirect}}{{.Path}}{{end}}' all | grep -v "^$$" | sort
+	@echo ""
+	@echo "${BLUE}Run 'go mod graph' for full dependency tree${NC}"
+
+viz-all: viz-deps-svg viz-internal viz-uml ## Generate all visualizations
+	@echo ""
+	@echo "${GREEN}All visualizations generated in build/viz/${NC}"
+	@ls -la build/viz/
