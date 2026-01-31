@@ -530,24 +530,86 @@ cli-cross-compile: ## Cross-compile CLI for multiple platforms
 # ═══════════════════════════════════════════════════════════════════════════════
 # CODEBASE VISUALIZATION
 # ═══════════════════════════════════════════════════════════════════════════════
+#
+# Recommended visualizations (clean, curated, easy to read):
+#   viz-architecture  - Simplified layered architecture diagram
+#   viz-workflows     - Flow diagrams for common operations
+#   viz-core-modules  - Dependency graph of core modules only
+#
+# Advanced visualizations (auto-generated, may be complex):
+#   viz-deps          - Full external package dependencies
+#   viz-internal-*    - Various layouts of complete internal dependencies
+#   viz-uml           - PlantUML class diagrams
+#
+# Run 'make viz' to generate recommended visualizations.
+# Run 'make viz-all' to generate everything.
+
+viz: viz-architecture viz-workflows viz-core-modules ## Generate recommended visualizations (clean & readable)
+	@echo ""
+	@echo "${GREEN}✓ Recommended visualizations generated!${NC}"
+	@echo ""
+	@echo "${BLUE}Architecture:${NC}"
+	@echo "  - architecture-simplified.svg  - Layered architecture overview"
+	@echo ""
+	@echo "${BLUE}Workflows:${NC}"
+	@echo "  - flow-rest-api.svg           - REST API request flow"
+	@echo "  - flow-authentication.svg     - Authentication flow"
+	@echo "  - flow-edge-functions.svg     - Edge functions execution"
+	@echo "  - flow-background-jobs.svg    - Background jobs processing"
+	@echo "  - flow-file-storage.svg       - File storage operations"
+	@echo "  - flow-realtime.svg           - Realtime WebSocket flow"
+	@echo ""
+	@echo "${BLUE}Core Dependencies:${NC}"
+	@echo "  - core-modules.svg            - API, Auth, Database dependencies"
+	@echo ""
+	@echo "${YELLOW}Open these files in your browser or IDE to view!${NC}"
+
+viz-architecture: ## Generate simplified layered architecture diagram
+	@echo "${YELLOW}Generating layered architecture diagram...${NC}"
+	@./scripts/viz-architecture.sh
+	@echo "${GREEN}Architecture diagram: build/viz/architecture-simplified.svg${NC}"
+
+viz-workflows: ## Generate workflow diagrams (REST, auth, functions, jobs, storage)
+	@echo "${YELLOW}Generating workflow diagrams...${NC}"
+	@./scripts/viz-workflows.sh
+	@echo "${GREEN}Workflow diagrams: build/viz/flow-*.svg${NC}"
 
 viz-deps: ## Generate package dependency graph (PNG)
 	@echo "${YELLOW}Generating package dependency graph...${NC}"
 	@mkdir -p build/viz
-	@godepgraph -s ./... 2>/dev/null | dot -Tpng -o build/viz/deps.png
+	@godepgraph -s github.com/fluxbase-eu/fluxbase/... 2>/dev/null | dot -Tpng -o build/viz/deps.png
 	@echo "${GREEN}Dependency graph: build/viz/deps.png${NC}"
 
 viz-deps-svg: ## Generate package dependency graph (SVG, interactive)
 	@echo "${YELLOW}Generating package dependency graph (SVG)...${NC}"
 	@mkdir -p build/viz
-	@godepgraph -s ./... 2>/dev/null | dot -Tsvg -o build/viz/deps.svg
+	@godepgraph -s github.com/fluxbase-eu/fluxbase/... 2>/dev/null | dot -Tsvg -o build/viz/deps.svg
 	@echo "${GREEN}Dependency graph: build/viz/deps.svg${NC}"
 
-viz-internal: ## Generate internal package dependency graph
-	@echo "${YELLOW}Generating internal package dependencies...${NC}"
+viz-internal-detailed: ## [ADVANCED] Complete internal dependency graph (complex, may be hard to read)
+	@echo "${YELLOW}Generating complete internal dependencies (force-directed)...${NC}"
+	@echo "${RED}Warning: This generates a complex graph with many nodes. Try 'make viz-architecture' for a cleaner view.${NC}"
 	@mkdir -p build/viz
-	@goda graph ./internal/... 2>/dev/null | dot -Tsvg -o build/viz/internal-deps.svg
-	@echo "${GREEN}Internal dependencies: build/viz/internal-deps.svg${NC}"
+	@goda graph -cluster ./internal/... 2>/dev/null | \
+		sed 's|github.com/fluxbase-eu/fluxbase/internal/||g' | \
+		sfdp -Tsvg -Gsize=30,30 -Goverlap=scale -Gsplines=true -Gsep=1.5 -Gnodesep=2 -o build/viz/internal-deps-complete.svg
+	@echo "${GREEN}Complete internal dependencies: build/viz/internal-deps-complete.svg${NC}"
+
+viz-internal-hierarchical: ## [ADVANCED] Complete internal graph with hierarchical layout
+	@echo "${YELLOW}Generating complete internal dependencies (hierarchical)...${NC}"
+	@mkdir -p build/viz
+	@goda graph -cluster ./internal/... 2>/dev/null | \
+		sed 's|github.com/fluxbase-eu/fluxbase/internal/||g' | \
+		dot -Tsvg -Grankdir=TB -Gnodesep=1.5 -Granksep=2 -o build/viz/internal-deps-hierarchical.svg
+	@echo "${GREEN}Hierarchical dependencies: build/viz/internal-deps-hierarchical.svg${NC}"
+
+viz-core-modules: ## Generate dependency graph for core modules only (api, auth, database)
+	@echo "${YELLOW}Generating core module dependencies...${NC}"
+	@mkdir -p build/viz
+	@goda graph "reach(./internal/api/... + ./internal/auth/... + ./internal/database/..., ./internal/...)" 2>/dev/null | \
+		sed 's|github.com/fluxbase-eu/fluxbase/internal/||g' | \
+		dot -Tsvg -Grankdir=TB -Gnodesep=1.5 -Granksep=2 -o build/viz/core-modules.svg
+	@echo "${GREEN}Core module dependencies: build/viz/core-modules.svg${NC}"
 
 viz-callgraph: ## Generate call graph (opens in browser)
 	@echo "${YELLOW}Generating call graph visualization...${NC}"
@@ -587,7 +649,24 @@ viz-module-deps: ## Show module-level dependencies
 	@echo ""
 	@echo "${BLUE}Run 'go mod graph' for full dependency tree${NC}"
 
-viz-all: viz-deps-svg viz-internal viz-uml ## Generate all visualizations
+viz-all: viz viz-deps-svg viz-internal-detailed viz-uml ## Generate all visualizations (recommended + advanced)
 	@echo ""
-	@echo "${GREEN}All visualizations generated in build/viz/${NC}"
-	@ls -la build/viz/
+	@echo "${GREEN}✓ All visualizations generated in build/viz/${NC}"
+	@echo ""
+	@echo "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+	@echo "${BLUE}Recommended Visualizations (clean & readable):${NC}"
+	@echo "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+	@echo ""
+	@echo "  ${GREEN}architecture-simplified.svg${NC}   - Layered architecture overview"
+	@echo "  ${GREEN}flow-*.svg${NC}                    - Workflow diagrams (REST, auth, functions, jobs, storage, realtime)"
+	@echo "  ${GREEN}core-modules.svg${NC}              - Core module dependencies"
+	@echo ""
+	@echo "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+	@echo "${BLUE}Advanced Visualizations (detailed, complex):${NC}"
+	@echo "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+	@echo ""
+	@echo "  deps.svg                     - Full package dependency graph"
+	@echo "  internal-deps-complete.svg   - Complete internal dependencies (complex)"
+	@echo "  internal.puml                - UML class diagrams (PlantUML)"
+	@echo ""
+	@ls -lh build/viz/ | grep -E '\.(svg|puml)$$' | tail -20
