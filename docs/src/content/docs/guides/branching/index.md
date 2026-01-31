@@ -51,7 +51,40 @@ fluxbase branch reset my-feature
 
 # Delete a branch
 fluxbase branch delete my-feature
+
+# Set default branch for all CLI commands
+fluxbase branch use my-feature
+
+# Check which branch is currently active
+fluxbase branch current
+
+# Switch back to main branch
+fluxbase branch use main
 ```
+
+### Setting a Default Branch
+
+Use `fluxbase branch use` to set a default branch for all CLI commands. This saves the branch to your profile and automatically includes the `X-Fluxbase-Branch` header in every request.
+
+```bash
+# Set CLI to use a specific branch
+fluxbase branch use my-feature
+# Output: Now using branch: my-feature
+#         All CLI commands will now use this branch.
+
+# All subsequent commands automatically use this branch
+fluxbase data list users    # Uses my-feature branch
+fluxbase function deploy    # Uses my-feature branch
+
+# Check current branch
+fluxbase branch current
+# Output: Current branch: my-feature
+
+# Switch back to main
+fluxbase branch use main
+```
+
+This is useful when you're working on a feature branch for an extended period and don't want to specify the branch with every command.
 
 ### Creating Nested Branches
 
@@ -93,30 +126,30 @@ That's it! The server will use its existing database credentials to create and m
 ```yaml
 branching:
   enabled: true
-  max_total_branches: 50       # Maximum total branches across all users
-  max_branches_per_user: 5     # Maximum branches per user (default: 5)
+  max_total_branches: 50 # Maximum total branches across all users
+  max_branches_per_user: 5 # Maximum branches per user (default: 5)
   default_data_clone_mode: schema_only
   auto_delete_after: 24h
   database_prefix: branch_
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `enabled` | `false` | Enable database branching |
-| `max_total_branches` | `50` | Maximum total branches across all users |
-| `default_data_clone_mode` | `schema_only` | Default cloning mode (schema_only, full_clone, seed_data) |
-| `auto_delete_after` | `0` | Auto-delete preview branches after this duration (0 = disabled) |
-| `database_prefix` | `branch_` | Prefix for branch database names |
+| Option                    | Default       | Description                                                     |
+| ------------------------- | ------------- | --------------------------------------------------------------- |
+| `enabled`                 | `false`       | Enable database branching                                       |
+| `max_total_branches`      | `50`          | Maximum total branches across all users                         |
+| `default_data_clone_mode` | `schema_only` | Default cloning mode (schema_only, full_clone, seed_data)       |
+| `auto_delete_after`       | `0`           | Auto-delete preview branches after this duration (0 = disabled) |
+| `database_prefix`         | `branch_`     | Prefix for branch database names                                |
 
 **Note:** When `auto_delete_after` is set (e.g., `24h`, `7d`), a background cleanup scheduler runs automatically to delete expired branches.
 
 ### Data Clone Modes
 
-| Mode | Description |
-|------|-------------|
-| `schema_only` | Copy schema only, no data (fast) |
-| `full_clone` | Copy schema and all data (slower, useful for testing with real data) |
-| `seed_data` | Copy schema with seed data (coming soon) |
+| Mode          | Description                                                          |
+| ------------- | -------------------------------------------------------------------- |
+| `schema_only` | Copy schema only, no data (fast)                                     |
+| `full_clone`  | Copy schema and all data (slower, useful for testing with real data) |
+| `seed_data`   | Copy schema with seed data (coming soon)                             |
 
 ### How It Works
 
@@ -183,21 +216,21 @@ flowchart TB
 ## Using TypeScript SDK
 
 ```typescript
-import { createClient } from '@fluxbase/sdk'
+import { createClient } from "@fluxbase/sdk";
 
-const client = createClient('http://localhost:8080', 'your-key')
+const client = createClient("http://localhost:8080", "your-key");
 
 // Create a branch
-const { data: branch } = await client.branching.create('my-feature', {
-  dataCloneMode: 'schema_only',
-  expiresIn: '7d'
-})
+const { data: branch } = await client.branching.create("my-feature", {
+  dataCloneMode: "schema_only",
+  expiresIn: "7d",
+});
 
 // Wait for it to be ready
-await client.branching.waitForReady('my-feature')
+await client.branching.waitForReady("my-feature");
 
 // Delete when done
-await client.branching.delete('my-feature')
+await client.branching.delete("my-feature");
 ```
 
 See the [Branching API](/guides/branching/api/) for complete documentation.
@@ -221,11 +254,11 @@ curl http://localhost:8080/api/v1/tables/users \
 
 ## Branch Types
 
-| Type | Description | Auto-Delete |
-|------|-------------|-------------|
-| `main` | Primary database | Never |
-| `preview` | Temporary environments | After `auto_delete_after` |
-| `persistent` | Long-lived branches | Never |
+| Type         | Description            | Auto-Delete               |
+| ------------ | ---------------------- | ------------------------- |
+| `main`       | Primary database       | Never                     |
+| `preview`    | Temporary environments | After `auto_delete_after` |
+| `persistent` | Long-lived branches    | Never                     |
 
 ## Connecting to Branches
 
@@ -271,14 +304,14 @@ fluxbase branch get my-feature --output json | jq -r .connection_url
 
 ### States
 
-| State | Description |
-|-------|-------------|
-| `creating` | Database is being created |
-| `ready` | Branch is available for use |
-| `migrating` | Migrations are running |
-| `error` | An error occurred |
-| `deleting` | Branch is being deleted |
-| `deleted` | Branch has been deleted |
+| State       | Description                 |
+| ----------- | --------------------------- |
+| `creating`  | Database is being created   |
+| `ready`     | Branch is available for use |
+| `migrating` | Migrations are running      |
+| `error`     | An error occurred           |
+| `deleting`  | Branch is being deleted     |
+| `deleted`   | Branch has been deleted     |
 
 ## Access Control
 
@@ -291,10 +324,10 @@ Branch access is controlled by:
 
 ### Access Levels
 
-| Level | Permissions |
-|-------|-------------|
-| `read` | View branch, query data |
-| `write` | Read + modify data |
+| Level   | Permissions                 |
+| ------- | --------------------------- |
+| `read`  | View branch, query data     |
+| `write` | Read + modify data          |
 | `admin` | Write + delete/reset branch |
 
 ## Next Steps
