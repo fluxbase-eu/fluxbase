@@ -44,6 +44,13 @@ go install -v github.com/cosmtrek/air@latest 2>/dev/null || true
 go install -v -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest 2>/dev/null || true
 go install -v github.com/vladopajic/go-test-coverage/v2@latest 2>/dev/null || true
 
+# Codebase visualization tools
+echo "📊 Installing codebase visualization tools..."
+go install -v github.com/ofabry/go-callvis@latest 2>/dev/null || true
+go install -v github.com/kisielk/godepgraph@latest 2>/dev/null || true
+go install -v github.com/loov/goda@latest 2>/dev/null || true
+go install -v github.com/jfeliu007/goplantuml/cmd/goplantuml@latest 2>/dev/null || true
+
 # Install lychee link checker for documentation
 echo "🔗 Installing lychee link checker..."
 LYCHEE_VERSION="lychee-v0.22.0"
@@ -272,6 +279,12 @@ echo "🤖 AI Assistant:"
 echo "  - Claude Code CLI: claude"
 echo "  - Claude VSCode extension is pre-installed"
 echo "  - Configure MCP: configure-claude-mcp (after 'make dev')"
+echo ""
+echo "📊 Codebase Visualization:"
+echo "  - go-callvis -group pkg ./cmd/fluxbase  # Call graph"
+echo "  - godepgraph ./... | dot -Tpng -o deps.png  # Dependency graph"
+echo "  - goda graph ./internal/... | dot -Tsvg -o graph.svg  # Advanced deps"
+echo "  - goplantuml -recursive ./internal > diagram.puml  # UML diagrams"
 echo ""
 echo "💡 Tips:"
 echo "  - Use 'make help' to see all available commands"

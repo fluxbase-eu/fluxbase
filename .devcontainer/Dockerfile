@@ -37,6 +37,8 @@ RUN apt-get update && apt-get install -y \
     poppler-utils \
     # Image processing library for govips
     libvips-dev \
+    # Graphviz for rendering dependency graphs
+    graphviz \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up locale
@@ -117,7 +119,12 @@ RUN go install -v golang.org/x/tools/gopls@latest \
     && go install -v github.com/securego/gosec/v2/cmd/gosec@latest \
     && go install -v github.com/mgechev/revive@latest \
     && go install -v github.com/kisielk/errcheck@latest \
-    && go install -v honnef.co/go/tools/cmd/staticcheck@latest
+    && go install -v honnef.co/go/tools/cmd/staticcheck@latest \
+    # Codebase visualization tools
+    && go install -v github.com/ofabry/go-callvis@latest \
+    && go install -v github.com/kisielk/godepgraph@latest \
+    && go install -v github.com/loov/goda@latest \
+    && go install -v github.com/jfeliu007/goplantuml/cmd/goplantuml@latest
 
 # Set permissions for Go directories
 RUN mkdir -p /go/pkg /go/bin \
