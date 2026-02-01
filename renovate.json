@@ -10,19 +10,9 @@
       "groupName": "go dependencies"
     },
     {
-      "description": "Group admin UI dependencies",
-      "matchPaths": ["admin/**"],
-      "groupName": "admin ui dependencies"
-    },
-    {
-      "description": "Group TypeScript SDK dependencies",
-      "matchPaths": ["sdk/**"],
-      "groupName": "typescript sdk dependencies"
-    },
-    {
-      "description": "Group React SDK dependencies",
-      "matchPaths": ["sdk-react/**"],
-      "groupName": "react sdk dependencies"
+      "description": "Group all NPM dependencies",
+      "matchManagers": ["npm"],
+      "groupName": "npm dependencies"
     },
     {
       "description": "Group Helm chart dependencies",
