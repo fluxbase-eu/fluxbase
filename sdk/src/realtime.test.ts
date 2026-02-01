@@ -601,7 +601,6 @@ describe("Realtime - Multiple Channels", () => {
 
 describe("RealtimeChannel - postgres_changes Filtering", () => {
   let channel: RealtimeChannel;
-  let mockWs: MockWebSocket;
 
   beforeEach(async () => {
     channel = new RealtimeChannel(
@@ -610,10 +609,7 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
       "test-token",
     );
     channel.subscribe();
-    // Capture the WebSocket reference immediately after subscribe() to avoid race conditions
-    // with reconnection timers from previous tests that may fire during async waits
-    mockWs = lastMockWebSocket!;
-    // Wait for any pending reconnection timers from previous tests to complete
+    // Wait for connection and any pending reconnection timers to complete
     await new Promise((resolve) => setTimeout(resolve, 50));
   });
 
@@ -653,11 +649,8 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
       callback,
     );
 
-    // Ensure the WebSocket message handler is ready (longer wait for reliability)
-    await new Promise((resolve) => setTimeout(resolve, 60));
-
-    // Simulate INSERT event (server sends type: "postgres_changes")
-    mockWs.simulateMessage({
+    // Simulate INSERT event immediately (server sends type: "postgres_changes")
+    lastMockWebSocket!.simulateMessage({
       type: "postgres_changes",
       payload: {
         type: "INSERT",
@@ -668,13 +661,10 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
       },
     });
 
-    // Small delay to ensure message processing
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
-  it("should support UPDATE event filtering", () => {
+  it("should support UPDATE event filtering", async () => {
     const callback = vi.fn();
 
     channel.on(
@@ -689,7 +679,7 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
     );
 
     // Server sends type: "postgres_changes" for database events
-    mockWs.simulateMessage({
+    lastMockWebSocket!.simulateMessage({
       type: "postgres_changes",
       payload: {
         type: "UPDATE",
@@ -702,7 +692,7 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
     expect(callback).toHaveBeenCalled();
   });
 
-  it("should support DELETE event filtering", () => {
+  it("should support DELETE event filtering", async () => {
     const callback = vi.fn();
 
     channel.on(
@@ -716,7 +706,7 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
     );
 
     // Server sends type: "postgres_changes" for database events
-    mockWs.simulateMessage({
+    lastMockWebSocket!.simulateMessage({
       type: "postgres_changes",
       payload: {
         type: "DELETE",
@@ -729,7 +719,7 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
     expect(callback).toHaveBeenCalled();
   });
 
-  it("should support wildcard event filtering", () => {
+  it("should support wildcard event filtering", async () => {
     const callback = vi.fn();
 
     channel.on(
@@ -743,15 +733,15 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
     );
 
     // Send different event types (server sends type: "postgres_changes")
-    mockWs.simulateMessage({
+    lastMockWebSocket!.simulateMessage({
       type: "postgres_changes",
       payload: { type: "INSERT", schema: "public", table: "jobs" },
     });
-    mockWs.simulateMessage({
+    lastMockWebSocket!.simulateMessage({
       type: "postgres_changes",
       payload: { type: "UPDATE", schema: "public", table: "jobs" },
     });
-    mockWs.simulateMessage({
+    lastMockWebSocket!.simulateMessage({
       type: "postgres_changes",
       payload: { type: "DELETE", schema: "public", table: "jobs" },
     });
@@ -759,13 +749,13 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
     expect(callback).toHaveBeenCalledTimes(3);
   });
 
-  it("should maintain backwards compatibility with legacy on() API", () => {
+  it("should maintain backwards compatibility with legacy on() API", async () => {
     const callback = vi.fn();
 
     channel.on("INSERT", callback);
 
     // Simulate INSERT event (server sends type: "postgres_changes")
-    mockWs.simulateMessage({
+    lastMockWebSocket!.simulateMessage({
       type: "postgres_changes",
       payload: {
         type: "INSERT",

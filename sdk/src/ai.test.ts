@@ -6,6 +6,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { FluxbaseAI, FluxbaseAIChat } from './ai'
 import type { AIChatbotSummary, AIChatbotLookupResponse, ListConversationsResult, AIUserConversationDetail } from './types'
 
+// Mock WebSocket constants (not available in Node.js)
+// Only need the constants, not a full mock, since these tests don't actually connect
+(global as any).WebSocket = {
+  CONNECTING: 0,
+  OPEN: 1,
+  CLOSING: 2,
+  CLOSED: 3,
+};
+
 // Mock fetch interface
 class MockFetch {
   public lastUrl: string = ''
