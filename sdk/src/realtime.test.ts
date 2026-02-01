@@ -639,7 +639,7 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
     expect(callback).not.toHaveBeenCalled();
   });
 
-  it("should support INSERT event filtering", () => {
+  it("should support INSERT event filtering", async () => {
     const callback = vi.fn();
 
     channel.on(
@@ -652,6 +652,9 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
       },
       callback,
     );
+
+    // Ensure the WebSocket message handler is ready
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     // Simulate INSERT event (server sends type: "postgres_changes")
     mockWs.simulateMessage({
