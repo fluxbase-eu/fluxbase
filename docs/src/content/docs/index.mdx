@@ -8,7 +8,6 @@ head:
 ---
 
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
-import { Image } from "astro:assets";
 import Hero from "../../components/Hero.astro";
 import dashboardScreenshot from "../../assets/screenshot-dashboard.png";
 
@@ -181,7 +180,7 @@ Fluxbase provides a similar developer experience to Supabase but runs as a **sin
 
 Manage your backend with a powerful built-in admin UI featuring database browsing, user management, real-time monitoring, and more.
 
-<Image src={dashboardScreenshot} alt="Fluxbase Admin Dashboard" />
+<img src={dashboardScreenshot.src} alt="Fluxbase Admin Dashboard" style="border-radius: 0.5rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);" />
 
 <div class="section-divider"></div>
 
