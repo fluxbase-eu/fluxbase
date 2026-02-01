@@ -187,24 +187,61 @@ func (h *GraphQLHandler) HandleGraphQL(c *fiber.Ctx) error {
 // setupRLSContext sets up Row Level Security context for the query
 func (h *GraphQLHandler) setupRLSContext(c *fiber.Ctx, ctx context.Context) context.Context {
 	// Get user from fiber context (set by auth middleware)
+	// The middleware can set either:
+	// 1. A full *auth.User struct in "user" local
+	// 2. Individual fields: "user_id", "user_role", etc.
+	// 3. Service key with "rls_role" but no user_id
 	user, ok := c.Locals("user").(*auth.User)
-	if !ok || user == nil {
+	if ok && user != nil {
+		// Full user struct available
+		rlsCtx := &RLSContext{
+			UserID: user.ID,
+			Role:   user.Role,
+			Claims: make(map[string]interface{}),
+		}
+
+		// Add user metadata to claims if available
+		if user.UserMetadata != nil {
+			if metadata, ok := user.UserMetadata.(map[string]interface{}); ok {
+				for k, v := range metadata {
+					rlsCtx.Claims[k] = v
+				}
+			}
+		}
+
+		return context.WithValue(ctx, GraphQLRLSContextKey, rlsCtx)
+	}
+
+	// Try individual locals (set by OptionalAuthOrServiceKey middleware)
+	userID, _ := c.Locals("user_id").(string)
+	userRole, _ := c.Locals("user_role").(string)
+
+	// Also check rls_role for service keys (which don't have user_id)
+	if userRole == "" {
+		if rlsRole, ok := c.Locals("rls_role").(string); ok && rlsRole != "" {
+			userRole = rlsRole
+		}
+	}
+
+	// Service keys have a role but no user ID - still need RLS context
+	if userID == "" && userRole == "" {
+		// No user context available - anonymous access
 		return ctx
 	}
 
-	// Create RLS context
+	// Create RLS context from individual fields
 	rlsCtx := &RLSContext{
-		UserID: user.ID,
-		Role:   user.Role,
+		UserID: userID,
+		Role:   userRole,
 		Claims: make(map[string]interface{}),
 	}
 
-	// Add user metadata to claims if available
-	if user.UserMetadata != nil {
-		if metadata, ok := user.UserMetadata.(map[string]interface{}); ok {
-			for k, v := range metadata {
-				rlsCtx.Claims[k] = v
-			}
+	// Add JWT claims if available
+	if claims := c.Locals("jwt_claims"); claims != nil {
+		if tokenClaims, ok := claims.(*auth.TokenClaims); ok {
+			rlsCtx.Claims["sub"] = tokenClaims.UserID
+			rlsCtx.Claims["email"] = tokenClaims.Email
+			rlsCtx.Claims["role"] = tokenClaims.Role
 		}
 	}
 
