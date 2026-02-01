@@ -11,11 +11,11 @@ GraphQL introspection type
 
 | Property | Type |
 | ------ | ------ |
-| `description?` | `string` |
-| `enumValues?` | [`IntrospectionEnumValue`](/api/sdk/interfaces/introspectionenumvalue/)[] |
-| `fields?` | [`IntrospectionField`](/api/sdk/interfaces/introspectionfield/)[] |
-| `inputFields?` | [`IntrospectionInputValue`](/api/sdk/interfaces/introspectioninputvalue/)[] |
-| `interfaces?` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/)[] |
-| `kind` | `string` |
-| `name` | `string` |
-| `possibleTypes?` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/)[] |
+| <a id="description"></a> `description?` | `string` |
+| <a id="enumvalues"></a> `enumValues?` | [`IntrospectionEnumValue`](/api/sdk/interfaces/introspectionenumvalue/)[] |
+| <a id="fields"></a> `fields?` | [`IntrospectionField`](/api/sdk/interfaces/introspectionfield/)[] |
+| <a id="inputfields"></a> `inputFields?` | [`IntrospectionInputValue`](/api/sdk/interfaces/introspectioninputvalue/)[] |
+| <a id="interfaces"></a> `interfaces?` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/)[] |
+| <a id="kind"></a> `kind` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="possibletypes"></a> `possibleTypes?` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/)[] |

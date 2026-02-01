@@ -11,6 +11,6 @@ Mailgun email provider configuration
 
 | Property | Type |
 | ------ | ------ |
-| `api_key` | `string` |
-| `domain` | `string` |
-| `eu_region` | `boolean` |
+| <a id="api_key"></a> `api_key` | `string` |
+| <a id="domain"></a> `domain` | `string` |
+| <a id="eu_region"></a> `eu_region` | `boolean` |

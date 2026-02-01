@@ -14,7 +14,7 @@ Use this URL when configuring your SAML IdP.
 
 ## Returns
 
-`Function`
+> (`provider`): `string`
 
 ### Parameters
 

@@ -11,8 +11,8 @@ Table column information
 
 | Property | Type |
 | ------ | ------ |
-| `default_value?` | `string` |
-| `is_primary_key?` | `boolean` |
-| `name` | `string` |
-| `nullable` | `boolean` |
-| `type` | `string` |
+| <a id="default_value"></a> `default_value?` | `string` |
+| <a id="is_primary_key"></a> `is_primary_key?` | `boolean` |
+| <a id="name"></a> `name` | `string` |
+| <a id="nullable"></a> `nullable` | `boolean` |
+| <a id="type"></a> `type` | `string` |

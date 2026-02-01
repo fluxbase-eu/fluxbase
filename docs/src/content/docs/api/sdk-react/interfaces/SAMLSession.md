@@ -11,11 +11,11 @@ SAML session information
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `attributes?` | `Record`\<`string`, `string`[]\> | SAML attributes |
-| `created_at` | `string` | Session creation time |
-| `expires_at?` | `string` | Session expiration time |
-| `id` | `string` | Session ID |
-| `name_id` | `string` | SAML NameID |
-| `provider_name` | `string` | Provider name |
-| `session_index?` | `string` | Session index from IdP |
-| `user_id` | `string` | User ID |
+| <a id="attributes"></a> `attributes?` | `Record`\<`string`, `string`[]\> | SAML attributes |
+| <a id="created_at"></a> `created_at` | `string` | Session creation time |
+| <a id="expires_at"></a> `expires_at?` | `string` | Session expiration time |
+| <a id="id"></a> `id` | `string` | Session ID |
+| <a id="name_id"></a> `name_id` | `string` | SAML NameID |
+| <a id="provider_name"></a> `provider_name` | `string` | Provider name |
+| <a id="session_index"></a> `session_index?` | `string` | Session index from IdP |
+| <a id="user_id"></a> `user_id` | `string` | User ID |

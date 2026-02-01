@@ -10,9 +10,9 @@ Provides sync, CRUD, and execution monitoring operations
 
 ## Constructors
 
-### new FluxbaseAdminRPC()
+### Constructor
 
-> **new FluxbaseAdminRPC**(`fetch`): [`FluxbaseAdminRPC`](/api/sdk/classes/fluxbaseadminrpc/)
+> **new FluxbaseAdminRPC**(`fetch`): `FluxbaseAdminRPC`
 
 #### Parameters
 
@@ -22,13 +22,13 @@ Provides sync, CRUD, and execution monitoring operations
 
 #### Returns
 
-[`FluxbaseAdminRPC`](/api/sdk/classes/fluxbaseadminrpc/)
+`FluxbaseAdminRPC`
 
 ## Methods
 
 ### cancelExecution()
 
-> **cancelExecution**(`executionId`): `Promise`\<`object`\>
+> **cancelExecution**(`executionId`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Cancel a running execution
 
@@ -40,14 +40,9 @@ Cancel a running execution
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated execution
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -59,7 +54,7 @@ const { data, error } = await client.admin.rpc.cancelExecution('execution-uuid')
 
 ### delete()
 
-> **delete**(`namespace`, `name`): `Promise`\<`object`\>
+> **delete**(`namespace`, `name`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete an RPC procedure
 
@@ -72,14 +67,9 @@ Delete an RPC procedure
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -91,7 +81,7 @@ const { data, error } = await client.admin.rpc.delete('default', 'get-user-order
 
 ### get()
 
-> **get**(`namespace`, `name`): `Promise`\<`object`\>
+> **get**(`namespace`, `name`): `Promise`\<\{ `data`: [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific RPC procedure
 
@@ -104,14 +94,9 @@ Get details of a specific RPC procedure
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with procedure details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -127,7 +112,7 @@ if (data) {
 
 ### getExecution()
 
-> **getExecution**(`executionId`): `Promise`\<`object`\>
+> **getExecution**(`executionId`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific execution
 
@@ -139,14 +124,9 @@ Get details of a specific execution
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -162,7 +142,7 @@ if (data) {
 
 ### getExecutionLogs()
 
-> **getExecutionLogs**(`executionId`, `afterLine`?): `Promise`\<`object`\>
+> **getExecutionLogs**(`executionId`, `afterLine?`): `Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get execution logs for a specific execution
 
@@ -171,18 +151,13 @@ Get execution logs for a specific execution
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `executionId` | `string` | Execution ID |
-| `afterLine`? | `number` | Optional line number to get logs after (for polling) |
+| `afterLine?` | `number` | Optional line number to get logs after (for polling) |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution logs
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -199,7 +174,7 @@ if (data) {
 
 ### list()
 
-> **list**(`namespace`?): `Promise`\<`object`\>
+> **list**(`namespace?`): `Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all RPC procedures (admin view)
 
@@ -207,18 +182,13 @@ List all RPC procedures (admin view)
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `namespace`? | `string` | Optional namespace filter |
+| `namespace?` | `string` | Optional namespace filter |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of procedure summaries
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -233,7 +203,7 @@ if (data) {
 
 ### listExecutions()
 
-> **listExecutions**(`filters`?): `Promise`\<`object`\>
+> **listExecutions**(`filters?`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List RPC executions with optional filters
 
@@ -241,18 +211,13 @@ List RPC executions with optional filters
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `filters`? | [`RPCExecutionFilters`](/api/sdk/interfaces/rpcexecutionfilters/) | Optional filters for namespace, procedure, status, user |
+| `filters?` | [`RPCExecutionFilters`](/api/sdk/interfaces/rpcexecutionfilters/) | Optional filters for namespace, procedure, status, user |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of executions
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCExecution`](/api/sdk/interfaces/rpcexecution/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -272,20 +237,15 @@ const { data, error } = await client.admin.rpc.listExecutions({
 
 ### listNamespaces()
 
-> **listNamespaces**(): `Promise`\<`object`\>
+> **listNamespaces**(): `Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all namespaces
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of namespace names
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `string`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -300,7 +260,7 @@ if (data) {
 
 ### sync()
 
-> **sync**(`options`?): `Promise`\<`object`\>
+> **sync**(`options?`): `Promise`\<\{ `data`: [`SyncRPCResult`](/api/sdk/interfaces/syncrpcresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Sync RPC procedures from filesystem or API payload
 
@@ -314,18 +274,13 @@ Requires service_role or admin authentication.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options`? | [`SyncRPCOptions`](/api/sdk/interfaces/syncrpcoptions/) | Sync options including namespace and optional procedures array |
+| `options?` | [`SyncRPCOptions`](/api/sdk/interfaces/syncrpcoptions/) | Sync options including namespace and optional procedures array |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`SyncRPCResult`](/api/sdk/interfaces/syncrpcresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`SyncRPCResult`](/api/sdk/interfaces/syncrpcresult/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -355,7 +310,7 @@ if (data) {
 
 ### toggle()
 
-> **toggle**(`namespace`, `name`, `enabled`): `Promise`\<`object`\>
+> **toggle**(`namespace`, `name`, `enabled`): `Promise`\<\{ `data`: [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Enable or disable an RPC procedure
 
@@ -369,14 +324,9 @@ Enable or disable an RPC procedure
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated procedure
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -388,7 +338,7 @@ const { data, error } = await client.admin.rpc.toggle('default', 'get-user-order
 
 ### update()
 
-> **update**(`namespace`, `name`, `updates`): `Promise`\<`object`\>
+> **update**(`namespace`, `name`, `updates`): `Promise`\<\{ `data`: [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update an RPC procedure
 
@@ -402,14 +352,9 @@ Update an RPC procedure
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated procedure
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCProcedure`](/api/sdk/interfaces/rpcprocedure/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 

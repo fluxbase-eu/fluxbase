@@ -11,4 +11,4 @@ Request to apply pending migrations
 
 | Property | Type |
 | ------ | ------ |
-| `namespace?` | `string` |
+| <a id="namespace"></a> `namespace?` | `string` |

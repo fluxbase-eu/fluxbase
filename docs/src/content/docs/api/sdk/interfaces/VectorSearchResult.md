@@ -17,6 +17,6 @@ Result from vector search
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `data` | `T`[] | Matched records |
-| `distances` | `number`[] | Distance scores for each result |
-| `model?` | `string` | Embedding model used (if query text was embedded) |
+| <a id="data"></a> `data` | `T`[] | Matched records |
+| <a id="distances"></a> `distances` | `number`[] | Distance scores for each result |
+| <a id="model"></a> `model?` | `string` | Embedding model used (if query text was embedded) |

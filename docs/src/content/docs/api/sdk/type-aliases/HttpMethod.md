@@ -5,4 +5,4 @@ prev: false
 title: "HttpMethod"
 ---
 
-> **HttpMethod**: `"GET"` \| `"POST"` \| `"PUT"` \| `"PATCH"` \| `"DELETE"` \| `"HEAD"`
+> **HttpMethod** = `"GET"` \| `"POST"` \| `"PUT"` \| `"PATCH"` \| `"DELETE"` \| `"HEAD"`

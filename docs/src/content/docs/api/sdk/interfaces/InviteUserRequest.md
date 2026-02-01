@@ -9,6 +9,6 @@ title: "InviteUserRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `email` | `string` |
-| `role?` | `string` |
-| `send_email?` | `boolean` |
+| <a id="email"></a> `email` | `string` |
+| <a id="role"></a> `role?` | `string` |
+| <a id="send_email"></a> `send_email?` | `boolean` |

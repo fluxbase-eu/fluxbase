@@ -27,9 +27,9 @@ console.log('Invite link:', invitation.invite_link)
 
 ## Constructors
 
-### new InvitationsManager()
+### Constructor
 
-> **new InvitationsManager**(`fetch`): [`InvitationsManager`](/api/sdk/classes/invitationsmanager/)
+> **new InvitationsManager**(`fetch`): `InvitationsManager`
 
 #### Parameters
 
@@ -39,7 +39,7 @@ console.log('Invite link:', invitation.invite_link)
 
 #### Returns
 
-[`InvitationsManager`](/api/sdk/classes/invitationsmanager/)
+`InvitationsManager`
 
 ## Methods
 

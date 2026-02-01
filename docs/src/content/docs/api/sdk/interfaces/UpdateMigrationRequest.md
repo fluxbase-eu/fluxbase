@@ -11,6 +11,6 @@ Request to update a migration (only if pending)
 
 | Property | Type |
 | ------ | ------ |
-| `description?` | `string` |
-| `down_sql?` | `string` |
-| `up_sql?` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="down_sql"></a> `down_sql?` | `string` |
+| <a id="up_sql"></a> `up_sql?` | `string` |

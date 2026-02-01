@@ -14,36 +14,6 @@ Main Fluxbase client class
 | `Database` | `unknown` |
 | `_SchemaName` *extends* `string` & keyof `Database` | `string` & keyof `Database` |
 
-## Constructors
-
-### new FluxbaseClient()
-
-> **new FluxbaseClient**\<`Database`, `_SchemaName`\>(`fluxbaseUrl`, `fluxbaseKey`, `options`?): [`FluxbaseClient`](/api/sdk-react/classes/fluxbaseclient/)\<`Database`, `_SchemaName`\>
-
-Create a new Fluxbase client instance
-
-#### Parameters
-
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `fluxbaseUrl` | `string` | The URL of your Fluxbase instance |
-| `fluxbaseKey` | `string` | The anon key (JWT token with "anon" role). Generate using scripts/generate-keys.sh |
-| `options`? | `FluxbaseClientOptions` | Additional client configuration options |
-
-#### Returns
-
-[`FluxbaseClient`](/api/sdk-react/classes/fluxbaseclient/)\<`Database`, `_SchemaName`\>
-
-#### Example
-
-```typescript
-const client = new FluxbaseClient(
-  'http://localhost:8080',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',  // Anon JWT token
-  { timeout: 30000 }
-)
-```
-
 ## Advanced
 
 ### http
@@ -73,13 +43,13 @@ The internal FluxbaseFetch instance
 
 ### getAuthToken()
 
-> **getAuthToken**(): `null` \| `string`
+> **getAuthToken**(): `string` \| `null`
 
 Get the current authentication token
 
 #### Returns
 
-`null` \| `string`
+`string` \| `null`
 
 The current JWT access token, or null if not authenticated
 
@@ -97,7 +67,7 @@ This updates both the HTTP client and realtime connection with the new token.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `token` | `null` \| `string` | The JWT access token to set, or null to clear authentication |
+| `token` | `string` \| `null` | The JWT access token to set, or null to clear authentication |
 
 #### Returns
 
@@ -354,7 +324,7 @@ const { data: procedures } = await client.rpc.list()
 
 ### channel()
 
-> **channel**(`name`, `config`?): `RealtimeChannel`
+> **channel**(`name`, `config?`): `RealtimeChannel`
 
 Create or get a realtime channel (Supabase-compatible)
 
@@ -363,7 +333,7 @@ Create or get a realtime channel (Supabase-compatible)
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `name` | `string` | Channel name |
-| `config`? | `RealtimeChannelConfig` | Optional channel configuration |
+| `config?` | `RealtimeChannelConfig` | Optional channel configuration |
 
 #### Returns
 
@@ -388,7 +358,7 @@ const channel = client.channel('room-1', {
 
 ### removeChannel()
 
-> **removeChannel**(`channel`): `Promise`\<`"error"` \| `"ok"`\>
+> **removeChannel**(`channel`): `Promise`\<`"ok"` \| `"error"`\>
 
 Remove a realtime channel (Supabase-compatible)
 
@@ -400,7 +370,7 @@ Remove a realtime channel (Supabase-compatible)
 
 #### Returns
 
-`Promise`\<`"error"` \| `"ok"`\>
+`Promise`\<`"ok"` \| `"error"`\>
 
 Promise resolving to status
 

@@ -11,6 +11,6 @@ MFA enable response - returned when activating 2FA after setup
 
 | Property | Type |
 | ------ | ------ |
-| `backup_codes` | `string`[] |
-| `message` | `string` |
-| `success` | `boolean` |
+| <a id="backup_codes"></a> `backup_codes` | `string`[] |
+| <a id="message"></a> `message` | `string` |
+| <a id="success"></a> `success` | `boolean` |

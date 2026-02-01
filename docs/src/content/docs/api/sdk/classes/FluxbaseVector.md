@@ -24,9 +24,9 @@ const { data: embedding } = await client.vector.embed({ text: 'Hello world' })
 
 ## Constructors
 
-### new FluxbaseVector()
+### Constructor
 
-> **new FluxbaseVector**(`fetch`): [`FluxbaseVector`](/api/sdk/classes/fluxbasevector/)
+> **new FluxbaseVector**(`fetch`): `FluxbaseVector`
 
 #### Parameters
 
@@ -36,7 +36,7 @@ const { data: embedding } = await client.vector.embed({ text: 'Hello world' })
 
 #### Returns
 
-[`FluxbaseVector`](/api/sdk/classes/fluxbasevector/)
+`FluxbaseVector`
 
 ## Methods
 

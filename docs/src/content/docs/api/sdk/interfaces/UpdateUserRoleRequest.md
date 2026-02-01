@@ -9,4 +9,4 @@ title: "UpdateUserRoleRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `role` | `string` |
+| <a id="role"></a> `role` | `string` |

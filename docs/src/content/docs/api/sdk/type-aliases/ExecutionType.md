@@ -5,6 +5,6 @@ prev: false
 title: "ExecutionType"
 ---
 
-> **ExecutionType**: `"function"` \| `"job"` \| `"rpc"`
+> **ExecutionType** = `"function"` \| `"job"` \| `"rpc"`
 
 Execution type for log subscriptions

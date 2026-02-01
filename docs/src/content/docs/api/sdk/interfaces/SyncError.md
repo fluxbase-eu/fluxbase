@@ -11,6 +11,6 @@ Sync operation error details
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `action` | `"create"` \| `"update"` \| `"delete"` \| `"bundle"` | Operation that failed |
-| `error` | `string` | Error message |
-| `function` | `string` | Name of the function that failed |
+| <a id="action"></a> `action` | `"create"` \| `"update"` \| `"delete"` \| `"bundle"` | Operation that failed |
+| <a id="error"></a> `error` | `string` | Error message |
+| <a id="function"></a> `function` | `string` | Name of the function that failed |

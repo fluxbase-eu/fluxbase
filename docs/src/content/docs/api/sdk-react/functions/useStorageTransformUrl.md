@@ -16,7 +16,7 @@ Only works for image files (JPEG, PNG, WebP, GIF, AVIF, etc.)
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `bucket` | `string` | The storage bucket name |
-| `path` | `null` \| `string` | The file path (or null to disable) |
+| `path` | `string` \| `null` | The file path (or null to disable) |
 | `transform` | [`TransformOptions`](/api/sdk-react/interfaces/transformoptions/) | Transformation options (width, height, format, quality, fit) |
 
 ## Returns

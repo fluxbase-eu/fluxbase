@@ -9,8 +9,8 @@ title: "AuthSession"
 
 | Property | Type |
 | ------ | ------ |
-| `access_token` | `string` |
-| `expires_at?` | `number` |
-| `expires_in` | `number` |
-| `refresh_token` | `string` |
-| `user` | [`User`](/api/sdk/interfaces/user/) |
+| <a id="access_token"></a> `access_token` | `string` |
+| <a id="expires_at"></a> `expires_at?` | `number` |
+| <a id="expires_in"></a> `expires_in` | `number` |
+| <a id="refresh_token"></a> `refresh_token` | `string` |
+| <a id="user"></a> `user` | [`User`](/api/sdk/interfaces/user/) |

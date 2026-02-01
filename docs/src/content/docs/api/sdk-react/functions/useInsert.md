@@ -5,7 +5,7 @@ prev: false
 title: "useInsert"
 ---
 
-> **useInsert**\<`T`\>(`table`): `UseMutationResult`\<`null` \| `T`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>
+> **useInsert**\<`T`\>(`table`): `UseMutationResult`\<`T` \| `null`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>
 
 Hook to insert data into a table
 
@@ -23,4 +23,4 @@ Hook to insert data into a table
 
 ## Returns
 
-`UseMutationResult`\<`null` \| `T`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>
+`UseMutationResult`\<`T` \| `null`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>

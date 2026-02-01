@@ -11,12 +11,12 @@ Migration execution record (audit log)
 
 | Property | Type |
 | ------ | ------ |
-| `action` | `"apply"` \| `"rollback"` |
-| `duration_ms?` | `number` |
-| `error_message?` | `string` |
-| `executed_at` | `string` |
-| `executed_by?` | `string` |
-| `id` | `string` |
-| `logs?` | `string` |
-| `migration_id` | `string` |
-| `status` | `"success"` \| `"failed"` |
+| <a id="action"></a> `action` | `"apply"` \| `"rollback"` |
+| <a id="duration_ms"></a> `duration_ms?` | `number` |
+| <a id="error_message"></a> `error_message?` | `string` |
+| <a id="executed_at"></a> `executed_at` | `string` |
+| <a id="executed_by"></a> `executed_by?` | `string` |
+| <a id="id"></a> `id` | `string` |
+| <a id="logs"></a> `logs?` | `string` |
+| <a id="migration_id"></a> `migration_id` | `string` |
+| <a id="status"></a> `status` | `"success"` \| `"failed"` |

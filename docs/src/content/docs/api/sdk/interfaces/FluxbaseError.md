@@ -13,9 +13,9 @@ title: "FluxbaseError"
 
 | Property | Type | Inherited from |
 | ------ | ------ | ------ |
-| `code?` | `string` | - |
-| `details?` | `unknown` | - |
-| `message` | `string` | `Error.message` |
-| `name` | `string` | `Error.name` |
-| `stack?` | `string` | `Error.stack` |
-| `status?` | `number` | - |
+| <a id="code"></a> `code?` | `string` | - |
+| <a id="details"></a> `details?` | `unknown` | - |
+| <a id="message"></a> `message` | `string` | `Error.message` |
+| <a id="name"></a> `name` | `string` | `Error.name` |
+| <a id="stack"></a> `stack?` | `string` | `Error.stack` |
+| <a id="status"></a> `status?` | `number` | - |

@@ -5,7 +5,7 @@ prev: false
 title: "useHandleSAMLCallback"
 ---
 
-> **useHandleSAMLCallback**(): `UseMutationResult`\<`FluxbaseAuthResponse`, `Error`, `object`, `unknown`\>
+> **useHandleSAMLCallback**(): `UseMutationResult`\<`FluxbaseAuthResponse`, `Error`, \{ `provider?`: `string`; `samlResponse`: `string`; \}, `unknown`\>
 
 Hook to handle SAML callback after IdP authentication
 
@@ -13,7 +13,7 @@ Use this in your SAML callback page to complete the authentication flow.
 
 ## Returns
 
-`UseMutationResult`\<`FluxbaseAuthResponse`, `Error`, `object`, `unknown`\>
+`UseMutationResult`\<`FluxbaseAuthResponse`, `Error`, \{ `provider?`: `string`; `samlResponse`: `string`; \}, `unknown`\>
 
 ## Example
 

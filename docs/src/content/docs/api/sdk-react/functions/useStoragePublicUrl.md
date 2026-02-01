@@ -5,7 +5,7 @@ prev: false
 title: "useStoragePublicUrl"
 ---
 
-> **useStoragePublicUrl**(`bucket`, `path`): `null` \| `string`
+> **useStoragePublicUrl**(`bucket`, `path`): `string` \| `null`
 
 Hook to get a public URL for a file
 
@@ -14,8 +14,8 @@ Hook to get a public URL for a file
 | Parameter | Type |
 | ------ | ------ |
 | `bucket` | `string` |
-| `path` | `null` \| `string` |
+| `path` | `string` \| `null` |
 
 ## Returns
 
-`null` \| `string`
+`string` \| `null`

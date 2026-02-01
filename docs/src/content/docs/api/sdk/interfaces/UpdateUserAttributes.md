@@ -11,7 +11,7 @@ User attributes for updateUser (Supabase-compatible)
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `data?` | `Record`\<`string`, `unknown`\> | User metadata (Supabase-compatible) |
-| `email?` | `string` | New email address |
-| `nonce?` | `string` | Nonce for password update reauthentication |
-| `password?` | `string` | New password |
+| <a id="data"></a> `data?` | `Record`\<`string`, `unknown`\> | User metadata (Supabase-compatible) |
+| <a id="email"></a> `email?` | `string` | New email address |
+| <a id="nonce"></a> `nonce?` | `string` | Nonce for password update reauthentication |
+| <a id="password"></a> `password?` | `string` | New password |

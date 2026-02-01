@@ -9,9 +9,9 @@ Management client for client keys, webhooks, and invitations
 
 ## Constructors
 
-### new FluxbaseManagement()
+### Constructor
 
-> **new FluxbaseManagement**(`fetch`): [`FluxbaseManagement`](/api/sdk/classes/fluxbasemanagement/)
+> **new FluxbaseManagement**(`fetch`): `FluxbaseManagement`
 
 #### Parameters
 
@@ -21,13 +21,13 @@ Management client for client keys, webhooks, and invitations
 
 #### Returns
 
-[`FluxbaseManagement`](/api/sdk/classes/fluxbasemanagement/)
+`FluxbaseManagement`
 
 ## Properties
 
 | Property | Modifier | Type | Description |
 | ------ | ------ | ------ | ------ |
-| ~~`apiKeys`~~ | `public` | [`ClientKeysManager`](/api/sdk/classes/clientkeysmanager/) | :::caution[Deprecated] Use clientKeys instead ::: |
-| `clientKeys` | `public` | [`ClientKeysManager`](/api/sdk/classes/clientkeysmanager/) | Client Keys management |
-| `invitations` | `public` | [`InvitationsManager`](/api/sdk/classes/invitationsmanager/) | Invitations management |
-| `webhooks` | `public` | [`WebhooksManager`](/api/sdk/classes/webhooksmanager/) | Webhooks management |
+| <a id="apikeys"></a> ~~`apiKeys`~~ | `public` | [`ClientKeysManager`](/api/sdk/classes/clientkeysmanager/) | :::caution[Deprecated] Use clientKeys instead ::: |
+| <a id="clientkeys"></a> `clientKeys` | `public` | [`ClientKeysManager`](/api/sdk/classes/clientkeysmanager/) | Client Keys management |
+| <a id="invitations"></a> `invitations` | `public` | [`InvitationsManager`](/api/sdk/classes/invitationsmanager/) | Invitations management |
+| <a id="webhooks"></a> `webhooks` | `public` | [`WebhooksManager`](/api/sdk/classes/webhooksmanager/) | Webhooks management |

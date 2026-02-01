@@ -11,17 +11,17 @@ AI chat server message
 
 | Property | Type |
 | ------ | ------ |
-| `chatbot?` | `string` |
-| `code?` | `string` |
-| `conversation_id?` | `string` |
-| `data?` | `Record`\<`string`, `unknown`\>[] |
-| `delta?` | `string` |
-| `error?` | `string` |
-| `message?` | `string` |
-| `message_id?` | `string` |
-| `query?` | `string` |
-| `row_count?` | `number` |
-| `step?` | `string` |
-| `summary?` | `string` |
-| `type` | `"error"` \| `"cancelled"` \| `"chat_started"` \| `"progress"` \| `"content"` \| `"query_result"` \| `"tool_result"` \| `"done"` |
-| `usage?` | [`AIUsageStats`](/api/sdk/interfaces/aiusagestats/) |
+| <a id="chatbot"></a> `chatbot?` | `string` |
+| <a id="code"></a> `code?` | `string` |
+| <a id="conversation_id"></a> `conversation_id?` | `string` |
+| <a id="data"></a> `data?` | `Record`\<`string`, `unknown`\>[] |
+| <a id="delta"></a> `delta?` | `string` |
+| <a id="error"></a> `error?` | `string` |
+| <a id="message"></a> `message?` | `string` |
+| <a id="message_id"></a> `message_id?` | `string` |
+| <a id="query"></a> `query?` | `string` |
+| <a id="row_count"></a> `row_count?` | `number` |
+| <a id="step"></a> `step?` | `string` |
+| <a id="summary"></a> `summary?` | `string` |
+| <a id="type"></a> `type` | `"error"` \| `"cancelled"` \| `"chat_started"` \| `"progress"` \| `"content"` \| `"query_result"` \| `"tool_result"` \| `"done"` |
+| <a id="usage"></a> `usage?` | [`AIUsageStats`](/api/sdk/interfaces/aiusagestats/) |

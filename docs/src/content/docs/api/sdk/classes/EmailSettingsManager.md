@@ -39,9 +39,9 @@ await email.setProvider('smtp')
 
 ## Constructors
 
-### new EmailSettingsManager()
+### Constructor
 
-> **new EmailSettingsManager**(`fetch`): [`EmailSettingsManager`](/api/sdk/classes/emailsettingsmanager/)
+> **new EmailSettingsManager**(`fetch`): `EmailSettingsManager`
 
 #### Parameters
 
@@ -51,7 +51,7 @@ await email.setProvider('smtp')
 
 #### Returns
 
-[`EmailSettingsManager`](/api/sdk/classes/emailsettingsmanager/)
+`EmailSettingsManager`
 
 ## Methods
 

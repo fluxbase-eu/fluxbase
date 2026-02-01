@@ -11,6 +11,6 @@ AWS SES email provider configuration
 
 | Property | Type |
 | ------ | ------ |
-| `access_key_id` | `string` |
-| `region` | `string` |
-| `secret_access_key` | `string` |
+| <a id="access_key_id"></a> `access_key_id` | `string` |
+| <a id="region"></a> `region` | `string` |
+| <a id="secret_access_key"></a> `secret_access_key` | `string` |

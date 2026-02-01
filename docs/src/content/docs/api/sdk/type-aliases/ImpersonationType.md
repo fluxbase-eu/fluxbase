@@ -5,6 +5,6 @@ prev: false
 title: "ImpersonationType"
 ---
 
-> **ImpersonationType**: `"user"` \| `"anon"` \| `"service"`
+> **ImpersonationType** = `"user"` \| `"anon"` \| `"service"`
 
 Impersonation type

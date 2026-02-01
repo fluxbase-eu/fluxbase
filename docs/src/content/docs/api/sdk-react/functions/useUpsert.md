@@ -5,7 +5,7 @@ prev: false
 title: "useUpsert"
 ---
 
-> **useUpsert**\<`T`\>(`table`): `UseMutationResult`\<`null` \| `T`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>
+> **useUpsert**\<`T`\>(`table`): `UseMutationResult`\<`T` \| `null`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>
 
 Hook to upsert data into a table
 
@@ -23,4 +23,4 @@ Hook to upsert data into a table
 
 ## Returns
 
-`UseMutationResult`\<`null` \| `T`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>
+`UseMutationResult`\<`T` \| `null`, `Error`, `Partial`\<`T`\> \| `Partial`\<`T`\>[], `unknown`\>

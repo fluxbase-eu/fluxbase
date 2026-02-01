@@ -10,9 +10,9 @@ Provides create, update, delete, and bulk sync operations
 
 ## Constructors
 
-### new FluxbaseAdminFunctions()
+### Constructor
 
-> **new FluxbaseAdminFunctions**(`fetch`): [`FluxbaseAdminFunctions`](/api/sdk/classes/fluxbaseadminfunctions/)
+> **new FluxbaseAdminFunctions**(`fetch`): `FluxbaseAdminFunctions`
 
 #### Parameters
 
@@ -22,13 +22,13 @@ Provides create, update, delete, and bulk sync operations
 
 #### Returns
 
-[`FluxbaseAdminFunctions`](/api/sdk/classes/fluxbaseadminfunctions/)
+`FluxbaseAdminFunctions`
 
 ## Methods
 
 ### create()
 
-> **create**(`request`): `Promise`\<`object`\>
+> **create**(`request`): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a new edge function
 
@@ -40,14 +40,9 @@ Create a new edge function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created function metadata
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -63,7 +58,7 @@ const { data, error } = await client.admin.functions.create({
 
 ### delete()
 
-> **delete**(`name`): `Promise`\<`object`\>
+> **delete**(`name`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete an edge function
 
@@ -75,14 +70,9 @@ Delete an edge function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -94,7 +84,7 @@ const { data, error } = await client.admin.functions.delete('my-function')
 
 ### get()
 
-> **get**(`name`): `Promise`\<`object`\>
+> **get**(`name`): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific edge function
 
@@ -106,14 +96,9 @@ Get details of a specific edge function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with function metadata
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -128,7 +113,7 @@ if (data) {
 
 ### getExecutions()
 
-> **getExecutions**(`name`, `limit`?): `Promise`\<`object`\>
+> **getExecutions**(`name`, `limit?`): `Promise`\<\{ `data`: [`EdgeFunctionExecution`](/api/sdk/interfaces/edgefunctionexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get execution history for an edge function
 
@@ -137,18 +122,13 @@ Get execution history for an edge function
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `name` | `string` | Function name |
-| `limit`? | `number` | Maximum number of executions to return (optional) |
+| `limit?` | `number` | Maximum number of executions to return (optional) |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`EdgeFunctionExecution`](/api/sdk/interfaces/edgefunctionexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution records
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`EdgeFunctionExecution`](/api/sdk/interfaces/edgefunctionexecution/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -165,7 +145,7 @@ if (data) {
 
 ### list()
 
-> **list**(`namespace`?): `Promise`\<`object`\>
+> **list**(`namespace?`): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all edge functions (admin view)
 
@@ -173,18 +153,13 @@ List all edge functions (admin view)
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `namespace`? | `string` | Optional namespace filter (if not provided, lists all public functions) |
+| `namespace?` | `string` | Optional namespace filter (if not provided, lists all public functions) |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of functions
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -203,20 +178,15 @@ if (data) {
 
 ### listNamespaces()
 
-> **listNamespaces**(): `Promise`\<`object`\>
+> **listNamespaces**(): `Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all namespaces that have edge functions
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of namespace strings
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `string`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -231,7 +201,7 @@ if (data) {
 
 ### sync()
 
-> **sync**(`options`): `Promise`\<`object`\>
+> **sync**(`options`): `Promise`\<\{ `data`: [`SyncFunctionsResult`](/api/sdk/interfaces/syncfunctionsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Sync multiple functions to a namespace
 
@@ -249,14 +219,9 @@ Requires service_role or admin authentication.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`SyncFunctionsResult`](/api/sdk/interfaces/syncfunctionsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`SyncFunctionsResult`](/api/sdk/interfaces/syncfunctionsresult/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -298,7 +263,7 @@ const { data, error } = await client.admin.functions.sync({
 
 ### syncWithBundling()
 
-> **syncWithBundling**(`options`, `bundleOptions`?): `Promise`\<`object`\>
+> **syncWithBundling**(`options`, `bundleOptions?`): `Promise`\<\{ `data`: [`SyncFunctionsResult`](/api/sdk/interfaces/syncfunctionsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Sync edge functions with automatic client-side bundling
 
@@ -310,18 +275,13 @@ before sending to the server. Requires esbuild as a peer dependency.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `options` | [`SyncFunctionsOptions`](/api/sdk/interfaces/syncfunctionsoptions/) | Sync options including namespace and functions array |
-| `bundleOptions`? | `Partial`\<[`BundleOptions`](/api/sdk/interfaces/bundleoptions/)\> | Optional bundling configuration |
+| `bundleOptions?` | `Partial`\<[`BundleOptions`](/api/sdk/interfaces/bundleoptions/)\> | Optional bundling configuration |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`SyncFunctionsResult`](/api/sdk/interfaces/syncfunctionsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`SyncFunctionsResult`](/api/sdk/interfaces/syncfunctionsresult/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -340,7 +300,7 @@ const { data, error } = await client.admin.functions.syncWithBundling({
 
 ### update()
 
-> **update**(`name`, `updates`): `Promise`\<`object`\>
+> **update**(`name`, `updates`): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update an existing edge function
 
@@ -353,14 +313,9 @@ Update an existing edge function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated function metadata
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 

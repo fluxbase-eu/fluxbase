@@ -11,5 +11,5 @@ Response type for resumable downloads - stream abstracts chunking
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `size` | `null` \| `number` | File size in bytes from HEAD request, or null if unknown |
-| `stream` | `ReadableStream`\<`Uint8Array`\> | The readable stream for the file content (abstracts chunking internally) |
+| <a id="size"></a> `size` | `number` \| `null` | File size in bytes from HEAD request, or null if unknown |
+| <a id="stream"></a> `stream` | `ReadableStream`\<`Uint8Array`\<`ArrayBufferLike`\>\> | The readable stream for the file content (abstracts chunking internally) |

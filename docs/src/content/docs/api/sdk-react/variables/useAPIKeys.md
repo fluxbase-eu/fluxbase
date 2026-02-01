@@ -5,11 +5,15 @@ prev: false
 title: "useAPIKeys"
 ---
 
-> **useAPIKeys**(`options`): `UseClientKeysReturn`
+> `const` **useAPIKeys**: (`options`) => `UseClientKeysReturn` = `useClientKeys`
 
 :::caution[Deprecated]
 Use useClientKeys instead
 :::
+
+Hook for managing client keys
+
+Provides client key list and management functions.
 
 ## Parameters
 

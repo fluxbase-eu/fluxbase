@@ -5,7 +5,7 @@ prev: false
 title: "FluxbaseResponse"
 ---
 
-> **FluxbaseResponse**\<`T`\>: `object` \| `object`
+> **FluxbaseResponse**\<`T`\> = \{ `data`: `T`; `error`: `null`; \} \| \{ `data`: `null`; `error`: `Error`; \}
 
 Base Fluxbase response type (Supabase-compatible)
 Returns either `{ data, error: null }` on success or `{ data: null, error }` on failure

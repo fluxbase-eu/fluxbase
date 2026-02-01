@@ -11,9 +11,9 @@ GraphQL introspection field
 
 | Property | Type |
 | ------ | ------ |
-| `args` | [`IntrospectionInputValue`](/api/sdk/interfaces/introspectioninputvalue/)[] |
-| `deprecationReason?` | `string` |
-| `description?` | `string` |
-| `isDeprecated` | `boolean` |
-| `name` | `string` |
-| `type` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/) |
+| <a id="args"></a> `args` | [`IntrospectionInputValue`](/api/sdk/interfaces/introspectioninputvalue/)[] |
+| <a id="deprecationreason"></a> `deprecationReason?` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="isdeprecated"></a> `isDeprecated` | `boolean` |
+| <a id="name"></a> `name` | `string` |
+| <a id="type"></a> `type` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/) |

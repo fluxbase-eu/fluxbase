@@ -37,9 +37,9 @@ await realtime.disableRealtime('public', 'products')
 
 ## Constructors
 
-### new FluxbaseAdminRealtime()
+### Constructor
 
-> **new FluxbaseAdminRealtime**(`fetch`): [`FluxbaseAdminRealtime`](/api/sdk/classes/fluxbaseadminrealtime/)
+> **new FluxbaseAdminRealtime**(`fetch`): `FluxbaseAdminRealtime`
 
 #### Parameters
 
@@ -49,13 +49,13 @@ await realtime.disableRealtime('public', 'products')
 
 #### Returns
 
-[`FluxbaseAdminRealtime`](/api/sdk/classes/fluxbaseadminrealtime/)
+`FluxbaseAdminRealtime`
 
 ## Methods
 
 ### disableRealtime()
 
-> **disableRealtime**(`schema`, `table`): `Promise`\<`object`\>
+> **disableRealtime**(`schema`, `table`): `Promise`\<\{ `message`: `string`; `success`: `boolean`; \}\>
 
 Disable realtime on a table
 
@@ -71,14 +71,9 @@ receiving updates for this table.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `message`: `string`; `success`: `boolean`; \}\>
 
 Promise resolving to success message
-
-| Name | Type |
-| ------ | ------ |
-| `message` | `string` |
-| `success` | `boolean` |
 
 #### Example
 
@@ -91,7 +86,7 @@ console.log('Realtime disabled')
 
 ### enableRealtime()
 
-> **enableRealtime**(`table`, `options`?): `Promise`\<[`EnableRealtimeResponse`](/api/sdk/interfaces/enablerealtimeresponse/)\>
+> **enableRealtime**(`table`, `options?`): `Promise`\<[`EnableRealtimeResponse`](/api/sdk/interfaces/enablerealtimeresponse/)\>
 
 Enable realtime on a table
 
@@ -103,10 +98,10 @@ Also sets REPLICA IDENTITY FULL to include old values in UPDATE/DELETE events.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `table` | `string` | Table name to enable realtime on |
-| `options`? | `object` | Optional configuration |
-| `options.events`? | (`"DELETE"` \| `"INSERT"` \| `"UPDATE"`)[] | - |
-| `options.exclude`? | `string`[] | - |
-| `options.schema`? | `string` | - |
+| `options?` | \{ `events?`: (`"DELETE"` \| `"INSERT"` \| `"UPDATE"`)[]; `exclude?`: `string`[]; `schema?`: `string`; \} | Optional configuration |
+| `options.events?` | (`"DELETE"` \| `"INSERT"` \| `"UPDATE"`)[] | - |
+| `options.exclude?` | `string`[] | - |
+| `options.schema?` | `string` | - |
 
 #### Returns
 
@@ -177,7 +172,7 @@ if (status.realtime_enabled) {
 
 ### listTables()
 
-> **listTables**(`options`?): `Promise`\<[`ListRealtimeTablesResponse`](/api/sdk/interfaces/listrealtimetablesresponse/)\>
+> **listTables**(`options?`): `Promise`\<[`ListRealtimeTablesResponse`](/api/sdk/interfaces/listrealtimetablesresponse/)\>
 
 List all realtime-enabled tables
 
@@ -188,8 +183,8 @@ configuration (events, excluded columns, etc.).
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options`? | `object` | Optional filter options |
-| `options.includeDisabled`? | `boolean` | - |
+| `options?` | \{ `includeDisabled?`: `boolean`; \} | Optional filter options |
+| `options.includeDisabled?` | `boolean` | - |
 
 #### Returns
 
@@ -216,7 +211,7 @@ const all = await client.admin.realtime.listTables({ includeDisabled: true })
 
 ### updateConfig()
 
-> **updateConfig**(`schema`, `table`, `config`): `Promise`\<`object`\>
+> **updateConfig**(`schema`, `table`, `config`): `Promise`\<\{ `message`: `string`; `success`: `boolean`; \}\>
 
 Update realtime configuration for a table
 
@@ -233,14 +228,9 @@ without recreating the trigger.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `message`: `string`; `success`: `boolean`; \}\>
 
 Promise resolving to success message
-
-| Name | Type |
-| ------ | ------ |
-| `message` | `string` |
-| `success` | `boolean` |
 
 #### Example
 

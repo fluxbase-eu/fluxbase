@@ -11,4 +11,4 @@ Request to start impersonating as anonymous user
 
 | Property | Type |
 | ------ | ------ |
-| `reason` | `string` |
+| <a id="reason"></a> `reason` | `string` |

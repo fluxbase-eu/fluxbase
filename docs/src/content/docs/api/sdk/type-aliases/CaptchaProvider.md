@@ -5,7 +5,7 @@ prev: false
 title: "CaptchaProvider"
 ---
 
-> **CaptchaProvider**: `"hcaptcha"` \| `"recaptcha_v3"` \| `"turnstile"` \| `"cap"`
+> **CaptchaProvider** = `"hcaptcha"` \| `"recaptcha_v3"` \| `"turnstile"` \| `"cap"`
 
 CAPTCHA provider types supported by Fluxbase
 - hcaptcha: Privacy-focused visual challenge

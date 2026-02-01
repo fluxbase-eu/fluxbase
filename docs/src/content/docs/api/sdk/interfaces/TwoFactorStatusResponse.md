@@ -11,5 +11,5 @@ MFA status response (Supabase-compatible)
 
 | Property | Type |
 | ------ | ------ |
-| `all` | `Factor`[] |
-| `totp` | `Factor`[] |
+| <a id="all"></a> `all` | `Factor`[] |
+| <a id="totp"></a> `totp` | `Factor`[] |

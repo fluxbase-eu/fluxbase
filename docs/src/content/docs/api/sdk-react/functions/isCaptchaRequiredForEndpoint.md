@@ -13,7 +13,7 @@ Check if CAPTCHA is required for a specific endpoint
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `config` | `undefined` \| [`CaptchaConfig`](/api/sdk-react/interfaces/captchaconfig/) | CAPTCHA configuration from useCaptchaConfig |
+| `config` | [`CaptchaConfig`](/api/sdk-react/interfaces/captchaconfig/) \| `undefined` | CAPTCHA configuration from useCaptchaConfig |
 | `endpoint` | `string` | The endpoint to check (e.g., 'signup', 'login', 'password_reset') |
 
 ## Returns

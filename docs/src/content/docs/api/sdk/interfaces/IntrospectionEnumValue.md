@@ -11,7 +11,7 @@ GraphQL introspection enum value
 
 | Property | Type |
 | ------ | ------ |
-| `deprecationReason?` | `string` |
-| `description?` | `string` |
-| `isDeprecated` | `boolean` |
-| `name` | `string` |
+| <a id="deprecationreason"></a> `deprecationReason?` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="isdeprecated"></a> `isDeprecated` | `boolean` |
+| <a id="name"></a> `name` | `string` |

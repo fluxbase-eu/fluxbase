@@ -5,7 +5,7 @@ prev: false
 title: "SupabaseAuthResponse"
 ---
 
-> **SupabaseAuthResponse**: [`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)
+> **SupabaseAuthResponse** = [`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)
 
 :::caution[Deprecated]
 Use FluxbaseAuthResponse instead

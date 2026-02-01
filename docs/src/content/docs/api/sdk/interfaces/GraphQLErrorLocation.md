@@ -11,5 +11,5 @@ GraphQL error location in the query
 
 | Property | Type |
 | ------ | ------ |
-| `column` | `number` |
-| `line` | `number` |
+| <a id="column"></a> `column` | `number` |
+| <a id="line"></a> `line` | `number` |

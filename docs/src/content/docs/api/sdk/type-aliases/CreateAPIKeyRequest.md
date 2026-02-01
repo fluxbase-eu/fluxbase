@@ -5,7 +5,7 @@ prev: false
 title: "CreateAPIKeyRequest"
 ---
 
-> **CreateAPIKeyRequest**: [`CreateClientKeyRequest`](/api/sdk/interfaces/createclientkeyrequest/)
+> **CreateAPIKeyRequest** = [`CreateClientKeyRequest`](/api/sdk/interfaces/createclientkeyrequest/)
 
 :::caution[Deprecated]
 Use CreateClientKeyRequest instead

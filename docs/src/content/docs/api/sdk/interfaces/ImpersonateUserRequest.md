@@ -11,5 +11,5 @@ Request to start impersonating a specific user
 
 | Property | Type |
 | ------ | ------ |
-| `reason` | `string` |
-| `target_user_id` | `string` |
+| <a id="reason"></a> `reason` | `string` |
+| <a id="target_user_id"></a> `target_user_id` | `string` |

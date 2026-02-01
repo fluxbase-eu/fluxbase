@@ -11,6 +11,6 @@ Result of listing user conversations
 
 | Property | Type |
 | ------ | ------ |
-| `conversations` | [`AIUserConversationSummary`](/api/sdk/interfaces/aiuserconversationsummary/)[] |
-| `has_more` | `boolean` |
-| `total` | `number` |
+| <a id="conversations"></a> `conversations` | [`AIUserConversationSummary`](/api/sdk/interfaces/aiuserconversationsummary/)[] |
+| <a id="has_more"></a> `has_more` | `boolean` |
+| <a id="total"></a> `total` | `number` |

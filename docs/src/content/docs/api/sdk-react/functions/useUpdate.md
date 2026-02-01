@@ -5,7 +5,7 @@ prev: false
 title: "useUpdate"
 ---
 
-> **useUpdate**\<`T`\>(`table`): `UseMutationResult`\<`null` \| `T`, `Error`, `object`, `unknown`\>
+> **useUpdate**\<`T`\>(`table`): `UseMutationResult`\<`T` \| `null`, `Error`, \{ `buildQuery`: (`query`) => `QueryBuilder`\<`T`\>; `data`: `Partial`\<`T`\>; \}, `unknown`\>
 
 Hook to update data in a table
 
@@ -23,4 +23,4 @@ Hook to update data in a table
 
 ## Returns
 
-`UseMutationResult`\<`null` \| `T`, `Error`, `object`, `unknown`\>
+`UseMutationResult`\<`T` \| `null`, `Error`, \{ `buildQuery`: (`query`) => `QueryBuilder`\<`T`\>; `data`: `Partial`\<`T`\>; \}, `unknown`\>

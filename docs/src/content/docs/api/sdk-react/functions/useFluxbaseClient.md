@@ -5,10 +5,10 @@ prev: false
 title: "useFluxbaseClient"
 ---
 
-> **useFluxbaseClient**(): [`FluxbaseClient`](/api/sdk-react/classes/fluxbaseclient/)
+> **useFluxbaseClient**(): [`FluxbaseClient`](/api/sdk-react/interfaces/fluxbaseclient/)
 
 Hook to access the Fluxbase client from context
 
 ## Returns
 
-[`FluxbaseClient`](/api/sdk-react/classes/fluxbaseclient/)
+[`FluxbaseClient`](/api/sdk-react/interfaces/fluxbaseclient/)

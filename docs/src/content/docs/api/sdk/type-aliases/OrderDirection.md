@@ -5,4 +5,4 @@ prev: false
 title: "OrderDirection"
 ---
 
-> **OrderDirection**: `"asc"` \| `"desc"`
+> **OrderDirection** = `"asc"` \| `"desc"`

@@ -11,8 +11,8 @@ Complete application settings structure
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `authentication` | [`AuthenticationSettings`](/api/sdk/interfaces/authenticationsettings/) | - |
-| `email` | [`EmailSettings`](/api/sdk/interfaces/emailsettings/) | - |
-| `features` | [`FeatureSettings`](/api/sdk/interfaces/featuresettings/) | - |
-| `overrides?` | `SettingOverrides` | Settings overridden by environment variables (read-only, cannot be modified via API) |
-| `security` | [`SecuritySettings`](/api/sdk/interfaces/securitysettings/) | - |
+| <a id="authentication"></a> `authentication` | [`AuthenticationSettings`](/api/sdk/interfaces/authenticationsettings/) | - |
+| <a id="email"></a> `email` | [`EmailSettings`](/api/sdk/interfaces/emailsettings/) | - |
+| <a id="features"></a> `features` | [`FeatureSettings`](/api/sdk/interfaces/featuresettings/) | - |
+| <a id="overrides"></a> `overrides?` | `SettingOverrides` | Settings overridden by environment variables (read-only, cannot be modified via API) |
+| <a id="security"></a> `security` | [`SecuritySettings`](/api/sdk/interfaces/securitysettings/) | - |

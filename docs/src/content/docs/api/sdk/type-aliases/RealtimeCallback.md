@@ -5,7 +5,7 @@ prev: false
 title: "RealtimeCallback"
 ---
 
-> **RealtimeCallback**: (`payload`) => `void`
+> **RealtimeCallback** = (`payload`) => `void`
 
 ## Parameters
 

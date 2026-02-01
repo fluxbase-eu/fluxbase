@@ -5,7 +5,7 @@ prev: false
 title: "useTableUpdates"
 ---
 
-> **useTableUpdates**(`table`, `callback`, `options`?): `object`
+> **useTableUpdates**(`table`, `callback`, `options?`): `object`
 
 Hook to subscribe to UPDATE events on a table
 
@@ -15,7 +15,7 @@ Hook to subscribe to UPDATE events on a table
 | ------ | ------ |
 | `table` | `string` |
 | `callback` | (`payload`) => `void` |
-| `options`? | `Omit`\<`UseRealtimeOptions`, `"channel"` \| `"event"` \| `"callback"`\> |
+| `options?` | `Omit`\<`UseRealtimeOptions`, `"channel"` \| `"event"` \| `"callback"`\> |
 
 ## Returns
 
@@ -23,4 +23,4 @@ Hook to subscribe to UPDATE events on a table
 
 | Name | Type | Default value |
 | ------ | ------ | ------ |
-| `channel` | `null` \| `RealtimeChannel` | channelRef.current |
+| `channel` | `RealtimeChannel` \| `null` | `channelRef.current` |

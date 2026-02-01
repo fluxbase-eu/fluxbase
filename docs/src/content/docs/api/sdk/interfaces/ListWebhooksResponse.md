@@ -9,5 +9,5 @@ title: "ListWebhooksResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `total` | `number` |
-| `webhooks` | [`Webhook`](/api/sdk/interfaces/webhook/)[] |
+| <a id="total"></a> `total` | `number` |
+| <a id="webhooks"></a> `webhooks` | [`Webhook`](/api/sdk/interfaces/webhook/)[] |

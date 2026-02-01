@@ -11,6 +11,6 @@ Request to update an email template
 
 | Property | Type |
 | ------ | ------ |
-| `html_body` | `string` |
-| `subject` | `string` |
-| `text_body?` | `string` |
+| <a id="html_body"></a> `html_body` | `string` |
+| <a id="subject"></a> `subject` | `string` |
+| <a id="text_body"></a> `text_body?` | `string` |

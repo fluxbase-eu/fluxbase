@@ -7,7 +7,7 @@ title: "@fluxbase/sdk-react"
 
 ## Client
 
-- [FluxbaseClient](/api/sdk-react/classes/fluxbaseclient/)
+- [FluxbaseClient](/api/sdk-react/interfaces/fluxbaseclient/)
 
 ## Other
 
@@ -23,7 +23,7 @@ title: "@fluxbase/sdk-react"
 - [GraphQLRequestOptions](/api/sdk-react/interfaces/graphqlrequestoptions/)
 - [GraphQLResponse](/api/sdk-react/interfaces/graphqlresponse/)
 - [PostgrestResponse](/api/sdk-react/interfaces/postgrestresponse/)
-- [RealtimeChangePayload](/api/sdk-react/interfaces/realtimechangepayload/)
+- [~~RealtimeChangePayload~~](/api/sdk-react/interfaces/realtimechangepayload/)
 - [SAMLLoginOptions](/api/sdk-react/interfaces/samlloginoptions/)
 - [SAMLLoginResponse](/api/sdk-react/interfaces/samlloginresponse/)
 - [SAMLProvider](/api/sdk-react/interfaces/samlprovider/)
@@ -38,15 +38,15 @@ title: "@fluxbase/sdk-react"
 - [UseGraphQLQueryOptions](/api/sdk-react/interfaces/usegraphqlqueryoptions/)
 - [User](/api/sdk-react/interfaces/user/)
 - [Webhook](/api/sdk-react/interfaces/webhook/)
-- [APIKey](/api/sdk-react/type-aliases/apikey/)
+- [~~APIKey~~](/api/sdk-react/type-aliases/apikey/)
 - [CaptchaProvider](/api/sdk-react/type-aliases/captchaprovider/)
 - [ImageFitMode](/api/sdk-react/type-aliases/imagefitmode/)
 - [ImageFormat](/api/sdk-react/type-aliases/imageformat/)
-- [StorageObject](/api/sdk-react/type-aliases/storageobject/)
+- [~~StorageObject~~](/api/sdk-react/type-aliases/storageobject/)
+- [~~useAPIKeys~~](/api/sdk-react/variables/useapikeys/)
 - [FluxbaseProvider](/api/sdk-react/functions/fluxbaseprovider/)
 - [isCaptchaRequiredForEndpoint](/api/sdk-react/functions/iscaptcharequiredforendpoint/)
 - [useAdminAuth](/api/sdk-react/functions/useadminauth/)
-- [useAPIKeys](/api/sdk-react/functions/useapikeys/)
 - [useAppSettings](/api/sdk-react/functions/useappsettings/)
 - [useAuth](/api/sdk-react/functions/useauth/)
 - [useAuthConfig](/api/sdk-react/functions/useauthconfig/)
@@ -80,7 +80,7 @@ title: "@fluxbase/sdk-react"
 - [useStorageList](/api/sdk-react/functions/usestoragelist/)
 - [useStorageMove](/api/sdk-react/functions/usestoragemove/)
 - [useStoragePublicUrl](/api/sdk-react/functions/usestoragepublicurl/)
-- [useStorageSignedUrl](/api/sdk-react/functions/usestoragesignedurl/)
+- [~~useStorageSignedUrl~~](/api/sdk-react/functions/usestoragesignedurl/)
 - [useStorageSignedUrlWithOptions](/api/sdk-react/functions/usestoragesignedurlwithoptions/)
 - [useStorageTransformUrl](/api/sdk-react/functions/usestoragetransformurl/)
 - [useStorageUpload](/api/sdk-react/functions/usestorageupload/)

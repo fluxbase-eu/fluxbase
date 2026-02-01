@@ -11,4 +11,4 @@ Response from listing buckets (admin API)
 
 | Property | Type |
 | ------ | ------ |
-| `buckets` | [`AdminBucket`](/api/sdk/interfaces/adminbucket/)[] |
+| <a id="buckets"></a> `buckets` | [`AdminBucket`](/api/sdk/interfaces/adminbucket/)[] |

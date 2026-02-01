@@ -11,7 +11,7 @@ Query result data in a user message
 
 | Property | Type |
 | ------ | ------ |
-| `data?` | `Record`\<`string`, `unknown`\>[] |
-| `query?` | `string` |
-| `row_count` | `number` |
-| `summary` | `string` |
+| <a id="data"></a> `data?` | `Record`\<`string`, `unknown`\>[] |
+| <a id="query"></a> `query?` | `string` |
+| <a id="row_count"></a> `row_count` | `number` |
+| <a id="summary"></a> `summary` | `string` |

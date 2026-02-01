@@ -9,7 +9,7 @@ title: "PostgrestError"
 
 | Property | Type |
 | ------ | ------ |
-| `code?` | `string` |
-| `details?` | `string` |
-| `hint?` | `string` |
-| `message` | `string` |
+| <a id="code"></a> `code?` | `string` |
+| <a id="details"></a> `details?` | `string` |
+| <a id="hint"></a> `hint?` | `string` |
+| <a id="message"></a> `message` | `string` |

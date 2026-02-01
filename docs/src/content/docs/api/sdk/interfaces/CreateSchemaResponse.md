@@ -11,5 +11,5 @@ Response after creating a schema
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
-| `schema` | `string` |
+| <a id="message"></a> `message` | `string` |
+| <a id="schema"></a> `schema` | `string` |

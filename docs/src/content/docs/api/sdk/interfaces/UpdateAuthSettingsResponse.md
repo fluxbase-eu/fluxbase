@@ -11,5 +11,5 @@ Response after updating authentication settings
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
-| `success` | `boolean` |
+| <a id="message"></a> `message` | `string` |
+| <a id="success"></a> `success` | `boolean` |

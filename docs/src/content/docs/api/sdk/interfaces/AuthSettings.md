@@ -11,16 +11,16 @@ Authentication settings configuration
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `_overrides?` | `Record`\<`string`, `SettingOverride`\> | Settings overridden by environment variables (read-only, cannot be modified via API) |
-| `disable_app_password_login` | `boolean` | - |
-| `disable_dashboard_password_login` | `boolean` | - |
-| `enable_magic_link` | `boolean` | - |
-| `enable_signup` | `boolean` | - |
-| `max_sessions_per_user` | `number` | - |
-| `password_min_length` | `number` | - |
-| `password_require_lowercase` | `boolean` | - |
-| `password_require_number` | `boolean` | - |
-| `password_require_special` | `boolean` | - |
-| `password_require_uppercase` | `boolean` | - |
-| `require_email_verification` | `boolean` | - |
-| `session_timeout_minutes` | `number` | - |
+| <a id="_overrides"></a> `_overrides?` | `Record`\<`string`, `SettingOverride`\> | Settings overridden by environment variables (read-only, cannot be modified via API) |
+| <a id="disable_app_password_login"></a> `disable_app_password_login` | `boolean` | - |
+| <a id="disable_dashboard_password_login"></a> `disable_dashboard_password_login` | `boolean` | - |
+| <a id="enable_magic_link"></a> `enable_magic_link` | `boolean` | - |
+| <a id="enable_signup"></a> `enable_signup` | `boolean` | - |
+| <a id="max_sessions_per_user"></a> `max_sessions_per_user` | `number` | - |
+| <a id="password_min_length"></a> `password_min_length` | `number` | - |
+| <a id="password_require_lowercase"></a> `password_require_lowercase` | `boolean` | - |
+| <a id="password_require_number"></a> `password_require_number` | `boolean` | - |
+| <a id="password_require_special"></a> `password_require_special` | `boolean` | - |
+| <a id="password_require_uppercase"></a> `password_require_uppercase` | `boolean` | - |
+| <a id="require_email_verification"></a> `require_email_verification` | `boolean` | - |
+| <a id="session_timeout_minutes"></a> `session_timeout_minutes` | `number` | - |

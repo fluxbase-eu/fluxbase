@@ -9,4 +9,4 @@ title: "ListWebhookDeliveriesResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `deliveries` | [`WebhookDelivery`](/api/sdk/interfaces/webhookdelivery/)[] |
+| <a id="deliveries"></a> `deliveries` | [`WebhookDelivery`](/api/sdk/interfaces/webhookdelivery/)[] |

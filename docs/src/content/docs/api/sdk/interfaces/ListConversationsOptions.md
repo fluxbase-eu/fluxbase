@@ -11,7 +11,7 @@ Options for listing user conversations
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `chatbot?` | `string` | Filter by chatbot name |
-| `limit?` | `number` | Number of conversations to return (default: 50, max: 100) |
-| `namespace?` | `string` | Filter by namespace |
-| `offset?` | `number` | Offset for pagination |
+| <a id="chatbot"></a> `chatbot?` | `string` | Filter by chatbot name |
+| <a id="limit"></a> `limit?` | `number` | Number of conversations to return (default: 50, max: 100) |
+| <a id="namespace"></a> `namespace?` | `string` | Filter by namespace |
+| <a id="offset"></a> `offset?` | `number` | Offset for pagination |

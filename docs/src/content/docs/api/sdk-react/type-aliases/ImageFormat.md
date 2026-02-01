@@ -5,6 +5,6 @@ prev: false
 title: "ImageFormat"
 ---
 
-> **ImageFormat**: `"webp"` \| `"jpg"` \| `"png"` \| `"avif"`
+> **ImageFormat** = `"webp"` \| `"jpg"` \| `"png"` \| `"avif"`
 
 Output format for image transformations

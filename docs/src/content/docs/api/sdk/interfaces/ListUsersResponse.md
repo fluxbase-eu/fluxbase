@@ -9,5 +9,5 @@ title: "ListUsersResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `total` | `number` |
-| `users` | [`EnrichedUser`](/api/sdk/interfaces/enricheduser/)[] |
+| <a id="total"></a> `total` | `number` |
+| <a id="users"></a> `users` | [`EnrichedUser`](/api/sdk/interfaces/enricheduser/)[] |

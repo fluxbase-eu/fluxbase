@@ -9,5 +9,5 @@ title: "AdminSetupStatusResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `has_admin` | `boolean` |
-| `needs_setup` | `boolean` |
+| <a id="has_admin"></a> `has_admin` | `boolean` |
+| <a id="needs_setup"></a> `needs_setup` | `boolean` |

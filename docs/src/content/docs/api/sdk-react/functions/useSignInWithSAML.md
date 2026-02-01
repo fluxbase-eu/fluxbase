@@ -5,7 +5,7 @@ prev: false
 title: "useSignInWithSAML"
 ---
 
-> **useSignInWithSAML**(): `UseMutationResult`\<`DataResponse`\<`object`\>, `Error`, `object`, `unknown`\>
+> **useSignInWithSAML**(): `UseMutationResult`\<`DataResponse`\<\{ `provider`: `string`; `url`: `string`; \}\>, `Error`, \{ `options?`: [`SAMLLoginOptions`](/api/sdk-react/interfaces/samlloginoptions/); `provider`: `string`; \}, `unknown`\>
 
 Hook to initiate SAML login (redirects to IdP)
 
@@ -14,7 +14,7 @@ SAML Identity Provider for authentication.
 
 ## Returns
 
-`UseMutationResult`\<`DataResponse`\<`object`\>, `Error`, `object`, `unknown`\>
+`UseMutationResult`\<`DataResponse`\<\{ `provider`: `string`; `url`: `string`; \}\>, `Error`, \{ `options?`: [`SAMLLoginOptions`](/api/sdk-react/interfaces/samlloginoptions/); `provider`: `string`; \}, `unknown`\>
 
 ## Example
 

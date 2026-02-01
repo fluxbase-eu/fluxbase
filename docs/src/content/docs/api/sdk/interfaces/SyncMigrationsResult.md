@@ -11,21 +11,21 @@ Result of a migration sync operation
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `details` | `object` | Detailed results |
+| <a id="details"></a> `details` | `object` | Detailed results |
 | `details.applied` | `string`[] | - |
 | `details.created` | `string`[] | - |
 | `details.errors` | `string`[] | - |
 | `details.skipped` | `string`[] | - |
 | `details.unchanged` | `string`[] | - |
 | `details.updated` | `string`[] | - |
-| `dry_run` | `boolean` | Whether this was a dry run |
-| `message` | `string` | Status message |
-| `namespace` | `string` | Namespace that was synced |
-| `summary` | `object` | Summary counts |
+| <a id="dry_run"></a> `dry_run` | `boolean` | Whether this was a dry run |
+| <a id="message"></a> `message` | `string` | Status message |
+| <a id="namespace"></a> `namespace` | `string` | Namespace that was synced |
+| <a id="summary"></a> `summary` | `object` | Summary counts |
 | `summary.applied` | `number` | - |
 | `summary.created` | `number` | - |
 | `summary.errors` | `number` | - |
 | `summary.skipped` | `number` | - |
 | `summary.unchanged` | `number` | - |
 | `summary.updated` | `number` | - |
-| `warnings?` | `string`[] | Warning messages |
+| <a id="warnings"></a> `warnings?` | `string`[] | Warning messages |

@@ -11,6 +11,6 @@ Target user information for impersonation
 
 | Property | Type |
 | ------ | ------ |
-| `email` | `string` |
-| `id` | `string` |
-| `role` | `string` |
+| <a id="email"></a> `email` | `string` |
+| <a id="id"></a> `id` | `string` |
+| <a id="role"></a> `role` | `string` |

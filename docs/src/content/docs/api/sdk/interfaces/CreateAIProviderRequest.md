@@ -12,10 +12,10 @@ Note: config values can be strings, numbers, or booleans - they will be converte
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `config` | `Record`\<`string`, `string` \| `number` \| `boolean`\> | - |
-| `display_name` | `string` | - |
-| `embedding_model?` | `null` \| `string` | Embedding model for this provider. null or omit to use provider-specific default |
-| `enabled?` | `boolean` | - |
-| `is_default?` | `boolean` | - |
-| `name` | `string` | - |
-| `provider_type` | [`AIProviderType`](/api/sdk/type-aliases/aiprovidertype/) | - |
+| <a id="config"></a> `config` | `Record`\<`string`, `string` \| `number` \| `boolean`\> | - |
+| <a id="display_name"></a> `display_name` | `string` | - |
+| <a id="embedding_model"></a> `embedding_model?` | `string` \| `null` | Embedding model for this provider. null or omit to use provider-specific default |
+| <a id="enabled"></a> `enabled?` | `boolean` | - |
+| <a id="is_default"></a> `is_default?` | `boolean` | - |
+| <a id="name"></a> `name` | `string` | - |
+| <a id="provider_type"></a> `provider_type` | [`AIProviderType`](/api/sdk/type-aliases/aiprovidertype/) | - |

@@ -13,9 +13,9 @@ Use RealtimePostgresChangesPayload instead
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| ~~`new_record?`~~ | `Record`\<`string`, `unknown`\> | :::caution[Deprecated] Use 'new' instead ::: |
-| ~~`old_record?`~~ | `Record`\<`string`, `unknown`\> | :::caution[Deprecated] Use 'old' instead ::: |
-| ~~`schema`~~ | `string` | - |
-| ~~`table`~~ | `string` | - |
-| ~~`timestamp`~~ | `string` | :::caution[Deprecated] Use commit_timestamp instead ::: |
-| ~~`type`~~ | `"DELETE"` \| `"INSERT"` \| `"UPDATE"` | :::caution[Deprecated] Use eventType instead ::: |
+| <a id="new_record"></a> ~~`new_record?`~~ | `Record`\<`string`, `unknown`\> | :::caution[Deprecated] Use 'new' instead ::: |
+| <a id="old_record"></a> ~~`old_record?`~~ | `Record`\<`string`, `unknown`\> | :::caution[Deprecated] Use 'old' instead ::: |
+| <a id="schema"></a> ~~`schema`~~ | `string` | - |
+| <a id="table"></a> ~~`table`~~ | `string` | - |
+| <a id="timestamp"></a> ~~`timestamp`~~ | `string` | :::caution[Deprecated] Use commit_timestamp instead ::: |
+| <a id="type"></a> ~~`type`~~ | `"DELETE"` \| `"INSERT"` \| `"UPDATE"` | :::caution[Deprecated] Use eventType instead ::: |

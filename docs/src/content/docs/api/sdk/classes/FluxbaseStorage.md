@@ -7,9 +7,9 @@ title: "FluxbaseStorage"
 
 ## Constructors
 
-### new FluxbaseStorage()
+### Constructor
 
-> **new FluxbaseStorage**(`fetch`): [`FluxbaseStorage`](/api/sdk/classes/fluxbasestorage/)
+> **new FluxbaseStorage**(`fetch`): `FluxbaseStorage`
 
 #### Parameters
 
@@ -19,13 +19,13 @@ title: "FluxbaseStorage"
 
 #### Returns
 
-[`FluxbaseStorage`](/api/sdk/classes/fluxbasestorage/)
+`FluxbaseStorage`
 
 ## Methods
 
 ### createBucket()
 
-> **createBucket**(`bucketName`): `Promise`\<`object`\>
+> **createBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `name`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a new bucket
 
@@ -37,18 +37,13 @@ Create a new bucket
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `name`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### deleteBucket()
 
-> **deleteBucket**(`bucketName`): `Promise`\<`object`\>
+> **deleteBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a bucket
 
@@ -60,18 +55,13 @@ Delete a bucket
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### emptyBucket()
 
-> **emptyBucket**(`bucketName`): `Promise`\<`object`\>
+> **emptyBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Empty a bucket (delete all files)
 
@@ -83,12 +73,7 @@ Empty a bucket (delete all files)
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
@@ -112,7 +97,7 @@ Get a reference to a storage bucket
 
 ### getBucket()
 
-> **getBucket**(`bucketName`): `Promise`\<`object`\>
+> **getBucket**(`bucketName`): `Promise`\<\{ `data`: `Bucket` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get bucket details
 
@@ -124,35 +109,25 @@ Get bucket details
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Bucket` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: `Bucket` \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### listBuckets()
 
-> **listBuckets**(): `Promise`\<`object`\>
+> **listBuckets**(): `Promise`\<\{ `data`: `object`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all buckets
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object`[] |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: `object`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### updateBucketSettings()
 
-> **updateBucketSettings**(`bucketName`, `settings`): `Promise`\<`object`\>
+> **updateBucketSettings**(`bucketName`, `settings`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Update bucket settings (RLS - requires admin or service key)
 
@@ -165,9 +140,4 @@ Update bucket settings (RLS - requires admin or service key)
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>

@@ -11,9 +11,9 @@ Options for streaming uploads (memory-efficient for large files)
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `cacheControl?` | `string` | Cache-Control header value |
-| `contentType?` | `string` | MIME type of the file |
-| `metadata?` | `Record`\<`string`, `string`\> | Custom metadata to attach to the file |
-| `onUploadProgress?` | (`progress`: [`UploadProgress`](/api/sdk/interfaces/uploadprogress/)) => `void` | Optional callback to track upload progress |
-| `signal?` | `AbortSignal` | AbortSignal to cancel the upload |
-| `upsert?` | `boolean` | If true, overwrite existing file at this path |
+| <a id="cachecontrol"></a> `cacheControl?` | `string` | Cache-Control header value |
+| <a id="contenttype"></a> `contentType?` | `string` | MIME type of the file |
+| <a id="metadata"></a> `metadata?` | `Record`\<`string`, `string`\> | Custom metadata to attach to the file |
+| <a id="onuploadprogress"></a> `onUploadProgress?` | (`progress`) => `void` | Optional callback to track upload progress |
+| <a id="signal"></a> `signal?` | `AbortSignal` | AbortSignal to cancel the upload |
+| <a id="upsert"></a> `upsert?` | `boolean` | If true, overwrite existing file at this path |

@@ -9,5 +9,5 @@ title: "CreateClientKeyResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `client_key` | [`ClientKey`](/api/sdk/interfaces/clientkey/) |
-| `key` | `string` |
+| <a id="client_key"></a> `client_key` | [`ClientKey`](/api/sdk/interfaces/clientkey/) |
+| <a id="key"></a> `key` | `string` |

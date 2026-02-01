@@ -9,5 +9,5 @@ title: "ListClientKeysResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `client_keys` | [`ClientKey`](/api/sdk/interfaces/clientkey/)[] |
-| `total` | `number` |
+| <a id="client_keys"></a> `client_keys` | [`ClientKey`](/api/sdk/interfaces/clientkey/)[] |
+| <a id="total"></a> `total` | `number` |

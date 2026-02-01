@@ -11,6 +11,6 @@ Upload progress information
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `loaded` | `number` | Number of bytes uploaded so far |
-| `percentage` | `number` | Upload percentage (0-100) |
-| `total` | `number` | Total number of bytes to upload |
+| <a id="loaded"></a> `loaded` | `number` | Number of bytes uploaded so far |
+| <a id="percentage"></a> `percentage` | `number` | Upload percentage (0-100) |
+| <a id="total"></a> `total` | `number` | Total number of bytes to upload |

@@ -23,9 +23,9 @@ const settings = await oauth.authSettings.get()
 
 ## Constructors
 
-### new FluxbaseOAuth()
+### Constructor
 
-> **new FluxbaseOAuth**(`fetch`): [`FluxbaseOAuth`](/api/sdk/classes/fluxbaseoauth/)
+> **new FluxbaseOAuth**(`fetch`): `FluxbaseOAuth`
 
 #### Parameters
 
@@ -35,11 +35,11 @@ const settings = await oauth.authSettings.get()
 
 #### Returns
 
-[`FluxbaseOAuth`](/api/sdk/classes/fluxbaseoauth/)
+`FluxbaseOAuth`
 
 ## Properties
 
 | Property | Modifier | Type |
 | ------ | ------ | ------ |
-| `authSettings` | `public` | [`AuthSettingsManager`](/api/sdk/classes/authsettingsmanager/) |
-| `providers` | `public` | [`OAuthProviderManager`](/api/sdk/classes/oauthprovidermanager/) |
+| <a id="authsettings"></a> `authSettings` | `public` | [`AuthSettingsManager`](/api/sdk/classes/authsettingsmanager/) |
+| <a id="providers"></a> `providers` | `public` | [`OAuthProviderManager`](/api/sdk/classes/oauthprovidermanager/) |

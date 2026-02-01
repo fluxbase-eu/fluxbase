@@ -9,7 +9,7 @@ title: "CreateInvitationResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `email_sent` | `boolean` |
-| `email_status?` | `string` |
-| `invitation` | [`Invitation`](/api/sdk/interfaces/invitation/) |
-| `invite_link` | `string` |
+| <a id="email_sent"></a> `email_sent` | `boolean` |
+| <a id="email_status"></a> `email_status?` | `string` |
+| <a id="invitation"></a> `invitation` | [`Invitation`](/api/sdk/interfaces/invitation/) |
+| <a id="invite_link"></a> `invite_link` | `string` |

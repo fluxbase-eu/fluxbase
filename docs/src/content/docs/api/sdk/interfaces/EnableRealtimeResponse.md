@@ -11,8 +11,8 @@ Response after enabling realtime on a table
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `events` | `string`[] | Events being tracked |
-| `exclude?` | `string`[] | Columns excluded from notifications |
-| `schema` | `string` | Schema name |
-| `table` | `string` | Table name |
-| `trigger_name` | `string` | Name of the created trigger |
+| <a id="events"></a> `events` | `string`[] | Events being tracked |
+| <a id="exclude"></a> `exclude?` | `string`[] | Columns excluded from notifications |
+| <a id="schema"></a> `schema` | `string` | Schema name |
+| <a id="table"></a> `table` | `string` | Table name |
+| <a id="trigger_name"></a> `trigger_name` | `string` | Name of the created trigger |

@@ -11,6 +11,6 @@ Request to create a new table
 
 | Property | Type |
 | ------ | ------ |
-| `columns` | [`CreateColumnRequest`](/api/sdk/interfaces/createcolumnrequest/)[] |
-| `name` | `string` |
-| `schema` | `string` |
+| <a id="columns"></a> `columns` | [`CreateColumnRequest`](/api/sdk/interfaces/createcolumnrequest/)[] |
+| <a id="name"></a> `name` | `string` |
+| <a id="schema"></a> `schema` | `string` |

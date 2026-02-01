@@ -11,8 +11,8 @@ Options for syncing chatbots
 
 | Property | Type |
 | ------ | ------ |
-| `chatbots?` | [`ChatbotSpec`](/api/sdk/interfaces/chatbotspec/)[] |
-| `namespace?` | `string` |
-| `options?` | `object` |
+| <a id="chatbots"></a> `chatbots?` | [`ChatbotSpec`](/api/sdk/interfaces/chatbotspec/)[] |
+| <a id="namespace"></a> `namespace?` | `string` |
+| <a id="options"></a> `options?` | `object` |
 | `options.delete_missing?` | `boolean` |
 | `options.dry_run?` | `boolean` |

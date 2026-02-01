@@ -11,5 +11,5 @@ Response type for stream downloads, includes file size from Content-Length heade
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `size` | `null` \| `number` | File size in bytes from Content-Length header, or null if unknown |
-| `stream` | `ReadableStream`\<`Uint8Array`\> | The readable stream for the file content |
+| <a id="size"></a> `size` | `number` \| `null` | File size in bytes from Content-Length header, or null if unknown |
+| <a id="stream"></a> `stream` | `ReadableStream`\<`Uint8Array`\<`ArrayBufferLike`\>\> | The readable stream for the file content |

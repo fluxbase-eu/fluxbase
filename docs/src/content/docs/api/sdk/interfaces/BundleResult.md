@@ -11,5 +11,5 @@ Result of bundling code
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `code` | `string` | Bundled code |
-| `sourceMap?` | `string` | Source map (if enabled) |
+| <a id="code"></a> `code` | `string` | Bundled code |
+| <a id="sourcemap"></a> `sourceMap?` | `string` | Source map (if enabled) |

@@ -11,10 +11,10 @@ Branch activity log entry
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `action` | `string` | Action performed |
-| `branch_id` | `string` | Branch ID |
-| `created_at` | `string` | When the activity occurred |
-| `details?` | `Record`\<`string`, `unknown`\> | Additional details |
-| `executed_by?` | `string` | User who performed the action |
-| `id` | `string` | Activity ID |
-| `status` | `"success"` \| `"pending"` \| `"failed"` | Activity status |
+| <a id="action"></a> `action` | `string` | Action performed |
+| <a id="branch_id"></a> `branch_id` | `string` | Branch ID |
+| <a id="created_at"></a> `created_at` | `string` | When the activity occurred |
+| <a id="details"></a> `details?` | `Record`\<`string`, `unknown`\> | Additional details |
+| <a id="executed_by"></a> `executed_by?` | `string` | User who performed the action |
+| <a id="id"></a> `id` | `string` | Activity ID |
+| <a id="status"></a> `status` | `"success"` \| `"pending"` \| `"failed"` | Activity status |

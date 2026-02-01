@@ -29,9 +29,9 @@ const result = await client.management.webhooks.test(webhook.id)
 
 ## Constructors
 
-### new WebhooksManager()
+### Constructor
 
-> **new WebhooksManager**(`fetch`): [`WebhooksManager`](/api/sdk/classes/webhooksmanager/)
+> **new WebhooksManager**(`fetch`): `WebhooksManager`
 
 #### Parameters
 
@@ -41,7 +41,7 @@ const result = await client.management.webhooks.test(webhook.id)
 
 #### Returns
 
-[`WebhooksManager`](/api/sdk/classes/webhooksmanager/)
+`WebhooksManager`
 
 ## Methods
 

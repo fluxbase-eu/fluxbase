@@ -11,10 +11,10 @@ Options for updating an RPC procedure
 
 | Property | Type |
 | ------ | ------ |
-| `allowed_schemas?` | `string`[] |
-| `allowed_tables?` | `string`[] |
-| `description?` | `string` |
-| `enabled?` | `boolean` |
-| `is_public?` | `boolean` |
-| `max_execution_time_seconds?` | `number` |
-| `require_role?` | `string` |
+| <a id="allowed_schemas"></a> `allowed_schemas?` | `string`[] |
+| <a id="allowed_tables"></a> `allowed_tables?` | `string`[] |
+| <a id="description"></a> `description?` | `string` |
+| <a id="enabled"></a> `enabled?` | `boolean` |
+| <a id="is_public"></a> `is_public?` | `boolean` |
+| <a id="max_execution_time_seconds"></a> `max_execution_time_seconds?` | `number` |
+| <a id="require_role"></a> `require_role?` | `string` |

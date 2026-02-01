@@ -5,7 +5,7 @@ prev: false
 title: "isFluxbaseError"
 ---
 
-> **isFluxbaseError**\<`T`\>(`response`): `response is Object`
+> **isFluxbaseError**\<`T`\>(`response`): `response is { data: null; error: Error }`
 
 Type guard to check if a FluxbaseResponse is an error response
 
@@ -23,7 +23,7 @@ Type guard to check if a FluxbaseResponse is an error response
 
 ## Returns
 
-`response is Object`
+`response is { data: null; error: Error }`
 
 true if the response is an error (data is null, error is not null)
 

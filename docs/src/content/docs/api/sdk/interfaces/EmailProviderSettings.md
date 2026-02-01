@@ -14,19 +14,19 @@ the nested EmailSettings structure used in AppSettings.
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `_overrides` | `Record`\<`string`, [`EmailSettingOverride`](/api/sdk/interfaces/emailsettingoverride/)\> | Settings overridden by environment variables |
-| `enabled` | `boolean` | - |
-| `from_address` | `string` | - |
-| `from_name` | `string` | - |
-| `mailgun_api_key_set` | `boolean` | - |
-| `mailgun_domain` | `string` | - |
-| `provider` | `"smtp"` \| `"sendgrid"` \| `"mailgun"` \| `"ses"` | - |
-| `sendgrid_api_key_set` | `boolean` | - |
-| `ses_access_key_set` | `boolean` | - |
-| `ses_region` | `string` | - |
-| `ses_secret_key_set` | `boolean` | - |
-| `smtp_host` | `string` | - |
-| `smtp_password_set` | `boolean` | - |
-| `smtp_port` | `number` | - |
-| `smtp_tls` | `boolean` | - |
-| `smtp_username` | `string` | - |
+| <a id="_overrides"></a> `_overrides` | `Record`\<`string`, [`EmailSettingOverride`](/api/sdk/interfaces/emailsettingoverride/)\> | Settings overridden by environment variables |
+| <a id="enabled"></a> `enabled` | `boolean` | - |
+| <a id="from_address"></a> `from_address` | `string` | - |
+| <a id="from_name"></a> `from_name` | `string` | - |
+| <a id="mailgun_api_key_set"></a> `mailgun_api_key_set` | `boolean` | - |
+| <a id="mailgun_domain"></a> `mailgun_domain` | `string` | - |
+| <a id="provider"></a> `provider` | `"smtp"` \| `"sendgrid"` \| `"mailgun"` \| `"ses"` | - |
+| <a id="sendgrid_api_key_set"></a> `sendgrid_api_key_set` | `boolean` | - |
+| <a id="ses_access_key_set"></a> `ses_access_key_set` | `boolean` | - |
+| <a id="ses_region"></a> `ses_region` | `string` | - |
+| <a id="ses_secret_key_set"></a> `ses_secret_key_set` | `boolean` | - |
+| <a id="smtp_host"></a> `smtp_host` | `string` | - |
+| <a id="smtp_password_set"></a> `smtp_password_set` | `boolean` | - |
+| <a id="smtp_port"></a> `smtp_port` | `number` | - |
+| <a id="smtp_tls"></a> `smtp_tls` | `boolean` | - |
+| <a id="smtp_username"></a> `smtp_username` | `string` | - |

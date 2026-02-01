@@ -11,5 +11,5 @@ Database schema information
 
 | Property | Type |
 | ------ | ------ |
-| `name` | `string` |
-| `owner?` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="owner"></a> `owner?` | `string` |

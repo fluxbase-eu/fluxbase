@@ -16,9 +16,9 @@ Main Fluxbase client class
 
 ## Constructors
 
-### new FluxbaseClient()
+### Constructor
 
-> **new FluxbaseClient**\<`Database`, `_SchemaName`\>(`fluxbaseUrl`, `fluxbaseKey`, `options`?): [`FluxbaseClient`](/api/sdk/classes/fluxbaseclient/)\<`Database`, `_SchemaName`\>
+> **new FluxbaseClient**\<`Database`, `_SchemaName`\>(`fluxbaseUrl`, `fluxbaseKey`, `options?`): `FluxbaseClient`\<`Database`, `_SchemaName`\>
 
 Create a new Fluxbase client instance
 
@@ -28,11 +28,11 @@ Create a new Fluxbase client instance
 | ------ | ------ | ------ |
 | `fluxbaseUrl` | `string` | The URL of your Fluxbase instance |
 | `fluxbaseKey` | `string` | The anon key (JWT token with "anon" role). Generate using scripts/generate-keys.sh |
-| `options`? | [`FluxbaseClientOptions`](/api/sdk/interfaces/fluxbaseclientoptions/) | Additional client configuration options |
+| `options?` | [`FluxbaseClientOptions`](/api/sdk/interfaces/fluxbaseclientoptions/) | Additional client configuration options |
 
 #### Returns
 
-[`FluxbaseClient`](/api/sdk/classes/fluxbaseclient/)\<`Database`, `_SchemaName`\>
+`FluxbaseClient`\<`Database`, `_SchemaName`\>
 
 #### Example
 
@@ -73,13 +73,13 @@ The internal FluxbaseFetch instance
 
 ### getAuthToken()
 
-> **getAuthToken**(): `null` \| `string`
+> **getAuthToken**(): `string` \| `null`
 
 Get the current authentication token
 
 #### Returns
 
-`null` \| `string`
+`string` \| `null`
 
 The current JWT access token, or null if not authenticated
 
@@ -97,7 +97,7 @@ This updates both the HTTP client and realtime connection with the new token.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `token` | `null` \| `string` | The JWT access token to set, or null to clear authentication |
+| `token` | `string` \| `null` | The JWT access token to set, or null to clear authentication |
 
 #### Returns
 
@@ -354,7 +354,7 @@ const { data: procedures } = await client.rpc.list()
 
 ### channel()
 
-> **channel**(`name`, `config`?): [`RealtimeChannel`](/api/sdk/classes/realtimechannel/)
+> **channel**(`name`, `config?`): [`RealtimeChannel`](/api/sdk/classes/realtimechannel/)
 
 Create or get a realtime channel (Supabase-compatible)
 
@@ -363,7 +363,7 @@ Create or get a realtime channel (Supabase-compatible)
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `name` | `string` | Channel name |
-| `config`? | [`RealtimeChannelConfig`](/api/sdk/interfaces/realtimechannelconfig/) | Optional channel configuration |
+| `config?` | [`RealtimeChannelConfig`](/api/sdk/interfaces/realtimechannelconfig/) | Optional channel configuration |
 
 #### Returns
 

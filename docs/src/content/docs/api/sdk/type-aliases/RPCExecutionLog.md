@@ -5,7 +5,7 @@ prev: false
 title: "RPCExecutionLog"
 ---
 
-> **RPCExecutionLog**: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)
+> **RPCExecutionLog** = [`ExecutionLog`](/api/sdk/interfaces/executionlog/)
 
 RPC execution log entry
 

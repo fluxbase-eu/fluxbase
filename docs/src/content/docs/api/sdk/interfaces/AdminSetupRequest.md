@@ -9,7 +9,7 @@ title: "AdminSetupRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `email` | `string` |
-| `name` | `string` |
-| `password` | `string` |
-| `setup_token` | `string` |
+| <a id="email"></a> `email` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="password"></a> `password` | `string` |
+| <a id="setup_token"></a> `setup_token` | `string` |

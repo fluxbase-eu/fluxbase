@@ -5,7 +5,7 @@ prev: false
 title: "useTableSubscription"
 ---
 
-> **useTableSubscription**(`table`, `options`?): `object`
+> **useTableSubscription**(`table`, `options?`): `object`
 
 Hook to subscribe to a table's changes
 
@@ -14,7 +14,7 @@ Hook to subscribe to a table's changes
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `table` | `string` | Table name (with optional schema, e.g., 'public.products') |
-| `options`? | `Omit`\<`UseRealtimeOptions`, `"channel"`\> | Subscription options |
+| `options?` | `Omit`\<`UseRealtimeOptions`, `"channel"`\> | Subscription options |
 
 ## Returns
 
@@ -22,4 +22,4 @@ Hook to subscribe to a table's changes
 
 | Name | Type | Default value |
 | ------ | ------ | ------ |
-| `channel` | `null` \| `RealtimeChannel` | channelRef.current |
+| `channel` | `RealtimeChannel` \| `null` | `channelRef.current` |

@@ -5,7 +5,7 @@ prev: false
 title: "StorageObject"
 ---
 
-> **StorageObject**: `FileObject`
+> **StorageObject** = `FileObject`
 
 :::caution[Deprecated]
 Use FileObject instead. This alias is provided for backwards compatibility.

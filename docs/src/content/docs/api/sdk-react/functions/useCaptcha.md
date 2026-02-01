@@ -5,7 +5,7 @@ prev: false
 title: "useCaptcha"
 ---
 
-> **useCaptcha**(`provider`?): [`CaptchaState`](/api/sdk-react/interfaces/captchastate/)
+> **useCaptcha**(`provider?`): [`CaptchaState`](/api/sdk-react/interfaces/captchastate/)
 
 Hook to manage CAPTCHA widget state
 
@@ -22,7 +22,7 @@ Supported providers:
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `provider`? | [`CaptchaProvider`](/api/sdk-react/type-aliases/captchaprovider/) | The CAPTCHA provider type |
+| `provider?` | [`CaptchaProvider`](/api/sdk-react/type-aliases/captchaprovider/) | The CAPTCHA provider type |
 
 ## Returns
 

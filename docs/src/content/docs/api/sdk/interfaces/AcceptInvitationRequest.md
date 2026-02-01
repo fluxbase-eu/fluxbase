@@ -9,5 +9,5 @@ title: "AcceptInvitationRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `name` | `string` |
-| `password` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="password"></a> `password` | `string` |

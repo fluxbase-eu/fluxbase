@@ -7,9 +7,9 @@ title: "RealtimeChannel"
 
 ## Constructors
 
-### new RealtimeChannel()
+### Constructor
 
-> **new RealtimeChannel**(`url`, `channelName`, `token`, `config`): [`RealtimeChannel`](/api/sdk/classes/realtimechannel/)
+> **new RealtimeChannel**(`url`, `channelName`, `token`, `config`): `RealtimeChannel`
 
 #### Parameters
 
@@ -17,12 +17,12 @@ title: "RealtimeChannel"
 | ------ | ------ | ------ |
 | `url` | `string` | `undefined` |
 | `channelName` | `string` | `undefined` |
-| `token` | `null` \| `string` | `null` |
+| `token` | `string` \| `null` | `null` |
 | `config` | [`RealtimeChannelConfig`](/api/sdk/interfaces/realtimechannelconfig/) | `{}` |
 
 #### Returns
 
-[`RealtimeChannel`](/api/sdk/classes/realtimechannel/)
+`RealtimeChannel`
 
 ## Methods
 
@@ -47,7 +47,7 @@ Remove a callback
 
 ### on()
 
-#### on(event, config, callback)
+#### Call Signature
 
 > **on**(`event`, `config`, `callback`): `this`
 
@@ -80,7 +80,7 @@ channel.on('postgres_changes', {
 })
 ```
 
-#### on(event, callback)
+#### Call Signature
 
 > **on**(`event`, `callback`): `this`
 
@@ -107,7 +107,7 @@ channel.on('INSERT', (payload) => {
 })
 ```
 
-#### on(event, config, callback)
+#### Call Signature
 
 > **on**(`event`, `config`, `callback`): `this`
 
@@ -118,7 +118,7 @@ Listen to broadcast messages
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `event` | `"broadcast"` | 'broadcast' |
-| `config` | `object` | Configuration with event name |
+| `config` | \{ `event`: `string`; \} | Configuration with event name |
 | `config.event` | `string` | - |
 | `callback` | [`BroadcastCallback`](/api/sdk/type-aliases/broadcastcallback/) | Function to call when broadcast received |
 
@@ -136,7 +136,7 @@ channel.on('broadcast', { event: 'cursor-pos' }, (payload) => {
 })
 ```
 
-#### on(event, config, callback)
+#### Call Signature
 
 > **on**(`event`, `config`, `callback`): `this`
 
@@ -147,7 +147,7 @@ Listen to presence events
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `event` | `"presence"` | 'presence' |
-| `config` | `object` | Configuration with event type (sync, join, leave) |
+| `config` | \{ `event`: `"sync"` \| `"join"` \| `"leave"`; \} | Configuration with event type (sync, join, leave) |
 | `config.event` | `"sync"` \| `"join"` \| `"leave"` | - |
 | `callback` | [`PresenceCallback`](/api/sdk/type-aliases/presencecallback/) | Function to call when presence changes |
 
@@ -165,7 +165,7 @@ channel.on('presence', { event: 'sync' }, (payload) => {
 })
 ```
 
-#### on(event, config, callback)
+#### Call Signature
 
 > **on**(`event`, `config`, `callback`): `this`
 
@@ -176,9 +176,9 @@ Listen to execution log events
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `event` | `"execution_log"` | 'execution_log' |
-| `config` | `object` | Configuration with execution_id and optional type |
+| `config` | \{ `execution_id`: `string`; `type?`: [`ExecutionType`](/api/sdk/type-aliases/executiontype/); \} | Configuration with execution_id and optional type |
 | `config.execution_id` | `string` | - |
-| `config.type`? | [`ExecutionType`](/api/sdk/type-aliases/executiontype/) | - |
+| `config.type?` | [`ExecutionType`](/api/sdk/type-aliases/executiontype/) | - |
 | `callback` | [`ExecutionLogCallback`](/api/sdk/type-aliases/executionlogcallback/) | Function to call when log entries are received |
 
 ##### Returns
@@ -250,7 +250,7 @@ await channel.send({
 
 ### subscribe()
 
-> **subscribe**(`callback`?, `_timeout`?): `this`
+> **subscribe**(`callback?`, `_timeout?`): `this`
 
 Subscribe to the channel
 
@@ -258,8 +258,8 @@ Subscribe to the channel
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `callback`? | (`status`, `err`?) => `void` | Optional status callback (Supabase-compatible) |
-| `_timeout`? | `number` | Optional timeout in milliseconds (currently unused) |
+| `callback?` | (`status`, `err?`) => `void` | Optional status callback (Supabase-compatible) |
+| `_timeout?` | `number` | Optional timeout in milliseconds (currently unused) |
 
 #### Returns
 
@@ -298,7 +298,7 @@ await channel.track({
 
 ### unsubscribe()
 
-> **unsubscribe**(`timeout`?): `Promise`\<`"error"` \| `"ok"` \| `"timed out"`\>
+> **unsubscribe**(`timeout?`): `Promise`\<`"error"` \| `"ok"` \| `"timed out"`\>
 
 Unsubscribe from the channel
 
@@ -306,7 +306,7 @@ Unsubscribe from the channel
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `timeout`? | `number` | Optional timeout in milliseconds |
+| `timeout?` | `number` | Optional timeout in milliseconds |
 
 #### Returns
 

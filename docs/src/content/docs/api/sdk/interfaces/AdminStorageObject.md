@@ -11,12 +11,12 @@ Storage object information (admin API)
 
 | Property | Type |
 | ------ | ------ |
-| `bucket` | `string` |
-| `created_at` | `string` |
-| `id` | `string` |
-| `metadata` | `null` \| `Record`\<`string`, `unknown`\> |
-| `mime_type` | `string` |
-| `owner_id` | `null` \| `string` |
-| `path` | `string` |
-| `size` | `number` |
-| `updated_at` | `string` |
+| <a id="bucket"></a> `bucket` | `string` |
+| <a id="created_at"></a> `created_at` | `string` |
+| <a id="id"></a> `id` | `string` |
+| <a id="metadata"></a> `metadata` | `Record`\<`string`, `unknown`\> \| `null` |
+| <a id="mime_type"></a> `mime_type` | `string` |
+| <a id="owner_id"></a> `owner_id` | `string` \| `null` |
+| <a id="path"></a> `path` | `string` |
+| <a id="size"></a> `size` | `number` |
+| <a id="updated_at"></a> `updated_at` | `string` |

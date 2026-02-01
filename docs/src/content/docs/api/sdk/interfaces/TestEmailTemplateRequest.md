@@ -11,4 +11,4 @@ Request to test an email template
 
 | Property | Type |
 | ------ | ------ |
-| `recipient_email` | `string` |
+| <a id="recipient_email"></a> `recipient_email` | `string` |

@@ -11,5 +11,5 @@ Realtime broadcast payload structure
 
 | Property | Type |
 | ------ | ------ |
-| `event` | `string` |
-| `payload` | `unknown` |
+| <a id="event"></a> `event` | `string` |
+| <a id="payload"></a> `payload` | `unknown` |

@@ -10,9 +10,9 @@ Provides create, update, delete, sync, and monitoring operations
 
 ## Constructors
 
-### new FluxbaseAdminAI()
+### Constructor
 
-> **new FluxbaseAdminAI**(`fetch`): [`FluxbaseAdminAI`](/api/sdk/classes/fluxbaseadminai/)
+> **new FluxbaseAdminAI**(`fetch`): `FluxbaseAdminAI`
 
 #### Parameters
 
@@ -22,13 +22,13 @@ Provides create, update, delete, sync, and monitoring operations
 
 #### Returns
 
-[`FluxbaseAdminAI`](/api/sdk/classes/fluxbaseadminai/)
+`FluxbaseAdminAI`
 
 ## Methods
 
 ### addDocument()
 
-> **addDocument**(`knowledgeBaseId`, `request`): `Promise`\<`object`\>
+> **addDocument**(`knowledgeBaseId`, `request`): `Promise`\<\{ `data`: `AddDocumentResponse` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Add a document to a knowledge base
 
@@ -43,14 +43,9 @@ Document will be chunked and embedded asynchronously.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `AddDocumentResponse` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with document ID
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `AddDocumentResponse` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -69,7 +64,7 @@ if (data) {
 
 ### clearEmbeddingProvider()
 
-> **clearEmbeddingProvider**(`id`): `Promise`\<`object`\>
+> **clearEmbeddingProvider**(`id`): `Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Clear explicit embedding provider preference (revert to default)
 
@@ -81,14 +76,9 @@ Clear explicit embedding provider preference (revert to default)
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -100,7 +90,7 @@ const { data, error } = await client.admin.ai.clearEmbeddingProvider('uuid')
 
 ### createKnowledgeBase()
 
-> **createKnowledgeBase**(`request`): `Promise`\<`object`\>
+> **createKnowledgeBase**(`request`): `Promise`\<\{ `data`: `KnowledgeBase` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a new knowledge base
 
@@ -112,14 +102,9 @@ Create a new knowledge base
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `KnowledgeBase` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created knowledge base
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `KnowledgeBase` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -136,7 +121,7 @@ const { data, error } = await client.admin.ai.createKnowledgeBase({
 
 ### createProvider()
 
-> **createProvider**(`request`): `Promise`\<`object`\>
+> **createProvider**(`request`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a new AI provider
 
@@ -148,14 +133,9 @@ Create a new AI provider
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created provider
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIProvider`](/api/sdk/interfaces/aiprovider/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -176,7 +156,7 @@ const { data, error } = await client.admin.ai.createProvider({
 
 ### deleteChatbot()
 
-> **deleteChatbot**(`id`): `Promise`\<`object`\>
+> **deleteChatbot**(`id`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a chatbot
 
@@ -188,14 +168,9 @@ Delete a chatbot
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -207,7 +182,7 @@ const { data, error } = await client.admin.ai.deleteChatbot('uuid')
 
 ### deleteDocument()
 
-> **deleteDocument**(`knowledgeBaseId`, `documentId`): `Promise`\<`object`\>
+> **deleteDocument**(`knowledgeBaseId`, `documentId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a document from a knowledge base
 
@@ -220,14 +195,9 @@ Delete a document from a knowledge base
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -239,7 +209,7 @@ const { data, error } = await client.admin.ai.deleteDocument('kb-uuid', 'doc-uui
 
 ### deleteKnowledgeBase()
 
-> **deleteKnowledgeBase**(`id`): `Promise`\<`object`\>
+> **deleteKnowledgeBase**(`id`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a knowledge base
 
@@ -251,14 +221,9 @@ Delete a knowledge base
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -270,7 +235,7 @@ const { data, error } = await client.admin.ai.deleteKnowledgeBase('uuid')
 
 ### deleteProvider()
 
-> **deleteProvider**(`id`): `Promise`\<`object`\>
+> **deleteProvider**(`id`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a provider
 
@@ -282,14 +247,9 @@ Delete a provider
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -301,7 +261,7 @@ const { data, error } = await client.admin.ai.deleteProvider('uuid')
 
 ### getChatbot()
 
-> **getChatbot**(`id`): `Promise`\<`object`\>
+> **getChatbot**(`id`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific chatbot
 
@@ -313,14 +273,9 @@ Get details of a specific chatbot
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with chatbot details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIChatbot`](/api/sdk/interfaces/aichatbot/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -335,7 +290,7 @@ if (data) {
 
 ### getDocument()
 
-> **getDocument**(`knowledgeBaseId`, `documentId`): `Promise`\<`object`\>
+> **getDocument**(`knowledgeBaseId`, `documentId`): `Promise`\<\{ `data`: `KnowledgeBaseDocument` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get a specific document
 
@@ -348,14 +303,9 @@ Get a specific document
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `KnowledgeBaseDocument` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with document details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `KnowledgeBaseDocument` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -367,7 +317,7 @@ const { data, error } = await client.admin.ai.getDocument('kb-uuid', 'doc-uuid')
 
 ### getKnowledgeBase()
 
-> **getKnowledgeBase**(`id`): `Promise`\<`object`\>
+> **getKnowledgeBase**(`id`): `Promise`\<\{ `data`: `KnowledgeBase` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get a specific knowledge base
 
@@ -379,14 +329,9 @@ Get a specific knowledge base
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `KnowledgeBase` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with knowledge base details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `KnowledgeBase` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -401,7 +346,7 @@ if (data) {
 
 ### getProvider()
 
-> **getProvider**(`id`): `Promise`\<`object`\>
+> **getProvider**(`id`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific provider
 
@@ -413,14 +358,9 @@ Get details of a specific provider
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with provider details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIProvider`](/api/sdk/interfaces/aiprovider/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -435,7 +375,7 @@ if (data) {
 
 ### linkKnowledgeBase()
 
-> **linkKnowledgeBase**(`chatbotId`, `request`): `Promise`\<`object`\>
+> **linkKnowledgeBase**(`chatbotId`, `request`): `Promise`\<\{ `data`: `ChatbotKnowledgeBaseLink` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Link a knowledge base to a chatbot
 
@@ -448,14 +388,9 @@ Link a knowledge base to a chatbot
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `ChatbotKnowledgeBaseLink` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with link details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `ChatbotKnowledgeBaseLink` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -472,7 +407,7 @@ const { data, error } = await client.admin.ai.linkKnowledgeBase('chatbot-uuid', 
 
 ### listChatbotKnowledgeBases()
 
-> **listChatbotKnowledgeBases**(`chatbotId`): `Promise`\<`object`\>
+> **listChatbotKnowledgeBases**(`chatbotId`): `Promise`\<\{ `data`: `ChatbotKnowledgeBaseLink`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List knowledge bases linked to a chatbot
 
@@ -484,14 +419,9 @@ List knowledge bases linked to a chatbot
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `ChatbotKnowledgeBaseLink`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with linked knowledge bases
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `ChatbotKnowledgeBaseLink`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -506,7 +436,7 @@ if (data) {
 
 ### listChatbots()
 
-> **listChatbots**(`namespace`?): `Promise`\<`object`\>
+> **listChatbots**(`namespace?`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all chatbots (admin view)
 
@@ -514,18 +444,13 @@ List all chatbots (admin view)
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `namespace`? | `string` | Optional namespace filter |
+| `namespace?` | `string` | Optional namespace filter |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of chatbot summaries
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -540,7 +465,7 @@ if (data) {
 
 ### listDocuments()
 
-> **listDocuments**(`knowledgeBaseId`): `Promise`\<`object`\>
+> **listDocuments**(`knowledgeBaseId`): `Promise`\<\{ `data`: `KnowledgeBaseDocument`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List documents in a knowledge base
 
@@ -552,14 +477,9 @@ List documents in a knowledge base
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `KnowledgeBaseDocument`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of documents
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `KnowledgeBaseDocument`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -574,20 +494,15 @@ if (data) {
 
 ### listKnowledgeBases()
 
-> **listKnowledgeBases**(): `Promise`\<`object`\>
+> **listKnowledgeBases**(): `Promise`\<\{ `data`: `KnowledgeBaseSummary`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all knowledge bases
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `KnowledgeBaseSummary`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of knowledge base summaries
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `KnowledgeBaseSummary`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -602,20 +517,15 @@ if (data) {
 
 ### listProviders()
 
-> **listProviders**(): `Promise`\<`object`\>
+> **listProviders**(): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all AI providers
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of providers
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIProvider`](/api/sdk/interfaces/aiprovider/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -630,7 +540,7 @@ if (data) {
 
 ### searchKnowledgeBase()
 
-> **searchKnowledgeBase**(`knowledgeBaseId`, `query`, `options`?): `Promise`\<`object`\>
+> **searchKnowledgeBase**(`knowledgeBaseId`, `query`, `options?`): `Promise`\<\{ `data`: `SearchKnowledgeBaseResponse` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Search a knowledge base
 
@@ -640,20 +550,15 @@ Search a knowledge base
 | ------ | ------ | ------ |
 | `knowledgeBaseId` | `string` | Knowledge base ID |
 | `query` | `string` | Search query |
-| `options`? | `object` | Search options |
-| `options.max_chunks`? | `number` | - |
-| `options.threshold`? | `number` | - |
+| `options?` | \{ `max_chunks?`: `number`; `threshold?`: `number`; \} | Search options |
+| `options.max_chunks?` | `number` | - |
+| `options.threshold?` | `number` | - |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `SearchKnowledgeBaseResponse` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with search results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `SearchKnowledgeBaseResponse` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -671,7 +576,7 @@ if (data) {
 
 ### setDefaultProvider()
 
-> **setDefaultProvider**(`id`): `Promise`\<`object`\>
+> **setDefaultProvider**(`id`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Set a provider as the default
 
@@ -683,14 +588,9 @@ Set a provider as the default
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated provider
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIProvider`](/api/sdk/interfaces/aiprovider/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -702,7 +602,7 @@ const { data, error } = await client.admin.ai.setDefaultProvider('uuid')
 
 ### setEmbeddingProvider()
 
-> **setEmbeddingProvider**(`id`): `Promise`\<`object`\>
+> **setEmbeddingProvider**(`id`): `Promise`\<\{ `data`: \{ `id`: `string`; `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Set a provider as the embedding provider
 
@@ -714,14 +614,9 @@ Set a provider as the embedding provider
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: \{ `id`: `string`; `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -733,7 +628,7 @@ const { data, error } = await client.admin.ai.setEmbeddingProvider('uuid')
 
 ### sync()
 
-> **sync**(`options`?): `Promise`\<`object`\>
+> **sync**(`options?`): `Promise`\<\{ `data`: [`SyncChatbotsResult`](/api/sdk/interfaces/syncchatbotsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Sync chatbots from filesystem or API payload
 
@@ -747,18 +642,13 @@ Requires service_role or admin authentication.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options`? | [`SyncChatbotsOptions`](/api/sdk/interfaces/syncchatbotsoptions/) | Sync options including namespace and optional chatbots array |
+| `options?` | [`SyncChatbotsOptions`](/api/sdk/interfaces/syncchatbotsoptions/) | Sync options including namespace and optional chatbots array |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`SyncChatbotsResult`](/api/sdk/interfaces/syncchatbotsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`SyncChatbotsResult`](/api/sdk/interfaces/syncchatbotsresult/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -788,7 +678,7 @@ if (data) {
 
 ### toggleChatbot()
 
-> **toggleChatbot**(`id`, `enabled`): `Promise`\<`object`\>
+> **toggleChatbot**(`id`, `enabled`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Enable or disable a chatbot
 
@@ -801,14 +691,9 @@ Enable or disable a chatbot
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated chatbot
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIChatbot`](/api/sdk/interfaces/aichatbot/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -820,7 +705,7 @@ const { data, error } = await client.admin.ai.toggleChatbot('uuid', true)
 
 ### unlinkKnowledgeBase()
 
-> **unlinkKnowledgeBase**(`chatbotId`, `knowledgeBaseId`): `Promise`\<`object`\>
+> **unlinkKnowledgeBase**(`chatbotId`, `knowledgeBaseId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Unlink a knowledge base from a chatbot
 
@@ -833,14 +718,9 @@ Unlink a knowledge base from a chatbot
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -852,7 +732,7 @@ const { data, error } = await client.admin.ai.unlinkKnowledgeBase('chatbot-uuid'
 
 ### updateChatbotKnowledgeBase()
 
-> **updateChatbotKnowledgeBase**(`chatbotId`, `knowledgeBaseId`, `updates`): `Promise`\<`object`\>
+> **updateChatbotKnowledgeBase**(`chatbotId`, `knowledgeBaseId`, `updates`): `Promise`\<\{ `data`: `ChatbotKnowledgeBaseLink` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update a chatbot-knowledge base link
 
@@ -866,14 +746,9 @@ Update a chatbot-knowledge base link
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `ChatbotKnowledgeBaseLink` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated link
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `ChatbotKnowledgeBaseLink` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -889,7 +764,7 @@ const { data, error } = await client.admin.ai.updateChatbotKnowledgeBase(
 
 ### updateKnowledgeBase()
 
-> **updateKnowledgeBase**(`id`, `updates`): `Promise`\<`object`\>
+> **updateKnowledgeBase**(`id`, `updates`): `Promise`\<\{ `data`: `KnowledgeBase` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update an existing knowledge base
 
@@ -902,14 +777,9 @@ Update an existing knowledge base
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `KnowledgeBase` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated knowledge base
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `KnowledgeBase` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -924,7 +794,7 @@ const { data, error } = await client.admin.ai.updateKnowledgeBase('uuid', {
 
 ### updateProvider()
 
-> **updateProvider**(`id`, `updates`): `Promise`\<`object`\>
+> **updateProvider**(`id`, `updates`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update an existing AI provider
 
@@ -937,14 +807,9 @@ Update an existing AI provider
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated provider
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIProvider`](/api/sdk/interfaces/aiprovider/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -963,7 +828,7 @@ const { data, error } = await client.admin.ai.updateProvider('uuid', {
 
 ### uploadDocument()
 
-> **uploadDocument**(`knowledgeBaseId`, `file`, `title`?): `Promise`\<`object`\>
+> **uploadDocument**(`knowledgeBaseId`, `file`, `title?`): `Promise`\<\{ `data`: `UploadDocumentResponse` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Upload a document file to a knowledge base
 
@@ -976,18 +841,13 @@ Maximum file size: 50MB
 | ------ | ------ | ------ |
 | `knowledgeBaseId` | `string` | Knowledge base ID |
 | `file` | `Blob` \| `File` | File to upload (File or Blob) |
-| `title`? | `string` | Optional document title (defaults to filename without extension) |
+| `title?` | `string` | Optional document title (defaults to filename without extension) |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `UploadDocumentResponse` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with upload result
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `UploadDocumentResponse` |
-| `error` | `null` \| `Error` |
 
 #### Example
 

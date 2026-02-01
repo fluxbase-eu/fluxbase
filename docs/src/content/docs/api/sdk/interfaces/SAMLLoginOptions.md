@@ -11,4 +11,4 @@ Options for initiating SAML login
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `redirectUrl?` | `string` | URL to redirect after successful authentication |
+| <a id="redirecturl"></a> `redirectUrl?` | `string` | URL to redirect after successful authentication |

@@ -11,4 +11,4 @@ Response for listing tables
 
 | Property | Type |
 | ------ | ------ |
-| `tables` | [`Table`](/api/sdk/interfaces/table/)[] |
+| <a id="tables"></a> `tables` | [`Table`](/api/sdk/interfaces/table/)[] |

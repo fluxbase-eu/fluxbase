@@ -11,5 +11,5 @@ Response containing SAML login URL
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `provider` | `string` | Provider name |
-| `url` | `string` | URL to redirect user to for SAML authentication |
+| <a id="provider"></a> `provider` | `string` | Provider name |
+| <a id="url"></a> `url` | `string` | URL to redirect user to for SAML authentication |

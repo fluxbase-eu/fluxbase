@@ -11,5 +11,5 @@ Response after deleting an OAuth provider
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
-| `success` | `boolean` |
+| <a id="message"></a> `message` | `string` |
+| <a id="success"></a> `success` | `boolean` |

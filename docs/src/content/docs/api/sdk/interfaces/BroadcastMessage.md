@@ -11,6 +11,6 @@ Broadcast message structure
 
 | Property | Type |
 | ------ | ------ |
-| `event` | `string` |
-| `payload` | `unknown` |
-| `type` | `"broadcast"` |
+| <a id="event"></a> `event` | `string` |
+| <a id="payload"></a> `payload` | `unknown` |
+| <a id="type"></a> `type` | `"broadcast"` |

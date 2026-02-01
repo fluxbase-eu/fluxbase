@@ -12,9 +12,9 @@ for development, testing, and preview environments.
 
 ## Constructors
 
-### new FluxbaseBranching()
+### Constructor
 
-> **new FluxbaseBranching**(`fetch`): [`FluxbaseBranching`](/api/sdk/classes/fluxbasebranching/)
+> **new FluxbaseBranching**(`fetch`): `FluxbaseBranching`
 
 #### Parameters
 
@@ -24,13 +24,13 @@ for development, testing, and preview environments.
 
 #### Returns
 
-[`FluxbaseBranching`](/api/sdk/classes/fluxbasebranching/)
+`FluxbaseBranching`
 
 ## Methods
 
 ### create()
 
-> **create**(`name`, `options`?): `Promise`\<`object`\>
+> **create**(`name`, `options?`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a new database branch
 
@@ -39,18 +39,13 @@ Create a new database branch
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `name` | `string` | Branch name (will be converted to a slug) |
-| `options`? | [`CreateBranchOptions`](/api/sdk/interfaces/createbranchoptions/) | Branch creation options |
+| `options?` | [`CreateBranchOptions`](/api/sdk/interfaces/createbranchoptions/) | Branch creation options |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created branch
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Branch`](/api/sdk/interfaces/branch/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -83,7 +78,7 @@ const { data } = await client.branching.create('debug-issue-456', {
 
 ### delete()
 
-> **delete**(`idOrSlug`): `Promise`\<`object`\>
+> **delete**(`idOrSlug`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
 
 Delete a database branch
 
@@ -98,13 +93,9 @@ Cannot delete the main branch.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { error } (null on success)
-
-| Name | Type |
-| ------ | ------ |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -151,7 +142,7 @@ if (!exists) {
 
 ### get()
 
-> **get**(`idOrSlug`): `Promise`\<`object`\>
+> **get**(`idOrSlug`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get a specific branch by ID or slug
 
@@ -163,14 +154,9 @@ Get a specific branch by ID or slug
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with branch details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Branch`](/api/sdk/interfaces/branch/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -186,7 +172,7 @@ const { data } = await client.branching.get('123e4567-e89b-12d3-a456-42661417400
 
 ### getActivity()
 
-> **getActivity**(`idOrSlug`, `limit`): `Promise`\<`object`\>
+> **getActivity**(`idOrSlug`, `limit`): `Promise`\<\{ `data`: [`BranchActivity`](/api/sdk/interfaces/branchactivity/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get activity log for a branch
 
@@ -199,14 +185,9 @@ Get activity log for a branch
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`BranchActivity`](/api/sdk/interfaces/branchactivity/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with activity entries
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`BranchActivity`](/api/sdk/interfaces/branchactivity/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -228,7 +209,7 @@ const { data } = await client.branching.getActivity('feature/add-auth', 100)
 
 ### getPoolStats()
 
-> **getPoolStats**(): `Promise`\<`object`\>
+> **getPoolStats**(): `Promise`\<\{ `data`: [`BranchPoolStats`](/api/sdk/interfaces/branchpoolstats/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get connection pool statistics for all branches
 
@@ -236,14 +217,9 @@ This is useful for monitoring and debugging branch connections.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`BranchPoolStats`](/api/sdk/interfaces/branchpoolstats/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with pool stats
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`BranchPoolStats`](/api/sdk/interfaces/branchpoolstats/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -261,7 +237,7 @@ if (data) {
 
 ### list()
 
-> **list**(`options`?): `Promise`\<`object`\>
+> **list**(`options?`): `Promise`\<\{ `data`: [`ListBranchesResponse`](/api/sdk/interfaces/listbranchesresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all database branches
 
@@ -269,18 +245,13 @@ List all database branches
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options`? | [`ListBranchesOptions`](/api/sdk/interfaces/listbranchesoptions/) | Filter and pagination options |
+| `options?` | [`ListBranchesOptions`](/api/sdk/interfaces/listbranchesoptions/) | Filter and pagination options |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`ListBranchesResponse`](/api/sdk/interfaces/listbranchesresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with branches list
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`ListBranchesResponse`](/api/sdk/interfaces/listbranchesresponse/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -305,7 +276,7 @@ const { data } = await client.branching.list({ limit: 10, offset: 20 })
 
 ### reset()
 
-> **reset**(`idOrSlug`): `Promise`\<`object`\>
+> **reset**(`idOrSlug`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Reset a branch to its parent state
 
@@ -320,14 +291,9 @@ to match the parent branch. Cannot reset the main branch.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with reset branch
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Branch`](/api/sdk/interfaces/branch/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -344,7 +310,7 @@ if (data) {
 
 ### waitForReady()
 
-> **waitForReady**(`idOrSlug`, `options`?): `Promise`\<`object`\>
+> **waitForReady**(`idOrSlug`, `options?`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Wait for a branch to be ready
 
@@ -355,20 +321,15 @@ Polls the branch status until it reaches 'ready' or an error state.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `idOrSlug` | `string` | Branch ID (UUID) or slug |
-| `options`? | `object` | Polling options |
-| `options.pollInterval`? | `number` | Poll interval in milliseconds (default: 1000) |
-| `options.timeout`? | `number` | Timeout in milliseconds (default: 30000) |
+| `options?` | \{ `pollInterval?`: `number`; `timeout?`: `number`; \} | Polling options |
+| `options.pollInterval?` | `number` | Poll interval in milliseconds (default: 1000) |
+| `options.timeout?` | `number` | Timeout in milliseconds (default: 30000) |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with ready branch
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Branch`](/api/sdk/interfaces/branch/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 

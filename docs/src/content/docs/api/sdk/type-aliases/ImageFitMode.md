@@ -5,7 +5,7 @@ prev: false
 title: "ImageFitMode"
 ---
 
-> **ImageFitMode**: `"cover"` \| `"contain"` \| `"fill"` \| `"inside"` \| `"outside"`
+> **ImageFitMode** = `"cover"` \| `"contain"` \| `"fill"` \| `"inside"` \| `"outside"`
 
 Fit mode for image transformations
 - cover: Resize to cover target dimensions, cropping if needed (default)

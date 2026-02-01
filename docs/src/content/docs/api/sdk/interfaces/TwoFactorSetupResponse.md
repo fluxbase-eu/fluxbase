@@ -11,6 +11,6 @@ MFA enroll response (Supabase-compatible)
 
 | Property | Type |
 | ------ | ------ |
-| `id` | `string` |
-| `totp` | `TOTPSetup` |
-| `type` | `"totp"` |
+| <a id="id"></a> `id` | `string` |
+| <a id="totp"></a> `totp` | `TOTPSetup` |
+| <a id="type"></a> `type` | `"totp"` |

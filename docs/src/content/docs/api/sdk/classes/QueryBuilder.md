@@ -17,9 +17,9 @@ title: "QueryBuilder"
 
 ## Constructors
 
-### new QueryBuilder()
+### Constructor
 
-> **new QueryBuilder**\<`T`\>(`fetch`, `table`, `schema`?): [`QueryBuilder`](/api/sdk/classes/querybuilder/)\<`T`\>
+> **new QueryBuilder**\<`T`\>(`fetch`, `table`, `schema?`): `QueryBuilder`\<`T`\>
 
 #### Parameters
 
@@ -27,11 +27,11 @@ title: "QueryBuilder"
 | ------ | ------ |
 | `fetch` | [`FluxbaseFetch`](/api/sdk/classes/fluxbasefetch/) |
 | `table` | `string` |
-| `schema`? | `string` |
+| `schema?` | `string` |
 
 #### Returns
 
-[`QueryBuilder`](/api/sdk/classes/querybuilder/)\<`T`\>
+`QueryBuilder`\<`T`\>
 
 ## Aggregation
 
@@ -683,7 +683,7 @@ Check if value is null or not null
 | Parameter | Type |
 | ------ | ------ |
 | `column` | `string` |
-| `value` | `null` \| `boolean` |
+| `value` | `boolean` \| `null` |
 
 #### Returns
 
@@ -945,7 +945,7 @@ or('id.eq.2,name.eq.Han')
 
 ### order()
 
-> **order**(`column`, `options`?): `this`
+> **order**(`column`, `options?`): `this`
 
 Order results
 
@@ -954,9 +954,9 @@ Order results
 | Parameter | Type |
 | ------ | ------ |
 | `column` | `string` |
-| `options`? | `object` |
-| `options.ascending`? | `boolean` |
-| `options.nullsFirst`? | `boolean` |
+| `options?` | \{ `ascending?`: `boolean`; `nullsFirst?`: `boolean`; \} |
+| `options.ascending?` | `boolean` |
+| `options.nullsFirst?` | `boolean` |
 
 #### Returns
 
@@ -966,7 +966,7 @@ Order results
 
 ### orderByVector()
 
-> **orderByVector**(`column`, `vector`, `metric`, `options`?): `this`
+> **orderByVector**(`column`, `vector`, `metric`, `options?`): `this`
 
 Order results by vector similarity (pgvector)
 Results are ordered by distance (ascending = closest first)
@@ -978,8 +978,8 @@ Results are ordered by distance (ascending = closest first)
 | `column` | `string` | `undefined` | The vector column to order by |
 | `vector` | `number`[] | `undefined` | The query vector to compare against |
 | `metric` | [`VectorMetric`](/api/sdk/type-aliases/vectormetric/) | `"cosine"` | Distance metric: 'l2' (euclidean), 'cosine', or 'inner_product' |
-| `options`? | `object` | `undefined` | Optional: { ascending?: boolean } - defaults to true (closest first) |
-| `options.ascending`? | `boolean` | `undefined` | - |
+| `options?` | \{ `ascending?`: `boolean`; \} | `undefined` | Optional: { ascending?: boolean } - defaults to true (closest first) |
+| `options.ascending?` | `boolean` | `undefined` | - |
 
 #### Returns
 
@@ -1044,7 +1044,7 @@ Range selection (pagination)
 
 ### select()
 
-> **select**(`columns`, `options`?): `this`
+> **select**(`columns`, `options?`): `this`
 
 Select columns to return
 
@@ -1053,7 +1053,7 @@ Select columns to return
 | Parameter | Type | Default value |
 | ------ | ------ | ------ |
 | `columns` | `string` | `"*"` |
-| `options`? | `SelectOptions` | `undefined` |
+| `options?` | `SelectOptions` | `undefined` |
 
 #### Returns
 
@@ -1167,7 +1167,7 @@ Full-text search
 
 ### then()
 
-> **then**\<`TResult1`, `TResult2`\>(`onfulfilled`?, `onrejected`?): `PromiseLike`\<`TResult1` \| `TResult2`\>
+> **then**\<`TResult1`, `TResult2`\>(`onfulfilled?`, `onrejected?`): `PromiseLike`\<`TResult1` \| `TResult2`\>
 
 Make QueryBuilder awaitable (implements PromiseLike)
 This allows using `await client.from('table').select()` without calling `.execute()`
@@ -1183,8 +1183,8 @@ This allows using `await client.from('table').select()` without calling `.execut
 
 | Parameter | Type |
 | ------ | ------ |
-| `onfulfilled`? | `null` \| (`value`) => `TResult1` \| `PromiseLike`\<`TResult1`\> |
-| `onrejected`? | `null` \| (`reason`) => `TResult2` \| `PromiseLike`\<`TResult2`\> |
+| `onfulfilled?` | (`value`) => `TResult1` \| `PromiseLike`\<`TResult1`\> \| `null` |
+| `onrejected?` | (`reason`) => `TResult2` \| `PromiseLike`\<`TResult2`\> \| `null` |
 
 #### Returns
 
@@ -1309,7 +1309,7 @@ Update rows matching the filters
 
 ### upsert()
 
-> **upsert**(`data`, `options`?): `Promise`\<[`PostgrestResponse`](/api/sdk/interfaces/postgrestresponse/)\<`T`\>\>
+> **upsert**(`data`, `options?`): `Promise`\<[`PostgrestResponse`](/api/sdk/interfaces/postgrestresponse/)\<`T`\>\>
 
 Upsert (insert or update) rows (Supabase-compatible)
 
@@ -1318,7 +1318,7 @@ Upsert (insert or update) rows (Supabase-compatible)
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `data` | `Partial`\<`T`\> \| `Partial`\<`T`\>[] | Row(s) to upsert |
-| `options`? | [`UpsertOptions`](/api/sdk/interfaces/upsertoptions/) | Upsert options (onConflict, ignoreDuplicates, defaultToNull) |
+| `options?` | [`UpsertOptions`](/api/sdk/interfaces/upsertoptions/) | Upsert options (onConflict, ignoreDuplicates, defaultToNull) |
 
 #### Returns
 

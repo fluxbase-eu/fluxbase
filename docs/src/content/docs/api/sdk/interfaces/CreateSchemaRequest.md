@@ -11,4 +11,4 @@ Request to create a new database schema
 
 | Property | Type |
 | ------ | ------ |
-| `name` | `string` |
+| <a id="name"></a> `name` | `string` |

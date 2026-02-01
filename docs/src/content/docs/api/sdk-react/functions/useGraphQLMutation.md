@@ -5,7 +5,7 @@ prev: false
 title: "useGraphQLMutation"
 ---
 
-> **useGraphQLMutation**\<`T`, `V`\>(`mutation`, `options`?): `UseMutationResult`\<`undefined` \| `T`, [`GraphQLError`](/api/sdk-react/interfaces/graphqlerror/), `V`, `unknown`\>
+> **useGraphQLMutation**\<`T`, `V`\>(`mutation`, `options?`): `UseMutationResult`\<`T` \| `undefined`, [`GraphQLError`](/api/sdk-react/interfaces/graphqlerror/), `V`, `unknown`\>
 
 Hook to execute GraphQL mutations
 
@@ -21,11 +21,11 @@ Hook to execute GraphQL mutations
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `mutation` | `string` | The GraphQL mutation string |
-| `options`? | [`UseGraphQLMutationOptions`](/api/sdk-react/interfaces/usegraphqlmutationoptions/)\<`T`, `V`\> | Mutation options |
+| `options?` | [`UseGraphQLMutationOptions`](/api/sdk-react/interfaces/usegraphqlmutationoptions/)\<`T`, `V`\> | Mutation options |
 
 ## Returns
 
-`UseMutationResult`\<`undefined` \| `T`, [`GraphQLError`](/api/sdk-react/interfaces/graphqlerror/), `V`, `unknown`\>
+`UseMutationResult`\<`T` \| `undefined`, [`GraphQLError`](/api/sdk-react/interfaces/graphqlerror/), `V`, `unknown`\>
 
 React Query mutation result object
 

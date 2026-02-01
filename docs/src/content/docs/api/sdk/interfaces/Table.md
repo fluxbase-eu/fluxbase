@@ -11,6 +11,6 @@ Database table information
 
 | Property | Type |
 | ------ | ------ |
-| `columns?` | [`Column`](/api/sdk/interfaces/column/)[] |
-| `name` | `string` |
-| `schema` | `string` |
+| <a id="columns"></a> `columns?` | [`Column`](/api/sdk/interfaces/column/)[] |
+| <a id="name"></a> `name` | `string` |
+| <a id="schema"></a> `schema` | `string` |

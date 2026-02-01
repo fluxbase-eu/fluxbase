@@ -5,6 +5,6 @@ prev: false
 title: "AIChatMessageRole"
 ---
 
-> **AIChatMessageRole**: `"user"` \| `"assistant"` \| `"system"` \| `"tool"`
+> **AIChatMessageRole** = `"user"` \| `"assistant"` \| `"system"` \| `"tool"`
 
 AI chat message role

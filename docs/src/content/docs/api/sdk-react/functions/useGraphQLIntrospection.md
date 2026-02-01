@@ -5,7 +5,7 @@ prev: false
 title: "useGraphQLIntrospection"
 ---
 
-> **useGraphQLIntrospection**(`options`?): `UseQueryResult`\<`undefined` \| `object`, `Error`\>
+> **useGraphQLIntrospection**(`options?`): `UseQueryResult`\<\{ `__schema`: `IntrospectionSchema`; \} \| `undefined`, `Error`\>
 
 Hook to fetch the GraphQL schema via introspection
 
@@ -13,14 +13,14 @@ Hook to fetch the GraphQL schema via introspection
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options`? | `object` | Query options |
-| `options.enabled`? | `boolean` | - |
-| `options.requestOptions`? | [`GraphQLRequestOptions`](/api/sdk-react/interfaces/graphqlrequestoptions/) | - |
-| `options.staleTime`? | `number` | - |
+| `options?` | \{ `enabled?`: `boolean`; `requestOptions?`: [`GraphQLRequestOptions`](/api/sdk-react/interfaces/graphqlrequestoptions/); `staleTime?`: `number`; \} | Query options |
+| `options.enabled?` | `boolean` | - |
+| `options.requestOptions?` | [`GraphQLRequestOptions`](/api/sdk-react/interfaces/graphqlrequestoptions/) | - |
+| `options.staleTime?` | `number` | - |
 
 ## Returns
 
-`UseQueryResult`\<`undefined` \| `object`, `Error`\>
+`UseQueryResult`\<\{ `__schema`: `IntrospectionSchema`; \} \| `undefined`, `Error`\>
 
 React Query result with schema introspection data
 

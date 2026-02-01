@@ -9,6 +9,6 @@ title: "InviteUserResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `invitation_link?` | `string` |
-| `message` | `string` |
-| `user` | [`EnrichedUser`](/api/sdk/interfaces/enricheduser/) |
+| <a id="invitation_link"></a> `invitation_link?` | `string` |
+| <a id="message"></a> `message` | `string` |
+| <a id="user"></a> `user` | [`EnrichedUser`](/api/sdk/interfaces/enricheduser/) |

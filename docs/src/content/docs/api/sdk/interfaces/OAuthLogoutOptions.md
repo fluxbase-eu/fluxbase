@@ -11,4 +11,4 @@ Options for OAuth logout
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `redirect_url?` | `string` | URL to redirect to after logout completes |
+| <a id="redirect_url"></a> `redirect_url?` | `string` | URL to redirect to after logout completes |

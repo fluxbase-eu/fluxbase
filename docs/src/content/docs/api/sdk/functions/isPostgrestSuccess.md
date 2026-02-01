@@ -5,7 +5,7 @@ prev: false
 title: "isPostgrestSuccess"
 ---
 
-> **isPostgrestSuccess**\<`T`\>(`response`): `response is PostgrestResponse<T> & Object`
+> **isPostgrestSuccess**\<`T`\>(`response`): `response is PostgrestResponse<T> & { data: T; error: null }`
 
 Type guard to check if a PostgrestResponse is successful (has data)
 
@@ -23,6 +23,6 @@ Type guard to check if a PostgrestResponse is successful (has data)
 
 ## Returns
 
-`response is PostgrestResponse<T> & Object`
+`response is PostgrestResponse<T> & { data: T; error: null }`
 
 true if the response has data and no error

@@ -11,7 +11,7 @@ Response from listing branches
 
 | Property | Type |
 | ------ | ------ |
-| `branches` | [`Branch`](/api/sdk/interfaces/branch/)[] |
-| `limit` | `number` |
-| `offset` | `number` |
-| `total` | `number` |
+| <a id="branches"></a> `branches` | [`Branch`](/api/sdk/interfaces/branch/)[] |
+| <a id="limit"></a> `limit` | `number` |
+| <a id="offset"></a> `offset` | `number` |
+| <a id="total"></a> `total` | `number` |

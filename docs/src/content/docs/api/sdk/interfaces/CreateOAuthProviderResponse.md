@@ -11,9 +11,9 @@ Response after creating an OAuth provider
 
 | Property | Type |
 | ------ | ------ |
-| `created_at` | `string` |
-| `id` | `string` |
-| `message` | `string` |
-| `provider` | `string` |
-| `success` | `boolean` |
-| `updated_at` | `string` |
+| <a id="created_at"></a> `created_at` | `string` |
+| <a id="id"></a> `id` | `string` |
+| <a id="message"></a> `message` | `string` |
+| <a id="provider"></a> `provider` | `string` |
+| <a id="success"></a> `success` | `boolean` |
+| <a id="updated_at"></a> `updated_at` | `string` |

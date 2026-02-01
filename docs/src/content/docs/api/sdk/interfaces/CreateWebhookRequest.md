@@ -9,7 +9,7 @@ title: "CreateWebhookRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `description?` | `string` |
-| `events` | `string`[] |
-| `secret?` | `string` |
-| `url` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="events"></a> `events` | `string`[] |
+| <a id="secret"></a> `secret?` | `string` |
+| <a id="url"></a> `url` | `string` |

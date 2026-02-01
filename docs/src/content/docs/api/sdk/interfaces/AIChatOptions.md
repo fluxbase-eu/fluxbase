@@ -11,13 +11,13 @@ Chat connection options
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `onContent?` | (`delta`: `string`, `conversationId`: `string`) => `void` | Callback for content chunks (streaming) |
-| `onDone?` | (`usage`: `undefined` \| [`AIUsageStats`](/api/sdk/interfaces/aiusagestats/), `conversationId`: `string`) => `void` | Callback when message is complete |
-| `onError?` | (`error`: `string`, `code`: `undefined` \| `string`, `conversationId`: `undefined` \| `string`) => `void` | Callback for errors |
-| `onEvent?` | (`event`: [`AIChatEvent`](/api/sdk/interfaces/aichatevent/)) => `void` | Callback for all events |
-| `onProgress?` | (`step`: `string`, `message`: `string`, `conversationId`: `string`) => `void` | Callback for progress updates |
-| `onQueryResult?` | (`query`: `string`, `summary`: `string`, `rowCount`: `number`, `data`: `Record`\<`string`, `any`\>[], `conversationId`: `string`) => `void` | Callback for query results |
-| `reconnectAttempts?` | `number` | Reconnect attempts (0 = no reconnect) |
-| `reconnectDelay?` | `number` | Reconnect delay in ms |
-| `token?` | `string` | JWT token for authentication |
-| `wsUrl?` | `string` | WebSocket URL (defaults to ws://host/ai/ws) |
+| <a id="oncontent"></a> `onContent?` | (`delta`, `conversationId`) => `void` | Callback for content chunks (streaming) |
+| <a id="ondone"></a> `onDone?` | (`usage`, `conversationId`) => `void` | Callback when message is complete |
+| <a id="onerror"></a> `onError?` | (`error`, `code`, `conversationId`) => `void` | Callback for errors |
+| <a id="onevent"></a> `onEvent?` | (`event`) => `void` | Callback for all events |
+| <a id="onprogress"></a> `onProgress?` | (`step`, `message`, `conversationId`) => `void` | Callback for progress updates |
+| <a id="onqueryresult"></a> `onQueryResult?` | (`query`, `summary`, `rowCount`, `data`, `conversationId`) => `void` | Callback for query results |
+| <a id="reconnectattempts"></a> `reconnectAttempts?` | `number` | Reconnect attempts (0 = no reconnect) |
+| <a id="reconnectdelay"></a> `reconnectDelay?` | `number` | Reconnect delay in ms |
+| <a id="token"></a> `token?` | `string` | JWT token for authentication |
+| <a id="wsurl"></a> `wsUrl?` | `string` | WebSocket URL (defaults to ws://host/ai/ws) |

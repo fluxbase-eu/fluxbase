@@ -11,4 +11,4 @@ Response for listing OAuth providers
 
 | Property | Type |
 | ------ | ------ |
-| `providers` | [`OAuthProvider`](/api/sdk/interfaces/oauthprovider/)[] |
+| <a id="providers"></a> `providers` | [`OAuthProvider`](/api/sdk/interfaces/oauthprovider/)[] |

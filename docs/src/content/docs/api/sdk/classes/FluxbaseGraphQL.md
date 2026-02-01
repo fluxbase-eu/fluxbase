@@ -9,9 +9,9 @@ GraphQL client class for executing queries and mutations
 
 ## Constructors
 
-### new FluxbaseGraphQL()
+### Constructor
 
-> **new FluxbaseGraphQL**(`fetch`): [`FluxbaseGraphQL`](/api/sdk/classes/fluxbasegraphql/)
+> **new FluxbaseGraphQL**(`fetch`): `FluxbaseGraphQL`
 
 Create a new GraphQL client
 
@@ -23,13 +23,13 @@ Create a new GraphQL client
 
 #### Returns
 
-[`FluxbaseGraphQL`](/api/sdk/classes/fluxbasegraphql/)
+`FluxbaseGraphQL`
 
 ## Methods
 
 ### execute()
 
-> **execute**\<`T`\>(`query`, `variables`?, `operationName`?, `options`?): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`T`\>\>
+> **execute**\<`T`\>(`query`, `variables?`, `operationName?`, `options?`): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`T`\>\>
 
 Execute a GraphQL request with an operation name
 
@@ -47,9 +47,9 @@ and you need to specify which one to execute.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `query` | `string` | The GraphQL document containing one or more operations |
-| `variables`? | `Record`\<`string`, `unknown`\> | Variables to pass to the operation |
-| `operationName`? | `string` | The name of the operation to execute |
-| `options`? | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
+| `variables?` | `Record`\<`string`, `unknown`\> | Variables to pass to the operation |
+| `operationName?` | `string` | The name of the operation to execute |
+| `options?` | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
 
 #### Returns
 
@@ -74,7 +74,7 @@ const { data } = await client.graphql.execute(`
 
 ### introspect()
 
-> **introspect**(`options`?): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`object`\>\>
+> **introspect**(`options?`): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<\{ `__schema`: [`IntrospectionSchema`](/api/sdk/interfaces/introspectionschema/); \}\>\>
 
 Fetch the GraphQL schema via introspection
 
@@ -85,11 +85,11 @@ Useful for tooling and documentation.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options`? | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
+| `options?` | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
 
 #### Returns
 
-`Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`object`\>\>
+`Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<\{ `__schema`: [`IntrospectionSchema`](/api/sdk/interfaces/introspectionschema/); \}\>\>
 
 Promise resolving to the introspection result
 
@@ -107,7 +107,7 @@ if (data) {
 
 ### mutation()
 
-> **mutation**\<`T`\>(`mutation`, `variables`?, `options`?): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`T`\>\>
+> **mutation**\<`T`\>(`mutation`, `variables?`, `options?`): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`T`\>\>
 
 Execute a GraphQL mutation
 
@@ -122,8 +122,8 @@ Execute a GraphQL mutation
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `mutation` | `string` | The GraphQL mutation string |
-| `variables`? | `Record`\<`string`, `unknown`\> | Variables to pass to the mutation |
-| `options`? | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
+| `variables?` | `Record`\<`string`, `unknown`\> | Variables to pass to the mutation |
+| `options?` | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
 
 #### Returns
 
@@ -152,7 +152,7 @@ const { data, errors } = await client.graphql.mutation<CreateUserMutation>(`
 
 ### query()
 
-> **query**\<`T`\>(`query`, `variables`?, `options`?): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`T`\>\>
+> **query**\<`T`\>(`query`, `variables?`, `options?`): `Promise`\<[`GraphQLResponse`](/api/sdk/interfaces/graphqlresponse/)\<`T`\>\>
 
 Execute a GraphQL query
 
@@ -167,8 +167,8 @@ Execute a GraphQL query
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `query` | `string` | The GraphQL query string |
-| `variables`? | `Record`\<`string`, `unknown`\> | Variables to pass to the query |
-| `options`? | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
+| `variables?` | `Record`\<`string`, `unknown`\> | Variables to pass to the query |
+| `options?` | [`GraphQLRequestOptions`](/api/sdk/interfaces/graphqlrequestoptions/) | Additional request options |
 
 #### Returns
 

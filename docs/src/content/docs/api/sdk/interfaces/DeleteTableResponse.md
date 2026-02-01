@@ -11,4 +11,4 @@ Response after deleting a table
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
+| <a id="message"></a> `message` | `string` |

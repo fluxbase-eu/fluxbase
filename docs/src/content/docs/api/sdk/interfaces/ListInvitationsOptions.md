@@ -9,5 +9,5 @@ title: "ListInvitationsOptions"
 
 | Property | Type |
 | ------ | ------ |
-| `include_accepted?` | `boolean` |
-| `include_expired?` | `boolean` |
+| <a id="include_accepted"></a> `include_accepted?` | `boolean` |
+| <a id="include_expired"></a> `include_expired?` | `boolean` |
