@@ -1,0 +1,348 @@
+---
+/**
+ * Custom Hero component for Fluxbase landing page
+ * Features animated logo icon with gradient text title
+ */
+import logoIcon from '../assets/logo-icon.svg';
+---
+
+<div class="hero-custom">
+  <div class="hero-content">
+    <div class="hero-brand">
+      <div class="hero-icon-container">
+        <img src={logoIcon.src} alt="Fluxbase Icon" class="hero-icon" />
+        <div class="hero-icon-glow"></div>
+      </div>
+      <h1 class="hero-title">
+        <span class="hero-title-text">Fluxbase</span>
+      </h1>
+    </div>
+
+    <p class="hero-tagline">
+      A lightweight, self-hosted Backend-as-a-Service with PostgreSQL, real-time subscriptions, authentication, storage, and edge functions.
+    </p>
+
+    <div class="hero-actions">
+      <a href="/intro/" class="hero-btn hero-btn-primary">
+        <span>Get Started</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14"></path>
+          <path d="m12 5 7 7-7 7"></path>
+        </svg>
+      </a>
+      <a href="https://github.com/fluxbase-eu/fluxbase" class="hero-btn hero-btn-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        </svg>
+        <span>View on GitHub</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="hero-particles" aria-hidden="true">
+    <div class="particle particle-1"></div>
+    <div class="particle particle-2"></div>
+    <div class="particle particle-3"></div>
+  </div>
+</div>
+
+<style>
+  .hero-custom {
+    position: relative;
+    padding: 4rem 1rem 3rem;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero-custom::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(44, 70, 137, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(139, 92, 246, 0.10) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 100%, rgba(91, 125, 199, 0.08) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .hero-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-icon-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-icon {
+    width: 120px;
+    height: auto;
+    position: relative;
+    z-index: 1;
+    animation: float 6s ease-in-out infinite;
+    filter: drop-shadow(0 10px 30px rgba(44, 70, 137, 0.3));
+  }
+
+  :global([data-theme='dark']) .hero-icon {
+    background: rgba(255, 255, 255, 0.85);
+    padding: 1rem;
+    border-radius: 1.5rem;
+  }
+
+  .hero-icon-glow {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(44, 70, 137, 0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulse-glow 4s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  .hero-title {
+    margin: 0;
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .hero-title-text {
+    background: linear-gradient(
+      135deg,
+      #192851 0%,
+      #2c4689 25%,
+      #5b7dc7 50%,
+      #8b5cf6 75%,
+      #5b7dc7 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 8s ease-in-out infinite;
+  }
+
+  :global([data-theme='dark']) .hero-title-text {
+    background: linear-gradient(
+      135deg,
+      #a3b8e2 0%,
+      #5b7dc7 25%,
+      #8b5cf6 50%,
+      #c4b5fd 75%,
+      #5b7dc7 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-tagline {
+    font-size: 1.25rem;
+    color: var(--sl-color-gray-2);
+    max-width: 650px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hero-btn-primary {
+    background: linear-gradient(135deg, #2c4689 0%, #5b7dc7 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(44, 70, 137, 0.4);
+  }
+
+  .hero-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(44, 70, 137, 0.5);
+  }
+
+  .hero-btn-secondary {
+    background: var(--sl-color-gray-6);
+    color: var(--sl-color-text);
+    border: 1px solid var(--sl-color-gray-5);
+  }
+
+  .hero-btn-secondary:hover {
+    background: var(--sl-color-gray-5);
+    transform: translateY(-2px);
+  }
+
+  /* Floating particles */
+  .hero-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: linear-gradient(135deg, #2c4689 0%, #8b5cf6 100%);
+    border-radius: 50%;
+    opacity: 0.4;
+  }
+
+  .particle-1 {
+    top: 20%;
+    left: 15%;
+    animation: float-particle 12s ease-in-out infinite;
+  }
+
+  .particle-2 {
+    top: 60%;
+    right: 20%;
+    animation: float-particle 10s ease-in-out infinite reverse;
+    animation-delay: -3s;
+  }
+
+  .particle-3 {
+    bottom: 25%;
+    left: 25%;
+    animation: float-particle 14s ease-in-out infinite;
+    animation-delay: -6s;
+  }
+
+  /* Animations */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.3;
+    }
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% {
+      background-position: 0% center;
+    }
+    50% {
+      background-position: 100% center;
+    }
+  }
+
+  @keyframes float-particle {
+    0%, 100% {
+      transform: translate(0, 0);
+    }
+    25% {
+      transform: translate(20px, -30px);
+    }
+    50% {
+      transform: translate(-10px, -50px);
+    }
+    75% {
+      transform: translate(15px, -20px);
+    }
+  }
+
+  /* Responsive adjustments */
+  @media screen and (max-width: 768px) {
+    .hero-custom {
+      padding: 3rem 1rem 2rem;
+    }
+
+    .hero-icon {
+      width: 90px;
+    }
+
+    .hero-icon-glow {
+      width: 110px;
+      height: 110px;
+    }
+
+    .hero-title {
+      font-size: 2.5rem;
+    }
+
+    .hero-tagline {
+      font-size: 1.1rem;
+    }
+
+    .hero-btn {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hero-btn {
+      width: 100%;
+      max-width: 250px;
+      justify-content: center;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-icon,
+    .hero-icon-glow,
+    .hero-title-text,
+    .particle {
+      animation: none;
+    }
+  }
+</style>

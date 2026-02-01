@@ -5,21 +5,12 @@ template: splash
 head:
   - tag: title
     content: Fluxbase - Lightweight Backend-as-a-Service
-hero:
-  tagline: A lightweight, self-hosted Backend-as-a-Service with PostgreSQL, real-time subscriptions, authentication, storage, and edge functions.
-  image:
-    file: ../../assets/logo.svg
-  actions:
-    - text: Get Started
-      link: /intro/
-      icon: right-arrow
-      variant: primary
-    - text: View on GitHub
-      link: https://github.com/fluxbase-eu/fluxbase
-      icon: external
 ---
 
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import Hero from "../../components/Hero.astro";
+
+<Hero />
 
 ## Core Features
 
