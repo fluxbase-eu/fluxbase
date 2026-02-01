@@ -66,17 +66,6 @@ func (g *GraphQLSchemaGenerator) queryWithRLS(ctx context.Context, query string,
 	// Check if RLS context is present
 	rlsCtx, ok := ctx.Value(GraphQLRLSContextKey).(*RLSContext)
 
-	// If no RLS context, execute directly (anonymous access)
-	if !ok || rlsCtx == nil {
-		log.Debug().Msg("GraphQL query executing without RLS context (anonymous)")
-		rows, err := db.Query(ctx, query, args...)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-		return scanRowsToMaps(rows)
-	}
-
 	// Start a transaction to set RLS context
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -84,9 +73,17 @@ func (g *GraphQLSchemaGenerator) queryWithRLS(ctx context.Context, query string,
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Set RLS context
-	if err := setGraphQLRLSContext(ctx, tx, rlsCtx); err != nil {
-		return nil, err
+	// Set RLS context if present, otherwise set anon role
+	if ok && rlsCtx != nil {
+		if err := setGraphQLRLSContext(ctx, tx, rlsCtx); err != nil {
+			return nil, err
+		}
+	} else {
+		// Anonymous access - set anon role explicitly (same as mutations)
+		log.Debug().Msg("GraphQL query executing with anon role (anonymous)")
+		if _, err := tx.Exec(ctx, "SET LOCAL ROLE anon"); err != nil {
+			return nil, fmt.Errorf("failed to SET LOCAL ROLE anon: %w", err)
+		}
 	}
 
 	// Execute query within transaction
