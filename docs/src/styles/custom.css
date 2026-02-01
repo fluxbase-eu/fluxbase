@@ -554,15 +554,9 @@
   display: none !important;
 }
 
-/* Remove padding from content-panel on splash page - override Starlight layer */
-/* Starlight uses @layer which has lower priority than unlayered CSS */
-[data-page-type="splash"] .content-panel {
-  padding: 0 var(--sl-content-pad-x) !important;
-}
-
-/* Also set the CSS variable to minimize horizontal padding */
-[data-page-type="splash"] {
-  --sl-content-pad-x: 0;
+/* Remove padding from content-panel that contains hero - use :has() to detect */
+.content-panel:has(.hero-custom) {
+  padding: 0 !important;
 }
 
 /* Full-width hero on splash page */
@@ -579,13 +573,13 @@
   width: 100%;
 }
 
-/* Animated gradient background for splash page - full viewport */
-/* Use :has() to detect splash page and apply to body */
-body:has([data-page-type="splash"]) {
+/* Animated gradient background for pages with hero - full viewport */
+/* Use :has(.hero-custom) to detect splash page */
+body:has(.hero-custom) {
   position: relative;
 }
 
-body:has([data-page-type="splash"])::before {
+body:has(.hero-custom)::before {
   content: '';
   position: fixed;
   top: 0;
@@ -602,7 +596,7 @@ body:has([data-page-type="splash"])::before {
   animation: background-shift 20s ease-in-out infinite;
 }
 
-:root[data-theme='dark'] body:has([data-page-type="splash"])::before {
+:root[data-theme='dark'] body:has(.hero-custom)::before {
   background:
     radial-gradient(ellipse at 20% 30%, rgba(91, 125, 199, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 45%),
@@ -622,7 +616,7 @@ body:has([data-page-type="splash"])::before {
 }
 
 /* Floating particles for the whole page - full viewport */
-body:has([data-page-type="splash"])::after {
+body:has(.hero-custom)::after {
   content: '';
   position: fixed;
   top: 0;
@@ -664,8 +658,8 @@ body:has([data-page-type="splash"])::after {
 
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
-  body:has([data-page-type="splash"])::before,
-  body:has([data-page-type="splash"])::after {
+  body:has(.hero-custom)::before,
+  body:has(.hero-custom)::after {
     animation: none;
   }
 }
