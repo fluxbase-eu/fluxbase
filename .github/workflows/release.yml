@@ -295,7 +295,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
 
       - name: Update version in files
         run: |
@@ -376,7 +376,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
 
       - name: Build SDKs (required by Admin UI and Go embed)
         run: |
@@ -636,7 +636,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           cache: "npm"
           cache-dependency-path: |
             sdk/package-lock.json
@@ -707,7 +707,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           registry-url: "https://registry.npmjs.org"
 
       - name: Build and Publish SDK
@@ -741,7 +741,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           registry-url: "https://registry.npmjs.org"
 
       - name: Build core SDK first

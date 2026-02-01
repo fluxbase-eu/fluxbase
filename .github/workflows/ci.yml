@@ -34,7 +34,7 @@ jobs:
       - name: Set up Node.js for embedded SDK generation
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           cache: "npm"
           cache-dependency-path: sdk/package-lock.json
 
@@ -73,7 +73,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           cache: "npm"
           cache-dependency-path: admin/package-lock.json
 
@@ -94,7 +94,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           cache: "npm"
           cache-dependency-path: sdk/package-lock.json
 
@@ -202,7 +202,7 @@ jobs:
       - name: Set up Node.js for embedded SDK generation
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           cache: "npm"
           cache-dependency-path: sdk/package-lock.json
 
@@ -405,7 +405,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           cache: "npm"
           cache-dependency-path: |
             sdk/package-lock.json
@@ -512,7 +512,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.20.0"
           cache: "npm"
           cache-dependency-path: |
             sdk/package-lock.json
