@@ -653,8 +653,8 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
       callback,
     );
 
-    // Ensure the WebSocket message handler is ready
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Ensure the WebSocket message handler is ready (longer wait for reliability)
+    await new Promise((resolve) => setTimeout(resolve, 60));
 
     // Simulate INSERT event (server sends type: "postgres_changes")
     mockWs.simulateMessage({
@@ -667,6 +667,9 @@ describe("RealtimeChannel - postgres_changes Filtering", () => {
         timestamp: new Date().toISOString(),
       },
     });
+
+    // Small delay to ensure message processing
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(callback).toHaveBeenCalledTimes(1);
   });

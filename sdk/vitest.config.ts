@@ -9,10 +9,10 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'src/examples/**'],
       thresholds: {
-        statements: 75,
+        statements: 80,
         branches: 80,
         functions: 60,
-        lines: 75
+        lines: 80
       }
     }
   }
