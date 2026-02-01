@@ -257,7 +257,10 @@ func (qb *QueryBuilder) BuildInsert(data map[string]interface{}) (string, []inte
 	if len(qb.returning) > 0 {
 		quotedRet := make([]string, 0, len(qb.returning))
 		for _, col := range qb.returning {
-			if quoted := quoteIdentifier(col); quoted != "" {
+			// Special case: * means all columns
+			if col == "*" {
+				quotedRet = append(quotedRet, "*")
+			} else if quoted := quoteIdentifier(col); quoted != "" {
 				quotedRet = append(quotedRet, quoted)
 			}
 		}
@@ -310,7 +313,10 @@ func (qb *QueryBuilder) BuildUpdate(data map[string]interface{}) (string, []inte
 	if len(qb.returning) > 0 {
 		quotedRet := make([]string, 0, len(qb.returning))
 		for _, col := range qb.returning {
-			if quoted := quoteIdentifier(col); quoted != "" {
+			// Special case: * means all columns
+			if col == "*" {
+				quotedRet = append(quotedRet, "*")
+			} else if quoted := quoteIdentifier(col); quoted != "" {
 				quotedRet = append(quotedRet, quoted)
 			}
 		}
@@ -343,7 +349,10 @@ func (qb *QueryBuilder) BuildDelete() (string, []interface{}) {
 	if len(qb.returning) > 0 {
 		quotedRet := make([]string, 0, len(qb.returning))
 		for _, col := range qb.returning {
-			if quoted := quoteIdentifier(col); quoted != "" {
+			// Special case: * means all columns
+			if col == "*" {
+				quotedRet = append(quotedRet, "*")
+			} else if quoted := quoteIdentifier(col); quoted != "" {
 				quotedRet = append(quotedRet, quoted)
 			}
 		}

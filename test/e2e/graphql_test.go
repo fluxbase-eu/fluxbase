@@ -150,30 +150,32 @@ func TestGraphQL_Query_Anonymous_UsesAnonRole(t *testing.T) {
 	require.NotNil(t, result.Data, "Should return data for anonymous query")
 }
 
-// TestGraphQL_Mutation_Insert tests GraphQL insert mutation
+// TestGraphQL_Mutation_Insert tests GraphQL insert mutation using tasks table (which has RLS policies)
 func TestGraphQL_Mutation_Insert(t *testing.T) {
-
-	tc := setupGraphQLTest(t)
+	// Use RLS test context which has tasks table with proper INSERT policies
+	tc := setupGraphQLRLSTest(t)
 	defer tc.Close()
 
 	// Create a test user
-	_, token := tc.CreateTestUser(test.E2ETestEmail(), "password123")
+	userID, token := tc.CreateTestUserDirect(test.E2ETestEmail(), "password123")
 
-	// Insert a product via GraphQL mutation (use string price as NUMERIC has serialization issues)
+	// Insert a task via GraphQL mutation
 	resp := tc.NewRequest("POST", "/api/v1/graphql").
 		WithAuth(token).
 		WithBody(graphQLRequest{
 			Query: `
-				mutation InsertProduct($name: String!, $price: Float!) {
-					insertProducts(data: {name: $name, price: $price}) {
+				mutation InsertTask($userId: UUID!, $title: String!, $description: String) {
+					insertTasks(data: {userId: $userId, title: $title, description: $description}) {
 						id
-						name
+						title
+						userId
 					}
 				}
 			`,
 			Variables: map[string]interface{}{
-				"name":  "GraphQL Product",
-				"price": 49.99,
+				"userId":      userID,
+				"title":       "GraphQL Task",
+				"description": "Created via GraphQL mutation",
 			},
 		}).
 		Send().
@@ -193,12 +195,14 @@ func TestGraphQL_Mutation_Insert(t *testing.T) {
 	// Verify no errors
 	require.Empty(t, result.Errors, "GraphQL mutation should not return errors")
 
-	// Verify product was created
+	// Verify task was created
 	require.NotNil(t, result.Data, "GraphQL mutation should return data")
-	insertResult, ok := result.Data["insertProducts"].(map[string]interface{})
-	require.True(t, ok, "insertProducts should return an object, got: %T", result.Data["insertProducts"])
-	require.NotEmpty(t, insertResult["id"], "Product should have an ID")
-	require.Equal(t, "GraphQL Product", insertResult["name"])
+	insertResult, ok := result.Data["insertTasks"].(map[string]interface{})
+	require.True(t, ok, "insertTasks should return an object, got: %T", result.Data["insertTasks"])
+	require.NotEmpty(t, insertResult["id"], "Task should have an ID")
+	require.Equal(t, "GraphQL Task", insertResult["title"])
+	// Note: UUID fields may be returned as byte arrays or strings depending on pgtype serialization
+	require.NotEmpty(t, insertResult["userId"], "Task should have a userId")
 }
 
 // TestGraphQL_Introspection tests GraphQL schema introspection
