@@ -4,7 +4,7 @@
   "extends": [
     "config:recommended",
     ":semanticCommitTypeAll(chore)",
-    "group:allNonMajor"
+    "group:all"
   ],
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
