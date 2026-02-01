@@ -554,11 +554,16 @@
   display: none !important;
 }
 
+/* Remove top padding from content-panel on splash page */
+[data-page-type="splash"] .content-panel {
+  padding-top: 0 !important;
+}
+
 /* Full-width hero on splash page */
 .hero-custom {
   width: 100vw;
   margin-left: calc(-50vw + 50%);
-  margin-top: -1rem;
+  margin-top: 0;
   border-radius: 0;
   box-sizing: border-box;
 }
@@ -568,7 +573,7 @@
   width: 100%;
 }
 
-/* Animated gradient background for splash page */
+/* Animated gradient background for splash page - full viewport */
 [data-page-type="splash"] {
   position: relative;
 }
@@ -578,8 +583,8 @@
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background:
     radial-gradient(ellipse at 20% 30%, rgba(44, 70, 137, 0.06) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 45%),
@@ -609,14 +614,14 @@
   }
 }
 
-/* Floating particles for the whole page */
+/* Floating particles for the whole page - full viewport */
 [data-page-type="splash"] .main-frame::after {
   content: '';
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background-image:
     radial-gradient(circle at 15% 25%, rgba(44, 70, 137, 0.4) 0%, rgba(44, 70, 137, 0.4) 2px, transparent 2px),
     radial-gradient(circle at 85% 15%, rgba(139, 92, 246, 0.3) 0%, rgba(139, 92, 246, 0.3) 3px, transparent 3px),
@@ -626,7 +631,7 @@
     radial-gradient(circle at 70% 40%, rgba(91, 125, 199, 0.2) 0%, rgba(91, 125, 199, 0.2) 3px, transparent 3px),
     radial-gradient(circle at 25% 55%, rgba(44, 70, 137, 0.3) 0%, rgba(44, 70, 137, 0.3) 2px, transparent 2px),
     radial-gradient(circle at 55% 20%, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 2px, transparent 2px);
-  background-size: 100% 100%;
+  background-size: 100vw 100vh;
   pointer-events: none;
   z-index: -1;
   animation: particles-drift 30s linear infinite;
