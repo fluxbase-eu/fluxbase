@@ -554,9 +554,15 @@
   display: none !important;
 }
 
-/* Remove top padding from content-panel on splash page */
+/* Remove padding from content-panel on splash page - override Starlight layer */
+/* Starlight uses @layer which has lower priority than unlayered CSS */
 [data-page-type="splash"] .content-panel {
-  padding-top: 0 !important;
+  padding: 0 var(--sl-content-pad-x) !important;
+}
+
+/* Also set the CSS variable to minimize horizontal padding */
+[data-page-type="splash"] {
+  --sl-content-pad-x: 0;
 }
 
 /* Full-width hero on splash page */
@@ -574,11 +580,12 @@
 }
 
 /* Animated gradient background for splash page - full viewport */
-[data-page-type="splash"] {
+/* Use :has() to detect splash page and apply to body */
+body:has([data-page-type="splash"]) {
   position: relative;
 }
 
-[data-page-type="splash"]::before {
+body:has([data-page-type="splash"])::before {
   content: '';
   position: fixed;
   top: 0;
@@ -595,7 +602,7 @@
   animation: background-shift 20s ease-in-out infinite;
 }
 
-:root[data-theme='dark'] [data-page-type="splash"]::before {
+:root[data-theme='dark'] body:has([data-page-type="splash"])::before {
   background:
     radial-gradient(ellipse at 20% 30%, rgba(91, 125, 199, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 45%),
@@ -615,7 +622,7 @@
 }
 
 /* Floating particles for the whole page - full viewport */
-[data-page-type="splash"] .main-frame::after {
+body:has([data-page-type="splash"])::after {
   content: '';
   position: fixed;
   top: 0;
@@ -657,8 +664,8 @@
 
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
-  [data-page-type="splash"]::before,
-  [data-page-type="splash"] .main-frame::after {
+  body:has([data-page-type="splash"])::before,
+  body:has([data-page-type="splash"])::after {
     animation: none;
   }
 }
