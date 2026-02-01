@@ -59,13 +59,13 @@ describe('useUsers', () => {
     } as any);
 
     renderHook(
-      () => useUsers({ autoFetch: true, limit: 10, offset: 5, search: 'test' }),
+      () => useUsers({ autoFetch: true, limit: 10, search: 'test' }),
       { wrapper: createWrapper(client) }
     );
 
     await waitFor(() => {
       expect(listUsersMock).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: 10, offset: 5, search: 'test' })
+        expect.objectContaining({ limit: 10, search: 'test' })
       );
     });
   });

@@ -65,7 +65,7 @@ describe('useClientKeys', () => {
   });
 
   it('should create client key', async () => {
-    const mockKeys = [];
+    const mockKeys: any[] = [];
     const listMock = vi.fn().mockResolvedValue({ client_keys: mockKeys });
     const createMock = vi.fn().mockResolvedValue({
       key: 'new-secret-key',
@@ -98,12 +98,16 @@ describe('useClientKeys', () => {
       response = await result.current.createKey({
         name: 'New Key',
         description: 'A new key',
+        scopes: ['read', 'write'],
+        rate_limit_per_minute: 60,
       });
     });
 
     expect(createMock).toHaveBeenCalledWith({
       name: 'New Key',
       description: 'A new key',
+      scopes: ['read', 'write'],
+      rate_limit_per_minute: 60,
     });
     expect(response).toEqual({
       key: 'new-secret-key',

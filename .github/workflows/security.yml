@@ -120,6 +120,7 @@ jobs:
         uses: golang/govulncheck-action@v1
         with:
           go-version-input: "1.25.6"
+          repo-checkout: false
           output-format: sarif
           output-file: govulncheck-results.sarif
 
@@ -133,4 +134,5 @@ jobs:
         uses: golang/govulncheck-action@v1
         with:
           go-version-input: "1.25.6"
+          repo-checkout: false
           output-format: text
