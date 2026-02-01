@@ -544,17 +544,13 @@
 }
 
 /* Hide page title on splash page - we have our own hero */
-[data-page-type="splash"] .sl-markdown-content > h1:first-of-type,
-[data-page-type="splash"] .content-panel h1:first-of-type,
-[data-page-type="splash"] main h1#_top,
-[data-page-type="splash"] main > .sl-container h1:first-of-type,
-[data-page-type="splash"] .main-pane h1:first-of-type {
+/* Target the exact structure from Starlight: .content-panel > .sl-container > h1#_top */
+.content-panel .sl-container > h1#_top {
   display: none !important;
 }
 
-/* Hide the page title that appears before the hero on splash pages */
-body[data-page-type="splash"] h1:has(+ .hero-custom),
-body[data-page-type="splash"] .sl-markdown-content > h1:first-child {
+/* Hide the entire content-panel that contains only the page title */
+.content-panel:has(> .sl-container > h1#_top):not(:has(.hero-custom)) {
   display: none !important;
 }
 
