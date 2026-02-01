@@ -378,7 +378,7 @@ jobs:
           name: codecov-umbrella
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: |
@@ -469,13 +469,13 @@ jobs:
           go build -ldflags="-s -w -X github.com/fluxbase-eu/fluxbase/cli/cmd.Version=dev-${GITHUB_SHA::8} -X github.com/fluxbase-eu/fluxbase/cli/cmd.Commit=${GITHUB_SHA} -X github.com/fluxbase-eu/fluxbase/cli/cmd.BuildDate=${BUILD_DATE}" -o "dist/${output_name}" cli/main.go
 
       - name: Upload server artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}
 
       - name: Upload CLI artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}
