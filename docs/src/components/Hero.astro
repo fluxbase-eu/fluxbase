@@ -6,6 +6,23 @@
 import logoIcon from '../assets/logo-icon.svg';
 ---
 
+<script>
+  // Hide any h1 title that appears before our custom hero
+  document.addEventListener('DOMContentLoaded', () => {
+    const hero = document.querySelector('.hero-custom');
+    if (hero) {
+      let prev = hero.previousElementSibling;
+      while (prev) {
+        if (prev.tagName === 'H1') {
+          prev.style.display = 'none';
+          break;
+        }
+        prev = prev.previousElementSibling;
+      }
+    }
+  });
+</script>
+
 <div class="hero-custom">
   <div class="hero-content">
     <div class="hero-brand">

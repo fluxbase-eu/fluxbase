@@ -542,3 +542,32 @@
   border-radius: 1rem;
   backdrop-filter: blur(8px);
 }
+
+/* Hide page title on splash page - we have our own hero */
+[data-page-type="splash"] .sl-markdown-content > h1:first-of-type,
+[data-page-type="splash"] .content-panel h1:first-of-type,
+[data-page-type="splash"] main h1#_top,
+[data-page-type="splash"] main > .sl-container h1:first-of-type,
+[data-page-type="splash"] .main-pane h1:first-of-type {
+  display: none !important;
+}
+
+/* Hide the page title that appears before the hero on splash pages */
+body[data-page-type="splash"] h1:has(+ .hero-custom),
+body[data-page-type="splash"] .sl-markdown-content > h1:first-child {
+  display: none !important;
+}
+
+/* Full-width hero on splash page */
+.hero-custom {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-top: -1rem;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* Ensure hero background extends full width */
+.hero-custom::before {
+  width: 100%;
+}
