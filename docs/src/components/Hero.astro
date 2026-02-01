@@ -82,17 +82,28 @@ import logoIcon from '../assets/logo-icon.svg';
 
   .hero-custom::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
+    width: 100vw;
+    height: 100vh;
     background:
       radial-gradient(ellipse at 30% 20%, rgba(44, 70, 137, 0.12) 0%, transparent 50%),
       radial-gradient(ellipse at 70% 60%, rgba(139, 92, 246, 0.10) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 100%, rgba(91, 125, 199, 0.08) 0%, transparent 40%);
+      radial-gradient(ellipse at 50% 80%, rgba(91, 125, 199, 0.08) 0%, transparent 40%),
+      radial-gradient(ellipse at 20% 90%, rgba(139, 92, 246, 0.06) 0%, transparent 35%),
+      radial-gradient(ellipse at 85% 85%, rgba(44, 70, 137, 0.07) 0%, transparent 40%);
     pointer-events: none;
-    z-index: 0;
+    z-index: -1;
+  }
+
+  :global([data-theme='dark']) .hero-custom::before {
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(91, 125, 199, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(44, 70, 137, 0.10) 0%, transparent 40%),
+      radial-gradient(ellipse at 20% 90%, rgba(139, 92, 246, 0.08) 0%, transparent 35%),
+      radial-gradient(ellipse at 85% 85%, rgba(91, 125, 199, 0.09) 0%, transparent 40%);
   }
 
   .hero-content {
@@ -230,13 +241,13 @@ import logoIcon from '../assets/logo-icon.svg';
     transform: translateY(-2px);
   }
 
-  /* Floating particles */
+  /* Floating particles - fixed to cover full viewport */
   .hero-particles {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
+    width: 100vw;
+    height: 100vh;
     pointer-events: none;
     overflow: hidden;
     z-index: 0;

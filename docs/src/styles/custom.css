@@ -543,14 +543,14 @@
   backdrop-filter: blur(8px);
 }
 
-/* Hide page title on splash page - we have our own hero */
-/* Target the exact structure from Starlight: .content-panel > .sl-container > h1#_top */
-.content-panel .sl-container > h1#_top {
+/* Hide page title ONLY on splash page (when hero-custom is present) */
+/* Use :has() to ensure we only target pages with our custom hero */
+main:has(.hero-custom) .content-panel .sl-container > h1#_top {
   display: none !important;
 }
 
-/* Hide the entire content-panel that contains only the page title */
-.content-panel:has(> .sl-container > h1#_top):not(:has(.hero-custom)) {
+/* Hide the entire content-panel that contains only the page title on splash page */
+main:has(.hero-custom) .content-panel:has(> .sl-container > h1#_top):not(:has(.hero-custom)) {
   display: none !important;
 }
 
@@ -568,26 +568,4 @@
   box-sizing: border-box;
 }
 
-/* Ensure hero background extends full width */
-.hero-custom::before {
-  width: 100%;
-}
-
-/* Gradient background for frontpage - applied to main container */
-main:has(.hero-custom) {
-  background:
-    radial-gradient(ellipse at 20% 10%, rgba(44, 70, 137, 0.08) 0%, transparent 40%),
-    radial-gradient(ellipse at 80% 5%, rgba(139, 92, 246, 0.06) 0%, transparent 35%),
-    radial-gradient(ellipse at 60% 50%, rgba(91, 125, 199, 0.05) 0%, transparent 40%),
-    radial-gradient(ellipse at 10% 70%, rgba(139, 92, 246, 0.04) 0%, transparent 35%),
-    radial-gradient(ellipse at 90% 90%, rgba(44, 70, 137, 0.05) 0%, transparent 40%);
-}
-
-:root[data-theme='dark'] main:has(.hero-custom) {
-  background:
-    radial-gradient(ellipse at 20% 10%, rgba(91, 125, 199, 0.1) 0%, transparent 40%),
-    radial-gradient(ellipse at 80% 5%, rgba(139, 92, 246, 0.08) 0%, transparent 35%),
-    radial-gradient(ellipse at 60% 50%, rgba(44, 70, 137, 0.06) 0%, transparent 40%),
-    radial-gradient(ellipse at 10% 70%, rgba(139, 92, 246, 0.05) 0%, transparent 35%),
-    radial-gradient(ellipse at 90% 90%, rgba(91, 125, 199, 0.06) 0%, transparent 40%);
-}
+/* Gradient and particles are now in the Hero component with position: fixed */
