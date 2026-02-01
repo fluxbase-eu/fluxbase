@@ -63,7 +63,7 @@ export function SecuritySummary() {
 
       {!hasIssues ? (
         <Card className='border-green-500/50 bg-green-500/5'>
-          <CardHeader className='pb-4'>
+          <CardHeader>
             <div className='flex items-center gap-3'>
               <CheckCircle2 className='h-8 w-8 text-green-500' />
               <div>
