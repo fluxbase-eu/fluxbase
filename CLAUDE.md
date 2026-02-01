@@ -25,21 +25,35 @@ test/e2e/                # End-to-end tests
 
 | Module | Purpose |
 |--------|---------|
-| `api/` | HTTP handlers (60+ files) - REST CRUD, storage, auth, DDL, webhooks |
-| `auth/` | Authentication - JWT, OAuth2, OIDC, magic links, MFA, scopes |
+| `adminui/` | Admin dashboard UI backend management |
+| `ai/` | Vector search (pgvector), embeddings |
+| `api/` | HTTP handlers (90+ files) - REST, GraphQL, storage, auth, DDL, webhooks, RPC |
+| `auth/` | Authentication - JWT, OAuth2, OIDC, SAML SSO, magic links, MFA, CAPTCHA, impersonation |
 | `branching/` | Database branching - isolated DBs for dev/test environments |
+| `config/` | YAML + env var configuration loading |
+| `crypto/` | Encryption utilities for secret storage |
 | `database/` | PostgreSQL connection, schema introspection, migrations |
+| `email/` | SMTP, SendGrid, Mailgun, AWS SES providers |
+| `extensions/` | PostgreSQL extension management system |
 | `functions/` | Edge functions - Deno runtime, bundling, loader, scheduler |
 | `jobs/` | Background jobs - queue, workers, scheduler, progress tracking |
+| `logging/` | Structured logging with batching and retention policies |
 | `mcp/` | Model Context Protocol server for AI assistant integration |
-| `realtime/` | WebSocket subscriptions via PostgreSQL LISTEN/NOTIFY |
-| `storage/` | File storage abstraction (local filesystem or S3/MinIO) |
 | `middleware/` | Auth, CORS, rate limiting, logging, branch context middlewares |
-| `secrets/` | Secret management for functions/jobs |
-| `config/` | YAML + env var configuration loading |
-| `email/` | SMTP, SendGrid, Mailgun, AWS SES providers |
-| `ai/` | Vector search (pgvector), embeddings |
+| `migrations/` | Database migration management |
+| `observability/` | Prometheus metrics and OpenTelemetry tracing |
+| `pubsub/` | Distributed pub/sub (local, PostgreSQL, Redis backends) |
 | `query/` | Shared query building types (FilterCondition, etc.) |
+| `ratelimit/` | Rate limiting service (memory, PostgreSQL, Redis backends) |
+| `realtime/` | WebSocket subscriptions via PostgreSQL LISTEN/NOTIFY |
+| `rpc/` | Remote procedure calls for database functions/procedures |
+| `runtime/` | Deno runtime wrapper for edge functions |
+| `scaling/` | Horizontal scaling and leader election |
+| `secrets/` | Secret management for functions/jobs |
+| `settings/` | Application settings and custom configuration |
+| `storage/` | File storage abstraction (local filesystem or S3/MinIO) |
+| `testutil/` | Test utilities and helpers |
+| `webhook/` | Webhook system for database events (INSERT, UPDATE, DELETE) |
 
 ## Database Schemas
 
@@ -97,6 +111,23 @@ test/e2e/                # End-to-end tests
 - `internal/middleware/branch.go` - Branch context extraction
 - `cli/cmd/branch.go` - CLI commands
 
+**GraphQL:**
+- `internal/api/graphql_handler.go` - GraphQL HTTP handler
+- `internal/api/graphql_resolvers.go` - Query/mutation resolvers
+- `internal/api/graphql_schema.go` - Schema generation
+
+**RPC/Procedures:**
+- `internal/rpc/service.go` - Procedure execution
+- `internal/api/rpc_handler.go` - RPC HTTP handlers
+
+**Webhooks:**
+- `internal/webhook/service.go` - Webhook delivery
+- `internal/api/webhook_handler.go` - Webhook management API
+
+**Observability:**
+- `internal/observability/metrics.go` - Prometheus metrics
+- `internal/observability/tracing.go` - OpenTelemetry tracing
+
 ## Common Commands
 
 ```bash
@@ -111,7 +142,7 @@ make cli-install      # Build and install CLI
 
 Three-layer system: defaults → `fluxbase.yaml` → `FLUXBASE_*` env vars
 
-Key config sections: server, database, auth, storage, realtime, functions, jobs, email, ai, mcp, branching
+Key config sections: server, database, auth, storage, realtime, functions, jobs, email, ai, mcp, branching, graphql, rpc, webhooks, scaling, observability (metrics, tracing), security, cors, api, logging
 
 **MCP Configuration:**
 ```yaml

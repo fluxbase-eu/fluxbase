@@ -542,3 +542,30 @@
   border-radius: 1rem;
   backdrop-filter: blur(8px);
 }
+
+/* Hide page title ONLY on splash page (when hero-custom is present) */
+/* Use :has() to ensure we only target pages with our custom hero */
+main:has(.hero-custom) .content-panel .sl-container > h1#_top {
+  display: none !important;
+}
+
+/* Hide the entire content-panel that contains only the page title on splash page */
+main:has(.hero-custom) .content-panel:has(> .sl-container > h1#_top):not(:has(.hero-custom)) {
+  display: none !important;
+}
+
+/* Remove padding from content-panel that contains hero - use :has() to detect */
+.content-panel:has(.hero-custom) {
+  padding: 0 !important;
+}
+
+/* Full-width hero on splash page */
+.hero-custom {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-top: 0;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* Gradient and particles are now in the Hero component with position: fixed */

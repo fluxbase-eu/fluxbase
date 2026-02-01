@@ -429,6 +429,9 @@ func (h *VectorHandler) HandleSearch(c *fiber.Ctx) error {
 	}
 
 	// Get user context for RLS
+	// The middleware can set either:
+	// 1. A *auth.TokenClaims struct in "user" local
+	// 2. Individual fields: "user_id", "user_role", etc.
 	userID := ""
 	userRole := "anon"
 	var claims *auth.TokenClaims
@@ -436,6 +439,18 @@ func (h *VectorHandler) HandleSearch(c *fiber.Ctx) error {
 		userID = user.Subject
 		userRole = user.Role
 		claims = user
+	} else {
+		// Try individual locals (set by OptionalAuthOrServiceKey middleware)
+		if id, ok := c.Locals("user_id").(string); ok && id != "" {
+			userID = id
+		}
+		if role, ok := c.Locals("user_role").(string); ok && role != "" {
+			userRole = role
+		}
+		// Try to get claims from jwt_claims local
+		if jwtClaims, ok := c.Locals("jwt_claims").(*auth.TokenClaims); ok {
+			claims = jwtClaims
+		}
 	}
 
 	// Execute vector search with RLS context

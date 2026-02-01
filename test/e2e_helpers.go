@@ -576,6 +576,12 @@ func GetTestConfig() *config.Config {
 		Admin: config.AdminConfig{
 			Enabled: true, // Enable admin dashboard for e2e tests
 		},
+		GraphQL: config.GraphQLConfig{
+			Enabled:       true,
+			MaxDepth:      10,
+			MaxComplexity: 1000,
+			Introspection: true,
+		},
 		Scaling: config.ScalingConfig{
 			DisableRealtime: true, // Disable realtime listener for tests to avoid connection issues
 		},

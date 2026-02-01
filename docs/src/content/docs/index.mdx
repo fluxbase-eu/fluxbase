@@ -5,21 +5,13 @@ template: splash
 head:
   - tag: title
     content: Fluxbase - Lightweight Backend-as-a-Service
-hero:
-  tagline: A lightweight, self-hosted Backend-as-a-Service with PostgreSQL, real-time subscriptions, authentication, storage, and edge functions.
-  image:
-    file: ../../assets/logo.svg
-  actions:
-    - text: Get Started
-      link: /intro/
-      icon: right-arrow
-      variant: primary
-    - text: View on GitHub
-      link: https://github.com/fluxbase-eu/fluxbase
-      icon: external
 ---
 
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import Hero from "../../components/Hero.astro";
+import dashboardScreenshot from "../../assets/screenshot-dashboard.png";
+
+<Hero />
 
 ## Core Features
 
@@ -188,7 +180,7 @@ Fluxbase provides a similar developer experience to Supabase but runs as a **sin
 
 Manage your backend with a powerful built-in admin UI featuring database browsing, user management, real-time monitoring, and more.
 
-![Fluxbase Admin Dashboard](../../assets/screenshot-dashboard.png)
+<img src={dashboardScreenshot.src} alt="Fluxbase Admin Dashboard" style="border-radius: 0.5rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);" />
 
 <div class="section-divider"></div>
 
