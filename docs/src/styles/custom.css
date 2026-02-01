@@ -559,6 +559,15 @@
   padding: 0 !important;
 }
 
+/* Make page content transparent on splash page so body background shows through */
+body:has(.hero-custom) .page,
+body:has(.hero-custom) .main-pane,
+body:has(.hero-custom) main,
+body:has(.hero-custom) .content-panel,
+body:has(.hero-custom) .sl-container {
+  background: transparent !important;
+}
+
 /* Full-width hero on splash page */
 .hero-custom {
   width: 100vw;
@@ -595,7 +604,7 @@ body:has(.hero-custom) {
   background-size: 100vw 100vh;
 }
 
-/* Floating particles for the whole page - fixed position covers viewport */
+/* Floating particles for the whole page - static dots across viewport */
 body:has(.hero-custom)::before {
   content: '';
   position: fixed;
@@ -604,41 +613,19 @@ body:has(.hero-custom)::before {
   width: 100%;
   height: 100%;
   background-image:
-    radial-gradient(circle at 15% 25%, rgba(44, 70, 137, 0.4) 0%, rgba(44, 70, 137, 0.4) 2px, transparent 2px),
-    radial-gradient(circle at 85% 15%, rgba(139, 92, 246, 0.3) 0%, rgba(139, 92, 246, 0.3) 3px, transparent 3px),
-    radial-gradient(circle at 45% 85%, rgba(91, 125, 199, 0.35) 0%, rgba(91, 125, 199, 0.35) 2px, transparent 2px),
-    radial-gradient(circle at 90% 60%, rgba(44, 70, 137, 0.25) 0%, rgba(44, 70, 137, 0.25) 4px, transparent 4px),
-    radial-gradient(circle at 5% 70%, rgba(139, 92, 246, 0.3) 0%, rgba(139, 92, 246, 0.3) 2px, transparent 2px),
-    radial-gradient(circle at 70% 40%, rgba(91, 125, 199, 0.2) 0%, rgba(91, 125, 199, 0.2) 3px, transparent 3px),
-    radial-gradient(circle at 25% 55%, rgba(44, 70, 137, 0.3) 0%, rgba(44, 70, 137, 0.3) 2px, transparent 2px),
-    radial-gradient(circle at 55% 20%, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 2px, transparent 2px);
+    radial-gradient(circle at 15% 25%, rgba(44, 70, 137, 0.35) 0%, rgba(44, 70, 137, 0.35) 2px, transparent 2px),
+    radial-gradient(circle at 85% 15%, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 3px, transparent 3px),
+    radial-gradient(circle at 45% 85%, rgba(91, 125, 199, 0.3) 0%, rgba(91, 125, 199, 0.3) 2px, transparent 2px),
+    radial-gradient(circle at 90% 60%, rgba(44, 70, 137, 0.2) 0%, rgba(44, 70, 137, 0.2) 4px, transparent 4px),
+    radial-gradient(circle at 5% 70%, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 2px, transparent 2px),
+    radial-gradient(circle at 70% 40%, rgba(91, 125, 199, 0.15) 0%, rgba(91, 125, 199, 0.15) 3px, transparent 3px),
+    radial-gradient(circle at 25% 55%, rgba(44, 70, 137, 0.25) 0%, rgba(44, 70, 137, 0.25) 2px, transparent 2px),
+    radial-gradient(circle at 55% 20%, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 2px, transparent 2px),
+    radial-gradient(circle at 35% 75%, rgba(44, 70, 137, 0.2) 0%, rgba(44, 70, 137, 0.2) 3px, transparent 3px),
+    radial-gradient(circle at 75% 80%, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 2px, transparent 2px),
+    radial-gradient(circle at 10% 45%, rgba(91, 125, 199, 0.2) 0%, rgba(91, 125, 199, 0.2) 2px, transparent 2px),
+    radial-gradient(circle at 95% 35%, rgba(44, 70, 137, 0.15) 0%, rgba(44, 70, 137, 0.15) 3px, transparent 3px);
   background-size: 100% 100%;
   pointer-events: none;
   z-index: -1;
-  animation: particles-drift 30s linear infinite;
-}
-
-@keyframes particles-drift {
-  0% {
-    transform: translateY(0) translateX(0);
-  }
-  25% {
-    transform: translateY(-15px) translateX(10px);
-  }
-  50% {
-    transform: translateY(-5px) translateX(-5px);
-  }
-  75% {
-    transform: translateY(-20px) translateX(15px);
-  }
-  100% {
-    transform: translateY(0) translateX(0);
-  }
-}
-
-/* Respect reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  body:has(.hero-custom)::before {
-    animation: none;
-  }
 }
