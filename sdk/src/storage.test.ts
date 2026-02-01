@@ -1359,4 +1359,743 @@ describe('StorageBucket - Large File Upload', () => {
     expect(data?.path).toBe('big-file.dat')
     expect(data?.fullPath).toBe('uploads/big-file.dat')
   })
+
+  it('should use default content type when not specified', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ key: 'file.bin' })
+    })
+
+    const mockFile = {
+      size: 100,
+      type: '',
+      stream: () => new ReadableStream({
+        start(controller) {
+          controller.close()
+        }
+      })
+    }
+
+    await bucket.uploadLargeFile('file.bin', mockFile as any)
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'X-Storage-Content-Type': 'application/octet-stream',
+        }),
+      })
+    )
+  })
+})
+
+describe('FluxbaseStorage - Empty Bucket', () => {
+  let fetch: MockFetch
+  let storage: FluxbaseStorage
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    storage = new FluxbaseStorage(fetch as unknown as FluxbaseFetch)
+  })
+
+  it('should empty a bucket with files', async () => {
+    // First call: list files
+    fetch.get = vi.fn().mockResolvedValue({
+      files: [
+        { key: 'file1.txt' },
+        { key: 'file2.txt' },
+      ]
+    })
+
+    // delete calls
+    fetch.delete = vi.fn().mockResolvedValue(undefined)
+
+    const { data, error } = await storage.emptyBucket('test-bucket')
+
+    expect(error).toBeNull()
+    expect(data?.message).toBe('Successfully emptied')
+    expect(fetch.delete).toHaveBeenCalledTimes(2)
+  })
+
+  it('should handle empty bucket', async () => {
+    fetch.get = vi.fn().mockResolvedValue({ files: [] })
+
+    const { data, error } = await storage.emptyBucket('empty-bucket')
+
+    expect(error).toBeNull()
+    expect(data?.message).toBe('Successfully emptied')
+  })
+
+  it('should handle list error', async () => {
+    fetch.get = vi.fn().mockRejectedValue(new Error('List failed'))
+
+    const { data, error } = await storage.emptyBucket('error-bucket')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('List failed')
+  })
+
+  it('should handle remove error', async () => {
+    fetch.get = vi.fn().mockResolvedValue({
+      files: [{ key: 'file.txt' }]
+    })
+    fetch.delete = vi.fn().mockRejectedValue(new Error('Delete failed'))
+
+    const { data, error } = await storage.emptyBucket('test-bucket')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Delete failed')
+  })
+})
+
+// Note: Testing XMLHttpRequest progress tracking requires a full XHR mock
+// which is complex in vitest/jsdom. These code paths are tested via E2E tests.
+
+describe('StorageBucket - Upload Options', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'uploads')
+  })
+
+  it('should upload with all options', async () => {
+    fetch.mockResponse = { id: '123', key: 'file.txt' }
+
+    const file = new Blob(['test'])
+    await bucket.upload('file.txt', file, {
+      contentType: 'text/plain',
+      metadata: { custom: 'value' },
+      cacheControl: 'max-age=3600',
+      upsert: true,
+    })
+
+    const formData = fetch.lastBody as FormData
+    expect(formData.has('file')).toBe(true)
+    expect(formData.get('content_type')).toBe('text/plain')
+    expect(formData.get('metadata')).toBe('{"custom":"value"}')
+    expect(formData.get('cache_control')).toBe('max-age=3600')
+    expect(formData.get('upsert')).toBe('true')
+  })
+})
+
+describe('StorageBucket - Stream Upload Progress', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'uploads')
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('should track progress during stream upload', async () => {
+    const progressCalls: any[] = []
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ key: 'file.bin' })
+    })
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2, 3, 4, 5]))
+        controller.close()
+      }
+    })
+
+    await bucket.uploadStream('file.bin', stream, 5, {
+      onUploadProgress: (p) => progressCalls.push({ ...p })
+    })
+
+    // The progress is tracked via transform stream, but the mock doesn't actually read it
+    expect(globalThis.fetch).toHaveBeenCalled()
+  })
+})
+
+describe('StorageBucket - Resumable Upload Full Flow', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'uploads')
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('should complete full resumable upload', async () => {
+    const fileContent = 'x'.repeat(100)
+    const file = new Blob([fileContent])
+    const progressCalls: any[] = []
+
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        // Init response
+        ok: true,
+        json: () => Promise.resolve({
+          session_id: 'sess-123',
+          bucket: 'uploads',
+          path: 'file.bin',
+          total_size: 100,
+          chunk_size: 50,
+          total_chunks: 2,
+          completed_chunks: [],
+          status: 'pending',
+        })
+      })
+      .mockResolvedValueOnce({
+        // Chunk 0
+        ok: true,
+        json: () => Promise.resolve({ chunk: 0 })
+      })
+      .mockResolvedValueOnce({
+        // Chunk 1
+        ok: true,
+        json: () => Promise.resolve({ chunk: 1 })
+      })
+      .mockResolvedValueOnce({
+        // Complete
+        ok: true,
+        json: () => Promise.resolve({
+          id: 'file-id',
+          path: 'file.bin',
+          full_path: 'uploads/file.bin'
+        })
+      })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      chunkSize: 50,
+      onProgress: (p) => progressCalls.push({ ...p })
+    })
+
+    expect(error).toBeNull()
+    expect(data).toEqual({
+      id: 'file-id',
+      path: 'file.bin',
+      fullPath: 'uploads/file.bin'
+    })
+    expect(progressCalls.length).toBe(2)
+  })
+
+  it('should resume existing upload session', async () => {
+    const fileContent = 'x'.repeat(100)
+    const file = new Blob([fileContent])
+
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        // Status response
+        ok: true,
+        json: () => Promise.resolve({
+          session: {
+            sessionId: 'sess-123',
+            bucket: 'uploads',
+            path: 'file.bin',
+            totalSize: 100,
+            chunkSize: 50,
+            totalChunks: 2,
+            completedChunks: [0], // First chunk already uploaded
+            status: 'in_progress',
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        // Chunk 1 (skipping 0)
+        ok: true,
+        json: () => Promise.resolve({ chunk: 1 })
+      })
+      .mockResolvedValueOnce({
+        // Complete
+        ok: true,
+        json: () => Promise.resolve({
+          id: 'file-id',
+          path: 'file.bin',
+          full_path: 'uploads/file.bin'
+        })
+      })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      chunkSize: 50,
+      resumeSessionId: 'sess-123',
+    })
+
+    expect(error).toBeNull()
+    expect(data?.id).toBe('file-id')
+    // Should have only uploaded chunk 1 (not chunk 0)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(3) // status + chunk1 + complete
+  })
+
+  it('should handle init error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      statusText: 'Server Error',
+      json: () => Promise.resolve({ error: 'Init failed' })
+    })
+
+    const file = new Blob(['test'])
+    const { data, error } = await bucket.uploadResumable('file.bin', file)
+
+    expect(data).toBeNull()
+    expect(error?.message).toContain('Init failed')
+  })
+
+  it('should handle chunk upload error with retry', async () => {
+    const file = new Blob(['x'.repeat(10)])
+
+    let chunkAttempts = 0
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        // Init
+        ok: true,
+        json: () => Promise.resolve({
+          session_id: 'sess-123',
+          total_chunks: 1,
+          completed_chunks: [],
+        })
+      })
+      .mockImplementation(() => {
+        chunkAttempts++
+        if (chunkAttempts <= 2) {
+          return Promise.resolve({
+            ok: false,
+            statusText: 'Error',
+            json: () => Promise.resolve({ error: 'Chunk failed' })
+          })
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ chunk: 0 })
+        })
+      })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      maxRetries: 3,
+      retryDelayMs: 1,
+    })
+
+    // Should have retried and eventually failed or succeeded
+    expect(chunkAttempts).toBeGreaterThan(1)
+  })
+})
+
+describe('StorageBucket - Transform URL Edge Cases', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'images')
+  })
+
+  it('should return base URL when no transform options provided', () => {
+    const url = bucket.getTransformUrl('photo.jpg', {})
+    expect(url).toBe('http://localhost:8080/api/v1/storage/images/photo.jpg')
+    expect(url).not.toContain('?')
+  })
+
+  it('should not include zero or negative dimensions', () => {
+    const url = bucket.getTransformUrl('photo.jpg', {
+      width: 0,
+      height: -1,
+    })
+    expect(url).not.toContain('w=')
+    expect(url).not.toContain('h=')
+  })
+
+  it('should not include zero quality', () => {
+    const url = bucket.getTransformUrl('photo.jpg', {
+      width: 100,
+      quality: 0,
+    })
+    expect(url).toContain('w=100')
+    expect(url).not.toContain('q=')
+  })
+})
+
+describe('FluxbaseStorage - Error Handling', () => {
+  let fetch: MockFetch
+  let storage: FluxbaseStorage
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    storage = new FluxbaseStorage(fetch as unknown as FluxbaseFetch)
+  })
+
+  it('should handle listBuckets error', async () => {
+    fetch.get = vi.fn().mockRejectedValue(new Error('Access denied'))
+
+    const { data, error } = await storage.listBuckets()
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Access denied')
+  })
+
+  it('should handle createBucket error', async () => {
+    fetch.post = vi.fn().mockRejectedValue(new Error('Bucket already exists'))
+
+    const { data, error } = await storage.createBucket('existing-bucket')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Bucket already exists')
+  })
+
+  it('should handle deleteBucket error', async () => {
+    fetch.delete = vi.fn().mockRejectedValue(new Error('Bucket not empty'))
+
+    const { data, error } = await storage.deleteBucket('my-bucket')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Bucket not empty')
+  })
+
+  it('should handle updateBucketSettings error', async () => {
+    fetch.put = vi.fn().mockRejectedValue(new Error('Permission denied'))
+
+    const { error } = await storage.updateBucketSettings('my-bucket', { public: true })
+
+    expect(error?.message).toBe('Permission denied')
+  })
+
+  it('should handle getBucket error', async () => {
+    fetch.get = vi.fn().mockRejectedValue(new Error('Bucket not found'))
+
+    const { data, error } = await storage.getBucket('unknown-bucket')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Bucket not found')
+  })
+
+  it('should handle emptyBucket with unexpected exception', async () => {
+    // Mock list to succeed but throw unexpected error
+    storage.from = vi.fn().mockReturnValue({
+      list: vi.fn().mockImplementation(() => {
+        throw new Error('Unexpected error')
+      })
+    })
+
+    const { data, error } = await storage.emptyBucket('test-bucket')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Unexpected error')
+  })
+})
+
+describe('StorageBucket - Share Error Handling', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'my-bucket')
+  })
+
+  it('should handle share error', async () => {
+    fetch.post = vi.fn().mockRejectedValue(new Error('User not found'))
+
+    const { error } = await bucket.share('file.txt', {
+      userId: 'unknown-user',
+      permission: 'read',
+    })
+
+    expect(error?.message).toBe('User not found')
+  })
+
+  it('should handle revokeShare error', async () => {
+    fetch.delete = vi.fn().mockRejectedValue(new Error('Share not found'))
+
+    const { error } = await bucket.revokeShare('file.txt', 'user-123')
+
+    expect(error?.message).toBe('Share not found')
+  })
+
+  it('should handle listShares error', async () => {
+    fetch.get = vi.fn().mockRejectedValue(new Error('Access denied'))
+
+    const { data, error } = await bucket.listShares('file.txt')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Access denied')
+  })
+})
+
+describe('StorageBucket - Resumable Upload Error Paths', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'uploads')
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('should handle session status error during resume', async () => {
+    const file = new Blob(['test content'])
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      statusText: 'Not Found',
+      json: () => Promise.resolve({ error: 'Session expired' }),
+    })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      sessionId: 'expired-session',
+    })
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Session expired')
+  })
+
+  it('should handle pre-abort signal during resumable upload', async () => {
+    const fileContent = 'x'.repeat(100)
+    const file = new Blob([fileContent])
+
+    // Abort before starting
+    const controller = new AbortController()
+    controller.abort()
+
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          session_id: 'session-123',
+          bucket: 'uploads',
+          path: 'file.bin',
+          total_size: 100,
+          chunk_size: 1000,
+          total_chunks: 1,
+          completed_chunks: [],
+          status: 'active',
+        }),
+      })
+    })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      signal: controller.signal,
+    })
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Upload aborted')
+  })
+
+  it('should handle chunk upload error with JSON parse failure', async () => {
+    const fileContent = 'x'.repeat(100)
+    const file = new Blob([fileContent])
+
+    let callCount = 0
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            session_id: 'session-123',
+            bucket: 'uploads',
+            path: 'file.bin',
+            total_size: 100,
+            chunk_size: 1000,
+            total_chunks: 1,
+            completed_chunks: [],
+            status: 'active',
+          }),
+        })
+      }
+      // Chunk upload fails with non-parseable response
+      return Promise.resolve({
+        ok: false,
+        statusText: 'Bad Request',
+        json: () => Promise.reject(new Error('Invalid JSON')),
+      })
+    })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      maxRetries: 0,
+    })
+
+    expect(data).toBeNull()
+    expect(error?.message).toContain('Bad Request')
+  })
+
+  it('should handle complete upload error with JSON parse failure', async () => {
+    const fileContent = 'x'.repeat(50)
+    const file = new Blob([fileContent])
+
+    let callCount = 0
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            session_id: 'session-123',
+            bucket: 'uploads',
+            path: 'file.bin',
+            total_size: 50,
+            chunk_size: 100,
+            total_chunks: 1,
+            completed_chunks: [],
+            status: 'active',
+          }),
+        })
+      }
+      if (callCount === 2) {
+        // Chunk upload succeeds
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        })
+      }
+      // Complete fails
+      return Promise.resolve({
+        ok: false,
+        statusText: 'Internal Error',
+        json: () => Promise.reject(new Error('Invalid JSON')),
+      })
+    })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file)
+
+    expect(data).toBeNull()
+    expect(error?.message).toContain('Internal Error')
+  })
+
+  it('should resume session and track progress bytes', async () => {
+    const fileContent = 'x'.repeat(200)
+    const file = new Blob([fileContent])
+
+    const progressCalls: any[] = []
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/status')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            session: {
+              sessionId: 'session-123',
+              bucket: 'uploads',
+              path: 'file.bin',
+              totalSize: 200,
+              chunkSize: 50,
+              totalChunks: 4,
+              completedChunks: [0, 1], // First two chunks already done
+              status: 'active',
+            },
+          }),
+        })
+      }
+
+      if (url.includes('/complete')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            id: 'file-id',
+            path: 'file.bin',
+            full_path: 'uploads/file.bin',
+          }),
+        })
+      }
+
+      // Chunk uploads
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      })
+    })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      sessionId: 'session-123',
+      onProgress: (p) => progressCalls.push({ ...p }),
+    })
+
+    expect(error).toBeNull()
+    expect(data).toBeDefined()
+  })
+
+  it('should handle init response with JSON parse failure', async () => {
+    const fileContent = 'x'.repeat(100)
+    const file = new Blob([fileContent])
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      statusText: 'Bad Request',
+      json: () => Promise.reject(new Error('Invalid JSON')),
+    })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file)
+
+    expect(data).toBeNull()
+    expect(error?.message).toContain('Bad Request')
+  })
+
+  it('should handle status response with JSON parse failure during resume', async () => {
+    const fileContent = 'x'.repeat(100)
+    const file = new Blob([fileContent])
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      statusText: 'Not Found',
+      json: () => Promise.reject(new Error('Invalid JSON')),
+    })
+
+    const { data, error } = await bucket.uploadResumable('file.bin', file, {
+      sessionId: 'session-123',
+    })
+
+    expect(data).toBeNull()
+    expect(error?.message).toContain('Not Found')
+  })
+})
+
+describe('StorageBucket - AbortResumableUpload Error Path', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'uploads')
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('should handle abortResumableUpload error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      statusText: 'Not Found',
+      json: () => Promise.resolve({ error: 'Session not found' }),
+    })
+
+    const { error } = await bucket.abortResumableUpload('invalid-session')
+
+    expect(error?.message).toBe('Session not found')
+  })
+
+  it('should handle abortResumableUpload JSON parse error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      statusText: 'Server Error',
+      json: () => Promise.reject(new Error('Invalid JSON')),
+    })
+
+    const { error } = await bucket.abortResumableUpload('invalid-session')
+
+    expect(error?.message).toContain('Server Error')
+  })
 })

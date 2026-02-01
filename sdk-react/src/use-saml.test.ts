@@ -179,7 +179,7 @@ describe('useHandleSAMLCallback', () => {
 
     expect(handleSAMLCallbackMock).toHaveBeenCalledWith('base64-response', undefined);
     expect(response).toEqual(mockResult);
-    expect(result.current.isSuccess).toBe(true);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
   it('should pass provider to callback handler', async () => {

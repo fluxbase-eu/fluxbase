@@ -1513,4 +1513,647 @@ describe("FluxbaseAuth", () => {
       expect(mockFetch.setAuthToken).toHaveBeenCalledWith("mobile-token");
     });
   });
+
+  describe("Two-Factor Authentication", () => {
+    // First sign in to have an active session
+    beforeEach(async () => {
+      const authResponse: AuthResponse = {
+        access_token: "token",
+        refresh_token: "refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValueOnce(authResponse);
+      await auth.signIn({ email: "user@example.com", password: "password" });
+      vi.mocked(mockFetch.post).mockClear();
+    });
+
+    describe("setup2FA()", () => {
+      it("should setup 2FA with TOTP", async () => {
+        const setupResponse = {
+          factor_id: "factor-123",
+          type: "totp",
+          totp: {
+            qr_code: "data:image/png;base64,abc123",
+            secret: "JBSWY3DPEHPK3PXP",
+            uri: "otpauth://totp/...",
+          },
+        };
+        vi.mocked(mockFetch.post).mockResolvedValue(setupResponse);
+
+        const { data, error } = await auth.setup2FA();
+
+        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/2fa/setup", undefined);
+        expect(error).toBeNull();
+        expect(data?.totp?.qr_code).toBe("data:image/png;base64,abc123");
+      });
+
+      it("should setup 2FA with custom issuer", async () => {
+        const setupResponse = {
+          factor_id: "factor-123",
+          type: "totp",
+          totp: { qr_code: "...", secret: "...", uri: "..." },
+        };
+        vi.mocked(mockFetch.post).mockResolvedValue(setupResponse);
+
+        await auth.setup2FA("MyApp");
+
+        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/2fa/setup", { issuer: "MyApp" });
+      });
+
+      it("should return error on setup failure", async () => {
+        vi.mocked(mockFetch.post).mockRejectedValue(new Error("Setup failed"));
+
+        const { data, error } = await auth.setup2FA();
+
+        expect(data).toBeNull();
+        expect(error?.message).toBe("Setup failed");
+      });
+    });
+
+    describe("enable2FA()", () => {
+      it("should enable 2FA with verification code", async () => {
+        const enableResponse = {
+          access_token: "new-token",
+          refresh_token: "new-refresh",
+          user: { id: "1", email: "user@example.com" },
+        };
+        vi.mocked(mockFetch.post).mockResolvedValue(enableResponse);
+
+        const { data, error } = await auth.enable2FA("123456");
+
+        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/2fa/enable", {
+          code: "123456",
+        });
+        expect(error).toBeNull();
+      });
+    });
+
+    describe("disable2FA()", () => {
+      it("should disable 2FA with password", async () => {
+        vi.mocked(mockFetch.post).mockResolvedValue({ factor_id: "factor-123" });
+
+        const { data, error } = await auth.disable2FA("mypassword");
+
+        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/2fa/disable", {
+          password: "mypassword",
+        });
+        expect(error).toBeNull();
+      });
+    });
+
+    describe("get2FAStatus()", () => {
+      it("should get 2FA status", async () => {
+        const statusResponse = {
+          totp: {
+            friendly_name: "Authenticator App",
+            factor_id: "factor-123",
+            status: "verified",
+          },
+          all: [
+            { friendly_name: "Authenticator App", factor_id: "factor-123", factor_type: "totp", status: "verified" }
+          ],
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(statusResponse);
+
+        const { data, error } = await auth.get2FAStatus();
+
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/auth/2fa/status");
+        expect(error).toBeNull();
+        expect(data?.totp?.status).toBe("verified");
+      });
+    });
+
+    describe("verify2FA()", () => {
+      it("should verify 2FA and create session", async () => {
+        const response = {
+          access_token: "2fa-token",
+          refresh_token: "2fa-refresh",
+          expires_in: 3600,
+          user: { id: "1", email: "user@example.com", created_at: "" },
+        };
+        vi.mocked(mockFetch.post).mockResolvedValue(response);
+
+        const { data, error } = await auth.verify2FA({
+          factor_id: "factor-123",
+          code: "123456",
+        });
+
+        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/2fa/verify", {
+          factor_id: "factor-123",
+          code: "123456",
+        });
+        expect(error).toBeNull();
+        expect(data?.access_token).toBe("2fa-token");
+      });
+
+      it("should handle verify without session creation", async () => {
+        vi.mocked(mockFetch.post).mockResolvedValue({ verified: true });
+
+        const { data, error } = await auth.verify2FA({
+          factor_id: "factor-123",
+          code: "123456",
+        });
+
+        expect(error).toBeNull();
+      });
+    });
+  });
+
+  describe("SAML Authentication", () => {
+    describe("getSAMLProviders()", () => {
+      it("should get list of SAML providers", async () => {
+        const providersResponse = {
+          providers: [
+            { id: "1", name: "okta", display_name: "Okta" },
+            { id: "2", name: "azure", display_name: "Azure AD" },
+          ],
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(providersResponse);
+
+        const { data, error } = await auth.getSAMLProviders();
+
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/auth/saml/providers");
+        expect(error).toBeNull();
+        expect(data?.providers).toHaveLength(2);
+      });
+    });
+
+    describe("getSAMLLoginUrl()", () => {
+      it("should get SAML login URL", async () => {
+        const urlResponse = {
+          url: "https://idp.example.com/sso/saml?SAMLRequest=...",
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(urlResponse);
+
+        const { data, error } = await auth.getSAMLLoginUrl("okta");
+
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/auth/saml/login/okta");
+        expect(error).toBeNull();
+        expect(data?.url).toContain("idp.example.com");
+      });
+
+      it("should get SAML login URL with options", async () => {
+        const urlResponse = {
+          url: "https://idp.example.com/sso/saml",
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(urlResponse);
+
+        const { data, error } = await auth.getSAMLLoginUrl("okta", {
+          redirectUrl: "https://app.example.com/callback",
+        });
+
+        expect(mockFetch.get).toHaveBeenCalledWith(
+          "/api/v1/auth/saml/login/okta?redirect_url=https%3A%2F%2Fapp.example.com%2Fcallback"
+        );
+        expect(error).toBeNull();
+      });
+    });
+
+    describe("signInWithSAML()", () => {
+      it("should redirect to SAML provider in browser", async () => {
+        const urlResponse = {
+          url: "https://idp.example.com/sso/saml",
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(urlResponse);
+
+        // Mock window.location
+        const originalWindow = global.window;
+        global.window = { location: { href: "" } } as any;
+
+        const { error } = await auth.signInWithSAML("okta");
+
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/auth/saml/login/okta");
+        expect(error).toBeNull();
+        expect(global.window.location.href).toBe("https://idp.example.com/sso/saml");
+
+        global.window = originalWindow;
+      });
+
+      it("should return error in non-browser environment", async () => {
+        const urlResponse = {
+          url: "https://idp.example.com/sso/saml",
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(urlResponse);
+
+        const originalWindow = global.window;
+        delete (global as any).window;
+
+        const { error } = await auth.signInWithSAML("okta");
+
+        expect(error?.message).toBe("signInWithSAML can only be called in a browser environment");
+
+        global.window = originalWindow;
+      });
+    });
+
+    describe("handleSAMLCallback()", () => {
+      it("should handle SAML callback and create session", async () => {
+        const authResponse: AuthResponse = {
+          access_token: "saml-token",
+          refresh_token: "saml-refresh",
+          expires_in: 3600,
+          token_type: "Bearer",
+          user: { id: "1", email: "saml@example.com", created_at: "" },
+        };
+        vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+        const { data, error } = await auth.handleSAMLCallback("base64-saml-response");
+
+        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/saml/acs", {
+          saml_response: "base64-saml-response",
+          provider: undefined,
+        });
+        expect(error).toBeNull();
+        expect(data?.session?.access_token).toBe("saml-token");
+      });
+
+      it("should handle SAML callback with provider", async () => {
+        const authResponse: AuthResponse = {
+          access_token: "saml-token",
+          refresh_token: "saml-refresh",
+          expires_in: 3600,
+          token_type: "Bearer",
+          user: { id: "1", email: "saml@example.com", created_at: "" },
+        };
+        vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+        await auth.handleSAMLCallback("base64-response", "okta");
+
+        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/saml/acs", {
+          saml_response: "base64-response",
+          provider: "okta",
+        });
+      });
+    });
+
+    describe("getSAMLMetadataUrl()", () => {
+      it("should return SAML metadata URL", () => {
+        // Mock the fetch baseUrl
+        (mockFetch as any).baseUrl = "https://api.example.com";
+        const newAuth = new FluxbaseAuth(mockFetch, true, true);
+
+        const url = newAuth.getSAMLMetadataUrl("okta");
+
+        expect(url).toBe("https://api.example.com/api/v1/auth/saml/metadata/okta");
+      });
+    });
+  });
+
+  describe("Config Methods", () => {
+    describe("getCaptchaConfig()", () => {
+      it("should get captcha configuration", async () => {
+        const captchaConfig = {
+          enabled: true,
+          provider: "hcaptcha",
+          site_key: "site-key-123",
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(captchaConfig);
+
+        const { data, error } = await auth.getCaptchaConfig();
+
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/auth/captcha/config");
+        expect(error).toBeNull();
+        expect(data?.provider).toBe("hcaptcha");
+      });
+    });
+
+    describe("getAuthConfig()", () => {
+      it("should get auth configuration", async () => {
+        const authConfig = {
+          disable_signup: false,
+          require_email_confirmation: true,
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(authConfig);
+
+        const { data, error } = await auth.getAuthConfig();
+
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/auth/config");
+        expect(error).toBeNull();
+        expect(data?.require_email_confirmation).toBe(true);
+      });
+    });
+  });
+
+  describe("setSession()", () => {
+    it("should set session from access and refresh tokens", async () => {
+      vi.mocked(mockFetch.get).mockResolvedValue({
+        id: "1",
+        email: "user@example.com",
+        created_at: "",
+      });
+
+      const { data, error } = await auth.setSession({
+        access_token: "new-access-token",
+        refresh_token: "new-refresh-token",
+      });
+
+      expect(error).toBeNull();
+      expect(data?.session?.access_token).toBe("new-access-token");
+      expect(mockFetch.setAuthToken).toHaveBeenCalledWith("new-access-token");
+    });
+
+    it("should fetch user info when setting session", async () => {
+      vi.mocked(mockFetch.get).mockResolvedValue({
+        id: "user-123",
+        email: "restored@example.com",
+        created_at: "",
+      });
+
+      const { data, error } = await auth.setSession({
+        access_token: "token-123",
+        refresh_token: "refresh-123",
+      });
+
+      expect(error).toBeNull();
+      expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/auth/user");
+      expect(data?.user?.email).toBe("restored@example.com");
+    });
+
+    it("should return error when API call fails", async () => {
+      vi.mocked(mockFetch.get).mockRejectedValue(new Error("API error"));
+
+      const { data, error } = await auth.setSession({
+        access_token: "token",
+        refresh_token: "refresh",
+      });
+
+      expect(data).toBeNull();
+      expect(error?.message).toBe("API error");
+    });
+  });
+
+  describe("onAuthStateChange()", () => {
+    it("should register state change listener", async () => {
+      const callback = vi.fn();
+      const subscription = auth.onAuthStateChange(callback);
+
+      // Sign in to trigger state change
+      const authResponse: AuthResponse = {
+        access_token: "token",
+        refresh_token: "refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      expect(callback).toHaveBeenCalledWith("SIGNED_IN", expect.any(Object));
+      expect(subscription.data.subscription).toBeDefined();
+    });
+
+    it("should unsubscribe from state changes", async () => {
+      const callback = vi.fn();
+      const subscription = auth.onAuthStateChange(callback);
+      subscription.data.subscription.unsubscribe();
+
+      // Sign in - callback should not be called
+      const authResponse: AuthResponse = {
+        access_token: "token",
+        refresh_token: "refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("should handle errors in state change listeners", async () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      const throwingCallback = vi.fn().mockImplementation(() => {
+        throw new Error("Listener error");
+      });
+      auth.onAuthStateChange(throwingCallback);
+
+      const authResponse: AuthResponse = {
+        access_token: "token",
+        refresh_token: "refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      expect(consoleError).toHaveBeenCalledWith(
+        "Error in auth state change listener:",
+        expect.any(Error)
+      );
+      consoleError.mockRestore();
+    });
+  });
+
+  describe("Auto-refresh configuration", () => {
+    it("should schedule token refresh after sign in", async () => {
+      vi.useFakeTimers();
+
+      const authResponse: AuthResponse = {
+        access_token: "initial-token",
+        refresh_token: "initial-refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValueOnce(authResponse);
+
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      // Session should be set
+      const { data } = await auth.getSession();
+      expect(data.session?.access_token).toBe("initial-token");
+
+      vi.useRealTimers();
+    });
+
+    it("should disable auto-refresh when autoRefresh is false", async () => {
+      const noAutoRefreshAuth = new FluxbaseAuth(mockFetch, true, false);
+
+      const authResponse: AuthResponse = {
+        access_token: "token",
+        refresh_token: "refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+      await noAutoRefreshAuth.signIn({ email: "user@example.com", password: "password" });
+
+      // Session should be set even without auto-refresh
+      const { data } = await noAutoRefreshAuth.getSession();
+      expect(data.session?.access_token).toBe("token");
+    });
+  });
+
+  describe("getUser()", () => {
+    it("should return null user when no session exists", async () => {
+      const { data, error } = await auth.getUser();
+
+      expect(error).toBeNull();
+      expect(data?.user).toBeNull();
+    });
+
+    it("should return user when session exists", async () => {
+      // Sign in first
+      const authResponse: AuthResponse = {
+        access_token: "token",
+        refresh_token: "refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      const { data, error } = await auth.getUser();
+
+      expect(error).toBeNull();
+      expect(data?.user?.email).toBe("user@example.com");
+    });
+  });
+
+  describe("signInWithPassword()", () => {
+    it("should be an alias for signIn with password credentials", async () => {
+      const authResponse: AuthResponse = {
+        access_token: "token",
+        refresh_token: "refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: { id: "1", email: "user@example.com", created_at: "" },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+
+      const { data, error } = await auth.signInWithPassword({
+        email: "user@example.com",
+        password: "password123",
+      });
+
+      expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/signin", {
+        email: "user@example.com",
+        password: "password123",
+      });
+      expect(error).toBeNull();
+      expect(data?.session).toBeDefined();
+    });
+  });
+
+  describe("resetPasswordForEmail()", () => {
+    it("should be an alias for sendPasswordReset", async () => {
+      vi.mocked(mockFetch.post).mockResolvedValue({ message: "Reset email sent" });
+
+      const { error } = await auth.resetPasswordForEmail("user@example.com");
+
+      expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/password/reset", {
+        email: "user@example.com",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("should support redirect URL option", async () => {
+      vi.mocked(mockFetch.post).mockResolvedValue({ message: "Reset email sent" });
+
+      await auth.resetPasswordForEmail("user@example.com", {
+        redirectTo: "https://app.example.com/reset",
+      });
+
+      expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/password/reset", {
+        email: "user@example.com",
+        redirect_to: "https://app.example.com/reset",
+      });
+    });
+  });
+
+  describe("getOAuthLogoutUrl()", () => {
+    it("should get OAuth logout URL", async () => {
+      const logoutResponse = {
+        requires_redirect: true,
+        redirect_url: "https://provider.example.com/logout",
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(logoutResponse);
+
+      const { data, error } = await auth.getOAuthLogoutUrl("google");
+
+      expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/oauth/google/logout", {});
+      expect(error).toBeNull();
+      expect(data?.redirect_url).toContain("provider.example.com");
+    });
+
+    it("should get OAuth logout URL with options", async () => {
+      const logoutResponse = {
+        requires_redirect: false,
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(logoutResponse);
+
+      await auth.getOAuthLogoutUrl("google", {
+        redirectTo: "https://app.example.com",
+      });
+
+      expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/auth/oauth/google/logout", {
+        redirectTo: "https://app.example.com",
+      });
+    });
+  });
+
+  describe("signOutWithOAuth()", () => {
+    it("should redirect to OAuth logout URL in browser when required", async () => {
+      const logoutResponse = {
+        requires_redirect: true,
+        redirect_url: "https://provider.example.com/logout",
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(logoutResponse);
+
+      const originalWindow = global.window;
+      global.window = { location: { href: "" } } as any;
+
+      const { data, error } = await auth.signOutWithOAuth("google");
+
+      expect(error).toBeNull();
+      expect(global.window.location.href).toBe("https://provider.example.com/logout");
+
+      global.window = originalWindow;
+    });
+
+    it("should not redirect when requires_redirect is false", async () => {
+      const logoutResponse = {
+        requires_redirect: false,
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(logoutResponse);
+
+      const originalWindow = global.window;
+      global.window = { location: { href: "http://original" } } as any;
+
+      const { data, error } = await auth.signOutWithOAuth("google");
+
+      expect(error).toBeNull();
+      expect(global.window.location.href).toBe("http://original"); // Should not change
+
+      global.window = originalWindow;
+    });
+
+    it("should work in non-browser environment when redirect not required", async () => {
+      const logoutResponse = {
+        requires_redirect: false,
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(logoutResponse);
+
+      const originalWindow = global.window;
+      delete (global as any).window;
+
+      const { data, error } = await auth.signOutWithOAuth("google");
+
+      expect(error).toBeNull();
+      expect(data?.requires_redirect).toBe(false);
+
+      global.window = originalWindow;
+    });
+  });
 });
