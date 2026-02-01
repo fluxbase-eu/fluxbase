@@ -14,10 +14,10 @@ jobs:
     name: Lint Go
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -32,9 +32,9 @@ jobs:
           go mod verify
 
       - name: Set up Node.js for embedded SDK generation
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.20.0"
+          node-version: "24.13.0"
           cache: "npm"
           cache-dependency-path: sdk/package-lock.json
 
@@ -68,12 +68,12 @@ jobs:
     name: Lint TypeScript
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.20.0"
+          node-version: "24.13.0"
           cache: "npm"
           cache-dependency-path: admin/package-lock.json
 
@@ -89,12 +89,12 @@ jobs:
     name: Test SDK
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.20.0"
+          node-version: "24.13.0"
           cache: "npm"
           cache-dependency-path: sdk/package-lock.json
 
@@ -107,7 +107,7 @@ jobs:
         run: npx vitest --coverage --run
 
       - name: Upload SDK coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./sdk/coverage/coverage-final.json
           flags: sdk
@@ -182,10 +182,10 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -200,9 +200,9 @@ jobs:
           go mod verify
 
       - name: Set up Node.js for embedded SDK generation
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.20.0"
+          node-version: "24.13.0"
           cache: "npm"
           cache-dependency-path: sdk/package-lock.json
 
@@ -371,14 +371,14 @@ jobs:
           go test -v -race -parallel=1 -timeout=10m ./test/e2e/...
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           file: ./coverage.out
           flags: unittests
           name: codecov-umbrella
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: |
@@ -400,12 +400,12 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.20.0"
+          node-version: "24.13.0"
           cache: "npm"
           cache-dependency-path: |
             sdk/package-lock.json
@@ -440,7 +440,7 @@ jobs:
           cp -r dist/* ../internal/adminui/dist/
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -469,13 +469,13 @@ jobs:
           go build -ldflags="-s -w -X github.com/fluxbase-eu/fluxbase/cli/cmd.Version=dev-${GITHUB_SHA::8} -X github.com/fluxbase-eu/fluxbase/cli/cmd.Commit=${GITHUB_SHA} -X github.com/fluxbase-eu/fluxbase/cli/cmd.BuildDate=${BUILD_DATE}" -o "dist/${output_name}" cli/main.go
 
       - name: Upload server artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}
 
       - name: Upload CLI artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -486,13 +486,13 @@ jobs:
     needs: [test-go]
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image (test only, no push)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
@@ -507,12 +507,12 @@ jobs:
     needs: [test-sdk]
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.20.0"
+          node-version: "24.13.0"
           cache: "npm"
           cache-dependency-path: |
             sdk/package-lock.json
@@ -553,7 +553,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build docs Docker image (test only, no push)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.docs
