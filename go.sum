@@ -189,6 +189,8 @@ github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 h1:6E+4a0GO5zZEnZ
 github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2jmtg6P3p1VtQj7WsuWi/y4VnjVBn7F8KPB3I=
 github.com/mailgun/mailgun-go/v5 v5.11.0 h1:5Ih/BIsbEoLzZAMtdoD2PgkpXapjyxTvSOBLpgvxa3k=
 github.com/mailgun/mailgun-go/v5 v5.11.0/go.mod h1:OxE3eAlj4xhdDoLJop8Dz1xDN9jzFP1ewunc+xApkwk=
+github.com/mailgun/mailgun-go/v5 v5.12.0 h1:jzgD9++03KSofLPf0AZ7WVUt7+lMygUoubn3xqASNBw=
+github.com/mailgun/mailgun-go/v5 v5.12.0/go.mod h1:OxE3eAlj4xhdDoLJop8Dz1xDN9jzFP1ewunc+xApkwk=
 github.com/mattermost/xml-roundtrip-validator v0.1.0 h1:RXbVD2UAl7A7nOTR4u7E3ILa4IbtvKBHw64LDsmu9hU=
 github.com/mattermost/xml-roundtrip-validator v0.1.0/go.mod h1:qccnGMcpgwcNaBnxqpJpWWUiPNr5H3O8eDgGV9gT5To=
 github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovkB8vQcUbaXHg=
