@@ -559,15 +559,6 @@
   padding: 0 !important;
 }
 
-/* Make page content transparent on splash page so body background shows through */
-body:has(.hero-custom) .page,
-body:has(.hero-custom) .main-pane,
-body:has(.hero-custom) main,
-body:has(.hero-custom) .content-panel,
-body:has(.hero-custom) .sl-container {
-  background: transparent !important;
-}
-
 /* Full-width hero on splash page */
 .hero-custom {
   width: 100vw;
@@ -582,50 +573,21 @@ body:has(.hero-custom) .sl-container {
   width: 100%;
 }
 
-/* Animated gradient background for pages with hero - covers full page */
-/* Use :has(.hero-custom) to detect splash page */
-body:has(.hero-custom) {
+/* Gradient background for frontpage - applied to main container */
+main:has(.hero-custom) {
   background:
-    radial-gradient(ellipse at 20% 30%, rgba(44, 70, 137, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 45%),
-    radial-gradient(ellipse at 60% 80%, rgba(91, 125, 199, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 10% 90%, rgba(139, 92, 246, 0.03) 0%, transparent 40%);
-  background-attachment: fixed;
-  background-size: 100vw 100vh;
+    radial-gradient(ellipse at 20% 10%, rgba(44, 70, 137, 0.08) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 5%, rgba(139, 92, 246, 0.06) 0%, transparent 35%),
+    radial-gradient(ellipse at 60% 50%, rgba(91, 125, 199, 0.05) 0%, transparent 40%),
+    radial-gradient(ellipse at 10% 70%, rgba(139, 92, 246, 0.04) 0%, transparent 35%),
+    radial-gradient(ellipse at 90% 90%, rgba(44, 70, 137, 0.05) 0%, transparent 40%);
 }
 
-:root[data-theme='dark'] body:has(.hero-custom) {
+:root[data-theme='dark'] main:has(.hero-custom) {
   background:
-    radial-gradient(ellipse at 20% 30%, rgba(91, 125, 199, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 45%),
-    radial-gradient(ellipse at 60% 80%, rgba(44, 70, 137, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 10% 90%, rgba(139, 92, 246, 0.04) 0%, transparent 40%);
-  background-attachment: fixed;
-  background-size: 100vw 100vh;
-}
-
-/* Floating particles for the whole page - static dots across viewport */
-body:has(.hero-custom)::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image:
-    radial-gradient(circle at 15% 25%, rgba(44, 70, 137, 0.35) 0%, rgba(44, 70, 137, 0.35) 2px, transparent 2px),
-    radial-gradient(circle at 85% 15%, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 3px, transparent 3px),
-    radial-gradient(circle at 45% 85%, rgba(91, 125, 199, 0.3) 0%, rgba(91, 125, 199, 0.3) 2px, transparent 2px),
-    radial-gradient(circle at 90% 60%, rgba(44, 70, 137, 0.2) 0%, rgba(44, 70, 137, 0.2) 4px, transparent 4px),
-    radial-gradient(circle at 5% 70%, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 2px, transparent 2px),
-    radial-gradient(circle at 70% 40%, rgba(91, 125, 199, 0.15) 0%, rgba(91, 125, 199, 0.15) 3px, transparent 3px),
-    radial-gradient(circle at 25% 55%, rgba(44, 70, 137, 0.25) 0%, rgba(44, 70, 137, 0.25) 2px, transparent 2px),
-    radial-gradient(circle at 55% 20%, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 2px, transparent 2px),
-    radial-gradient(circle at 35% 75%, rgba(44, 70, 137, 0.2) 0%, rgba(44, 70, 137, 0.2) 3px, transparent 3px),
-    radial-gradient(circle at 75% 80%, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 2px, transparent 2px),
-    radial-gradient(circle at 10% 45%, rgba(91, 125, 199, 0.2) 0%, rgba(91, 125, 199, 0.2) 2px, transparent 2px),
-    radial-gradient(circle at 95% 35%, rgba(44, 70, 137, 0.15) 0%, rgba(44, 70, 137, 0.15) 3px, transparent 3px);
-  background-size: 100% 100%;
-  pointer-events: none;
-  z-index: -1;
+    radial-gradient(ellipse at 20% 10%, rgba(91, 125, 199, 0.1) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 5%, rgba(139, 92, 246, 0.08) 0%, transparent 35%),
+    radial-gradient(ellipse at 60% 50%, rgba(44, 70, 137, 0.06) 0%, transparent 40%),
+    radial-gradient(ellipse at 10% 70%, rgba(139, 92, 246, 0.05) 0%, transparent 35%),
+    radial-gradient(ellipse at 90% 90%, rgba(91, 125, 199, 0.06) 0%, transparent 40%);
 }
