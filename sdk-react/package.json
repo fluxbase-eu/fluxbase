@@ -47,16 +47,16 @@
     "@fluxbase/sdk": "file:../sdk",
     "@tanstack/react-query": "^5.90.20",
     "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.2.0",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.10",
-    "@vitest/coverage-v8": "^2.1.8",
-    "jsdom": "^25.0.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "jsdom": "^27.4.0",
     "prettier": "^3.8.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tsup": "^8.5.1",
     "typedoc": "^0.28.16",
     "typescript": "^5.9.3",
-    "vitest": "^2.1.8"
+    "vitest": "^4.0.18"
   }
 }
