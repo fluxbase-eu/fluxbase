@@ -1,14 +1,19 @@
 import { defineConfig } from 'vitest/config';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { rmSync } from 'fs';
+import { join } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Clear Vitest cache when config loads
+try {
+  const cacheDir = join(process.cwd(), 'node_modules', '.vitest');
+  rmSync(cacheDir, { recursive: true, force: true });
+  console.log('Cleared Vitest cache directory');
+} catch (err) {
+  // Ignore if cache doesn't exist
+}
 
 export default defineConfig({
   test: {
     cache: false,
-    globalSetup: resolve(__dirname, 'vitest.setup.ts'),
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
