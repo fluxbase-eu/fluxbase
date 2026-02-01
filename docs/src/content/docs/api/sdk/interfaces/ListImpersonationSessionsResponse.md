@@ -11,5 +11,5 @@ Response for listing impersonation sessions
 
 | Property | Type |
 | ------ | ------ |
-| `sessions` | [`ImpersonationSession`](/api/sdk/interfaces/impersonationsession/)[] |
-| `total` | `number` |
+| <a id="sessions"></a> `sessions` | [`ImpersonationSession`](/api/sdk/interfaces/impersonationsession/)[] |
+| <a id="total"></a> `total` | `number` |

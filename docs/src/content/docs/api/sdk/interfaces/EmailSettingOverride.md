@@ -11,5 +11,5 @@ Override information for a setting controlled by environment variable
 
 | Property | Type |
 | ------ | ------ |
-| `env_var` | `string` |
-| `is_overridden` | `boolean` |
+| <a id="env_var"></a> `env_var` | `string` |
+| <a id="is_overridden"></a> `is_overridden` | `boolean` |

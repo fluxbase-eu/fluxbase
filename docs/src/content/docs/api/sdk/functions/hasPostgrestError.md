@@ -5,7 +5,7 @@ prev: false
 title: "hasPostgrestError"
 ---
 
-> **hasPostgrestError**\<`T`\>(`response`): `response is PostgrestResponse<T> & Object`
+> **hasPostgrestError**\<`T`\>(`response`): `response is PostgrestResponse<T> & { data: null; error: PostgrestError }`
 
 Type guard to check if a PostgrestResponse has an error
 
@@ -23,7 +23,7 @@ Type guard to check if a PostgrestResponse has an error
 
 ## Returns
 
-`response is PostgrestResponse<T> & Object`
+`response is PostgrestResponse<T> & { data: null; error: PostgrestError }`
 
 true if the response contains an error
 

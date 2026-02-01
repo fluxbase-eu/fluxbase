@@ -9,6 +9,6 @@ title: "CreateInvitationRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `email` | `string` |
-| `expiry_duration?` | `number` |
-| `role` | `"dashboard_admin"` \| `"dashboard_user"` |
+| <a id="email"></a> `email` | `string` |
+| <a id="expiry_duration"></a> `expiry_duration?` | `number` |
+| <a id="role"></a> `role` | `"dashboard_admin"` \| `"dashboard_user"` |

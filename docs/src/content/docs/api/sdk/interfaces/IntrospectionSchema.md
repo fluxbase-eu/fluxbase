@@ -11,11 +11,11 @@ GraphQL introspection schema type
 
 | Property | Type |
 | ------ | ------ |
-| `directives` | [`IntrospectionDirective`](/api/sdk/interfaces/introspectiondirective/)[] |
-| `mutationType?` | `object` |
+| <a id="directives"></a> `directives` | [`IntrospectionDirective`](/api/sdk/interfaces/introspectiondirective/)[] |
+| <a id="mutationtype"></a> `mutationType?` | `object` |
 | `mutationType.name` | `string` |
-| `queryType` | `object` |
+| <a id="querytype"></a> `queryType` | `object` |
 | `queryType.name` | `string` |
-| `subscriptionType?` | `object` |
+| <a id="subscriptiontype"></a> `subscriptionType?` | `object` |
 | `subscriptionType.name` | `string` |
-| `types` | [`IntrospectionType`](/api/sdk/interfaces/introspectiontype/)[] |
+| <a id="types"></a> `types` | [`IntrospectionType`](/api/sdk/interfaces/introspectiontype/)[] |

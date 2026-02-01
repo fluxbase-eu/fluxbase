@@ -11,9 +11,9 @@ Realtime channel configuration options
 
 | Property | Type |
 | ------ | ------ |
-| `broadcast?` | `object` |
+| <a id="broadcast"></a> `broadcast?` | `object` |
 | `broadcast.ack?` | `boolean` |
 | `broadcast.ackTimeout?` | `number` |
 | `broadcast.self?` | `boolean` |
-| `presence?` | `object` |
+| <a id="presence"></a> `presence?` | `object` |
 | `presence.key?` | `string` |

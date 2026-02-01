@@ -11,7 +11,7 @@ GraphQL introspection directive
 
 | Property | Type |
 | ------ | ------ |
-| `args` | [`IntrospectionInputValue`](/api/sdk/interfaces/introspectioninputvalue/)[] |
-| `description?` | `string` |
-| `locations` | `string`[] |
-| `name` | `string` |
+| <a id="args"></a> `args` | [`IntrospectionInputValue`](/api/sdk/interfaces/introspectioninputvalue/)[] |
+| <a id="description"></a> `description?` | `string` |
+| <a id="locations"></a> `locations` | `string`[] |
+| <a id="name"></a> `name` | `string` |

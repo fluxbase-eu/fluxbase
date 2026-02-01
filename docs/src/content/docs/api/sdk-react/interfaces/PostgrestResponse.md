@@ -15,8 +15,8 @@ title: "PostgrestResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `count` | `null` \| `number` |
-| `data` | `null` \| `T` |
-| `error` | `null` \| `PostgrestError` |
-| `status` | `number` |
-| `statusText` | `string` |
+| <a id="count"></a> `count` | `number` \| `null` |
+| <a id="data"></a> `data` | `T` \| `null` |
+| <a id="error"></a> `error` | `PostgrestError` \| `null` |
+| <a id="status"></a> `status` | `number` |
+| <a id="statustext"></a> `statusText` | `string` |

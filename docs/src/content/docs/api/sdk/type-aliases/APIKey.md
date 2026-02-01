@@ -5,7 +5,7 @@ prev: false
 title: "APIKey"
 ---
 
-> **APIKey**: [`ClientKey`](/api/sdk/interfaces/clientkey/)
+> **APIKey** = [`ClientKey`](/api/sdk/interfaces/clientkey/)
 
 :::caution[Deprecated]
 Use ClientKey instead

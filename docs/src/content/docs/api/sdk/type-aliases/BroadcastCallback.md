@@ -5,7 +5,7 @@ prev: false
 title: "BroadcastCallback"
 ---
 
-> **BroadcastCallback**: (`payload`) => `void`
+> **BroadcastCallback** = (`payload`) => `void`
 
 Broadcast callback type
 

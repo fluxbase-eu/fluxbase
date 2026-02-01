@@ -28,9 +28,9 @@ await authSettings.update({
 
 ## Constructors
 
-### new AuthSettingsManager()
+### Constructor
 
-> **new AuthSettingsManager**(`fetch`): [`AuthSettingsManager`](/api/sdk/classes/authsettingsmanager/)
+> **new AuthSettingsManager**(`fetch`): `AuthSettingsManager`
 
 #### Parameters
 
@@ -40,7 +40,7 @@ await authSettings.update({
 
 #### Returns
 
-[`AuthSettingsManager`](/api/sdk/classes/authsettingsmanager/)
+`AuthSettingsManager`
 
 ## Methods
 

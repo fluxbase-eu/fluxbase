@@ -11,6 +11,6 @@ GraphQL introspection type reference
 
 | Property | Type |
 | ------ | ------ |
-| `kind` | `string` |
-| `name?` | `string` |
-| `ofType?` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/) |
+| <a id="kind"></a> `kind` | `string` |
+| <a id="name"></a> `name?` | `string` |
+| <a id="oftype"></a> `ofType?` | `IntrospectionTypeRef` |

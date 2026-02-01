@@ -9,4 +9,4 @@ title: "ListInvitationsResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `invitations` | [`Invitation`](/api/sdk/interfaces/invitation/)[] |
+| <a id="invitations"></a> `invitations` | [`Invitation`](/api/sdk/interfaces/invitation/)[] |

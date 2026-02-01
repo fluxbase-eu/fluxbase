@@ -10,9 +10,9 @@ Provides create, update, delete, apply, rollback, and smart sync operations
 
 ## Constructors
 
-### new FluxbaseAdminMigrations()
+### Constructor
 
-> **new FluxbaseAdminMigrations**(`fetch`): [`FluxbaseAdminMigrations`](/api/sdk/classes/fluxbaseadminmigrations/)
+> **new FluxbaseAdminMigrations**(`fetch`): `FluxbaseAdminMigrations`
 
 #### Parameters
 
@@ -22,13 +22,13 @@ Provides create, update, delete, apply, rollback, and smart sync operations
 
 #### Returns
 
-[`FluxbaseAdminMigrations`](/api/sdk/classes/fluxbaseadminmigrations/)
+`FluxbaseAdminMigrations`
 
 ## Methods
 
 ### apply()
 
-> **apply**(`name`, `namespace`): `Promise`\<`object`\>
+> **apply**(`name`, `namespace`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Apply a specific migration
 
@@ -41,14 +41,9 @@ Apply a specific migration
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with result message
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -63,7 +58,7 @@ if (data) {
 
 ### applyPending()
 
-> **applyPending**(`namespace`): `Promise`\<`object`\>
+> **applyPending**(`namespace`): `Promise`\<\{ `data`: \{ `applied`: `string`[]; `failed`: `string`[]; `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Apply all pending migrations in order
 
@@ -75,14 +70,9 @@ Apply all pending migrations in order
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: \{ `applied`: `string`[]; `failed`: `string`[]; `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with applied/failed counts
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -97,7 +87,7 @@ if (data) {
 
 ### create()
 
-> **create**(`request`): `Promise`\<`object`\>
+> **create**(`request`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a new migration
 
@@ -109,14 +99,9 @@ Create a new migration
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created migration
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Migration`](/api/sdk/interfaces/migration/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -134,7 +119,7 @@ const { data, error } = await client.admin.migrations.create({
 
 ### delete()
 
-> **delete**(`name`, `namespace`): `Promise`\<`object`\>
+> **delete**(`name`, `namespace`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a migration (only if status is pending)
 
@@ -147,14 +132,9 @@ Delete a migration (only if status is pending)
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -166,7 +146,7 @@ const { data, error } = await client.admin.migrations.delete('001_create_users',
 
 ### get()
 
-> **get**(`name`, `namespace`): `Promise`\<`object`\>
+> **get**(`name`, `namespace`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific migration
 
@@ -179,14 +159,9 @@ Get details of a specific migration
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with migration details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Migration`](/api/sdk/interfaces/migration/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -198,7 +173,7 @@ const { data, error } = await client.admin.migrations.get('001_create_users', 'm
 
 ### getExecutions()
 
-> **getExecutions**(`name`, `namespace`, `limit`): `Promise`\<`object`\>
+> **getExecutions**(`name`, `namespace`, `limit`): `Promise`\<\{ `data`: [`MigrationExecution`](/api/sdk/interfaces/migrationexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get execution history for a migration
 
@@ -212,14 +187,9 @@ Get execution history for a migration
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`MigrationExecution`](/api/sdk/interfaces/migrationexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution records
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`MigrationExecution`](/api/sdk/interfaces/migrationexecution/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -240,7 +210,7 @@ if (data) {
 
 ### list()
 
-> **list**(`namespace`, `status`?): `Promise`\<`object`\>
+> **list**(`namespace`, `status?`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List migrations in a namespace
 
@@ -249,18 +219,13 @@ List migrations in a namespace
 | Parameter | Type | Default value | Description |
 | ------ | ------ | ------ | ------ |
 | `namespace` | `string` | `"default"` | Migration namespace (default: 'default') |
-| `status`? | `"pending"` \| `"failed"` \| `"applied"` \| `"rolled_back"` | `undefined` | Filter by status: 'pending', 'applied', 'failed', 'rolled_back' |
+| `status?` | `"pending"` \| `"failed"` \| `"applied"` \| `"rolled_back"` | `undefined` | Filter by status: 'pending', 'applied', 'failed', 'rolled_back' |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with migrations array
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Migration`](/api/sdk/interfaces/migration/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -297,7 +262,7 @@ tuple (always succeeds unless validation fails)
 
 | Name | Type |
 | ------ | ------ |
-| `error` | `null` \| `Error` |
+| `error` | `Error` \| `null` |
 
 #### Example
 
@@ -326,7 +291,7 @@ await client.admin.migrations.sync()
 
 ### rollback()
 
-> **rollback**(`name`, `namespace`): `Promise`\<`object`\>
+> **rollback**(`name`, `namespace`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Rollback a specific migration
 
@@ -339,14 +304,9 @@ Rollback a specific migration
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with result message
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -358,7 +318,7 @@ const { data, error } = await client.admin.migrations.rollback('001_create_users
 
 ### sync()
 
-> **sync**(`options`): `Promise`\<`object`\>
+> **sync**(`options`): `Promise`\<\{ `data`: [`SyncMigrationsResult`](/api/sdk/interfaces/syncmigrationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Smart sync all registered migrations
 
@@ -378,14 +338,9 @@ the server's schema cache.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`SyncMigrationsResult`](/api/sdk/interfaces/syncmigrationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`SyncMigrationsResult`](/api/sdk/interfaces/syncmigrationsresult/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -411,7 +366,7 @@ const { data, error } = await client.admin.migrations.sync({
 
 ### update()
 
-> **update**(`name`, `updates`, `namespace`): `Promise`\<`object`\>
+> **update**(`name`, `updates`, `namespace`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update a migration (only if status is pending)
 
@@ -425,14 +380,9 @@ Update a migration (only if status is pending)
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated migration
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`Migration`](/api/sdk/interfaces/migration/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 

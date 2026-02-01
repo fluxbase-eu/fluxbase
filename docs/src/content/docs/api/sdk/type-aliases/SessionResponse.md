@@ -5,12 +5,6 @@ prev: false
 title: "SessionResponse"
 ---
 
-> **SessionResponse**: [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>
+> **SessionResponse** = [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/); \}\>
 
 Session response
-
-## Type declaration
-
-| Name | Type |
-| ------ | ------ |
-| `session` | [`AuthSession`](/api/sdk/interfaces/authsession/) |

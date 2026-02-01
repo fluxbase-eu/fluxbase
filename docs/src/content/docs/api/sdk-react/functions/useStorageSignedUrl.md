@@ -5,7 +5,7 @@ prev: false
 title: "useStorageSignedUrl"
 ---
 
-> **useStorageSignedUrl**(`bucket`, `path`, `expiresIn`?): `UseQueryResult`\<`null` \| `string`, `Error`\>
+> **useStorageSignedUrl**(`bucket`, `path`, `expiresIn?`): `UseQueryResult`\<`string` \| `null`, `Error`\>
 
 Hook to create a signed URL
 
@@ -18,9 +18,9 @@ Use useStorageSignedUrlWithOptions for more control including transforms
 | Parameter | Type |
 | ------ | ------ |
 | `bucket` | `string` |
-| `path` | `null` \| `string` |
-| `expiresIn`? | `number` |
+| `path` | `string` \| `null` |
+| `expiresIn?` | `number` |
 
 ## Returns
 
-`UseQueryResult`\<`null` \| `string`, `Error`\>
+`UseQueryResult`\<`string` \| `null`, `Error`\>

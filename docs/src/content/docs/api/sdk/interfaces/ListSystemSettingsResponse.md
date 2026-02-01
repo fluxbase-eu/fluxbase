@@ -11,4 +11,4 @@ Response containing all system settings
 
 | Property | Type |
 | ------ | ------ |
-| `settings` | [`SystemSetting`](/api/sdk/interfaces/systemsetting/)[] |
+| <a id="settings"></a> `settings` | [`SystemSetting`](/api/sdk/interfaces/systemsetting/)[] |

@@ -11,6 +11,6 @@ Response after creating a table
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
-| `schema` | `string` |
-| `table` | `string` |
+| <a id="message"></a> `message` | `string` |
+| <a id="schema"></a> `schema` | `string` |
+| <a id="table"></a> `table` | `string` |

@@ -5,7 +5,7 @@ prev: false
 title: "isAuthSuccess"
 ---
 
-> **isAuthSuccess**(`response`): `response is Object`
+> **isAuthSuccess**(`response`): `response is { data: AuthResponseData; error: null }`
 
 Type guard to check if an auth response is successful
 
@@ -17,6 +17,6 @@ Type guard to check if an auth response is successful
 
 ## Returns
 
-`response is Object`
+`response is { data: AuthResponseData; error: null }`
 
 true if the auth operation succeeded

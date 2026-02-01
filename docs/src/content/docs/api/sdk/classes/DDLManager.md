@@ -40,9 +40,9 @@ await ddl.deleteTable('analytics', 'events')
 
 ## Constructors
 
-### new DDLManager()
+### Constructor
 
-> **new DDLManager**(`fetch`): [`DDLManager`](/api/sdk/classes/ddlmanager/)
+> **new DDLManager**(`fetch`): `DDLManager`
 
 #### Parameters
 
@@ -52,7 +52,7 @@ await ddl.deleteTable('analytics', 'events')
 
 #### Returns
 
-[`DDLManager`](/api/sdk/classes/ddlmanager/)
+`DDLManager`
 
 ## Methods
 
@@ -222,7 +222,7 @@ schemas.forEach(schema => {
 
 ### listTables()
 
-> **listTables**(`schema`?): `Promise`\<[`ListTablesResponse`](/api/sdk/interfaces/listtablesresponse/)\>
+> **listTables**(`schema?`): `Promise`\<[`ListTablesResponse`](/api/sdk/interfaces/listtablesresponse/)\>
 
 List all tables in the database or a specific schema
 
@@ -234,7 +234,7 @@ are returned.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `schema`? | `string` | Optional schema name to filter tables |
+| `schema?` | `string` | Optional schema name to filter tables |
 
 #### Returns
 

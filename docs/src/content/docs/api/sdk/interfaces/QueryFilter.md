@@ -9,6 +9,6 @@ title: "QueryFilter"
 
 | Property | Type |
 | ------ | ------ |
-| `column` | `string` |
-| `operator` | [`FilterOperator`](/api/sdk/type-aliases/filteroperator/) |
-| `value` | `unknown` |
+| <a id="column"></a> `column` | `string` |
+| <a id="operator"></a> `operator` | [`FilterOperator`](/api/sdk/type-aliases/filteroperator/) |
+| <a id="value"></a> `value` | `unknown` |

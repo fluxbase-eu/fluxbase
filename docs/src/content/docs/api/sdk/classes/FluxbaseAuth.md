@@ -7,9 +7,9 @@ title: "FluxbaseAuth"
 
 ## Constructors
 
-### new FluxbaseAuth()
+### Constructor
 
-> **new FluxbaseAuth**(`fetch`, `autoRefresh`, `persist`): [`FluxbaseAuth`](/api/sdk/classes/fluxbaseauth/)
+> **new FluxbaseAuth**(`fetch`, `autoRefresh`, `persist`): `FluxbaseAuth`
 
 #### Parameters
 
@@ -21,7 +21,7 @@ title: "FluxbaseAuth"
 
 #### Returns
 
-[`FluxbaseAuth`](/api/sdk/classes/fluxbaseauth/)
+`FluxbaseAuth`
 
 ## Methods
 
@@ -69,7 +69,7 @@ Promise with access_token, refresh_token, and user
 
 ### exchangeCodeForSession()
 
-> **exchangeCodeForSession**(`code`, `state`?): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
+> **exchangeCodeForSession**(`code`, `state?`): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
 
 Exchange OAuth authorization code for session
 This is typically called in your OAuth callback handler
@@ -79,7 +79,7 @@ This is typically called in your OAuth callback handler
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `code` | `string` | Authorization code from OAuth callback |
-| `state`? | `string` | State parameter from OAuth callback (for CSRF protection) |
+| `state?` | `string` | State parameter from OAuth callback (for CSRF protection) |
 
 #### Returns
 
@@ -104,13 +104,13 @@ Promise with all factors and TOTP factors
 
 ### getAccessToken()
 
-> **getAccessToken**(): `null` \| `string`
+> **getAccessToken**(): `string` \| `null`
 
 Get the current access token
 
 #### Returns
 
-`null` \| `string`
+`string` \| `null`
 
 ***
 
@@ -176,7 +176,7 @@ Get the current user from the server
 
 ### getOAuthLogoutUrl()
 
-> **getOAuthLogoutUrl**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
+> **getOAuthLogoutUrl**(`provider`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
 
 Get OAuth logout URL for a provider
 Use this to get the logout URL without automatically redirecting
@@ -186,7 +186,7 @@ Use this to get the logout URL without automatically redirecting
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options`? | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
+| `options?` | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
 
 #### Returns
 
@@ -220,7 +220,7 @@ Get list of enabled OAuth providers
 
 ### getOAuthUrl()
 
-> **getOAuthUrl**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`OAuthUrlResponse`\>\>
+> **getOAuthUrl**(`provider`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`OAuthUrlResponse`\>\>
 
 Get OAuth authorization URL for a provider
 
@@ -229,7 +229,7 @@ Get OAuth authorization URL for a provider
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options`? | `OAuthOptions` | Optional OAuth configuration |
+| `options?` | `OAuthOptions` | Optional OAuth configuration |
 
 #### Returns
 
@@ -239,7 +239,7 @@ Get OAuth authorization URL for a provider
 
 ### getSAMLLoginUrl()
 
-> **getSAMLLoginUrl**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`SAMLLoginResponse`](/api/sdk/interfaces/samlloginresponse/)\>\>
+> **getSAMLLoginUrl**(`provider`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`SAMLLoginResponse`](/api/sdk/interfaces/samlloginresponse/)\>\>
 
 Get SAML login URL for a specific provider
 Use this to redirect the user to the IdP for authentication
@@ -249,7 +249,7 @@ Use this to redirect the user to the IdP for authentication
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `provider` | `string` | SAML provider name/ID |
-| `options`? | [`SAMLLoginOptions`](/api/sdk/interfaces/samlloginoptions/) | Optional login configuration |
+| `options?` | [`SAMLLoginOptions`](/api/sdk/interfaces/samlloginoptions/) | Optional login configuration |
 
 #### Returns
 
@@ -321,20 +321,20 @@ if (!error) {
 
 ### getSession()
 
-> **getSession**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+> **getSession**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/) \| `null`; \}\>\>
 
 Get the current session (Supabase-compatible)
 Returns the session from the client-side cache without making a network request
 
 #### Returns
 
-`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/) \| `null`; \}\>\>
 
 ***
 
 ### getUser()
 
-> **getUser**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+> **getUser**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `user`: [`User`](/api/sdk/interfaces/user/) \| `null`; \}\>\>
 
 Get the current user (Supabase-compatible)
 Returns the user from the client-side session without making a network request
@@ -342,7 +342,7 @@ For server-side validation, use getCurrentUser() instead
 
 #### Returns
 
-`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `user`: [`User`](/api/sdk/interfaces/user/) \| `null`; \}\>\>
 
 ***
 
@@ -363,7 +363,7 @@ Promise with list of user identities
 
 ### handleSAMLCallback()
 
-> **handleSAMLCallback**(`samlResponse`, `provider`?): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
+> **handleSAMLCallback**(`samlResponse`, `provider?`): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
 
 Handle SAML callback after IdP authentication
 Call this from your SAML callback page to complete authentication
@@ -373,7 +373,7 @@ Call this from your SAML callback page to complete authentication
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `samlResponse` | `string` | Base64-encoded SAML response from the ACS endpoint |
-| `provider`? | `string` | SAML provider name (optional, extracted from RelayState) |
+| `provider?` | `string` | SAML provider name (optional, extracted from RelayState) |
 
 #### Returns
 
@@ -472,20 +472,20 @@ Promise with nonce for reauthentication
 
 ### refreshSession()
 
-> **refreshSession**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+> **refreshSession**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/); `user`: [`User`](/api/sdk/interfaces/user/); \}\>\>
 
 Refresh the session (Supabase-compatible)
 Returns a new session with refreshed tokens
 
 #### Returns
 
-`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/); `user`: [`User`](/api/sdk/interfaces/user/); \}\>\>
 
 ***
 
 ### refreshToken()
 
-> **refreshToken**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+> **refreshToken**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/); `user`: [`User`](/api/sdk/interfaces/user/); \}\>\>
 
 Refresh the session (Supabase-compatible alias)
 Alias for refreshSession() to maintain compatibility with Supabase naming
@@ -493,7 +493,7 @@ Returns a new session with refreshed tokens
 
 #### Returns
 
-`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>\>
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/); `user`: [`User`](/api/sdk/interfaces/user/); \}\>\>
 
 ***
 
@@ -542,7 +542,7 @@ Promise with user and new session
 
 ### resetPasswordForEmail()
 
-> **resetPasswordForEmail**(`email`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`PasswordResetResponse`\>\>
+> **resetPasswordForEmail**(`email`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`PasswordResetResponse`\>\>
 
 Supabase-compatible alias for sendPasswordReset()
 
@@ -551,9 +551,9 @@ Supabase-compatible alias for sendPasswordReset()
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `email` | `string` | Email address to send reset link to |
-| `options`? | `object` | Optional redirect and CAPTCHA configuration |
-| `options.captchaToken`? | `string` | - |
-| `options.redirectTo`? | `string` | - |
+| `options?` | \{ `captchaToken?`: `string`; `redirectTo?`: `string`; \} | Optional redirect and CAPTCHA configuration |
+| `options.captchaToken?` | `string` | - |
+| `options.redirectTo?` | `string` | - |
 
 #### Returns
 
@@ -565,7 +565,7 @@ Promise with OTP-style response
 
 ### sendMagicLink()
 
-> **sendMagicLink**(`email`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`MagicLinkResponse`\>\>
+> **sendMagicLink**(`email`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`MagicLinkResponse`\>\>
 
 Send magic link for passwordless authentication (Supabase-compatible)
 
@@ -574,7 +574,7 @@ Send magic link for passwordless authentication (Supabase-compatible)
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `email` | `string` | Email address to send magic link to |
-| `options`? | `MagicLinkOptions` | Optional configuration for magic link |
+| `options?` | `MagicLinkOptions` | Optional configuration for magic link |
 
 #### Returns
 
@@ -586,7 +586,7 @@ Promise with OTP-style response
 
 ### sendPasswordReset()
 
-> **sendPasswordReset**(`email`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`PasswordResetResponse`\>\>
+> **sendPasswordReset**(`email`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`PasswordResetResponse`\>\>
 
 Send password reset email (Supabase-compatible)
 Sends a password reset link to the provided email address
@@ -596,9 +596,9 @@ Sends a password reset link to the provided email address
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `email` | `string` | Email address to send reset link to |
-| `options`? | `object` | Optional configuration including redirect URL and CAPTCHA token |
-| `options.captchaToken`? | `string` | - |
-| `options.redirectTo`? | `string` | - |
+| `options?` | \{ `captchaToken?`: `string`; `redirectTo?`: `string`; \} | Optional configuration including redirect URL and CAPTCHA token |
+| `options.captchaToken?` | `string` | - |
+| `options.redirectTo?` | `string` | - |
 
 #### Returns
 
@@ -619,7 +619,7 @@ Useful for restoring a session from storage or SSR scenarios
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `session` | `object` | Object containing access_token and refresh_token |
+| `session` | \{ `access_token`: `string`; `refresh_token`: `string`; \} | Object containing access_token and refresh_token |
 | `session.access_token` | `string` | - |
 | `session.refresh_token` | `string` | - |
 
@@ -633,7 +633,7 @@ Promise with session data
 
 ### setup2FA()
 
-> **setup2FA**(`issuer`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`TwoFactorSetupResponse`](/api/sdk/interfaces/twofactorsetupresponse/)\>\>
+> **setup2FA**(`issuer?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`TwoFactorSetupResponse`](/api/sdk/interfaces/twofactorsetupresponse/)\>\>
 
 Setup 2FA for the current user (Supabase-compatible)
 Enrolls a new MFA factor and returns TOTP details
@@ -642,7 +642,7 @@ Enrolls a new MFA factor and returns TOTP details
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `issuer`? | `string` | Optional custom issuer name for the QR code (e.g., "MyApp"). If not provided, uses server default. |
+| `issuer?` | `string` | Optional custom issuer name for the QR code (e.g., "MyApp"). If not provided, uses server default. |
 
 #### Returns
 
@@ -707,7 +707,7 @@ Promise with user and session
 
 ### signInWithOAuth()
 
-> **signInWithOAuth**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+> **signInWithOAuth**(`provider`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `provider`: `string`; `url`: `string`; \}\>\>
 
 Convenience method to initiate OAuth sign-in
 Redirects the user to the OAuth provider's authorization page
@@ -717,11 +717,11 @@ Redirects the user to the OAuth provider's authorization page
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options`? | `OAuthOptions` | Optional OAuth configuration |
+| `options?` | `OAuthOptions` | Optional OAuth configuration |
 
 #### Returns
 
-`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `provider`: `string`; `url`: `string`; \}\>\>
 
 ***
 
@@ -768,7 +768,7 @@ Returns { user, session } if successful, or SignInWith2FAResponse if 2FA is requ
 
 ### signInWithSAML()
 
-> **signInWithSAML**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+> **signInWithSAML**(`provider`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `provider`: `string`; `url`: `string`; \}\>\>
 
 Initiate SAML login and redirect to IdP
 This is a convenience method that redirects the user to the SAML IdP
@@ -778,11 +778,11 @@ This is a convenience method that redirects the user to the SAML IdP
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `provider` | `string` | SAML provider name/ID |
-| `options`? | [`SAMLLoginOptions`](/api/sdk/interfaces/samlloginoptions/) | Optional login configuration |
+| `options?` | [`SAMLLoginOptions`](/api/sdk/interfaces/samlloginoptions/) | Optional login configuration |
 
 #### Returns
 
-`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `provider`: `string`; `url`: `string`; \}\>\>
 
 Promise with provider and URL (browser will redirect)
 
@@ -809,7 +809,7 @@ Sign out the current user
 
 ### signOutWithOAuth()
 
-> **signOutWithOAuth**(`provider`, `options`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
+> **signOutWithOAuth**(`provider`, `options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`OAuthLogoutResponse`](/api/sdk/interfaces/oauthlogoutresponse/)\>\>
 
 Sign out with OAuth provider logout
 Revokes tokens at the OAuth provider and optionally redirects for OIDC logout
@@ -819,7 +819,7 @@ Revokes tokens at the OAuth provider and optionally redirects for OIDC logout
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options`? | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
+| `options?` | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
 
 #### Returns
 

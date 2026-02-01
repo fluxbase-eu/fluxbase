@@ -11,7 +11,7 @@ Response from listing objects (admin API)
 
 | Property | Type |
 | ------ | ------ |
-| `bucket` | `string` |
-| `objects` | `null` \| [`AdminStorageObject`](/api/sdk/interfaces/adminstorageobject/)[] |
-| `prefixes` | `string`[] |
-| `truncated` | `boolean` |
+| <a id="bucket"></a> `bucket` | `string` |
+| <a id="objects"></a> `objects` | [`AdminStorageObject`](/api/sdk/interfaces/adminstorageobject/)[] \| `null` |
+| <a id="prefixes"></a> `prefixes` | `string`[] |
+| <a id="truncated"></a> `truncated` | `boolean` |

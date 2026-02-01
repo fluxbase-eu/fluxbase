@@ -5,7 +5,7 @@ prev: false
 title: "SupabaseResponse"
 ---
 
-> **SupabaseResponse**\<`T`\>: [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`T`\>
+> **SupabaseResponse**\<`T`\> = [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`T`\>
 
 :::caution[Deprecated]
 Use FluxbaseResponse instead

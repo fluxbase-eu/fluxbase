@@ -11,5 +11,5 @@ Response from generating a signed URL
 
 | Property | Type |
 | ------ | ------ |
-| `expires_in` | `number` |
-| `url` | `string` |
+| <a id="expires_in"></a> `expires_in` | `number` |
+| <a id="url"></a> `url` | `string` |

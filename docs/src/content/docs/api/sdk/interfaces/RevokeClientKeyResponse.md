@@ -9,4 +9,4 @@ title: "RevokeClientKeyResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
+| <a id="message"></a> `message` | `string` |

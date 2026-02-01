@@ -5,7 +5,7 @@ prev: false
 title: "useStorageList"
 ---
 
-> **useStorageList**(`bucket`, `options`?): `UseQueryResult`\<`any`[], `Error`\>
+> **useStorageList**(`bucket`, `options?`): `UseQueryResult`\<`any`[], `Error`\>
 
 Hook to list files in a bucket
 
@@ -14,7 +14,7 @@ Hook to list files in a bucket
 | Parameter | Type |
 | ------ | ------ |
 | `bucket` | `string` |
-| `options`? | `ListOptions` & `Omit`\<`UseQueryOptions`\<`any`[], `Error`, `any`[], readonly `unknown`[]\>, `"queryFn"` \| `"queryKey"`\> |
+| `options?` | `ListOptions` & `Omit`\<`UseQueryOptions`\<`any`[], `Error`, `any`[], readonly `unknown`[]\>, `"queryKey"` \| `"queryFn"`\> |
 
 ## Returns
 

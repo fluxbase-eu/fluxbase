@@ -21,9 +21,9 @@ Hook to upload a file to a bucket with built-in progress tracking
 
 | Name | Type | Default value |
 | ------ | ------ | ------ |
-| `progress` | `null` \| `UploadProgress` | - |
-| `reset` | () => `void` | - |
-| `upload` | `UseMutationResult`\<`null` \| `object`, `Error`, `object`, `unknown`\> | mutation |
+| `progress` | `UploadProgress` \| `null` | - |
+| `reset()` | () => `void` | - |
+| `upload` | `UseMutationResult`\<\{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`, `Error`, \{ `file`: `Blob` \| `File` \| `ArrayBuffer`; `options?`: `Omit`\<`UploadOptions`, `"onUploadProgress"`\>; `path`: `string`; \}, `unknown`\> | `mutation` |
 
 ## Example
 

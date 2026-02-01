@@ -11,4 +11,4 @@ Weak password information (Supabase-compatible)
 
 | Property | Type |
 | ------ | ------ |
-| `reasons` | `string`[] |
+| <a id="reasons"></a> `reasons` | `string`[] |

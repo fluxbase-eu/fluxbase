@@ -38,9 +38,9 @@ await chat.sendMessage(convId, 'Show me the top 10 users by order count')
 
 ## Constructors
 
-### new FluxbaseAIChat()
+### Constructor
 
-> **new FluxbaseAIChat**(`options`): [`FluxbaseAIChat`](/api/sdk/classes/fluxbaseaichat/)
+> **new FluxbaseAIChat**(`options`): `FluxbaseAIChat`
 
 #### Parameters
 
@@ -50,7 +50,7 @@ await chat.sendMessage(convId, 'Show me the top 10 users by order count')
 
 #### Returns
 
-[`FluxbaseAIChat`](/api/sdk/classes/fluxbaseaichat/)
+`FluxbaseAIChat`
 
 ## Methods
 
@@ -151,7 +151,7 @@ Send a message in a conversation
 
 ### startChat()
 
-> **startChat**(`chatbot`, `namespace`?, `conversationId`?, `impersonateUserId`?): `Promise`\<`string`\>
+> **startChat**(`chatbot`, `namespace?`, `conversationId?`, `impersonateUserId?`): `Promise`\<`string`\>
 
 Start a new chat session with a chatbot
 
@@ -160,9 +160,9 @@ Start a new chat session with a chatbot
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `chatbot` | `string` | Chatbot name |
-| `namespace`? | `string` | Optional namespace. If not provided and a lookup function is available, performs smart resolution: - If exactly one chatbot with this name exists, uses it - If multiple exist, tries "default" namespace - If ambiguous and not in default, throws error with available namespaces If no lookup function, falls back to "default" namespace. |
-| `conversationId`? | `string` | Optional conversation ID to resume |
-| `impersonateUserId`? | `string` | Optional user ID to impersonate (admin only) |
+| `namespace?` | `string` | Optional namespace. If not provided and a lookup function is available, performs smart resolution: - If exactly one chatbot with this name exists, uses it - If multiple exist, tries "default" namespace - If ambiguous and not in default, throws error with available namespaces If no lookup function, falls back to "default" namespace. |
+| `conversationId?` | `string` | Optional conversation ID to resume |
+| `impersonateUserId?` | `string` | Optional user ID to impersonate (admin only) |
 
 #### Returns
 

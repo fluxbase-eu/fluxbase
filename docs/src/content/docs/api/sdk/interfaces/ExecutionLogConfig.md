@@ -11,5 +11,5 @@ Configuration for execution log subscription
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `execution_id` | `string` | Execution ID to subscribe to |
-| `type?` | [`ExecutionType`](/api/sdk/type-aliases/executiontype/) | Type of execution (function, job, rpc) |
+| <a id="execution_id"></a> `execution_id` | `string` | Execution ID to subscribe to |
+| <a id="type"></a> `type?` | [`ExecutionType`](/api/sdk/type-aliases/executiontype/) | Type of execution (function, job, rpc) |

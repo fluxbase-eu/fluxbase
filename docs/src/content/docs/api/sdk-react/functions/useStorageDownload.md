@@ -5,7 +5,7 @@ prev: false
 title: "useStorageDownload"
 ---
 
-> **useStorageDownload**(`bucket`, `path`, `enabled`): `UseQueryResult`\<`null` \| `Blob`, `Error`\>
+> **useStorageDownload**(`bucket`, `path`, `enabled`): `UseQueryResult`\<`Blob` \| `null`, `Error`\>
 
 Hook to download a file from a bucket
 
@@ -14,9 +14,9 @@ Hook to download a file from a bucket
 | Parameter | Type | Default value |
 | ------ | ------ | ------ |
 | `bucket` | `string` | `undefined` |
-| `path` | `null` \| `string` | `undefined` |
+| `path` | `string` \| `null` | `undefined` |
 | `enabled` | `boolean` | `true` |
 
 ## Returns
 
-`UseQueryResult`\<`null` \| `Blob`, `Error`\>
+`UseQueryResult`\<`Blob` \| `null`, `Error`\>

@@ -11,8 +11,8 @@ SMTP email provider configuration
 
 | Property | Type |
 | ------ | ------ |
-| `host` | `string` |
-| `password` | `string` |
-| `port` | `number` |
-| `use_tls` | `boolean` |
-| `username` | `string` |
+| <a id="host"></a> `host` | `string` |
+| <a id="password"></a> `password` | `string` |
+| <a id="port"></a> `port` | `number` |
+| <a id="use_tls"></a> `use_tls` | `boolean` |
+| <a id="username"></a> `username` | `string` |

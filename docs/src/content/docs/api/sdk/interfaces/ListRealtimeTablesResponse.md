@@ -11,5 +11,5 @@ Response listing realtime-enabled tables
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `count` | `number` | Total count |
-| `tables` | [`RealtimeTableStatus`](/api/sdk/interfaces/realtimetablestatus/)[] | List of tables with realtime enabled |
+| <a id="count"></a> `count` | `number` | Total count |
+| <a id="tables"></a> `tables` | [`RealtimeTableStatus`](/api/sdk/interfaces/realtimetablestatus/)[] | List of tables with realtime enabled |

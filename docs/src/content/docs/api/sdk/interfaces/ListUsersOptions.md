@@ -9,7 +9,7 @@ title: "ListUsersOptions"
 
 | Property | Type |
 | ------ | ------ |
-| `exclude_admins?` | `boolean` |
-| `limit?` | `number` |
-| `search?` | `string` |
-| `type?` | `"app"` \| `"dashboard"` |
+| <a id="exclude_admins"></a> `exclude_admins?` | `boolean` |
+| <a id="limit"></a> `limit?` | `number` |
+| <a id="search"></a> `search?` | `string` |
+| <a id="type"></a> `type?` | `"app"` \| `"dashboard"` |

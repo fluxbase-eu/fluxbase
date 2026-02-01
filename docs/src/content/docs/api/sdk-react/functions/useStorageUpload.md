@@ -5,7 +5,7 @@ prev: false
 title: "useStorageUpload"
 ---
 
-> **useStorageUpload**(`bucket`): `UseMutationResult`\<`null` \| `object`, `Error`, `object`, `unknown`\>
+> **useStorageUpload**(`bucket`): `UseMutationResult`\<\{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`, `Error`, \{ `file`: `Blob` \| `File` \| `ArrayBuffer`; `options?`: `UploadOptions`; `path`: `string`; \}, `unknown`\>
 
 Hook to upload a file to a bucket
 
@@ -19,7 +19,7 @@ Note: You can track upload progress by passing an `onUploadProgress` callback in
 
 ## Returns
 
-`UseMutationResult`\<`null` \| `object`, `Error`, `object`, `unknown`\>
+`UseMutationResult`\<\{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`, `Error`, \{ `file`: `Blob` \| `File` \| `ArrayBuffer`; `options?`: `UploadOptions`; `path`: `string`; \}, `unknown`\>
 
 ## Example
 

@@ -9,7 +9,7 @@ title: "AcceptInvitationResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `access_token` | `string` |
-| `expires_in` | `number` |
-| `refresh_token` | `string` |
-| `user` | [`AdminUser`](/api/sdk/interfaces/adminuser/) |
+| <a id="access_token"></a> `access_token` | `string` |
+| <a id="expires_in"></a> `expires_in` | `number` |
+| <a id="refresh_token"></a> `refresh_token` | `string` |
+| <a id="user"></a> `user` | [`AdminUser`](/api/sdk/interfaces/adminuser/) |

@@ -11,8 +11,8 @@ Options for syncing RPC procedures
 
 | Property | Type |
 | ------ | ------ |
-| `namespace?` | `string` |
-| `options?` | `object` |
+| <a id="namespace"></a> `namespace?` | `string` |
+| <a id="options"></a> `options?` | `object` |
 | `options.delete_missing?` | `boolean` |
 | `options.dry_run?` | `boolean` |
-| `procedures?` | [`RPCProcedureSpec`](/api/sdk/interfaces/rpcprocedurespec/)[] |
+| <a id="procedures"></a> `procedures?` | [`RPCProcedureSpec`](/api/sdk/interfaces/rpcprocedurespec/)[] |

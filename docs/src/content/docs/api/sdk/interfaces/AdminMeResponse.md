@@ -9,7 +9,7 @@ title: "AdminMeResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `user` | `object` |
+| <a id="user"></a> `user` | `object` |
 | `user.email` | `string` |
 | `user.id` | `string` |
 | `user.role` | `string` |

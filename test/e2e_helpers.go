@@ -502,8 +502,8 @@ func GetTestConfig() *config.Config {
 			MaxConnections:  20,               // Support parallel test execution (4-8 tests concurrent)
 			MinConnections:  4,                // Keep warm connections for parallel tests
 			MaxConnLifetime: 5 * time.Minute,  // Shorter lifetime to recycle connections
-			MaxConnIdleTime: 30 * time.Second, // Close idle connections faster
-			HealthCheck:     15 * time.Second, // Must be < MaxConnIdleTime to catch stale connections
+			MaxConnIdleTime: 2 * time.Minute,  // Increased from 30s to 2min for CI stability
+			HealthCheck:     30 * time.Second, // Increased from 15s to 30s (must be < MaxConnIdleTime)
 		},
 		Auth: config.AuthConfig{
 			JWTSecret:        "test-secret-key-for-testing-only",
@@ -1503,13 +1503,44 @@ func (tc *TestContext) GetAuthToken(email, password string) string {
 // EnsureAuthSchema ensures auth schema and tables exist
 // Note: auth schema is already created by migrations, so we only ensure tables exist
 func (tc *TestContext) EnsureAuthSchema() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	// Verify database connection is alive before proceeding
-	// This prevents "conn closed" errors in CI environments
-	err := tc.DB.Health(ctx)
-	require.NoError(tc.T, err, "Database connection health check failed")
+	// Verify database connection is alive before proceeding with retry logic
+	// This prevents "conn closed" errors in CI environments where connection
+	// pool may close idle connections during slow test setup
+	const maxRetries = 3
+	var err error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err = tc.DB.Health(ctx)
+		if err == nil {
+			// Connection is alive, proceed
+			break
+		}
+
+		if attempt < maxRetries {
+			// Log the failure and retry with exponential backoff
+			backoff := time.Duration(1<<uint(attempt-1)) * time.Second // 1s, 2s, 4s
+			log.Warn().
+				Err(err).
+				Int("attempt", attempt).
+				Dur("backoff", backoff).
+				Msg("Database health check failed, retrying...")
+			time.Sleep(backoff)
+		}
+	}
+	require.NoError(tc.T, err, "Database connection health check failed after %d attempts", maxRetries)
+
+	// In CI, log connection pool stats for diagnostics
+	if os.Getenv("CI") != "" {
+		stats := tc.DB.Stats()
+		log.Debug().
+			Int32("idle_conns", stats.IdleConns()).
+			Int32("acquired_conns", stats.AcquiredConns()).
+			Int32("total_conns", stats.TotalConns()).
+			Int32("max_conns", stats.MaxConns()).
+			Msg("Connection pool stats after health check (CI)")
+	}
 
 	// Note: Don't create auth schema here - it's already created by migrations
 	// The RLS test user only has USAGE and CREATE on auth schema (for tables),

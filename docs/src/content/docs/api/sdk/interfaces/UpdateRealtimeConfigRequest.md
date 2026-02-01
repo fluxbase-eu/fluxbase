@@ -11,5 +11,5 @@ Request to update realtime configuration
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `events?` | (`"DELETE"` \| `"INSERT"` \| `"UPDATE"`)[] | Events to track |
-| `exclude?` | `string`[] | Columns to exclude from notifications |
+| <a id="events"></a> `events?` | (`"DELETE"` \| `"INSERT"` \| `"UPDATE"`)[] | Events to track |
+| <a id="exclude"></a> `exclude?` | `string`[] | Columns to exclude from notifications |

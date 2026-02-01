@@ -9,4 +9,4 @@ title: "AdminRefreshRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `refresh_token` | `string` |
+| <a id="refresh_token"></a> `refresh_token` | `string` |

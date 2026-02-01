@@ -33,9 +33,9 @@ await settings.delete('app.auth.enable_signup')
 
 ## Constructors
 
-### new SystemSettingsManager()
+### Constructor
 
-> **new SystemSettingsManager**(`fetch`): [`SystemSettingsManager`](/api/sdk/classes/systemsettingsmanager/)
+> **new SystemSettingsManager**(`fetch`): `SystemSettingsManager`
 
 #### Parameters
 
@@ -45,7 +45,7 @@ await settings.delete('app.auth.enable_signup')
 
 #### Returns
 
-[`SystemSettingsManager`](/api/sdk/classes/systemsettingsmanager/)
+`SystemSettingsManager`
 
 ## Methods
 

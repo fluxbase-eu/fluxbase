@@ -12,7 +12,7 @@ All fields are optional for partial updates
 
 | Property | Type |
 | ------ | ------ |
-| `authentication?` | `Partial`\<[`AuthenticationSettings`](/api/sdk/interfaces/authenticationsettings/)\> |
-| `email?` | `Partial`\<[`EmailSettings`](/api/sdk/interfaces/emailsettings/)\> |
-| `features?` | `Partial`\<[`FeatureSettings`](/api/sdk/interfaces/featuresettings/)\> |
-| `security?` | `Partial`\<[`SecuritySettings`](/api/sdk/interfaces/securitysettings/)\> |
+| <a id="authentication"></a> `authentication?` | `Partial`\<[`AuthenticationSettings`](/api/sdk/interfaces/authenticationsettings/)\> |
+| <a id="email"></a> `email?` | `Partial`\<[`EmailSettings`](/api/sdk/interfaces/emailsettings/)\> |
+| <a id="features"></a> `features?` | `Partial`\<[`FeatureSettings`](/api/sdk/interfaces/featuresettings/)\> |
+| <a id="security"></a> `security?` | `Partial`\<[`SecuritySettings`](/api/sdk/interfaces/securitysettings/)\> |

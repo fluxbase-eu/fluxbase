@@ -7,23 +7,23 @@ title: "FluxbaseFetch"
 
 ## Constructors
 
-### new FluxbaseFetch()
+### Constructor
 
-> **new FluxbaseFetch**(`baseUrl`, `options`): [`FluxbaseFetch`](/api/sdk/classes/fluxbasefetch/)
+> **new FluxbaseFetch**(`baseUrl`, `options`): `FluxbaseFetch`
 
 #### Parameters
 
 | Parameter | Type |
 | ------ | ------ |
 | `baseUrl` | `string` |
-| `options` | `object` |
-| `options.debug`? | `boolean` |
-| `options.headers`? | `Record`\<`string`, `string`\> |
-| `options.timeout`? | `number` |
+| `options` | \{ `debug?`: `boolean`; `headers?`: `Record`\<`string`, `string`\>; `timeout?`: `number`; \} |
+| `options.debug?` | `boolean` |
+| `options.headers?` | `Record`\<`string`, `string`\> |
+| `options.timeout?` | `number` |
 
 #### Returns
 
-[`FluxbaseFetch`](/api/sdk/classes/fluxbasefetch/)
+`FluxbaseFetch`
 
 ## Methods
 
@@ -142,7 +142,7 @@ HEAD request
 
 ### patch()
 
-> **patch**\<`T`\>(`path`, `body`?, `options`?): `Promise`\<`T`\>
+> **patch**\<`T`\>(`path`, `body?`, `options?`): `Promise`\<`T`\>
 
 PATCH request
 
@@ -157,8 +157,8 @@ PATCH request
 | Parameter | Type |
 | ------ | ------ |
 | `path` | `string` |
-| `body`? | `unknown` |
-| `options`? | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
+| `body?` | `unknown` |
+| `options?` | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
 
 #### Returns
 
@@ -168,7 +168,7 @@ PATCH request
 
 ### post()
 
-> **post**\<`T`\>(`path`, `body`?, `options`?): `Promise`\<`T`\>
+> **post**\<`T`\>(`path`, `body?`, `options?`): `Promise`\<`T`\>
 
 POST request
 
@@ -183,8 +183,8 @@ POST request
 | Parameter | Type |
 | ------ | ------ |
 | `path` | `string` |
-| `body`? | `unknown` |
-| `options`? | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
+| `body?` | `unknown` |
+| `options?` | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
 
 #### Returns
 
@@ -194,7 +194,7 @@ POST request
 
 ### postWithHeaders()
 
-> **postWithHeaders**\<`T`\>(`path`, `body`?, `options`?): `Promise`\<`FetchResponseWithHeaders`\<`T`\>\>
+> **postWithHeaders**\<`T`\>(`path`, `body?`, `options?`): `Promise`\<`FetchResponseWithHeaders`\<`T`\>\>
 
 POST request that returns response with headers (for POST-based queries with count)
 
@@ -209,8 +209,8 @@ POST request that returns response with headers (for POST-based queries with cou
 | Parameter | Type |
 | ------ | ------ |
 | `path` | `string` |
-| `body`? | `unknown` |
-| `options`? | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
+| `body?` | `unknown` |
+| `options?` | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
 
 #### Returns
 
@@ -220,7 +220,7 @@ POST request that returns response with headers (for POST-based queries with cou
 
 ### put()
 
-> **put**\<`T`\>(`path`, `body`?, `options`?): `Promise`\<`T`\>
+> **put**\<`T`\>(`path`, `body?`, `options?`): `Promise`\<`T`\>
 
 PUT request
 
@@ -235,8 +235,8 @@ PUT request
 | Parameter | Type |
 | ------ | ------ |
 | `path` | `string` |
-| `body`? | `unknown` |
-| `options`? | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
+| `body?` | `unknown` |
+| `options?` | `Omit`\<`FetchOptions`, `"method"` \| `"body"`\> |
 
 #### Returns
 
@@ -325,7 +325,7 @@ When token is null, restores to anon key if available
 
 | Parameter | Type |
 | ------ | ------ |
-| `token` | `null` \| `string` |
+| `token` | `string` \| `null` |
 
 #### Returns
 
@@ -344,7 +344,7 @@ The callback should return true if refresh was successful, false otherwise
 
 | Parameter | Type |
 | ------ | ------ |
-| `callback` | `null` \| `RefreshTokenCallback` |
+| `callback` | `RefreshTokenCallback` \| `null` |
 
 #### Returns
 

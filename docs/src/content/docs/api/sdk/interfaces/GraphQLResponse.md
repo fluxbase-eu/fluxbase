@@ -17,5 +17,5 @@ GraphQL response from the server
 
 | Property | Type |
 | ------ | ------ |
-| `data?` | `T` |
-| `errors?` | [`GraphQLError`](/api/sdk/interfaces/graphqlerror/)[] |
+| <a id="data"></a> `data?` | `T` |
+| <a id="errors"></a> `errors?` | [`GraphQLError`](/api/sdk/interfaces/graphqlerror/)[] |

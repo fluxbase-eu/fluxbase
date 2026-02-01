@@ -11,16 +11,16 @@ Result of a chatbot sync operation
 
 | Property | Type |
 | ------ | ------ |
-| `details` | `object` |
+| <a id="details"></a> `details` | `object` |
 | `details.created` | `string`[] |
 | `details.deleted` | `string`[] |
 | `details.unchanged` | `string`[] |
 | `details.updated` | `string`[] |
-| `dry_run` | `boolean` |
-| `errors` | [`SyncError`](/api/sdk/interfaces/syncerror/)[] |
-| `message` | `string` |
-| `namespace` | `string` |
-| `summary` | `object` |
+| <a id="dry_run"></a> `dry_run` | `boolean` |
+| <a id="errors"></a> `errors` | [`SyncError`](/api/sdk/interfaces/syncerror/)[] |
+| <a id="message"></a> `message` | `string` |
+| <a id="namespace"></a> `namespace` | `string` |
+| <a id="summary"></a> `summary` | `object` |
 | `summary.created` | `number` |
 | `summary.deleted` | `number` |
 | `summary.errors` | `number` |

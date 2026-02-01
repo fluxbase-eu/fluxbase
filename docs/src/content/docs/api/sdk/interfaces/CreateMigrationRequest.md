@@ -11,8 +11,8 @@ Request to create a new migration
 
 | Property | Type |
 | ------ | ------ |
-| `description?` | `string` |
-| `down_sql?` | `string` |
-| `name` | `string` |
-| `namespace?` | `string` |
-| `up_sql` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="down_sql"></a> `down_sql?` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="namespace"></a> `namespace?` | `string` |
+| <a id="up_sql"></a> `up_sql` | `string` |

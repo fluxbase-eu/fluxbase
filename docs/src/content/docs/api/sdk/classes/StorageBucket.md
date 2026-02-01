@@ -7,9 +7,9 @@ title: "StorageBucket"
 
 ## Constructors
 
-### new StorageBucket()
+### Constructor
 
-> **new StorageBucket**(`fetch`, `bucketName`): [`StorageBucket`](/api/sdk/classes/storagebucket/)
+> **new StorageBucket**(`fetch`, `bucketName`): `StorageBucket`
 
 #### Parameters
 
@@ -20,13 +20,13 @@ title: "StorageBucket"
 
 #### Returns
 
-[`StorageBucket`](/api/sdk/classes/storagebucket/)
+`StorageBucket`
 
 ## Methods
 
 ### abortResumableUpload()
 
-> **abortResumableUpload**(`sessionId`): `Promise`\<`object`\>
+> **abortResumableUpload**(`sessionId`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
 
 Abort an in-progress resumable upload
 
@@ -38,17 +38,13 @@ Abort an in-progress resumable upload
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### copy()
 
-> **copy**(`fromPath`, `toPath`): `Promise`\<`object`\>
+> **copy**(`fromPath`, `toPath`): `Promise`\<\{ `data`: \{ `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Copy a file to a new location
 
@@ -61,18 +57,13 @@ Copy a file to a new location
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### createSignedUrl()
 
-> **createSignedUrl**(`path`, `options`?): `Promise`\<`object`\>
+> **createSignedUrl**(`path`, `options?`): `Promise`\<\{ `data`: \{ `signedUrl`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a signed URL for temporary access to a file
 Optionally include image transformation parameters
@@ -82,16 +73,11 @@ Optionally include image transformation parameters
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `path` | `string` | The file path |
-| `options`? | [`SignedUrlOptions`](/api/sdk/interfaces/signedurloptions/) | Signed URL options including expiration and transforms |
+| `options?` | [`SignedUrlOptions`](/api/sdk/interfaces/signedurloptions/) | Signed URL options including expiration and transforms |
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `signedUrl`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 #### Example
 
@@ -121,9 +107,9 @@ const { data, error } = await storage.from('images').createSignedUrl('photo.jpg'
 
 ### download()
 
-#### download(path)
+#### Call Signature
 
-> **download**(`path`): `Promise`\<`object`\>
+> **download**(`path`): `Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Download a file from the bucket
 
@@ -135,12 +121,7 @@ Download a file from the bucket
 
 ##### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Blob` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
 
 ##### Example
 
@@ -154,57 +135,75 @@ console.log(`File size: ${data.size} bytes`);
 // Process data.stream...
 ```
 
-#### download(path, options)
+#### Call Signature
 
-> **download**(`path`, `options`): `Promise`\<`object`\>
+> **download**(`path`, `options`): `Promise`\<\{ `data`: [`StreamDownloadData`](/api/sdk/interfaces/streamdownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
 
-##### Parameters
-
-| Parameter | Type |
-| ------ | ------ |
-| `path` | `string` |
-| `options` | `object` |
-| `options.signal`? | `AbortSignal` |
-| `options.stream` | `true` |
-| `options.timeout`? | `number` |
-
-##### Returns
-
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`StreamDownloadData`](/api/sdk/interfaces/streamdownloaddata/) |
-| `error` | `null` \| `Error` |
-
-#### download(path, options)
-
-> **download**(`path`, `options`): `Promise`\<`object`\>
+Download a file from the bucket
 
 ##### Parameters
 
-| Parameter | Type |
-| ------ | ------ |
-| `path` | `string` |
-| `options` | `object` |
-| `options.signal`? | `AbortSignal` |
-| `options.stream`? | `false` |
-| `options.timeout`? | `number` |
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `path` | `string` | The path/key of the file |
+| `options` | \{ `signal?`: `AbortSignal`; `stream`: `true`; `timeout?`: `number`; \} | - |
+| `options.signal?` | `AbortSignal` | - |
+| `options.stream` | `true` | - |
+| `options.timeout?` | `number` | - |
 
 ##### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`StreamDownloadData`](/api/sdk/interfaces/streamdownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
 
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Blob` |
-| `error` | `null` \| `Error` |
+##### Example
+
+```typescript
+// Default: returns Blob
+const { data: blob } = await storage.from('bucket').download('file.pdf');
+
+// Streaming: returns { stream, size } for progress tracking
+const { data } = await storage.from('bucket').download('large.json', { stream: true });
+console.log(`File size: ${data.size} bytes`);
+// Process data.stream...
+```
+
+#### Call Signature
+
+> **download**(`path`, `options`): `Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Download a file from the bucket
+
+##### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `path` | `string` | The path/key of the file |
+| `options` | \{ `signal?`: `AbortSignal`; `stream?`: `false`; `timeout?`: `number`; \} | - |
+| `options.signal?` | `AbortSignal` | - |
+| `options.stream?` | `false` | - |
+| `options.timeout?` | `number` | - |
+
+##### Returns
+
+`Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
+
+##### Example
+
+```typescript
+// Default: returns Blob
+const { data: blob } = await storage.from('bucket').download('file.pdf');
+
+// Streaming: returns { stream, size } for progress tracking
+const { data } = await storage.from('bucket').download('large.json', { stream: true });
+console.log(`File size: ${data.size} bytes`);
+// Process data.stream...
+```
 
 ***
 
 ### downloadResumable()
 
-> **downloadResumable**(`path`, `options`?): `Promise`\<`object`\>
+> **downloadResumable**(`path`, `options?`): `Promise`\<\{ `data`: [`ResumableDownloadData`](/api/sdk/interfaces/resumabledownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Download a file with resumable chunked downloads for large files.
 Returns a ReadableStream that abstracts the chunking internally.
@@ -220,18 +219,13 @@ Features:
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `path` | `string` | The file path within the bucket |
-| `options`? | [`ResumableDownloadOptions`](/api/sdk/interfaces/resumabledownloadoptions/) | Download options including chunk size, retries, and progress callback |
+| `options?` | [`ResumableDownloadOptions`](/api/sdk/interfaces/resumabledownloadoptions/) | Download options including chunk size, retries, and progress callback |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`ResumableDownloadData`](/api/sdk/interfaces/resumabledownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 A ReadableStream and file size (consumer doesn't need to know about chunking)
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`ResumableDownloadData`](/api/sdk/interfaces/resumabledownloaddata/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -274,7 +268,7 @@ Get a public URL for a file
 
 ### getResumableUploadStatus()
 
-> **getResumableUploadStatus**(`sessionId`): `Promise`\<`object`\>
+> **getResumableUploadStatus**(`sessionId`): `Promise`\<\{ `data`: [`ChunkedUploadSession`](/api/sdk/interfaces/chunkeduploadsession/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get the status of a resumable upload session
 
@@ -286,12 +280,7 @@ Get the status of a resumable upload session
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`ChunkedUploadSession`](/api/sdk/interfaces/chunkeduploadsession/) |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: [`ChunkedUploadSession`](/api/sdk/interfaces/chunkeduploadsession/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
@@ -336,7 +325,7 @@ const url = storage.from('images').getTransformUrl('photo.jpg', {
 
 ### list()
 
-> **list**(`pathOrOptions`?, `maybeOptions`?): `Promise`\<`object`\>
+> **list**(`pathOrOptions?`, `maybeOptions?`): `Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List files in the bucket
 Supports both Supabase-style list(path, options) and Fluxbase-style list(options)
@@ -345,23 +334,18 @@ Supports both Supabase-style list(path, options) and Fluxbase-style list(options
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `pathOrOptions`? | `string` \| [`ListOptions`](/api/sdk/interfaces/listoptions/) | The folder path or list options |
-| `maybeOptions`? | [`ListOptions`](/api/sdk/interfaces/listoptions/) | List options when first param is a path |
+| `pathOrOptions?` | `string` \| [`ListOptions`](/api/sdk/interfaces/listoptions/) | The folder path or list options |
+| `maybeOptions?` | [`ListOptions`](/api/sdk/interfaces/listoptions/) | List options when first param is a path |
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`FileObject`](/api/sdk/interfaces/fileobject/)[] |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### listShares()
 
-> **listShares**(`path`): `Promise`\<`object`\>
+> **listShares**(`path`): `Promise`\<\{ `data`: `FileShare`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List users a file is shared with (RLS)
 
@@ -373,18 +357,13 @@ List users a file is shared with (RLS)
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `FileShare`[] |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: `FileShare`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### move()
 
-> **move**(`fromPath`, `toPath`): `Promise`\<`object`\>
+> **move**(`fromPath`, `toPath`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Move a file to a new location
 
@@ -397,18 +376,13 @@ Move a file to a new location
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### remove()
 
-> **remove**(`paths`): `Promise`\<`object`\>
+> **remove**(`paths`): `Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Remove files from the bucket
 
@@ -420,18 +394,13 @@ Remove files from the bucket
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`FileObject`](/api/sdk/interfaces/fileobject/)[] |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### revokeShare()
 
-> **revokeShare**(`path`, `userId`): `Promise`\<`object`\>
+> **revokeShare**(`path`, `userId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Revoke file access from a user (RLS)
 
@@ -444,18 +413,13 @@ Revoke file access from a user (RLS)
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### share()
 
-> **share**(`path`, `options`): `Promise`\<`object`\>
+> **share**(`path`, `options`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Share a file with another user (RLS)
 
@@ -468,18 +432,13 @@ Share a file with another user (RLS)
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### upload()
 
-> **upload**(`path`, `file`, `options`?): `Promise`\<`object`\>
+> **upload**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Upload a file to the bucket
 
@@ -488,23 +447,18 @@ Upload a file to the bucket
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `path` | `string` | The path/key for the file |
-| `file` | `Blob` \| `ArrayBufferView` \| `ArrayBuffer` \| `File` | The file to upload (File, Blob, ArrayBuffer, or ArrayBufferView like Uint8Array) |
-| `options`? | [`UploadOptions`](/api/sdk/interfaces/uploadoptions/) | Upload options |
+| `file` | `ArrayBuffer` \| `Blob` \| `File` \| `ArrayBufferView`\<`ArrayBufferLike`\> | The file to upload (File, Blob, ArrayBuffer, or ArrayBufferView like Uint8Array) |
+| `options?` | [`UploadOptions`](/api/sdk/interfaces/uploadoptions/) | Upload options |
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 ***
 
 ### uploadLargeFile()
 
-> **uploadLargeFile**(`path`, `file`, `options`?): `Promise`\<`object`\>
+> **uploadLargeFile**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Upload a large file using streaming for reduced memory usage.
 This is a convenience method that converts a File or Blob to a stream.
@@ -515,16 +469,11 @@ This is a convenience method that converts a File or Blob to a stream.
 | ------ | ------ | ------ |
 | `path` | `string` | The path/key for the file |
 | `file` | `Blob` \| `File` | The File or Blob to upload |
-| `options`? | [`StreamUploadOptions`](/api/sdk/interfaces/streamuploadoptions/) | Upload options |
+| `options?` | [`StreamUploadOptions`](/api/sdk/interfaces/streamuploadoptions/) | Upload options |
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 #### Example
 
@@ -542,7 +491,7 @@ const { data, error } = await storage
 
 ### uploadResumable()
 
-> **uploadResumable**(`path`, `file`, `options`?): `Promise`\<`object`\>
+> **uploadResumable**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Upload a large file with resumable chunked uploads.
 
@@ -558,18 +507,13 @@ Features:
 | ------ | ------ | ------ |
 | `path` | `string` | The file path within the bucket |
 | `file` | `Blob` \| `File` | The File or Blob to upload |
-| `options`? | [`ResumableUploadOptions`](/api/sdk/interfaces/resumableuploadoptions/) | Upload options including chunk size, retries, and progress callback |
+| `options?` | [`ResumableUploadOptions`](/api/sdk/interfaces/resumableuploadoptions/) | Upload options including chunk size, retries, and progress callback |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Upload result with file info
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -594,7 +538,7 @@ const { data, error } = await storage.from('uploads').uploadResumable('large.zip
 
 ### uploadStream()
 
-> **uploadStream**(`path`, `stream`, `size`, `options`?): `Promise`\<`object`\>
+> **uploadStream**(`path`, `stream`, `size`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Upload a file using streaming for reduced memory usage.
 This method bypasses FormData buffering and streams data directly to the server.
@@ -605,18 +549,13 @@ Ideal for large files where memory efficiency is important.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `path` | `string` | The path/key for the file |
-| `stream` | `ReadableStream`\<`Uint8Array`\> | ReadableStream of the file data |
+| `stream` | `ReadableStream`\<`Uint8Array`\<`ArrayBufferLike`\>\> | ReadableStream of the file data |
 | `size` | `number` | The size of the file in bytes (required for Content-Length header) |
-| `options`? | [`StreamUploadOptions`](/api/sdk/interfaces/streamuploadoptions/) | Upload options |
+| `options?` | [`StreamUploadOptions`](/api/sdk/interfaces/streamuploadoptions/) | Upload options |
 
 #### Returns
 
-`Promise`\<`object`\>
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `object` |
-| `error` | `null` \| `Error` |
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 #### Example
 

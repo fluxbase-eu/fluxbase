@@ -33,9 +33,9 @@ await settings.reset()
 
 ## Constructors
 
-### new AppSettingsManager()
+### Constructor
 
-> **new AppSettingsManager**(`fetch`): [`AppSettingsManager`](/api/sdk/classes/appsettingsmanager/)
+> **new AppSettingsManager**(`fetch`): `AppSettingsManager`
 
 #### Parameters
 
@@ -45,13 +45,13 @@ await settings.reset()
 
 #### Returns
 
-[`AppSettingsManager`](/api/sdk/classes/appsettingsmanager/)
+`AppSettingsManager`
 
 ## Methods
 
 ### configureMailgun()
 
-> **configureMailgun**(`apiKey`, `domain`, `options`?): `Promise`\<[`AppSettings`](/api/sdk/interfaces/appsettings/)\>
+> **configureMailgun**(`apiKey`, `domain`, `options?`): `Promise`\<[`AppSettings`](/api/sdk/interfaces/appsettings/)\>
 
 Configure Mailgun email provider
 
@@ -63,11 +63,11 @@ Convenience method to set up Mailgun email delivery.
 | ------ | ------ | ------ |
 | `apiKey` | `string` | Mailgun API key |
 | `domain` | `string` | Mailgun domain |
-| `options`? | `object` | Optional EU region flag and email addresses |
-| `options.eu_region`? | `boolean` | - |
-| `options.from_address`? | `string` | - |
-| `options.from_name`? | `string` | - |
-| `options.reply_to_address`? | `string` | - |
+| `options?` | \{ `eu_region?`: `boolean`; `from_address?`: `string`; `from_name?`: `string`; `reply_to_address?`: `string`; \} | Optional EU region flag and email addresses |
+| `options.eu_region?` | `boolean` | - |
+| `options.from_address?` | `string` | - |
+| `options.from_name?` | `string` | - |
+| `options.reply_to_address?` | `string` | - |
 
 #### Returns
 
@@ -89,7 +89,7 @@ await client.admin.settings.app.configureMailgun('key-xxx', 'mg.yourapp.com', {
 
 ### configureSendGrid()
 
-> **configureSendGrid**(`apiKey`, `options`?): `Promise`\<[`AppSettings`](/api/sdk/interfaces/appsettings/)\>
+> **configureSendGrid**(`apiKey`, `options?`): `Promise`\<[`AppSettings`](/api/sdk/interfaces/appsettings/)\>
 
 Configure SendGrid email provider
 
@@ -100,10 +100,10 @@ Convenience method to set up SendGrid email delivery.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `apiKey` | `string` | SendGrid API key |
-| `options`? | `object` | Optional from address, name, and reply-to |
-| `options.from_address`? | `string` | - |
-| `options.from_name`? | `string` | - |
-| `options.reply_to_address`? | `string` | - |
+| `options?` | \{ `from_address?`: `string`; `from_name?`: `string`; `reply_to_address?`: `string`; \} | Optional from address, name, and reply-to |
+| `options.from_address?` | `string` | - |
+| `options.from_name?` | `string` | - |
+| `options.reply_to_address?` | `string` | - |
 
 #### Returns
 
@@ -124,7 +124,7 @@ await client.admin.settings.app.configureSendGrid('SG.xxx', {
 
 ### configureSES()
 
-> **configureSES**(`accessKeyId`, `secretAccessKey`, `region`, `options`?): `Promise`\<[`AppSettings`](/api/sdk/interfaces/appsettings/)\>
+> **configureSES**(`accessKeyId`, `secretAccessKey`, `region`, `options?`): `Promise`\<[`AppSettings`](/api/sdk/interfaces/appsettings/)\>
 
 Configure AWS SES email provider
 
@@ -137,10 +137,10 @@ Convenience method to set up AWS SES email delivery.
 | `accessKeyId` | `string` | AWS access key ID |
 | `secretAccessKey` | `string` | AWS secret access key |
 | `region` | `string` | AWS region (e.g., 'us-east-1') |
-| `options`? | `object` | Optional email addresses |
-| `options.from_address`? | `string` | - |
-| `options.from_name`? | `string` | - |
-| `options.reply_to_address`? | `string` | - |
+| `options?` | \{ `from_address?`: `string`; `from_name?`: `string`; `reply_to_address?`: `string`; \} | Optional email addresses |
+| `options.from_address?` | `string` | - |
+| `options.from_name?` | `string` | - |
+| `options.reply_to_address?` | `string` | - |
 
 #### Returns
 
@@ -176,13 +176,13 @@ Convenience method to set up SMTP email delivery.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `config` | `object` | SMTP configuration |
-| `config.from_address`? | `string` | - |
-| `config.from_name`? | `string` | - |
+| `config` | \{ `from_address?`: `string`; `from_name?`: `string`; `host`: `string`; `password`: `string`; `port`: `number`; `reply_to_address?`: `string`; `use_tls`: `boolean`; `username`: `string`; \} | SMTP configuration |
+| `config.from_address?` | `string` | - |
+| `config.from_name?` | `string` | - |
 | `config.host` | `string` | - |
 | `config.password` | `string` | - |
 | `config.port` | `number` | - |
-| `config.reply_to_address`? | `string` | - |
+| `config.reply_to_address?` | `string` | - |
 | `config.use_tls` | `boolean` | - |
 | `config.username` | `string` | - |
 
@@ -627,12 +627,12 @@ Convenience method to set password validation rules.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `requirements` | `object` | Password complexity requirements |
-| `requirements.min_length`? | `number` | - |
-| `requirements.require_lowercase`? | `boolean` | - |
-| `requirements.require_number`? | `boolean` | - |
-| `requirements.require_special`? | `boolean` | - |
-| `requirements.require_uppercase`? | `boolean` | - |
+| `requirements` | \{ `min_length?`: `number`; `require_lowercase?`: `boolean`; `require_number?`: `boolean`; `require_special?`: `boolean`; `require_uppercase?`: `boolean`; \} | Password complexity requirements |
+| `requirements.min_length?` | `number` | - |
+| `requirements.require_lowercase?` | `boolean` | - |
+| `requirements.require_number?` | `boolean` | - |
+| `requirements.require_special?` | `boolean` | - |
+| `requirements.require_uppercase?` | `boolean` | - |
 
 #### Returns
 
@@ -712,7 +712,7 @@ await client.admin.settings.app.setRateLimiting(true)
 
 ### setSecretSetting()
 
-> **setSecretSetting**(`key`, `value`, `options`?): `Promise`\<`SecretSettingMetadata`\>
+> **setSecretSetting**(`key`, `value`, `options?`): `Promise`\<`SecretSettingMetadata`\>
 
 Set a system-level secret setting (encrypted)
 
@@ -726,8 +726,8 @@ The SDK never returns the decrypted value.
 | ------ | ------ | ------ |
 | `key` | `string` | Secret key |
 | `value` | `string` | Secret value (will be encrypted server-side) |
-| `options`? | `object` | Optional description |
-| `options.description`? | `string` | - |
+| `options?` | \{ `description?`: `string`; \} | Optional description |
+| `options.description?` | `string` | - |
 
 #### Returns
 
@@ -777,7 +777,7 @@ await client.admin.settings.app.setSessionSettings(30, 3)
 
 ### setSetting()
 
-> **setSetting**(`key`, `value`, `options`?): `Promise`\<`CustomSetting`\>
+> **setSetting**(`key`, `value`, `options?`): `Promise`\<`CustomSetting`\>
 
 Set or create a custom setting
 
@@ -789,11 +789,11 @@ Creates a new custom setting or updates an existing one.
 | ------ | ------ | ------ |
 | `key` | `string` | Setting key |
 | `value` | `any` | Setting value (any JSON-serializable value) |
-| `options`? | `object` | Optional configuration (description, is_public, is_secret, etc.) |
-| `options.description`? | `string` | - |
-| `options.is_public`? | `boolean` | - |
-| `options.is_secret`? | `boolean` | - |
-| `options.value_type`? | `string` | - |
+| `options?` | \{ `description?`: `string`; `is_public?`: `boolean`; `is_secret?`: `boolean`; `value_type?`: `string`; \} | Optional configuration (description, is_public, is_secret, etc.) |
+| `options.description?` | `string` | - |
+| `options.is_public?` | `boolean` | - |
+| `options.is_secret?` | `boolean` | - |
+| `options.value_type?` | `string` | - |
 
 #### Returns
 

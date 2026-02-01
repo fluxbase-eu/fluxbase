@@ -9,6 +9,6 @@ title: "ListOptions"
 
 | Property | Type |
 | ------ | ------ |
-| `limit?` | `number` |
-| `offset?` | `number` |
-| `prefix?` | `string` |
+| <a id="limit"></a> `limit?` | `number` |
+| <a id="offset"></a> `offset?` | `number` |
+| <a id="prefix"></a> `prefix?` | `string` |

@@ -27,9 +27,9 @@ const { data: status } = await fluxbase.rpc.getStatus(asyncResult.execution_id);
 
 ## Constructors
 
-### new FluxbaseRPC()
+### Constructor
 
-> **new FluxbaseRPC**(`fetch`): [`FluxbaseRPC`](/api/sdk/classes/fluxbaserpc/)
+> **new FluxbaseRPC**(`fetch`): `FluxbaseRPC`
 
 #### Parameters
 
@@ -39,13 +39,13 @@ const { data: status } = await fluxbase.rpc.getStatus(asyncResult.execution_id);
 
 #### Returns
 
-[`FluxbaseRPC`](/api/sdk/classes/fluxbaserpc/)
+`FluxbaseRPC`
 
 ## Methods
 
 ### getLogs()
 
-> **getLogs**(`executionId`, `afterLine`?): `Promise`\<`object`\>
+> **getLogs**(`executionId`, `afterLine?`): `Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get execution logs (for debugging and monitoring)
 
@@ -54,18 +54,13 @@ Get execution logs (for debugging and monitoring)
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `executionId` | `string` | The execution ID |
-| `afterLine`? | `number` | Optional line number to get logs after (for polling) |
+| `afterLine?` | `number` | Optional line number to get logs after (for polling) |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution logs
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -80,7 +75,7 @@ for (const log of logs) {
 
 ### getStatus()
 
-> **getStatus**(`executionId`): `Promise`\<`object`\>
+> **getStatus**(`executionId`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get execution status (for async invocations or checking history)
 
@@ -92,14 +87,9 @@ Get execution status (for async invocations or checking history)
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -116,7 +106,7 @@ if (data.status === 'completed') {
 
 ### invoke()
 
-> **invoke**\<`T`\>(`name`, `params`?, `options`?): `Promise`\<`object`\>
+> **invoke**\<`T`\>(`name`, `params?`, `options?`): `Promise`\<\{ `data`: [`RPCInvokeResponse`](/api/sdk/interfaces/rpcinvokeresponse/)\<`T`\> \| `null`; `error`: `Error` \| `null`; \}\>
 
 Invoke an RPC procedure
 
@@ -131,19 +121,14 @@ Invoke an RPC procedure
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `name` | `string` | Procedure name |
-| `params`? | `Record`\<`string`, `unknown`\> | Optional parameters to pass to the procedure |
-| `options`? | `RPCInvokeOptions` | Optional invocation options |
+| `params?` | `Record`\<`string`, `unknown`\> | Optional parameters to pass to the procedure |
+| `options?` | `RPCInvokeOptions` | Optional invocation options |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCInvokeResponse`](/api/sdk/interfaces/rpcinvokeresponse/)\<`T`\> \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with invocation response
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCInvokeResponse`](/api/sdk/interfaces/rpcinvokeresponse/)\<`T`\> |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -166,7 +151,7 @@ console.log(asyncData.execution_id); // Use to poll status
 
 ### list()
 
-> **list**(`namespace`?): `Promise`\<`object`\>
+> **list**(`namespace?`): `Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List available RPC procedures (public, enabled)
 
@@ -174,24 +159,19 @@ List available RPC procedures (public, enabled)
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `namespace`? | `string` | Optional namespace filter |
+| `namespace?` | `string` | Optional namespace filter |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of procedure summaries
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] |
-| `error` | `null` \| `Error` |
 
 ***
 
 ### waitForCompletion()
 
-> **waitForCompletion**(`executionId`, `options`?): `Promise`\<`object`\>
+> **waitForCompletion**(`executionId`, `options?`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Poll for execution completion with exponential backoff
 
@@ -200,22 +180,17 @@ Poll for execution completion with exponential backoff
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `executionId` | `string` | The execution ID to poll |
-| `options`? | `object` | Polling options |
-| `options.initialIntervalMs`? | `number` | Initial polling interval in milliseconds (default: 500) |
-| `options.maxIntervalMs`? | `number` | Maximum polling interval in milliseconds (default: 5000) |
-| `options.maxWaitMs`? | `number` | Maximum time to wait in milliseconds (default: 30000) |
-| `options.onProgress`? | (`execution`) => `void` | Callback for progress updates |
+| `options?` | \{ `initialIntervalMs?`: `number`; `maxIntervalMs?`: `number`; `maxWaitMs?`: `number`; `onProgress?`: (`execution`) => `void`; \} | Polling options |
+| `options.initialIntervalMs?` | `number` | Initial polling interval in milliseconds (default: 500) |
+| `options.maxIntervalMs?` | `number` | Maximum polling interval in milliseconds (default: 5000) |
+| `options.maxWaitMs?` | `number` | Maximum time to wait in milliseconds (default: 30000) |
+| `options.onProgress?` | (`execution`) => `void` | Callback for progress updates |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to final execution state
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 

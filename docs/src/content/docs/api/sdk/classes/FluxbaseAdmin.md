@@ -9,9 +9,9 @@ Admin client for managing Fluxbase instance
 
 ## Constructors
 
-### new FluxbaseAdmin()
+### Constructor
 
-> **new FluxbaseAdmin**(`fetch`): [`FluxbaseAdmin`](/api/sdk/classes/fluxbaseadmin/)
+> **new FluxbaseAdmin**(`fetch`): `FluxbaseAdmin`
 
 #### Parameters
 
@@ -21,25 +21,25 @@ Admin client for managing Fluxbase instance
 
 #### Returns
 
-[`FluxbaseAdmin`](/api/sdk/classes/fluxbaseadmin/)
+`FluxbaseAdmin`
 
 ## Properties
 
 | Property | Modifier | Type | Description |
 | ------ | ------ | ------ | ------ |
-| `ai` | `public` | [`FluxbaseAdminAI`](/api/sdk/classes/fluxbaseadminai/) | AI manager for chatbot and provider management (create, update, delete, sync) |
-| `ddl` | `public` | [`DDLManager`](/api/sdk/classes/ddlmanager/) | DDL manager for database schema and table operations |
-| `emailTemplates` | `public` | [`EmailTemplateManager`](/api/sdk/classes/emailtemplatemanager/) | Email template manager for customizing authentication and notification emails |
-| `functions` | `public` | [`FluxbaseAdminFunctions`](/api/sdk/classes/fluxbaseadminfunctions/) | Functions manager for edge function management (create, update, delete, sync) |
-| `impersonation` | `public` | [`ImpersonationManager`](/api/sdk/classes/impersonationmanager/) | Impersonation manager for user impersonation and audit trail |
-| `jobs` | `public` | [`FluxbaseAdminJobs`](/api/sdk/classes/fluxbaseadminjobs/) | Jobs manager for background job management (create, update, delete, sync, monitoring) |
-| `management` | `public` | [`FluxbaseManagement`](/api/sdk/classes/fluxbasemanagement/) | Management namespace for client keys, webhooks, and invitations |
-| `migrations` | `public` | [`FluxbaseAdminMigrations`](/api/sdk/classes/fluxbaseadminmigrations/) | Migrations manager for database migration operations (create, apply, rollback, sync) |
-| `oauth` | `public` | [`FluxbaseOAuth`](/api/sdk/classes/fluxbaseoauth/) | OAuth configuration manager for provider and auth settings |
-| `realtime` | `public` | [`FluxbaseAdminRealtime`](/api/sdk/classes/fluxbaseadminrealtime/) | Realtime manager for enabling/disabling realtime on tables |
-| `rpc` | `public` | [`FluxbaseAdminRPC`](/api/sdk/classes/fluxbaseadminrpc/) | RPC manager for procedure management (create, update, delete, sync, execution monitoring) |
-| `settings` | `public` | [`FluxbaseSettings`](/api/sdk/classes/fluxbasesettings/) | Settings manager for system and application settings |
-| `storage` | `public` | [`FluxbaseAdminStorage`](/api/sdk/classes/fluxbaseadminstorage/) | Storage manager for bucket and object management (list, create, delete, signed URLs) |
+| <a id="ai"></a> `ai` | `public` | [`FluxbaseAdminAI`](/api/sdk/classes/fluxbaseadminai/) | AI manager for chatbot and provider management (create, update, delete, sync) |
+| <a id="ddl"></a> `ddl` | `public` | [`DDLManager`](/api/sdk/classes/ddlmanager/) | DDL manager for database schema and table operations |
+| <a id="emailtemplates"></a> `emailTemplates` | `public` | [`EmailTemplateManager`](/api/sdk/classes/emailtemplatemanager/) | Email template manager for customizing authentication and notification emails |
+| <a id="functions"></a> `functions` | `public` | [`FluxbaseAdminFunctions`](/api/sdk/classes/fluxbaseadminfunctions/) | Functions manager for edge function management (create, update, delete, sync) |
+| <a id="impersonation"></a> `impersonation` | `public` | [`ImpersonationManager`](/api/sdk/classes/impersonationmanager/) | Impersonation manager for user impersonation and audit trail |
+| <a id="jobs"></a> `jobs` | `public` | [`FluxbaseAdminJobs`](/api/sdk/classes/fluxbaseadminjobs/) | Jobs manager for background job management (create, update, delete, sync, monitoring) |
+| <a id="management"></a> `management` | `public` | [`FluxbaseManagement`](/api/sdk/classes/fluxbasemanagement/) | Management namespace for client keys, webhooks, and invitations |
+| <a id="migrations"></a> `migrations` | `public` | [`FluxbaseAdminMigrations`](/api/sdk/classes/fluxbaseadminmigrations/) | Migrations manager for database migration operations (create, apply, rollback, sync) |
+| <a id="oauth"></a> `oauth` | `public` | [`FluxbaseOAuth`](/api/sdk/classes/fluxbaseoauth/) | OAuth configuration manager for provider and auth settings |
+| <a id="realtime"></a> `realtime` | `public` | [`FluxbaseAdminRealtime`](/api/sdk/classes/fluxbaseadminrealtime/) | Realtime manager for enabling/disabling realtime on tables |
+| <a id="rpc"></a> `rpc` | `public` | [`FluxbaseAdminRPC`](/api/sdk/classes/fluxbaseadminrpc/) | RPC manager for procedure management (create, update, delete, sync, execution monitoring) |
+| <a id="settings"></a> `settings` | `public` | [`FluxbaseSettings`](/api/sdk/classes/fluxbasesettings/) | Settings manager for system and application settings |
+| <a id="storage"></a> `storage` | `public` | [`FluxbaseAdminStorage`](/api/sdk/classes/fluxbaseadminstorage/) | Storage manager for bucket and object management (list, create, delete, signed URLs) |
 
 ## Methods
 
@@ -135,13 +135,13 @@ if (status.needs_setup) {
 
 ### getToken()
 
-> **getToken**(): `null` \| `string`
+> **getToken**(): `string` \| `null`
 
 Get current admin token
 
 #### Returns
 
-`null` \| `string`
+`string` \| `null`
 
 ***
 

@@ -5,6 +5,6 @@ prev: false
 title: "BranchStatus"
 ---
 
-> **BranchStatus**: `"creating"` \| `"ready"` \| `"migrating"` \| `"error"` \| `"deleting"` \| `"deleted"`
+> **BranchStatus** = `"creating"` \| `"ready"` \| `"migrating"` \| `"error"` \| `"deleting"` \| `"deleted"`
 
 Branch status

@@ -11,7 +11,7 @@ Request to send an email
 
 | Property | Type |
 | ------ | ------ |
-| `html?` | `string` |
-| `subject` | `string` |
-| `text?` | `string` |
-| `to` | `string` \| `string`[] |
+| <a id="html"></a> `html?` | `string` |
+| <a id="subject"></a> `subject` | `string` |
+| <a id="text"></a> `text?` | `string` |
+| <a id="to"></a> `to` | `string` \| `string`[] |

@@ -5,6 +5,6 @@ prev: false
 title: "BranchType"
 ---
 
-> **BranchType**: `"main"` \| `"preview"` \| `"persistent"`
+> **BranchType** = `"main"` \| `"preview"` \| `"persistent"`
 
 Branch type

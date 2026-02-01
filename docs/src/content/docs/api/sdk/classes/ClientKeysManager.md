@@ -29,9 +29,9 @@ const { client_keys } = await client.management.clientKeys.list()
 
 ## Constructors
 
-### new ClientKeysManager()
+### Constructor
 
-> **new ClientKeysManager**(`fetch`): [`ClientKeysManager`](/api/sdk/classes/clientkeysmanager/)
+> **new ClientKeysManager**(`fetch`): `ClientKeysManager`
 
 #### Parameters
 
@@ -41,7 +41,7 @@ const { client_keys } = await client.management.clientKeys.list()
 
 #### Returns
 
-[`ClientKeysManager`](/api/sdk/classes/clientkeysmanager/)
+`ClientKeysManager`
 
 ## Methods
 

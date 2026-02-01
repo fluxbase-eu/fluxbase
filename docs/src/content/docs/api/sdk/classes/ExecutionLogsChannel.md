@@ -10,9 +10,9 @@ Provides a cleaner API than the generic RealtimeChannel
 
 ## Constructors
 
-### new ExecutionLogsChannel()
+### Constructor
 
-> **new ExecutionLogsChannel**(`url`, `executionId`, `type`, `token`, `tokenRefreshCallback`): [`ExecutionLogsChannel`](/api/sdk/classes/executionlogschannel/)
+> **new ExecutionLogsChannel**(`url`, `executionId`, `type`, `token`, `tokenRefreshCallback`): `ExecutionLogsChannel`
 
 #### Parameters
 
@@ -21,12 +21,12 @@ Provides a cleaner API than the generic RealtimeChannel
 | `url` | `string` |
 | `executionId` | `string` |
 | `type` | [`ExecutionType`](/api/sdk/type-aliases/executiontype/) |
-| `token` | `null` \| `string` |
-| `tokenRefreshCallback` | `null` \| () => `Promise`\<`null` \| `string`\> |
+| `token` | `string` \| `null` |
+| `tokenRefreshCallback` | () => `Promise`\<`string` \| `null`\> \| `null` |
 
 #### Returns
 
-[`ExecutionLogsChannel`](/api/sdk/classes/executionlogschannel/)
+`ExecutionLogsChannel`
 
 ## Methods
 
@@ -60,7 +60,7 @@ channel.onLog((log) => {
 
 ### subscribe()
 
-> **subscribe**(`callback`?): `this`
+> **subscribe**(`callback?`): `this`
 
 Subscribe to execution logs
 
@@ -68,7 +68,7 @@ Subscribe to execution logs
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `callback`? | (`status`, `err`?) => `void` | Optional status callback |
+| `callback?` | (`status`, `err?`) => `void` | Optional status callback |
 
 #### Returns
 

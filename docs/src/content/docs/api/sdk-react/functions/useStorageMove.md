@@ -5,7 +5,7 @@ prev: false
 title: "useStorageMove"
 ---
 
-> **useStorageMove**(`bucket`): `UseMutationResult`\<`null` \| `object`, `Error`, `object`, `unknown`\>
+> **useStorageMove**(`bucket`): `UseMutationResult`\<\{ `message`: `string`; \} \| `null`, `Error`, \{ `fromPath`: `string`; `toPath`: `string`; \}, `unknown`\>
 
 Hook to move a file
 
@@ -17,4 +17,4 @@ Hook to move a file
 
 ## Returns
 
-`UseMutationResult`\<`null` \| `object`, `Error`, `object`, `unknown`\>
+`UseMutationResult`\<\{ `message`: `string`; \} \| `null`, `Error`, \{ `fromPath`: `string`; `toPath`: `string`; \}, `unknown`\>

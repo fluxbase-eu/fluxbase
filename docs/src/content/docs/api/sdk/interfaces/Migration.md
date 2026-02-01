@@ -11,17 +11,17 @@ Database migration metadata
 
 | Property | Type |
 | ------ | ------ |
-| `applied_at?` | `string` |
-| `applied_by?` | `string` |
-| `created_at` | `string` |
-| `created_by?` | `string` |
-| `description?` | `string` |
-| `down_sql?` | `string` |
-| `id` | `string` |
-| `name` | `string` |
-| `namespace` | `string` |
-| `rolled_back_at?` | `string` |
-| `status` | `"pending"` \| `"failed"` \| `"applied"` \| `"rolled_back"` |
-| `up_sql` | `string` |
-| `updated_at` | `string` |
-| `version` | `number` |
+| <a id="applied_at"></a> `applied_at?` | `string` |
+| <a id="applied_by"></a> `applied_by?` | `string` |
+| <a id="created_at"></a> `created_at` | `string` |
+| <a id="created_by"></a> `created_by?` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="down_sql"></a> `down_sql?` | `string` |
+| <a id="id"></a> `id` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="namespace"></a> `namespace` | `string` |
+| <a id="rolled_back_at"></a> `rolled_back_at?` | `string` |
+| <a id="status"></a> `status` | `"pending"` \| `"failed"` \| `"applied"` \| `"rolled_back"` |
+| <a id="up_sql"></a> `up_sql` | `string` |
+| <a id="updated_at"></a> `updated_at` | `string` |
+| <a id="version"></a> `version` | `number` |

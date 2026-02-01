@@ -12,9 +12,9 @@ For admin operations (create, update, delete, sync), use client.admin.functions
 
 ## Constructors
 
-### new FluxbaseFunctions()
+### Constructor
 
-> **new FluxbaseFunctions**(`fetch`): [`FluxbaseFunctions`](/api/sdk/classes/fluxbasefunctions/)
+> **new FluxbaseFunctions**(`fetch`): `FluxbaseFunctions`
 
 #### Parameters
 
@@ -24,13 +24,13 @@ For admin operations (create, update, delete, sync), use client.admin.functions
 
 #### Returns
 
-[`FluxbaseFunctions`](/api/sdk/classes/fluxbasefunctions/)
+`FluxbaseFunctions`
 
 ## Methods
 
 ### get()
 
-> **get**(`name`): `Promise`\<`object`\>
+> **get**(`name`): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific edge function
 
@@ -42,14 +42,9 @@ Get details of a specific edge function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with function metadata
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -64,7 +59,7 @@ if (data) {
 
 ### invoke()
 
-> **invoke**\<`T`\>(`functionName`, `options`?): `Promise`\<`object`\>
+> **invoke**\<`T`\>(`functionName`, `options?`): `Promise`\<\{ `data`: `T` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Invoke an edge function
 
@@ -81,18 +76,13 @@ This method is fully compatible with Supabase's functions.invoke() API.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `functionName` | `string` | The name of the function to invoke |
-| `options`? | [`FunctionInvokeOptions`](/api/sdk/interfaces/functioninvokeoptions/) | Invocation options including body, headers, HTTP method, and namespace |
+| `options?` | [`FunctionInvokeOptions`](/api/sdk/interfaces/functioninvokeoptions/) | Invocation options including body, headers, HTTP method, and namespace |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `T` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `T` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -125,20 +115,15 @@ const { data, error } = await client.functions.invoke('api-proxy', {
 
 ### list()
 
-> **list**(): `Promise`\<`object`\>
+> **list**(): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all public edge functions
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of public functions
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 

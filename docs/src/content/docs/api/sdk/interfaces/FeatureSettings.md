@@ -11,9 +11,9 @@ Feature flags for the application
 
 | Property | Type |
 | ------ | ------ |
-| `enable_ai` | `boolean` |
-| `enable_functions` | `boolean` |
-| `enable_jobs` | `boolean` |
-| `enable_realtime` | `boolean` |
-| `enable_rpc` | `boolean` |
-| `enable_storage` | `boolean` |
+| <a id="enable_ai"></a> `enable_ai` | `boolean` |
+| <a id="enable_functions"></a> `enable_functions` | `boolean` |
+| <a id="enable_jobs"></a> `enable_jobs` | `boolean` |
+| <a id="enable_realtime"></a> `enable_realtime` | `boolean` |
+| <a id="enable_rpc"></a> `enable_rpc` | `boolean` |
+| <a id="enable_storage"></a> `enable_storage` | `boolean` |

@@ -28,23 +28,23 @@ chat.sendMessage(convId, 'Show me recent orders')
 
 ## Constructors
 
-### new FluxbaseAI()
+### Constructor
 
-> **new FluxbaseAI**(`fetch`, `wsBaseUrl`): [`FluxbaseAI`](/api/sdk/classes/fluxbaseai/)
+> **new FluxbaseAI**(`fetch`, `wsBaseUrl`): `FluxbaseAI`
 
 #### Parameters
 
 | Parameter | Type |
 | ------ | ------ |
-| `fetch` | `object` |
+| `fetch` | \{ `delete`: (`path`) => `Promise`\<`void`\>; `get`: \<`T`\>(`path`) => `Promise`\<`T`\>; `patch`: \<`T`\>(`path`, `body?`) => `Promise`\<`T`\>; \} |
 | `fetch.delete` | (`path`) => `Promise`\<`void`\> |
 | `fetch.get` | \<`T`\>(`path`) => `Promise`\<`T`\> |
-| `fetch.patch` | \<`T`\>(`path`, `body`?) => `Promise`\<`T`\> |
+| `fetch.patch` | \<`T`\>(`path`, `body?`) => `Promise`\<`T`\> |
 | `wsBaseUrl` | `string` |
 
 #### Returns
 
-[`FluxbaseAI`](/api/sdk/classes/fluxbaseai/)
+`FluxbaseAI`
 
 ## Methods
 
@@ -70,7 +70,7 @@ FluxbaseAIChat instance
 
 ### deleteConversation()
 
-> **deleteConversation**(`id`): `Promise`\<`object`\>
+> **deleteConversation**(`id`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
 
 Delete a conversation
 
@@ -82,13 +82,9 @@ Delete a conversation
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { error } (null on success)
-
-| Name | Type |
-| ------ | ------ |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -103,7 +99,7 @@ if (!error) {
 
 ### getChatbot()
 
-> **getChatbot**(`id`): `Promise`\<`object`\>
+> **getChatbot**(`id`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific chatbot
 
@@ -115,20 +111,15 @@ Get details of a specific chatbot
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with chatbot details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) |
-| `error` | `null` \| `Error` |
 
 ***
 
 ### getConversation()
 
-> **getConversation**(`id`): `Promise`\<`object`\>
+> **getConversation**(`id`): `Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get a single conversation with all messages
 
@@ -140,14 +131,9 @@ Get a single conversation with all messages
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with conversation detail
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -163,26 +149,21 @@ if (data) {
 
 ### listChatbots()
 
-> **listChatbots**(): `Promise`\<`object`\>
+> **listChatbots**(): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List available chatbots (public, enabled)
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of chatbot summaries
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] |
-| `error` | `null` \| `Error` |
 
 ***
 
 ### listConversations()
 
-> **listConversations**(`options`?): `Promise`\<`object`\>
+> **listConversations**(`options?`): `Promise`\<\{ `data`: [`ListConversationsResult`](/api/sdk/interfaces/listconversationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 List the authenticated user's conversations
 
@@ -190,18 +171,13 @@ List the authenticated user's conversations
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `options`? | [`ListConversationsOptions`](/api/sdk/interfaces/listconversationsoptions/) | Optional filters and pagination |
+| `options?` | [`ListConversationsOptions`](/api/sdk/interfaces/listconversationsoptions/) | Optional filters and pagination |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`ListConversationsResult`](/api/sdk/interfaces/listconversationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with conversations
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`ListConversationsResult`](/api/sdk/interfaces/listconversationsresult/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -220,7 +196,7 @@ const { data, error } = await ai.listConversations({ limit: 20, offset: 0 })
 
 ### lookupChatbot()
 
-> **lookupChatbot**(`name`): `Promise`\<`object`\>
+> **lookupChatbot**(`name`): `Promise`\<\{ `data`: [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Lookup a chatbot by name with smart namespace resolution
 
@@ -237,14 +213,9 @@ Resolution logic:
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with lookup result
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -262,7 +233,7 @@ if (data?.chatbot) {
 
 ### updateConversation()
 
-> **updateConversation**(`id`, `updates`): `Promise`\<`object`\>
+> **updateConversation**(`id`, `updates`): `Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update a conversation (currently supports title update only)
 
@@ -275,14 +246,9 @@ Update a conversation (currently supports title update only)
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated conversation
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) |
-| `error` | `null` \| `Error` |
 
 #### Example
 

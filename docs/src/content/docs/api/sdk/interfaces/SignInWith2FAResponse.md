@@ -9,6 +9,6 @@ title: "SignInWith2FAResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
-| `requires_2fa` | `boolean` |
-| `user_id` | `string` |
+| <a id="message"></a> `message` | `string` |
+| <a id="requires_2fa"></a> `requires_2fa` | `boolean` |
+| <a id="user_id"></a> `user_id` | `string` |

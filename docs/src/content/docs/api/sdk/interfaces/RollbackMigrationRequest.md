@@ -11,4 +11,4 @@ Request to rollback a migration
 
 | Property | Type |
 | ------ | ------ |
-| `namespace?` | `string` |
+| <a id="namespace"></a> `namespace?` | `string` |

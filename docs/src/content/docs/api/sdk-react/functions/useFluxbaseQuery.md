@@ -5,7 +5,7 @@ prev: false
 title: "useFluxbaseQuery"
 ---
 
-> **useFluxbaseQuery**\<`T`\>(`buildQuery`, `options`?): `UseQueryResult`\<`T`[], `Error`\>
+> **useFluxbaseQuery**\<`T`\>(`buildQuery`, `options?`): `UseQueryResult`\<`T`[], `Error`\>
 
 Hook to execute a database query
 
@@ -20,8 +20,18 @@ Hook to execute a database query
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `buildQuery` | (`client`) => `QueryBuilder`\<`T`\> | Function that builds and returns the query |
-| `options`? | `UseFluxbaseQueryOptions`\<`T`\> | React Query options |
+| `options?` | `UseFluxbaseQueryOptions`\<`T`\> | React Query options IMPORTANT: You must provide a stable `queryKey` in options for proper caching. Without a custom queryKey, each render may create a new cache entry. |
 
 ## Returns
 
 `UseQueryResult`\<`T`[], `Error`\>
+
+## Example
+
+```tsx
+// Always provide a queryKey for stable caching
+useFluxbaseQuery(
+  (client) => client.from('users').select('*'),
+  { queryKey: ['users', 'all'] }
+)
+```

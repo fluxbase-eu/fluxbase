@@ -41,9 +41,9 @@ await oauth.deleteProvider('provider-id')
 
 ## Constructors
 
-### new OAuthProviderManager()
+### Constructor
 
-> **new OAuthProviderManager**(`fetch`): [`OAuthProviderManager`](/api/sdk/classes/oauthprovidermanager/)
+> **new OAuthProviderManager**(`fetch`): `OAuthProviderManager`
 
 #### Parameters
 
@@ -53,7 +53,7 @@ await oauth.deleteProvider('provider-id')
 
 #### Returns
 
-[`OAuthProviderManager`](/api/sdk/classes/oauthprovidermanager/)
+`OAuthProviderManager`
 
 ## Methods
 

@@ -11,5 +11,5 @@ Request to update a system setting
 
 | Property | Type |
 | ------ | ------ |
-| `description?` | `string` |
-| `value` | `Record`\<`string`, `unknown`\> |
+| <a id="description"></a> `description?` | `string` |
+| <a id="value"></a> `value` | `Record`\<`string`, `unknown`\> |

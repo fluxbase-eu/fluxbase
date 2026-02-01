@@ -5,7 +5,7 @@ prev: false
 title: "useStorageCopy"
 ---
 
-> **useStorageCopy**(`bucket`): `UseMutationResult`\<`null` \| `object`, `Error`, `object`, `unknown`\>
+> **useStorageCopy**(`bucket`): `UseMutationResult`\<\{ `path`: `string`; \} \| `null`, `Error`, \{ `fromPath`: `string`; `toPath`: `string`; \}, `unknown`\>
 
 Hook to copy a file
 
@@ -17,4 +17,4 @@ Hook to copy a file
 
 ## Returns
 
-`UseMutationResult`\<`null` \| `object`, `Error`, `object`, `unknown`\>
+`UseMutationResult`\<\{ `path`: `string`; \} \| `null`, `Error`, \{ `fromPath`: `string`; `toPath`: `string`; \}, `unknown`\>

@@ -35,9 +35,9 @@ await settings.email.test('admin@yourapp.com')
 
 ## Constructors
 
-### new FluxbaseSettings()
+### Constructor
 
-> **new FluxbaseSettings**(`fetch`): [`FluxbaseSettings`](/api/sdk/classes/fluxbasesettings/)
+> **new FluxbaseSettings**(`fetch`): `FluxbaseSettings`
 
 #### Parameters
 
@@ -47,12 +47,12 @@ await settings.email.test('admin@yourapp.com')
 
 #### Returns
 
-[`FluxbaseSettings`](/api/sdk/classes/fluxbasesettings/)
+`FluxbaseSettings`
 
 ## Properties
 
 | Property | Modifier | Type |
 | ------ | ------ | ------ |
-| `app` | `public` | [`AppSettingsManager`](/api/sdk/classes/appsettingsmanager/) |
-| `email` | `public` | [`EmailSettingsManager`](/api/sdk/classes/emailsettingsmanager/) |
-| `system` | `public` | [`SystemSettingsManager`](/api/sdk/classes/systemsettingsmanager/) |
+| <a id="app"></a> `app` | `public` | [`AppSettingsManager`](/api/sdk/classes/appsettingsmanager/) |
+| <a id="email"></a> `email` | `public` | [`EmailSettingsManager`](/api/sdk/classes/emailsettingsmanager/) |
+| <a id="system"></a> `system` | `public` | [`SystemSettingsManager`](/api/sdk/classes/systemsettingsmanager/) |

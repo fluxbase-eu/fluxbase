@@ -5,7 +5,7 @@ prev: false
 title: "isAuthError"
 ---
 
-> **isAuthError**(`response`): `response is Object`
+> **isAuthError**(`response`): `response is { data: null; error: Error }`
 
 Type guard to check if an auth response is an error
 
@@ -17,7 +17,7 @@ Type guard to check if an auth response is an error
 
 ## Returns
 
-`response is Object`
+`response is { data: null; error: Error }`
 
 true if the auth operation failed
 

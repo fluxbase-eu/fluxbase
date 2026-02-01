@@ -10,9 +10,9 @@ Provides create, update, delete, sync, and monitoring operations
 
 ## Constructors
 
-### new FluxbaseAdminJobs()
+### Constructor
 
-> **new FluxbaseAdminJobs**(`fetch`): [`FluxbaseAdminJobs`](/api/sdk/classes/fluxbaseadminjobs/)
+> **new FluxbaseAdminJobs**(`fetch`): `FluxbaseAdminJobs`
 
 #### Parameters
 
@@ -22,13 +22,13 @@ Provides create, update, delete, sync, and monitoring operations
 
 #### Returns
 
-[`FluxbaseAdminJobs`](/api/sdk/classes/fluxbaseadminjobs/)
+`FluxbaseAdminJobs`
 
 ## Methods
 
 ### cancel()
 
-> **cancel**(`jobId`): `Promise`\<`object`\>
+> **cancel**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Cancel a running or pending job
 
@@ -40,14 +40,9 @@ Cancel a running or pending job
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -59,7 +54,7 @@ const { data, error } = await client.admin.jobs.cancel('550e8400-e29b-41d4-a716-
 
 ### create()
 
-> **create**(`request`): `Promise`\<`object`\>
+> **create**(`request`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Create a new job function
 
@@ -71,14 +66,9 @@ Create a new job function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created job function metadata
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `JobFunction` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -95,7 +85,7 @@ const { data, error } = await client.admin.jobs.create({
 
 ### delete()
 
-> **delete**(`namespace`, `name`): `Promise`\<`object`\>
+> **delete**(`namespace`, `name`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a job function
 
@@ -108,14 +98,9 @@ Delete a job function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -127,7 +112,7 @@ const { data, error } = await client.admin.jobs.delete('default', 'process-data'
 
 ### get()
 
-> **get**(`namespace`, `name`): `Promise`\<`object`\>
+> **get**(`namespace`, `name`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific job function
 
@@ -140,14 +125,9 @@ Get details of a specific job function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job function metadata
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `JobFunction` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -162,7 +142,7 @@ if (data) {
 
 ### getJob()
 
-> **getJob**(`jobId`): `Promise`\<`object`\>
+> **getJob**(`jobId`): `Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific job (execution)
 
@@ -174,14 +154,9 @@ Get details of a specific job (execution)
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Job` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -196,7 +171,7 @@ if (data) {
 
 ### getStats()
 
-> **getStats**(`namespace`?): `Promise`\<`object`\>
+> **getStats**(`namespace?`): `Promise`\<\{ `data`: `JobStats` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get job statistics
 
@@ -204,18 +179,13 @@ Get job statistics
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `namespace`? | `string` | Optional namespace filter |
+| `namespace?` | `string` | Optional namespace filter |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `JobStats` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job stats
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `JobStats` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -230,7 +200,7 @@ if (data) {
 
 ### list()
 
-> **list**(`namespace`?): `Promise`\<`object`\>
+> **list**(`namespace?`): `Promise`\<\{ `data`: `JobFunction`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all job functions (admin view)
 
@@ -238,18 +208,13 @@ List all job functions (admin view)
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `namespace`? | `string` | Optional namespace filter |
+| `namespace?` | `string` | Optional namespace filter |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `JobFunction`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of job functions
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `JobFunction`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -264,7 +229,7 @@ if (data) {
 
 ### listJobs()
 
-> **listJobs**(`filters`?): `Promise`\<`object`\>
+> **listJobs**(`filters?`): `Promise`\<\{ `data`: `Job`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all jobs (executions) across all namespaces (admin view)
 
@@ -272,23 +237,18 @@ List all jobs (executions) across all namespaces (admin view)
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `filters`? | `object` | Optional filters (status, namespace, limit, offset) |
-| `filters.includeResult`? | `boolean` | - |
-| `filters.limit`? | `number` | - |
-| `filters.namespace`? | `string` | - |
-| `filters.offset`? | `number` | - |
-| `filters.status`? | `string` | - |
+| `filters?` | \{ `includeResult?`: `boolean`; `limit?`: `number`; `namespace?`: `string`; `offset?`: `number`; `status?`: `string`; \} | Optional filters (status, namespace, limit, offset) |
+| `filters.includeResult?` | `boolean` | - |
+| `filters.limit?` | `number` | - |
+| `filters.namespace?` | `string` | - |
+| `filters.offset?` | `number` | - |
+| `filters.status?` | `string` | - |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `Job`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of jobs
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Job`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -309,20 +269,15 @@ if (data) {
 
 ### listNamespaces()
 
-> **listNamespaces**(): `Promise`\<`object`\>
+> **listNamespaces**(): `Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List all namespaces that have job functions
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of namespace strings
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `string`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -337,20 +292,15 @@ if (data) {
 
 ### listWorkers()
 
-> **listWorkers**(): `Promise`\<`object`\>
+> **listWorkers**(): `Promise`\<\{ `data`: `JobWorker`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List active workers
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `JobWorker`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of workers
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `JobWorker`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -367,7 +317,7 @@ if (data) {
 
 ### retry()
 
-> **retry**(`jobId`): `Promise`\<`object`\>
+> **retry**(`jobId`): `Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Retry a failed job
 
@@ -379,14 +329,9 @@ Retry a failed job
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with new job
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Job` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -398,7 +343,7 @@ const { data, error } = await client.admin.jobs.retry('550e8400-e29b-41d4-a716-4
 
 ### sync()
 
-> **sync**(`options`): `Promise`\<`object`\>
+> **sync**(`options`): `Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Sync multiple job functions to a namespace
 
@@ -416,14 +361,9 @@ Requires service_role or admin authentication.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `SyncJobsResult` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -456,7 +396,7 @@ if (data) {
 
 ### syncWithBundling()
 
-> **syncWithBundling**(`options`, `bundleOptions`?): `Promise`\<`object`\>
+> **syncWithBundling**(`options`, `bundleOptions?`): `Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Sync job functions with automatic client-side bundling
 
@@ -468,18 +408,13 @@ before sending to the server. Requires esbuild as a peer dependency.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `options` | `SyncJobsOptions` | Sync options including namespace and jobs array |
-| `bundleOptions`? | `Partial`\<[`BundleOptions`](/api/sdk/interfaces/bundleoptions/)\> | Optional bundling configuration |
+| `bundleOptions?` | `Partial`\<[`BundleOptions`](/api/sdk/interfaces/bundleoptions/)\> | Optional bundling configuration |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `SyncJobsResult` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -498,7 +433,7 @@ const { data, error } = await client.admin.jobs.syncWithBundling({
 
 ### terminate()
 
-> **terminate**(`jobId`): `Promise`\<`object`\>
+> **terminate**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Terminate a running job immediately
 
@@ -510,14 +445,9 @@ Terminate a running job immediately
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -529,7 +459,7 @@ const { data, error } = await client.admin.jobs.terminate('550e8400-e29b-41d4-a7
 
 ### update()
 
-> **update**(`namespace`, `name`, `updates`): `Promise`\<`object`\>
+> **update**(`namespace`, `name`, `updates`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update an existing job function
 
@@ -543,14 +473,9 @@ Update an existing job function
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated job function metadata
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `JobFunction` |
-| `error` | `null` \| `Error` |
 
 #### Example
 

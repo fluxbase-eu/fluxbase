@@ -11,4 +11,4 @@ Security settings for the application
 
 | Property | Type |
 | ------ | ------ |
-| `enable_global_rate_limit` | `boolean` |
+| <a id="enable_global_rate_limit"></a> `enable_global_rate_limit` | `boolean` |

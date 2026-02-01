@@ -9,15 +9,15 @@ title: "ClientKey"
 
 | Property | Type |
 | ------ | ------ |
-| `created_at` | `string` |
-| `description?` | `string` |
-| `expires_at?` | `string` |
-| `id` | `string` |
-| `key_prefix` | `string` |
-| `last_used_at?` | `string` |
-| `name` | `string` |
-| `rate_limit_per_minute` | `number` |
-| `revoked_at?` | `string` |
-| `scopes` | `string`[] |
-| `updated_at?` | `string` |
-| `user_id` | `string` |
+| <a id="created_at"></a> `created_at` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="expires_at"></a> `expires_at?` | `string` |
+| <a id="id"></a> `id` | `string` |
+| <a id="key_prefix"></a> `key_prefix` | `string` |
+| <a id="last_used_at"></a> `last_used_at?` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="rate_limit_per_minute"></a> `rate_limit_per_minute` | `number` |
+| <a id="revoked_at"></a> `revoked_at?` | `string` |
+| <a id="scopes"></a> `scopes` | `string`[] |
+| <a id="updated_at"></a> `updated_at?` | `string` |
+| <a id="user_id"></a> `user_id` | `string` |

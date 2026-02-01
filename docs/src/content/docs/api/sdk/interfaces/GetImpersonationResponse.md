@@ -11,5 +11,5 @@ Response for getting current impersonation session
 
 | Property | Type |
 | ------ | ------ |
-| `session` | `null` \| [`ImpersonationSession`](/api/sdk/interfaces/impersonationsession/) |
-| `target_user` | `null` \| [`ImpersonationTargetUser`](/api/sdk/interfaces/impersonationtargetuser/) |
+| <a id="session"></a> `session` | [`ImpersonationSession`](/api/sdk/interfaces/impersonationsession/) \| `null` |
+| <a id="target_user"></a> `target_user` | [`ImpersonationTargetUser`](/api/sdk/interfaces/impersonationtargetuser/) \| `null` |

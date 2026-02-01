@@ -9,13 +9,13 @@ title: "EnrichedUser"
 
 | Property | Type |
 | ------ | ------ |
-| `created_at` | `string` |
-| `email` | `string` |
-| `email_verified?` | `boolean` |
-| `id` | `string` |
-| `is_anonymous?` | `boolean` |
-| `last_login_at?` | `string` |
-| `metadata?` | `Record`\<`string`, `unknown`\> |
-| `role?` | `string` |
-| `session_count?` | `number` |
-| `updated_at?` | `string` |
+| <a id="created_at"></a> `created_at` | `string` |
+| <a id="email"></a> `email` | `string` |
+| <a id="email_verified"></a> `email_verified?` | `boolean` |
+| <a id="id"></a> `id` | `string` |
+| <a id="is_anonymous"></a> `is_anonymous?` | `boolean` |
+| <a id="last_login_at"></a> `last_login_at?` | `string` |
+| <a id="metadata"></a> `metadata?` | `Record`\<`string`, `unknown`\> |
+| <a id="role"></a> `role?` | `string` |
+| <a id="session_count"></a> `session_count?` | `number` |
+| <a id="updated_at"></a> `updated_at?` | `string` |

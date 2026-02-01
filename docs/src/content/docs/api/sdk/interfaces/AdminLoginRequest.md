@@ -9,5 +9,5 @@ title: "AdminLoginRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `email` | `string` |
-| `password` | `string` |
+| <a id="email"></a> `email` | `string` |
+| <a id="password"></a> `password` | `string` |

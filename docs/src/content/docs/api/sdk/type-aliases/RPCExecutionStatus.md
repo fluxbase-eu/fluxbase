@@ -5,6 +5,6 @@ prev: false
 title: "RPCExecutionStatus"
 ---
 
-> **RPCExecutionStatus**: `"pending"` \| `"running"` \| `"completed"` \| `"failed"` \| `"cancelled"` \| `"timeout"`
+> **RPCExecutionStatus** = `"pending"` \| `"running"` \| `"completed"` \| `"failed"` \| `"cancelled"` \| `"timeout"`
 
 RPC execution status

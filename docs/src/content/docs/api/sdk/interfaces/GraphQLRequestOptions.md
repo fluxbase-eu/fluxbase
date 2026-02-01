@@ -11,5 +11,5 @@ Options for GraphQL requests
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `headers?` | `Record`\<`string`, `string`\> | Custom headers to include in the request |
-| `timeout?` | `number` | Request timeout in milliseconds |
+| <a id="headers"></a> `headers?` | `Record`\<`string`, `string`\> | Custom headers to include in the request |
+| <a id="timeout"></a> `timeout?` | `number` | Request timeout in milliseconds |

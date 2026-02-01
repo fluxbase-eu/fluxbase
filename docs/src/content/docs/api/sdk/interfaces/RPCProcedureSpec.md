@@ -11,7 +11,7 @@ RPC procedure specification for sync operations
 
 | Property | Type |
 | ------ | ------ |
-| `code` | `string` |
-| `description?` | `string` |
-| `enabled?` | `boolean` |
-| `name` | `string` |
+| <a id="code"></a> `code` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="enabled"></a> `enabled?` | `boolean` |
+| <a id="name"></a> `name` | `string` |

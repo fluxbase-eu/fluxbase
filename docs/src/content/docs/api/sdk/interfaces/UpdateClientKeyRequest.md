@@ -9,7 +9,7 @@ title: "UpdateClientKeyRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `description?` | `string` |
-| `name?` | `string` |
-| `rate_limit_per_minute?` | `number` |
-| `scopes?` | `string`[] |
+| <a id="description"></a> `description?` | `string` |
+| <a id="name"></a> `name?` | `string` |
+| <a id="rate_limit_per_minute"></a> `rate_limit_per_minute?` | `number` |
+| <a id="scopes"></a> `scopes?` | `string`[] |

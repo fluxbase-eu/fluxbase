@@ -9,7 +9,7 @@ title: "TestWebhookResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `error?` | `string` |
-| `response_body?` | `string` |
-| `status_code?` | `number` |
-| `success` | `boolean` |
+| <a id="error"></a> `error?` | `string` |
+| <a id="response_body"></a> `response_body?` | `string` |
+| <a id="status_code"></a> `status_code?` | `number` |
+| <a id="success"></a> `success` | `boolean` |

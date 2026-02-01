@@ -9,9 +9,9 @@ Admin storage manager for bucket and object management
 
 ## Constructors
 
-### new FluxbaseAdminStorage()
+### Constructor
 
-> **new FluxbaseAdminStorage**(`fetch`): [`FluxbaseAdminStorage`](/api/sdk/classes/fluxbaseadminstorage/)
+> **new FluxbaseAdminStorage**(`fetch`): `FluxbaseAdminStorage`
 
 #### Parameters
 
@@ -21,13 +21,13 @@ Admin storage manager for bucket and object management
 
 #### Returns
 
-[`FluxbaseAdminStorage`](/api/sdk/classes/fluxbaseadminstorage/)
+`FluxbaseAdminStorage`
 
 ## Methods
 
 ### createBucket()
 
-> **createBucket**(`name`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+> **createBucket**(`name`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `message`: `string`; \}\>\>
 
 Create a new storage bucket
 
@@ -39,7 +39,7 @@ Create a new storage bucket
 
 #### Returns
 
-`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `message`: `string`; \}\>\>
 
 Success message
 
@@ -81,7 +81,7 @@ const { error } = await admin.storage.createFolder('my-bucket', 'new-folder/');
 
 ### deleteBucket()
 
-> **deleteBucket**(`name`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+> **deleteBucket**(`name`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `message`: `string`; \}\>\>
 
 Delete a storage bucket
 
@@ -93,7 +93,7 @@ Delete a storage bucket
 
 #### Returns
 
-`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`object`\>\>
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `message`: `string`; \}\>\>
 
 Success message
 
@@ -254,7 +254,7 @@ if (data) {
 
 ### listObjects()
 
-> **listObjects**(`bucket`, `prefix`?, `delimiter`?): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AdminListObjectsResponse`](/api/sdk/interfaces/adminlistobjectsresponse/)\>\>
+> **listObjects**(`bucket`, `prefix?`, `delimiter?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AdminListObjectsResponse`](/api/sdk/interfaces/adminlistobjectsresponse/)\>\>
 
 List objects in a bucket
 
@@ -263,8 +263,8 @@ List objects in a bucket
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `bucket` | `string` | Bucket name |
-| `prefix`? | `string` | Optional path prefix to filter results |
-| `delimiter`? | `string` | Optional delimiter for hierarchical listing (usually '/') |
+| `prefix?` | `string` | Optional path prefix to filter results |
+| `delimiter?` | `string` | Optional delimiter for hierarchical listing (usually '/') |
 
 #### Returns
 

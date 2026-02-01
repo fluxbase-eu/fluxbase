@@ -18,10 +18,10 @@ Compatible with Supabase realtime payloads
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `commit_timestamp` | `string` | Commit timestamp (Supabase-compatible field name) |
-| `errors` | `null` \| `string` | Error message if any |
-| `eventType` | `"DELETE"` \| `"INSERT"` \| `"UPDATE"` \| `"*"` | Event type (Supabase-compatible field name) |
-| `new` | `T` | New record data (Supabase-compatible field name) |
-| `old` | `T` | Old record data (Supabase-compatible field name) |
-| `schema` | `string` | Database schema |
-| `table` | `string` | Table name |
+| <a id="commit_timestamp"></a> `commit_timestamp` | `string` | Commit timestamp (Supabase-compatible field name) |
+| <a id="errors"></a> `errors` | `string` \| `null` | Error message if any |
+| <a id="eventtype"></a> `eventType` | `"DELETE"` \| `"INSERT"` \| `"UPDATE"` \| `"*"` | Event type (Supabase-compatible field name) |
+| <a id="new"></a> `new` | `T` | New record data (Supabase-compatible field name) |
+| <a id="old"></a> `old` | `T` | Old record data (Supabase-compatible field name) |
+| <a id="schema"></a> `schema` | `string` | Database schema |
+| <a id="table"></a> `table` | `string` | Table name |

@@ -11,8 +11,8 @@ Complete application settings structure
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `authentication` | `AuthenticationSettings` | - |
-| `email` | `EmailSettings` | - |
-| `features` | `FeatureSettings` | - |
-| `overrides?` | `SettingOverrides` | Settings overridden by environment variables (read-only, cannot be modified via API) |
-| `security` | `SecuritySettings` | - |
+| <a id="authentication"></a> `authentication` | `AuthenticationSettings` | - |
+| <a id="email"></a> `email` | `EmailSettings` | - |
+| <a id="features"></a> `features` | `FeatureSettings` | - |
+| <a id="overrides"></a> `overrides?` | `SettingOverrides` | Settings overridden by environment variables (read-only, cannot be modified via API) |
+| <a id="security"></a> `security` | `SecuritySettings` | - |

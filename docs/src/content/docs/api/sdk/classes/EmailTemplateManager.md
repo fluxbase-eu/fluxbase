@@ -37,9 +37,9 @@ await templates.reset('magic_link')
 
 ## Constructors
 
-### new EmailTemplateManager()
+### Constructor
 
-> **new EmailTemplateManager**(`fetch`): [`EmailTemplateManager`](/api/sdk/classes/emailtemplatemanager/)
+> **new EmailTemplateManager**(`fetch`): `EmailTemplateManager`
 
 #### Parameters
 
@@ -49,7 +49,7 @@ await templates.reset('magic_link')
 
 #### Returns
 
-[`EmailTemplateManager`](/api/sdk/classes/emailtemplatemanager/)
+`EmailTemplateManager`
 
 ## Methods
 

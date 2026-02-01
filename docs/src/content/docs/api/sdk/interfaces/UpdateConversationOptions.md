@@ -11,4 +11,4 @@ Options for updating a conversation
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `title` | `string` | New title for the conversation |
+| <a id="title"></a> `title` | `string` | New title for the conversation |

@@ -10,12 +10,12 @@ title: "denoExternalPlugin"
 esbuild plugin that marks Deno-specific imports as external
 Use this when bundling functions/jobs with esbuild to handle npm:, https://, and jsr: imports
 
-## Type declaration
+## Type Declaration
 
 | Name | Type | Default value |
 | ------ | ------ | ------ |
-| `name` | `string` | "deno-external" |
-| `setup()` | `void` | - |
+| <a id="name"></a> `name` | `string` | `"deno-external"` |
+| `setup()` | (`build`) => `void` | - |
 
 ## Example
 

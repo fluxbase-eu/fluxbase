@@ -11,5 +11,5 @@ Options for vector similarity ordering
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `metric?` | [`VectorMetric`](/api/sdk/type-aliases/vectormetric/) | Distance metric to use |
-| `vector` | `number`[] | The vector to compare against |
+| <a id="metric"></a> `metric?` | [`VectorMetric`](/api/sdk/type-aliases/vectormetric/) | Distance metric to use |
+| <a id="vector"></a> `vector` | `number`[] | The vector to compare against |

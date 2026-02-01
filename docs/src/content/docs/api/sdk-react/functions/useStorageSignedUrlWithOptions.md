@@ -5,7 +5,7 @@ prev: false
 title: "useStorageSignedUrlWithOptions"
 ---
 
-> **useStorageSignedUrlWithOptions**(`bucket`, `path`, `options`?): `UseQueryResult`\<`null` \| `string`, `Error`\>
+> **useStorageSignedUrlWithOptions**(`bucket`, `path`, `options?`): `UseQueryResult`\<`string` \| `null`, `Error`\>
 
 Hook to create a signed URL with full options including image transformations
 
@@ -14,12 +14,12 @@ Hook to create a signed URL with full options including image transformations
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `bucket` | `string` | The storage bucket name |
-| `path` | `null` \| `string` | The file path (or null to disable) |
-| `options`? | [`SignedUrlOptions`](/api/sdk-react/interfaces/signedurloptions/) | Signed URL options including expiration and transforms |
+| `path` | `string` \| `null` | The file path (or null to disable) |
+| `options?` | [`SignedUrlOptions`](/api/sdk-react/interfaces/signedurloptions/) | Signed URL options including expiration and transforms |
 
 ## Returns
 
-`UseQueryResult`\<`null` \| `string`, `Error`\>
+`UseQueryResult`\<`string` \| `null`, `Error`\>
 
 ## Example
 

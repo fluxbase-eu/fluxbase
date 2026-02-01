@@ -9,5 +9,5 @@ title: "TwoFactorVerifyRequest"
 
 | Property | Type |
 | ------ | ------ |
-| `code` | `string` |
-| `user_id` | `string` |
+| <a id="code"></a> `code` | `string` |
+| <a id="user_id"></a> `user_id` | `string` |

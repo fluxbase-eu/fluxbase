@@ -7,26 +7,26 @@ title: "FluxbaseRealtime"
 
 ## Constructors
 
-### new FluxbaseRealtime()
+### Constructor
 
-> **new FluxbaseRealtime**(`url`, `token`): [`FluxbaseRealtime`](/api/sdk/classes/fluxbaserealtime/)
+> **new FluxbaseRealtime**(`url`, `token`): `FluxbaseRealtime`
 
 #### Parameters
 
 | Parameter | Type | Default value |
 | ------ | ------ | ------ |
 | `url` | `string` | `undefined` |
-| `token` | `null` \| `string` | `null` |
+| `token` | `string` \| `null` | `null` |
 
 #### Returns
 
-[`FluxbaseRealtime`](/api/sdk/classes/fluxbaserealtime/)
+`FluxbaseRealtime`
 
 ## Methods
 
 ### channel()
 
-> **channel**(`channelName`, `config`?): [`RealtimeChannel`](/api/sdk/classes/realtimechannel/)
+> **channel**(`channelName`, `config?`): [`RealtimeChannel`](/api/sdk/classes/realtimechannel/)
 
 Create or get a channel with optional configuration
 
@@ -35,7 +35,7 @@ Create or get a channel with optional configuration
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `channelName` | `string` | Channel name (e.g., 'table:public.products') |
-| `config`? | [`RealtimeChannelConfig`](/api/sdk/interfaces/realtimechannelconfig/) | Optional channel configuration |
+| `config?` | [`RealtimeChannelConfig`](/api/sdk/interfaces/realtimechannelconfig/) | Optional channel configuration |
 
 #### Returns
 
@@ -139,7 +139,7 @@ the token to all existing connected channels.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `token` | `null` \| `string` | The new auth token |
+| `token` | `string` \| `null` | The new auth token |
 
 #### Returns
 

@@ -12,9 +12,9 @@ use client.admin.jobs
 
 ## Constructors
 
-### new FluxbaseJobs()
+### Constructor
 
-> **new FluxbaseJobs**(`fetch`): [`FluxbaseJobs`](/api/sdk/classes/fluxbasejobs/)
+> **new FluxbaseJobs**(`fetch`): `FluxbaseJobs`
 
 #### Parameters
 
@@ -24,13 +24,13 @@ use client.admin.jobs
 
 #### Returns
 
-[`FluxbaseJobs`](/api/sdk/classes/fluxbasejobs/)
+`FluxbaseJobs`
 
 ## Methods
 
 ### cancel()
 
-> **cancel**(`jobId`): `Promise`\<`object`\>
+> **cancel**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Cancel a pending or running job
 
@@ -42,14 +42,9 @@ Cancel a pending or running job
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -65,7 +60,7 @@ if (!error) {
 
 ### get()
 
-> **get**(`jobId`): `Promise`\<`object`\>
+> **get**(`jobId`): `Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get status and details of a specific job
 
@@ -77,14 +72,9 @@ Get status and details of a specific job
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Job` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -103,7 +93,7 @@ if (job) {
 
 ### getLogs()
 
-> **getLogs**(`jobId`, `afterLine`?): `Promise`\<`object`\>
+> **getLogs**(`jobId`, `afterLine?`): `Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get execution logs for a job
 
@@ -115,18 +105,13 @@ owned by the authenticated user (unless using service_role).
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `jobId` | `string` | Job ID |
-| `afterLine`? | `number` | Optional line number to get logs after (for polling/streaming) |
+| `afterLine?` | `number` | Optional line number to get logs after (for polling/streaming) |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution logs
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -159,7 +144,7 @@ const channel = client.realtime
 
 ### list()
 
-> **list**(`filters`?): `Promise`\<`object`\>
+> **list**(`filters?`): `Promise`\<\{ `data`: `Job`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List jobs submitted by the current user
 
@@ -167,23 +152,18 @@ List jobs submitted by the current user
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `filters`? | `object` | Optional filters (status, namespace, limit, offset) |
-| `filters.includeResult`? | `boolean` | - |
-| `filters.limit`? | `number` | - |
-| `filters.namespace`? | `string` | - |
-| `filters.offset`? | `number` | - |
-| `filters.status`? | `string` | - |
+| `filters?` | \{ `includeResult?`: `boolean`; `limit?`: `number`; `namespace?`: `string`; `offset?`: `number`; `status?`: `string`; \} | Optional filters (status, namespace, limit, offset) |
+| `filters.includeResult?` | `boolean` | - |
+| `filters.limit?` | `number` | - |
+| `filters.namespace?` | `string` | - |
+| `filters.offset?` | `number` | - |
+| `filters.status?` | `string` | - |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `Job`[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of jobs
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Job`[] |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -207,7 +187,7 @@ const { data: page } = await client.jobs.list({
 
 ### retry()
 
-> **retry**(`jobId`): `Promise`\<`object`\>
+> **retry**(`jobId`): `Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Retry a failed job
 
@@ -221,14 +201,9 @@ Creates a new job execution with the same parameters
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with new job
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Job` |
-| `error` | `null` \| `Error` |
 
 #### Example
 
@@ -244,7 +219,7 @@ if (newJob) {
 
 ### submit()
 
-> **submit**(`jobName`, `payload`?, `options`?): `Promise`\<`object`\>
+> **submit**(`jobName`, `payload?`, `options?`): `Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Submit a new job for execution
 
@@ -253,23 +228,18 @@ Submit a new job for execution
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `jobName` | `string` | Name of the job function to execute |
-| `payload`? | `unknown` | Job input data |
-| `options`? | `object` | Additional options (priority, namespace, scheduled time, onBehalfOf) |
-| `options.namespace`? | `string` | - |
-| `options.onBehalfOf`? | `OnBehalfOf` | Submit job on behalf of another user (service_role only). The job will be created with the specified user's identity, allowing them to see the job and its logs via RLS. |
-| `options.priority`? | `number` | - |
-| `options.scheduled`? | `string` | - |
+| `payload?` | `unknown` | Job input data |
+| `options?` | \{ `namespace?`: `string`; `onBehalfOf?`: `OnBehalfOf`; `priority?`: `number`; `scheduled?`: `string`; \} | Additional options (priority, namespace, scheduled time, onBehalfOf) |
+| `options.namespace?` | `string` | - |
+| `options.onBehalfOf?` | `OnBehalfOf` | Submit job on behalf of another user (service_role only). The job will be created with the specified user's identity, allowing them to see the job and its logs via RLS. |
+| `options.priority?` | `number` | - |
+| `options.scheduled?` | `string` | - |
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `data`: `Job` \| `null`; `error`: `Error` \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with submitted job details
-
-| Name | Type |
-| ------ | ------ |
-| `data` | `null` \| `Job` |
-| `error` | `null` \| `Error` |
 
 #### Example
 

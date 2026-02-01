@@ -5,7 +5,7 @@ prev: false
 title: "DataResponse"
 ---
 
-> **DataResponse**\<`T`\>: [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`T`\>
+> **DataResponse**\<`T`\> = [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`T`\>
 
 Generic data response
 

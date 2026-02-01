@@ -11,7 +11,7 @@ GraphQL introspection input value
 
 | Property | Type |
 | ------ | ------ |
-| `defaultValue?` | `string` |
-| `description?` | `string` |
-| `name` | `string` |
-| `type` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/) |
+| <a id="defaultvalue"></a> `defaultValue?` | `string` |
+| <a id="description"></a> `description?` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="type"></a> `type` | [`IntrospectionTypeRef`](/api/sdk/interfaces/introspectiontyperef/) |

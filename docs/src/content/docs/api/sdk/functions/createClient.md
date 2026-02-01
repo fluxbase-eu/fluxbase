@@ -5,7 +5,7 @@ prev: false
 title: "createClient"
 ---
 
-> **createClient**\<`Database`, `SchemaName`\>(`fluxbaseUrl`?, `fluxbaseKey`?, `options`?): [`FluxbaseClient`](/api/sdk/classes/fluxbaseclient/)\<`Database`, `SchemaName`\>
+> **createClient**\<`Database`, `SchemaName`\>(`fluxbaseUrl?`, `fluxbaseKey?`, `options?`): [`FluxbaseClient`](/api/sdk/classes/fluxbaseclient/)\<`Database`, `SchemaName`\>
 
 Create a new Fluxbase client instance (Supabase-compatible)
 
@@ -32,9 +32,9 @@ This is useful in:
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `fluxbaseUrl`? | `string` | The URL of your Fluxbase instance (optional if FLUXBASE_URL env var is set) |
-| `fluxbaseKey`? | `string` | The anon key or JWT token (optional if env var is set) |
-| `options`? | [`FluxbaseClientOptions`](/api/sdk/interfaces/fluxbaseclientoptions/) | Optional client configuration |
+| `fluxbaseUrl?` | `string` | The URL of your Fluxbase instance (optional if FLUXBASE_URL env var is set) |
+| `fluxbaseKey?` | `string` | The anon key or JWT token (optional if env var is set) |
+| `options?` | [`FluxbaseClientOptions`](/api/sdk/interfaces/fluxbaseclientoptions/) | Optional client configuration |
 
 ## Returns
 

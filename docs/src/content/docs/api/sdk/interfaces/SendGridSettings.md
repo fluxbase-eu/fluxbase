@@ -11,4 +11,4 @@ SendGrid email provider configuration
 
 | Property | Type |
 | ------ | ------ |
-| `api_key` | `string` |
+| <a id="api_key"></a> `api_key` | `string` |

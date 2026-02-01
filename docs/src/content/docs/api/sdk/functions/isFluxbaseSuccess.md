@@ -5,7 +5,7 @@ prev: false
 title: "isFluxbaseSuccess"
 ---
 
-> **isFluxbaseSuccess**\<`T`\>(`response`): `response is Object`
+> **isFluxbaseSuccess**\<`T`\>(`response`): `response is { data: T; error: null }`
 
 Type guard to check if a FluxbaseResponse is a success response
 
@@ -23,7 +23,7 @@ Type guard to check if a FluxbaseResponse is a success response
 
 ## Returns
 
-`response is Object`
+`response is { data: T; error: null }`
 
 true if the response is successful (data is not null, error is null)
 

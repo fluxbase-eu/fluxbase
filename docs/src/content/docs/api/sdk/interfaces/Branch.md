@@ -11,19 +11,19 @@ Database branch information
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `created_at` | `string` | When the branch was created |
-| `created_by?` | `string` | User ID who created the branch |
-| `data_clone_mode` | [`DataCloneMode`](/api/sdk/type-aliases/dataclonemode/) | How data was cloned when branch was created |
-| `database_name` | `string` | Actual database name |
-| `error_message?` | `string` | Error message if status is 'error' |
-| `expires_at?` | `string` | When the branch will automatically expire |
-| `github_pr_number?` | `number` | GitHub PR number if this is a preview branch |
-| `github_pr_url?` | `string` | GitHub PR URL |
-| `github_repo?` | `string` | GitHub repository (owner/repo) |
-| `id` | `string` | Unique branch identifier |
-| `name` | `string` | Display name of the branch |
-| `parent_branch_id?` | `string` | Parent branch ID (for feature branches) |
-| `slug` | `string` | URL-safe slug for the branch |
-| `status` | [`BranchStatus`](/api/sdk/type-aliases/branchstatus/) | Current status of the branch |
-| `type` | [`BranchType`](/api/sdk/type-aliases/branchtype/) | Type of branch |
-| `updated_at` | `string` | When the branch was last updated |
+| <a id="created_at"></a> `created_at` | `string` | When the branch was created |
+| <a id="created_by"></a> `created_by?` | `string` | User ID who created the branch |
+| <a id="data_clone_mode"></a> `data_clone_mode` | [`DataCloneMode`](/api/sdk/type-aliases/dataclonemode/) | How data was cloned when branch was created |
+| <a id="database_name"></a> `database_name` | `string` | Actual database name |
+| <a id="error_message"></a> `error_message?` | `string` | Error message if status is 'error' |
+| <a id="expires_at"></a> `expires_at?` | `string` | When the branch will automatically expire |
+| <a id="github_pr_number"></a> `github_pr_number?` | `number` | GitHub PR number if this is a preview branch |
+| <a id="github_pr_url"></a> `github_pr_url?` | `string` | GitHub PR URL |
+| <a id="github_repo"></a> `github_repo?` | `string` | GitHub repository (owner/repo) |
+| <a id="id"></a> `id` | `string` | Unique branch identifier |
+| <a id="name"></a> `name` | `string` | Display name of the branch |
+| <a id="parent_branch_id"></a> `parent_branch_id?` | `string` | Parent branch ID (for feature branches) |
+| <a id="slug"></a> `slug` | `string` | URL-safe slug for the branch |
+| <a id="status"></a> `status` | [`BranchStatus`](/api/sdk/type-aliases/branchstatus/) | Current status of the branch |
+| <a id="type"></a> `type` | [`BranchType`](/api/sdk/type-aliases/branchtype/) | Type of branch |
+| <a id="updated_at"></a> `updated_at` | `string` | When the branch was last updated |

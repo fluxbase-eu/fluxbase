@@ -11,4 +11,4 @@ Response when listing email templates
 
 | Property | Type |
 | ------ | ------ |
-| `templates` | [`EmailTemplate`](/api/sdk/interfaces/emailtemplate/)[] |
+| <a id="templates"></a> `templates` | [`EmailTemplate`](/api/sdk/interfaces/emailtemplate/)[] |

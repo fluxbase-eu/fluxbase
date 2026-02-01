@@ -11,19 +11,19 @@ OAuth provider configuration
 
 | Property | Type |
 | ------ | ------ |
-| `authorization_url?` | `string` |
-| `authorize_url?` | `string` |
-| `client_id` | `string` |
-| `client_secret?` | `string` |
-| `created_at` | `string` |
-| `display_name` | `string` |
-| `enabled` | `boolean` |
-| `id` | `string` |
-| `is_custom` | `boolean` |
-| `name` | `string` |
-| `provider_name` | `string` |
-| `redirect_url` | `string` |
-| `scopes` | `string`[] |
-| `token_url?` | `string` |
-| `updated_at` | `string` |
-| `user_info_url?` | `string` |
+| <a id="authorization_url"></a> `authorization_url?` | `string` |
+| <a id="authorize_url"></a> `authorize_url?` | `string` |
+| <a id="client_id"></a> `client_id` | `string` |
+| <a id="client_secret"></a> `client_secret?` | `string` |
+| <a id="created_at"></a> `created_at` | `string` |
+| <a id="display_name"></a> `display_name` | `string` |
+| <a id="enabled"></a> `enabled` | `boolean` |
+| <a id="id"></a> `id` | `string` |
+| <a id="is_custom"></a> `is_custom` | `boolean` |
+| <a id="name"></a> `name` | `string` |
+| <a id="provider_name"></a> `provider_name` | `string` |
+| <a id="redirect_url"></a> `redirect_url` | `string` |
+| <a id="scopes"></a> `scopes` | `string`[] |
+| <a id="token_url"></a> `token_url?` | `string` |
+| <a id="updated_at"></a> `updated_at` | `string` |
+| <a id="user_info_url"></a> `user_info_url?` | `string` |

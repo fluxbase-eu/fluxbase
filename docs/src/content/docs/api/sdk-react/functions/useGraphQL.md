@@ -14,16 +14,14 @@ Useful for one-off operations or when you need full control.
 
 ## Returns
 
-`object`
-
 Functions to execute queries and mutations
 
 | Name | Type | Description |
 | ------ | ------ | ------ |
-| `execute` | \<`T`\>(`document`, `variables`?, `operationName`?, `options`?) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<`T`\>\> | Execute a GraphQL operation with an explicit operation name |
-| `executeMutation` | \<`T`\>(`mutation`, `variables`?, `options`?) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<`T`\>\> | Execute a GraphQL mutation |
-| `executeQuery` | \<`T`\>(`query`, `variables`?, `options`?) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<`T`\>\> | Execute a GraphQL query |
-| `introspect` | (`options`?) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<`object`\>\> | Fetch the GraphQL schema via introspection |
+| `execute()` | \<`T`\>(`document`, `variables?`, `operationName?`, `options?`) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<`T`\>\> | Execute a GraphQL operation with an explicit operation name |
+| `executeMutation()` | \<`T`\>(`mutation`, `variables?`, `options?`) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<`T`\>\> | Execute a GraphQL mutation |
+| `executeQuery()` | \<`T`\>(`query`, `variables?`, `options?`) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<`T`\>\> | Execute a GraphQL query |
+| `introspect()` | (`options?`) => `Promise`\<[`GraphQLResponse`](/api/sdk-react/interfaces/graphqlresponse/)\<\{ `__schema`: `IntrospectionSchema`; \}\>\> | Fetch the GraphQL schema via introspection |
 
 ## Example
 

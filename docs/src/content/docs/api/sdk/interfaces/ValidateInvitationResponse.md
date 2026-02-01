@@ -9,6 +9,6 @@ title: "ValidateInvitationResponse"
 
 | Property | Type |
 | ------ | ------ |
-| `error?` | `string` |
-| `invitation?` | [`Invitation`](/api/sdk/interfaces/invitation/) |
-| `valid` | `boolean` |
+| <a id="error"></a> `error?` | `string` |
+| <a id="invitation"></a> `invitation?` | [`Invitation`](/api/sdk/interfaces/invitation/) |
+| <a id="valid"></a> `valid` | `boolean` |

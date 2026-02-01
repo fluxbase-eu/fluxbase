@@ -11,6 +11,6 @@ AI token usage statistics
 
 | Property | Type |
 | ------ | ------ |
-| `completion_tokens` | `number` |
-| `prompt_tokens` | `number` |
-| `total_tokens?` | `number` |
+| <a id="completion_tokens"></a> `completion_tokens` | `number` |
+| <a id="prompt_tokens"></a> `prompt_tokens` | `number` |
+| <a id="total_tokens"></a> `total_tokens?` | `number` |

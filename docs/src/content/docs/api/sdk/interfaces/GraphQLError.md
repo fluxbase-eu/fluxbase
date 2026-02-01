@@ -11,7 +11,7 @@ GraphQL error returned from the server
 
 | Property | Type |
 | ------ | ------ |
-| `extensions?` | `Record`\<`string`, `unknown`\> |
-| `locations?` | [`GraphQLErrorLocation`](/api/sdk/interfaces/graphqlerrorlocation/)[] |
-| `message` | `string` |
-| `path?` | (`string` \| `number`)[] |
+| <a id="extensions"></a> `extensions?` | `Record`\<`string`, `unknown`\> |
+| <a id="locations"></a> `locations?` | [`GraphQLErrorLocation`](/api/sdk/interfaces/graphqlerrorlocation/)[] |
+| <a id="message"></a> `message` | `string` |
+| <a id="path"></a> `path?` | (`string` \| `number`)[] |

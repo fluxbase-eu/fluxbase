@@ -7,9 +7,9 @@ title: "SchemaQueryBuilder"
 
 ## Constructors
 
-### new SchemaQueryBuilder()
+### Constructor
 
-> **new SchemaQueryBuilder**(`fetch`, `schemaName`): [`SchemaQueryBuilder`](/api/sdk/classes/schemaquerybuilder/)
+> **new SchemaQueryBuilder**(`fetch`, `schemaName`): `SchemaQueryBuilder`
 
 #### Parameters
 
@@ -20,7 +20,7 @@ title: "SchemaQueryBuilder"
 
 #### Returns
 
-[`SchemaQueryBuilder`](/api/sdk/classes/schemaquerybuilder/)
+`SchemaQueryBuilder`
 
 ## Methods
 

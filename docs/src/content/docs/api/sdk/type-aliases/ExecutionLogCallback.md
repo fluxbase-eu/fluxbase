@@ -5,7 +5,7 @@ prev: false
 title: "ExecutionLogCallback"
 ---
 
-> **ExecutionLogCallback**: (`log`) => `void`
+> **ExecutionLogCallback** = (`log`) => `void`
 
 Callback for execution log events
 

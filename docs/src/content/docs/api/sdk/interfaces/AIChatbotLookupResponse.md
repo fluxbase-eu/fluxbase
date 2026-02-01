@@ -11,7 +11,7 @@ Response from chatbot lookup by name (smart namespace resolution)
 
 | Property | Type | Description |
 | ------ | ------ | ------ |
-| `ambiguous` | `boolean` | True if multiple chatbots with this name exist in different namespaces |
-| `chatbot?` | [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) | The chatbot if found (unique or resolved from default namespace) |
-| `error?` | `string` | Error message if lookup failed |
-| `namespaces?` | `string`[] | List of namespaces where the chatbot exists (when ambiguous) |
+| <a id="ambiguous"></a> `ambiguous` | `boolean` | True if multiple chatbots with this name exist in different namespaces |
+| <a id="chatbot"></a> `chatbot?` | [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) | The chatbot if found (unique or resolved from default namespace) |
+| <a id="error"></a> `error?` | `string` | Error message if lookup failed |
+| <a id="namespaces"></a> `namespaces?` | `string`[] | List of namespaces where the chatbot exists (when ambiguous) |

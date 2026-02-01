@@ -11,8 +11,8 @@ System health status response
 
 | Property | Type |
 | ------ | ------ |
-| `services` | `object` |
+| <a id="services"></a> `services` | `object` |
 | `services.database` | `boolean` |
 | `services.realtime` | `boolean` |
-| `status` | `string` |
-| `timestamp` | `string` |
+| <a id="status"></a> `status` | `string` |
+| <a id="timestamp"></a> `timestamp` | `string` |

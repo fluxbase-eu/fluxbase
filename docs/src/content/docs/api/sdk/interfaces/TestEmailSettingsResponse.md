@@ -11,5 +11,5 @@ Response from testing email settings
 
 | Property | Type |
 | ------ | ------ |
-| `message` | `string` |
-| `success` | `boolean` |
+| <a id="message"></a> `message` | `string` |
+| <a id="success"></a> `success` | `boolean` |

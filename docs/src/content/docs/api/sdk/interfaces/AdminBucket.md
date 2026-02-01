@@ -11,10 +11,10 @@ Storage bucket information (admin API)
 
 | Property | Type |
 | ------ | ------ |
-| `allowed_mime_types` | `null` \| `string`[] |
-| `created_at` | `string` |
-| `id` | `string` |
-| `max_file_size` | `null` \| `number` |
-| `name` | `string` |
-| `public` | `boolean` |
-| `updated_at` | `string` |
+| <a id="allowed_mime_types"></a> `allowed_mime_types` | `string`[] \| `null` |
+| <a id="created_at"></a> `created_at` | `string` |
+| <a id="id"></a> `id` | `string` |
+| <a id="max_file_size"></a> `max_file_size` | `number` \| `null` |
+| <a id="name"></a> `name` | `string` |
+| <a id="public"></a> `public` | `boolean` |
+| <a id="updated_at"></a> `updated_at` | `string` |

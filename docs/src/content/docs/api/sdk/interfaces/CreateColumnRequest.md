@@ -11,8 +11,8 @@ Column definition for creating a table
 
 | Property | Type |
 | ------ | ------ |
-| `defaultValue?` | `string` |
-| `name` | `string` |
-| `nullable?` | `boolean` |
-| `primaryKey?` | `boolean` |
-| `type` | `string` |
+| <a id="defaultvalue"></a> `defaultValue?` | `string` |
+| <a id="name"></a> `name` | `string` |
+| <a id="nullable"></a> `nullable?` | `boolean` |
+| <a id="primarykey"></a> `primaryKey?` | `boolean` |
+| <a id="type"></a> `type` | `string` |

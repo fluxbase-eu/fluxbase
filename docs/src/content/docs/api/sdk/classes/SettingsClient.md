@@ -35,9 +35,9 @@ console.log(values)
 
 ## Constructors
 
-### new SettingsClient()
+### Constructor
 
-> **new SettingsClient**(`fetch`): [`SettingsClient`](/api/sdk/classes/settingsclient/)
+> **new SettingsClient**(`fetch`): `SettingsClient`
 
 #### Parameters
 
@@ -47,7 +47,7 @@ console.log(values)
 
 #### Returns
 
-[`SettingsClient`](/api/sdk/classes/settingsclient/)
+`SettingsClient`
 
 ## Methods
 
@@ -259,7 +259,7 @@ console.log(source)  // 'user' (user's own setting)
 
 ### getSystemSetting()
 
-> **getSystemSetting**(`key`): `Promise`\<`object`\>
+> **getSystemSetting**(`key`): `Promise`\<\{ `key`: `string`; `value`: `Record`\<`string`, `unknown`\>; \}\>
 
 Get a system-level setting (no user override)
 
@@ -274,14 +274,9 @@ Useful for reading default configurations.
 
 #### Returns
 
-`Promise`\<`object`\>
+`Promise`\<\{ `key`: `string`; `value`: `Record`\<`string`, `unknown`\>; \}\>
 
 Promise resolving to the setting value
-
-| Name | Type |
-| ------ | ------ |
-| `key` | `string` |
-| `value` | `Record`\<`string`, `unknown`\> |
 
 #### Throws
 
@@ -383,7 +378,7 @@ settings.forEach(s => console.log(s.key, s.value))
 
 ### setSecret()
 
-> **setSecret**(`key`, `value`, `options`?): `Promise`\<`SecretSettingMetadata`\>
+> **setSecret**(`key`, `value`, `options?`): `Promise`\<`SecretSettingMetadata`\>
 
 Set a user secret setting (encrypted)
 
@@ -398,8 +393,8 @@ behalf of this user. Even admins cannot see the decrypted value.
 | ------ | ------ | ------ |
 | `key` | `string` | Secret key |
 | `value` | `string` | Secret value (will be encrypted server-side) |
-| `options`? | `object` | Optional description |
-| `options.description`? | `string` | - |
+| `options?` | \{ `description?`: `string`; \} | Optional description |
+| `options.description?` | `string` | - |
 
 #### Returns
 
@@ -420,7 +415,7 @@ await client.settings.setSecret('openai_api_key', 'sk-abc123', {
 
 ### setSetting()
 
-> **setSetting**(`key`, `value`, `options`?): `Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)\>
+> **setSetting**(`key`, `value`, `options?`): `Promise`\<[`UserSetting`](/api/sdk/interfaces/usersetting/)\>
 
 Set a user setting (create or update)
 
@@ -433,8 +428,8 @@ This value will override any system default when using getSetting().
 | ------ | ------ | ------ |
 | `key` | `string` | Setting key |
 | `value` | `Record`\<`string`, `unknown`\> | Setting value (any JSON-serializable object) |
-| `options`? | `object` | Optional description |
-| `options.description`? | `string` | - |
+| `options?` | \{ `description?`: `string`; \} | Optional description |
+| `options.description?` | `string` | - |
 
 #### Returns
 

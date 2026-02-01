@@ -5,12 +5,6 @@ prev: false
 title: "UserResponse"
 ---
 
-> **UserResponse**: [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`object`\>
+> **UserResponse** = [`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `user`: [`User`](/api/sdk/interfaces/user/); \}\>
 
 User response
-
-## Type declaration
-
-| Name | Type |
-| ------ | ------ |
-| `user` | [`User`](/api/sdk/interfaces/user/) |

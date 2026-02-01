@@ -11,4 +11,4 @@ Response containing list of SAML providers
 
 | Property | Type |
 | ------ | ------ |
-| `providers` | [`SAMLProvider`](/api/sdk/interfaces/samlprovider/)[] |
+| <a id="providers"></a> `providers` | [`SAMLProvider`](/api/sdk/interfaces/samlprovider/)[] |

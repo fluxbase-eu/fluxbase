@@ -5,12 +5,12 @@ prev: false
 title: "VoidResponse"
 ---
 
-> **VoidResponse**: `object`
+> **VoidResponse** = `object`
 
 Response type for operations that don't return data (void operations)
 
-## Type declaration
+## Properties
 
-| Name | Type |
+| Property | Type |
 | ------ | ------ |
-| `error` | `Error` \| `null` |
+| <a id="error"></a> `error` | `Error` \| `null` |

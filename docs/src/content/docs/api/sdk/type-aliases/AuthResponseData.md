@@ -5,14 +5,14 @@ prev: false
 title: "AuthResponseData"
 ---
 
-> **AuthResponseData**: `object`
+> **AuthResponseData** = `object`
 
 Auth response with user and session (Supabase-compatible)
 
-## Type declaration
+## Properties
 
-| Name | Type |
+| Property | Type |
 | ------ | ------ |
-| `session` | [`AuthSession`](/api/sdk/interfaces/authsession/) \| `null` |
-| `user` | [`User`](/api/sdk/interfaces/user/) |
-| `weakPassword`? | [`WeakPassword`](/api/sdk/interfaces/weakpassword/) |
+| <a id="session"></a> `session` | [`AuthSession`](/api/sdk/interfaces/authsession/) \| `null` |
+| <a id="user"></a> `user` | [`User`](/api/sdk/interfaces/user/) |
+| <a id="weakpassword"></a> `weakPassword?` | [`WeakPassword`](/api/sdk/interfaces/weakpassword/) |

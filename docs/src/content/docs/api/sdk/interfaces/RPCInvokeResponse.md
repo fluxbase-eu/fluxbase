@@ -17,9 +17,9 @@ RPC invocation response
 
 | Property | Type |
 | ------ | ------ |
-| `duration_ms?` | `number` |
-| `error?` | `string` |
-| `execution_id` | `string` |
-| `result?` | `T` |
-| `rows_returned?` | `number` |
-| `status` | [`RPCExecutionStatus`](/api/sdk/type-aliases/rpcexecutionstatus/) |
+| <a id="duration_ms"></a> `duration_ms?` | `number` |
+| <a id="error"></a> `error?` | `string` |
+| <a id="execution_id"></a> `execution_id` | `string` |
+| <a id="result"></a> `result?` | `T` |
+| <a id="rows_returned"></a> `rows_returned?` | `number` |
+| <a id="status"></a> `status` | [`RPCExecutionStatus`](/api/sdk/type-aliases/rpcexecutionstatus/) |

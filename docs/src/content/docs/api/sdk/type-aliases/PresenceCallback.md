@@ -5,7 +5,7 @@ prev: false
 title: "PresenceCallback"
 ---
 
-> **PresenceCallback**: (`payload`) => `void`
+> **PresenceCallback** = (`payload`) => `void`
 
 Presence callback type
 

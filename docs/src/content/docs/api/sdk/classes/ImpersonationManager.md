@@ -39,9 +39,9 @@ await impersonation.stop()
 
 ## Constructors
 
-### new ImpersonationManager()
+### Constructor
 
-> **new ImpersonationManager**(`fetch`): [`ImpersonationManager`](/api/sdk/classes/impersonationmanager/)
+> **new ImpersonationManager**(`fetch`): `ImpersonationManager`
 
 #### Parameters
 
@@ -51,7 +51,7 @@ await impersonation.stop()
 
 #### Returns
 
-[`ImpersonationManager`](/api/sdk/classes/impersonationmanager/)
+`ImpersonationManager`
 
 ## Methods
 

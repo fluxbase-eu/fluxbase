@@ -5,7 +5,7 @@ prev: false
 title: "useGetSAMLLoginUrl"
 ---
 
-> **useGetSAMLLoginUrl**(): `UseMutationResult`\<`DataResponse`\<[`SAMLLoginResponse`](/api/sdk-react/interfaces/samlloginresponse/)\>, `Error`, `object`, `unknown`\>
+> **useGetSAMLLoginUrl**(): `UseMutationResult`\<`DataResponse`\<[`SAMLLoginResponse`](/api/sdk-react/interfaces/samlloginresponse/)\>, `Error`, \{ `options?`: [`SAMLLoginOptions`](/api/sdk-react/interfaces/samlloginoptions/); `provider`: `string`; \}, `unknown`\>
 
 Hook to get SAML login URL for a provider
 
@@ -14,7 +14,7 @@ Use this when you need more control over the redirect behavior.
 
 ## Returns
 
-`UseMutationResult`\<`DataResponse`\<[`SAMLLoginResponse`](/api/sdk-react/interfaces/samlloginresponse/)\>, `Error`, `object`, `unknown`\>
+`UseMutationResult`\<`DataResponse`\<[`SAMLLoginResponse`](/api/sdk-react/interfaces/samlloginresponse/)\>, `Error`, \{ `options?`: [`SAMLLoginOptions`](/api/sdk-react/interfaces/samlloginoptions/); `provider`: `string`; \}, `unknown`\>
 
 ## Example
 
