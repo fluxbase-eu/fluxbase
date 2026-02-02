@@ -299,6 +299,91 @@ describe("FluxbaseClient", () => {
       expect(client.rpc.waitForCompletion).toBeDefined();
     });
   });
+
+  describe("setupAuthSync", () => {
+    it("should set up token refresh callback for realtime", () => {
+      const client = new FluxbaseClient(testUrl, testKey);
+
+      // The setTokenRefreshCallback should have been called
+      expect(client.realtime.setTokenRefreshCallback).toHaveBeenCalled();
+    });
+
+    it("should return access token on successful refresh", async () => {
+      const client = new FluxbaseClient(testUrl, testKey);
+
+      // Get the callback that was passed to setTokenRefreshCallback
+      const callback = vi.mocked(client.realtime.setTokenRefreshCallback).mock
+        .calls[0][0];
+
+      // Call the callback and verify it returns the new token
+      const token = await callback();
+
+      expect(token).toBe("new-token");
+    });
+
+    it("should return null on refresh error", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const client = new FluxbaseClient(testUrl, testKey);
+
+      // Mock auth to return an error
+      vi.mocked(client.auth.refreshSession).mockResolvedValueOnce({
+        data: null,
+        error: new Error("Refresh failed"),
+      });
+
+      // Get the callback
+      const callback = vi.mocked(client.realtime.setTokenRefreshCallback).mock
+        .calls[0][0];
+
+      const token = await callback();
+
+      expect(token).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to refresh token"),
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should return null when session is missing", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const client = new FluxbaseClient(testUrl, testKey);
+
+      // Mock auth to return success but no session
+      vi.mocked(client.auth.refreshSession).mockResolvedValueOnce({
+        data: { session: null } as any,
+        error: null,
+      });
+
+      const callback = vi.mocked(client.realtime.setTokenRefreshCallback).mock
+        .calls[0][0];
+
+      const token = await callback();
+
+      expect(token).toBeNull();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("WebSocket URL conversion", () => {
+    it("should handle https URL for WebSocket connections", () => {
+      const httpsUrl = "https://api.example.com";
+      // Just verify the client is created successfully with https URL
+      const client = new FluxbaseClient(httpsUrl, testKey);
+      expect(client).toBeDefined();
+      expect(client.ai).toBeDefined();
+    });
+
+    it("should handle http URL for WebSocket connections", () => {
+      const httpUrl = "http://localhost:8080";
+      const client = new FluxbaseClient(httpUrl, testKey);
+      expect(client).toBeDefined();
+      expect(client.ai).toBeDefined();
+    });
+  });
 });
 
 describe("createClient", () => {
