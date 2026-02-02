@@ -1,0 +1,115 @@
+name: Claude Fix Request
+description: Request an automated fix from Claude AI
+labels: ["claude-fix", "automation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Automated Fix Request
+
+        This issue template is designed for tasks that Claude AI can fix automatically.
+        When you add the `claude-fix` label, our automation will:
+        1. Create a new branch
+        2. Analyze the issue and codebase
+        3. Implement the fix
+        4. Create a PR for review
+
+        **Best suited for:**
+        - Bug fixes with clear reproduction steps
+        - Small refactoring tasks
+        - Documentation updates
+        - Test additions
+        - Code style/lint fixes
+
+        **Not recommended for:**
+        - Large architectural changes
+        - Security-sensitive code
+        - Breaking API changes
+        - Features requiring product decisions
+
+  - type: dropdown
+    id: task_type
+    attributes:
+      label: Task Type
+      description: What type of task is this?
+      options:
+        - Bug Fix
+        - Refactoring
+        - Documentation
+        - Test Addition
+        - Code Style/Lint Fix
+        - Dependency Update
+        - Performance Improvement
+        - Type Safety Improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: task_description
+    attributes:
+      label: Task Description
+      description: |
+        Describe what needs to be done. Be as specific as possible.
+        Include file paths, function names, or code snippets if relevant.
+      placeholder: |
+        Example:
+        - Fix the nil pointer dereference in `internal/auth/service.go` in the `ValidateToken` function
+        - The error occurs when the token is expired and `claims` is nil
+        - Add a nil check before accessing `claims.Subject`
+    validations:
+      required: true
+
+  - type: textarea
+    id: files_affected
+    attributes:
+      label: Files to Modify
+      description: List the files that need to be changed (if known).
+      placeholder: |
+        - internal/auth/service.go
+        - internal/auth/service_test.go
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know the task is complete?
+      placeholder: |
+        - [ ] No panic when token is expired
+        - [ ] Unit test added for this case
+        - [ ] All existing tests pass
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional information, error messages, or stack traces.
+      render: shell
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How urgent is this fix?
+      options:
+        - Low (can wait)
+        - Medium (should fix soon)
+        - High (fix promptly)
+        - Critical (fix immediately)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      description: Please confirm the following
+      options:
+        - label: I understand this will trigger an automated fix attempt
+          required: true
+        - label: I will review the generated PR before merging
+          required: true
+        - label: This task is appropriate for automated fixing (not security-sensitive or architectural)
+          required: true

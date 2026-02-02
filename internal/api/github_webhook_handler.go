@@ -39,9 +39,33 @@ func (h *GitHubWebhookHandler) RegisterRoutes(api fiber.Router) {
 type GitHubWebhookPayload struct {
 	Action       string              `json:"action"`
 	PullRequest  *GitHubPullRequest  `json:"pull_request,omitempty"`
+	Issue        *GitHubIssue        `json:"issue,omitempty"`
+	Label        *GitHubLabel        `json:"label,omitempty"`
 	Repository   *GitHubRepository   `json:"repository,omitempty"`
 	Sender       *GitHubUser         `json:"sender,omitempty"`
 	Installation *GitHubInstallation `json:"installation,omitempty"`
+}
+
+// GitHubIssue represents a GitHub issue
+type GitHubIssue struct {
+	Number    int            `json:"number"`
+	State     string         `json:"state"`
+	Title     string         `json:"title"`
+	Body      string         `json:"body"`
+	HTMLURL   string         `json:"html_url"`
+	Labels    []GitHubLabel  `json:"labels"`
+	Assignees []GitHubUser   `json:"assignees"`
+	User      *GitHubUser    `json:"user,omitempty"`
+	CreatedAt string         `json:"created_at"`
+	UpdatedAt string         `json:"updated_at"`
+}
+
+// GitHubLabel represents a GitHub label
+type GitHubLabel struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Color       string `json:"color"`
 }
 
 // GitHubPullRequest represents a GitHub pull request
@@ -144,6 +168,8 @@ func (h *GitHubWebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 	switch eventType {
 	case "pull_request":
 		return h.handlePullRequestEvent(c, &payload)
+	case "issues":
+		return h.handleIssueEvent(c, &payload)
 	case "ping":
 		return h.handlePingEvent(c, &payload)
 	default:
@@ -413,6 +439,161 @@ func (h *GitHubWebhookHandler) handlePingEvent(c *fiber.Ctx, payload *GitHubWebh
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "pong",
 		"message": "Webhook configured successfully",
+	})
+}
+
+// handleIssueEvent handles issue events (opened, labeled, closed, etc.)
+func (h *GitHubWebhookHandler) handleIssueEvent(c *fiber.Ctx, payload *GitHubWebhookPayload) error {
+	if payload.Issue == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "missing_issue",
+			"message": "Missing issue in payload",
+		})
+	}
+
+	issue := payload.Issue
+	repo := payload.Repository.FullName
+
+	log.Info().
+		Str("action", payload.Action).
+		Int("issue_number", issue.Number).
+		Str("repository", repo).
+		Str("title", issue.Title).
+		Msg("Processing issue event")
+
+	switch payload.Action {
+	case "opened":
+		return h.handleIssueOpened(c, repo, issue, payload.Sender)
+
+	case "labeled":
+		if payload.Label == nil {
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"status":  "ignored",
+				"message": "No label in payload",
+			})
+		}
+		return h.handleIssueLabeled(c, repo, issue, payload.Label, payload.Sender)
+
+	case "closed":
+		return h.handleIssueClosed(c, repo, issue, payload.Sender)
+
+	case "assigned":
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":  "acknowledged",
+			"message": "Issue assignment acknowledged",
+			"issue":   issue.Number,
+		})
+
+	default:
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":  "ignored",
+			"message": "Issue action not handled: " + payload.Action,
+		})
+	}
+}
+
+// handleIssueOpened handles when a new issue is opened
+func (h *GitHubWebhookHandler) handleIssueOpened(c *fiber.Ctx, repo string, issue *GitHubIssue, sender *GitHubUser) error {
+	senderLogin := ""
+	if sender != nil {
+		senderLogin = sender.Login
+	}
+
+	log.Info().
+		Str("repository", repo).
+		Int("issue_number", issue.Number).
+		Str("title", issue.Title).
+		Str("sender", senderLogin).
+		Msg("New issue opened")
+
+	// Check if the issue has the claude-fix label from the start
+	for _, label := range issue.Labels {
+		if label.Name == "claude-fix" {
+			log.Info().
+				Int("issue_number", issue.Number).
+				Msg("Issue opened with claude-fix label - automation will be triggered via GitHub Actions")
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":       "acknowledged",
+		"message":      "Issue opened event processed",
+		"issue_number": issue.Number,
+		"title":        issue.Title,
+	})
+}
+
+// handleIssueLabeled handles when a label is added to an issue
+func (h *GitHubWebhookHandler) handleIssueLabeled(c *fiber.Ctx, repo string, issue *GitHubIssue, label *GitHubLabel, sender *GitHubUser) error {
+	senderLogin := ""
+	if sender != nil {
+		senderLogin = sender.Login
+	}
+
+	log.Info().
+		Str("repository", repo).
+		Int("issue_number", issue.Number).
+		Str("label", label.Name).
+		Str("sender", senderLogin).
+		Msg("Label added to issue")
+
+	// Handle specific labels that trigger automation
+	switch label.Name {
+	case "claude-fix":
+		log.Info().
+			Int("issue_number", issue.Number).
+			Str("repository", repo).
+			Msg("claude-fix label detected - GitHub Actions workflow will handle automation")
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":       "acknowledged",
+			"message":      "claude-fix label detected, automation triggered via GitHub Actions",
+			"issue_number": issue.Number,
+			"label":        label.Name,
+		})
+
+	case "priority:critical", "priority:high":
+		log.Warn().
+			Int("issue_number", issue.Number).
+			Str("repository", repo).
+			Str("priority", label.Name).
+			Msg("High priority issue labeled")
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":       "acknowledged",
+			"message":      "High priority issue noted",
+			"issue_number": issue.Number,
+			"label":        label.Name,
+		})
+
+	default:
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":       "acknowledged",
+			"message":      "Label added",
+			"issue_number": issue.Number,
+			"label":        label.Name,
+		})
+	}
+}
+
+// handleIssueClosed handles when an issue is closed
+func (h *GitHubWebhookHandler) handleIssueClosed(c *fiber.Ctx, repo string, issue *GitHubIssue, sender *GitHubUser) error {
+	senderLogin := ""
+	if sender != nil {
+		senderLogin = sender.Login
+	}
+
+	log.Info().
+		Str("repository", repo).
+		Int("issue_number", issue.Number).
+		Str("title", issue.Title).
+		Str("sender", senderLogin).
+		Msg("Issue closed")
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":       "acknowledged",
+		"message":      "Issue closed",
+		"issue_number": issue.Number,
 	})
 }
 
