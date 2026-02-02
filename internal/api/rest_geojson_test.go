@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsGeoJSON(t *testing.T) {
+func TestIsGeoJSON_GeoTypes(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    interface{}
@@ -132,7 +132,7 @@ func TestIsGeoJSON(t *testing.T) {
 	}
 }
 
-func TestIsPartialGeoJSON(t *testing.T) {
+func TestIsPartialGeoJSON_Validation(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    interface{}
@@ -193,7 +193,7 @@ func TestIsPartialGeoJSON(t *testing.T) {
 	}
 }
 
-func TestIsGeometryColumn(t *testing.T) {
+func TestIsGeometryColumn_DataTypes(t *testing.T) {
 	tests := []struct {
 		name     string
 		dataType string
@@ -256,7 +256,7 @@ func TestIsTextColumn(t *testing.T) {
 	}
 }
 
-func TestBuildSelectColumns(t *testing.T) {
+func TestBuildSelectColumns_GeoJSON(t *testing.T) {
 	t.Run("basic columns", func(t *testing.T) {
 		table := database.TableInfo{
 			Schema: "public",
@@ -392,7 +392,7 @@ func TestBuildSelectColumnsWithTruncation(t *testing.T) {
 	})
 }
 
-func TestBuildReturningClause(t *testing.T) {
+func TestBuildReturningClause_GeoJSON(t *testing.T) {
 	t.Run("basic table", func(t *testing.T) {
 		table := database.TableInfo{
 			Schema: "public",
