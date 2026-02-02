@@ -25,7 +25,7 @@ A lightweight, single-binary Backend-as-a-Service (BaaS) alternative to Supabase
 
 ### Key Highlights
 
-- Single binary deployment (~50MB)
+- Single binary or container deployment
 - PostgreSQL as the only external dependency
 - Automatic REST endpoint generation
 - Row Level Security (RLS) support
