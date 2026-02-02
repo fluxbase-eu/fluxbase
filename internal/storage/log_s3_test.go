@@ -298,14 +298,14 @@ func TestS3LogStorage_matchesFilter(t *testing.T) {
 		entry := &LogEntry{Category: LogCategoryHTTP}
 
 		assert.True(t, storage.matchesFilter(entry, LogQueryOptions{Category: LogCategoryHTTP}))
-		assert.False(t, storage.matchesFilter(entry, LogQueryOptions{Category: LogCategoryAuth}))
+		assert.False(t, storage.matchesFilter(entry, LogQueryOptions{Category: LogCategorySecurity}))
 	})
 
 	t.Run("filters by levels", func(t *testing.T) {
 		entry := &LogEntry{Level: LogLevelError}
 
 		assert.True(t, storage.matchesFilter(entry, LogQueryOptions{Levels: []LogLevel{LogLevelError}}))
-		assert.True(t, storage.matchesFilter(entry, LogQueryOptions{Levels: []LogLevel{LogLevelError, LogLevelWarning}}))
+		assert.True(t, storage.matchesFilter(entry, LogQueryOptions{Levels: []LogLevel{LogLevelError, LogLevelWarn}}))
 		assert.False(t, storage.matchesFilter(entry, LogQueryOptions{Levels: []LogLevel{LogLevelInfo}}))
 	})
 
@@ -371,7 +371,7 @@ func TestS3LogStorage_matchesFilter(t *testing.T) {
 
 	t.Run("combines multiple filters with AND logic", func(t *testing.T) {
 		entry := &LogEntry{
-			Category:  LogCategoryAuth,
+			Category:  LogCategorySecurity,
 			Level:     LogLevelError,
 			Component: "handler",
 			Message:   "login failed",
@@ -379,14 +379,14 @@ func TestS3LogStorage_matchesFilter(t *testing.T) {
 
 		// All conditions match
 		assert.True(t, storage.matchesFilter(entry, LogQueryOptions{
-			Category:  LogCategoryAuth,
+			Category:  LogCategorySecurity,
 			Levels:    []LogLevel{LogLevelError},
 			Component: "handler",
 		}))
 
 		// One condition doesn't match
 		assert.False(t, storage.matchesFilter(entry, LogQueryOptions{
-			Category:  LogCategoryAuth,
+			Category:  LogCategorySecurity,
 			Levels:    []LogLevel{LogLevelInfo},
 			Component: "handler",
 		}))
@@ -523,7 +523,7 @@ func TestS3LogStorage_Stats(t *testing.T) {
 		provider.listedObjects = []Object{
 			{Key: "logs/http/2024/01/15/batch1.ndjson"},
 			{Key: "logs/http/2024/01/15/batch2.ndjson"},
-			{Key: "logs/auth/2024/01/15/batch1.ndjson"},
+			{Key: "logs/security/2024/01/15/batch1.ndjson"},
 		}
 		storage := NewS3LogStorage(provider, "bucket", "logs")
 
@@ -532,7 +532,7 @@ func TestS3LogStorage_Stats(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, int64(3), stats.TotalEntries)
 		assert.Equal(t, int64(2), stats.EntriesByCategory[LogCategoryHTTP])
-		assert.Equal(t, int64(1), stats.EntriesByCategory[LogCategoryAuth])
+		assert.Equal(t, int64(1), stats.EntriesByCategory[LogCategorySecurity])
 	})
 
 	t.Run("ignores non-ndjson files", func(t *testing.T) {
@@ -614,7 +614,7 @@ func BenchmarkS3LogStorage_matchesFilter_Complex(b *testing.B) {
 	}
 	opts := LogQueryOptions{
 		Category:    LogCategoryHTTP,
-		Levels:      []LogLevel{LogLevelError, LogLevelWarning},
+		Levels:      []LogLevel{LogLevelError, LogLevelWarn},
 		Component:   "auth",
 		RequestID:   "req-123",
 		TraceID:     "trace-456",

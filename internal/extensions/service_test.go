@@ -54,11 +54,11 @@ func TestQuoteIdentifier(t *testing.T) {
 
 	t.Run("escapes injection attempt with semicolon", func(t *testing.T) {
 		// Attacker tries: test"; DROP TABLE users; --
-		// The semicolon is not escaped but the identifier is quoted
+		// The embedded double quote must be escaped by doubling it
 		// PostgreSQL will treat the entire thing as one identifier
 		result := quoteIdentifier(`test"; DROP TABLE users; --`)
-		assert.Equal(t, `"test"; DROP TABLE users; --"`, result)
-		// The result is still within double quotes, so PostgreSQL treats it as an identifier name
+		assert.Equal(t, `"test""; DROP TABLE users; --"`, result)
+		// The result has the embedded quote escaped, so PostgreSQL treats it as a single identifier name
 	})
 
 	t.Run("handles empty string", func(t *testing.T) {
@@ -271,7 +271,7 @@ func TestExtensionStatusResponse(t *testing.T) {
 // Extension Type Tests
 // =============================================================================
 
-func TestExtension_Struct(t *testing.T) {
+func TestExtensionService_Struct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		ext := Extension{
 			Name:             "pgvector",
@@ -292,7 +292,7 @@ func TestExtension_Struct(t *testing.T) {
 	})
 }
 
-func TestAvailableExtension_Struct(t *testing.T) {
+func TestAvailableExtensionService_Struct(t *testing.T) {
 	t.Run("stores metadata", func(t *testing.T) {
 		ext := AvailableExtension{
 			Name:             "uuid-ossp",
@@ -313,7 +313,7 @@ func TestAvailableExtension_Struct(t *testing.T) {
 // Category Tests
 // =============================================================================
 
-func TestCategory_Struct(t *testing.T) {
+func TestCategoryService_Struct(t *testing.T) {
 	t.Run("stores category information", func(t *testing.T) {
 		category := Category{
 			ID:    "ai",
@@ -327,7 +327,7 @@ func TestCategory_Struct(t *testing.T) {
 	})
 }
 
-func TestCategoryDisplayNames(t *testing.T) {
+func TestCategoryDisplayNamesService(t *testing.T) {
 	t.Run("contains common categories", func(t *testing.T) {
 		// Verify CategoryDisplayNames map exists and has expected entries
 		// This map provides human-readable names for categories
@@ -339,7 +339,7 @@ func TestCategoryDisplayNames(t *testing.T) {
 // PostgresExtension Tests
 // =============================================================================
 
-func TestPostgresExtension_Struct(t *testing.T) {
+func TestPostgresExtensionService_Struct(t *testing.T) {
 	t.Run("stores postgres extension info", func(t *testing.T) {
 		ext := PostgresExtension{
 			Name:             "pg_stat_statements",

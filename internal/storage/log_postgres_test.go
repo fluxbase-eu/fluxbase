@@ -71,14 +71,14 @@ func TestPostgresLogStorage_buildWhereClause(t *testing.T) {
 	})
 
 	t.Run("filters by multiple levels", func(t *testing.T) {
-		opts := LogQueryOptions{Levels: []LogLevel{LogLevelError, LogLevelWarning}}
+		opts := LogQueryOptions{Levels: []LogLevel{LogLevelError, LogLevelWarn}}
 
 		where, args := storage.buildWhereClause(opts)
 
 		assert.Contains(t, where, "level IN ($1, $2)")
 		assert.Len(t, args, 2)
 		assert.Equal(t, "error", args[0])
-		assert.Equal(t, "warning", args[1])
+		assert.Equal(t, "warn", args[1])
 	})
 
 	t.Run("filters by component", func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestPostgresLogStorage_buildWhereClause(t *testing.T) {
 
 	t.Run("combines multiple filters with AND", func(t *testing.T) {
 		opts := LogQueryOptions{
-			Category:  LogCategoryAuth,
+			Category:  LogCategorySecurity,
 			Component: "middleware",
 			Levels:    []LogLevel{LogLevelInfo},
 		}
@@ -275,6 +275,7 @@ func TestPostgresLogStorage_Write_EmptyBatch(t *testing.T) {
 		// This would normally be: err := storage.Write(ctx, entries)
 		// But without DB, we verify the logic path exists
 		assert.Empty(t, entries)
+		assert.NotNil(t, storage) // Verify storage is initialized
 	})
 }
 
@@ -352,10 +353,10 @@ func TestLogStats_Structure(t *testing.T) {
 		}
 
 		stats.EntriesByCategory[LogCategoryHTTP] = 100
-		stats.EntriesByCategory[LogCategoryAuth] = 50
+		stats.EntriesByCategory[LogCategorySecurity] = 50
 
 		assert.Equal(t, int64(100), stats.EntriesByCategory[LogCategoryHTTP])
-		assert.Equal(t, int64(50), stats.EntriesByCategory[LogCategoryAuth])
+		assert.Equal(t, int64(50), stats.EntriesByCategory[LogCategorySecurity])
 	})
 
 	t.Run("tracks entries by level", func(t *testing.T) {
@@ -411,7 +412,7 @@ func BenchmarkPostgresLogStorage_buildWhereClause_Complex(b *testing.B) {
 	userID := uuid.New().String()
 	opts := LogQueryOptions{
 		Category:         LogCategoryHTTP,
-		Levels:           []LogLevel{LogLevelInfo, LogLevelWarning, LogLevelError},
+		Levels:           []LogLevel{LogLevelInfo, LogLevelWarn, LogLevelError},
 		Component:        "auth",
 		UserID:           userID,
 		StartTime:        time.Now().Add(-24 * time.Hour),

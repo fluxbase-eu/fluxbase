@@ -324,8 +324,7 @@ func TestLoadedProcedure_ToProcedure(t *testing.T) {
 			Code:      "SELECT * FROM users",
 			Annotations: &Annotations{
 				Description:   "Test description",
-				Public:        true,
-				RequiresAuth:  false,
+				IsPublic:      true,
 				AllowedTables: []string{"users", "orders"},
 			},
 		}
@@ -334,7 +333,6 @@ func TestLoadedProcedure_ToProcedure(t *testing.T) {
 
 		assert.Equal(t, "Test description", proc.Description)
 		assert.True(t, proc.IsPublic)
-		assert.False(t, proc.RequiresAuth)
 		assert.Equal(t, []string{"users", "orders"}, proc.AllowedTables)
 	})
 
@@ -363,10 +361,10 @@ func TestLoader_LoadProcedureWithAnnotations(t *testing.T) {
 	t.Run("parses procedure with annotations", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		sqlContent := `-- @name: custom_name
--- @description: This is a test procedure
--- @public: true
--- @allowed_tables: users, orders
+		sqlContent := `-- @fluxbase:name custom_name
+-- @fluxbase:description This is a test procedure
+-- @fluxbase:public true
+-- @fluxbase:allowed-tables users, orders
 SELECT * FROM users WHERE id = $user_id`
 
 		err := os.WriteFile(filepath.Join(tmpDir, "test.sql"), []byte(sqlContent), 0644)
@@ -383,7 +381,7 @@ SELECT * FROM users WHERE id = $user_id`
 		assert.Equal(t, "custom_name", procs[0].Name)
 		require.NotNil(t, procs[0].Annotations)
 		assert.Equal(t, "This is a test procedure", procs[0].Annotations.Description)
-		assert.True(t, procs[0].Annotations.Public)
+		assert.True(t, procs[0].Annotations.IsPublic)
 		assert.Contains(t, procs[0].Annotations.AllowedTables, "users")
 	})
 }
@@ -469,7 +467,7 @@ func BenchmarkLoadedProcedure_ToProcedure(b *testing.B) {
 		Code:      "-- @description: Test\nSELECT * FROM users WHERE id = $user_id",
 		Annotations: &Annotations{
 			Description:   "Test description",
-			Public:        true,
+			IsPublic:      true,
 			AllowedTables: []string{"users", "orders"},
 		},
 	}

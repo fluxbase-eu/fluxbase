@@ -558,9 +558,8 @@ func TestExecutor_SQLInjectionPrevention(t *testing.T) {
 		require.NoError(t, err)
 		// Single quotes should be escaped
 		assert.Contains(t, sql, "''")
-		assert.NotContains(t, sql, "DROP TABLE")
-		// The entire malicious string is quoted
-		assert.Contains(t, sql, "''; DROP TABLE users; --'")
+		// The entire malicious string is quoted and escaped
+		assert.Contains(t, sql, "'''; DROP TABLE users; --'")
 	})
 
 	t.Run("escapes union-based injection", func(t *testing.T) {

@@ -108,7 +108,7 @@ func TestLocalLogStorage_Write(t *testing.T) {
 		entries := []*LogEntry{
 			{Category: LogCategoryHTTP, Level: LogLevelInfo, Message: "Entry 1"},
 			{Category: LogCategoryHTTP, Level: LogLevelWarn, Message: "Entry 2"},
-			{Category: LogCategoryAuth, Level: LogLevelError, Message: "Entry 3"},
+			{Category: LogCategorySecurity, Level: LogLevelError, Message: "Entry 3"},
 		}
 
 		err = storage.Write(context.Background(), entries)
@@ -209,7 +209,7 @@ func TestLocalLogStorage_Query(t *testing.T) {
 		// Write entries with different categories
 		entries := []*LogEntry{
 			{Category: LogCategoryHTTP, Level: LogLevelInfo, Message: "HTTP entry"},
-			{Category: LogCategoryAuth, Level: LogLevelInfo, Message: "Auth entry"},
+			{Category: LogCategorySecurity, Level: LogLevelInfo, Message: "Auth entry"},
 		}
 		err = storage.Write(context.Background(), entries)
 		require.NoError(t, err)
@@ -279,7 +279,7 @@ func TestLocalLogStorage_matchesFilter(t *testing.T) {
 		entry := &LogEntry{Category: LogCategoryHTTP}
 
 		assert.True(t, storage.matchesFilter(entry, LogQueryOptions{Category: LogCategoryHTTP}))
-		assert.False(t, storage.matchesFilter(entry, LogQueryOptions{Category: LogCategoryAuth}))
+		assert.False(t, storage.matchesFilter(entry, LogQueryOptions{Category: LogCategorySecurity}))
 	})
 
 	t.Run("filters by levels", func(t *testing.T) {
@@ -480,7 +480,7 @@ func TestLocalLogStorage_Stats(t *testing.T) {
 		entries := []*LogEntry{
 			{Category: LogCategoryHTTP, Level: LogLevelInfo, Message: "HTTP 1"},
 			{Category: LogCategoryHTTP, Level: LogLevelInfo, Message: "HTTP 2"},
-			{Category: LogCategoryAuth, Level: LogLevelInfo, Message: "Auth 1"},
+			{Category: LogCategorySecurity, Level: LogLevelInfo, Message: "Auth 1"},
 		}
 		err = storage.Write(context.Background(), entries)
 		require.NoError(t, err)
