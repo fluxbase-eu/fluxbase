@@ -106,14 +106,21 @@ function MonitoringPage() {
   }
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold'>System Monitoring</h1>
-          <p className='text-muted-foreground mt-1 text-sm'>
-            Real-time system metrics and health status
-          </p>
+    <div className='flex h-full flex-col'>
+      {/* Header */}
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <Activity className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>System Monitoring</h1>
+            <p className='text-muted-foreground text-sm'>
+              Real-time system metrics and health status
+            </p>
+          </div>
         </div>
+
         <div className='flex items-center gap-2'>
           <label className='flex items-center gap-2 text-sm'>
             <input
@@ -126,6 +133,9 @@ function MonitoringPage() {
           </label>
         </div>
       </div>
+
+      <div className='flex-1 overflow-auto p-6'>
+        <div className='flex flex-col gap-6'>
 
       {/* System Status Cards */}
       <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4'>
@@ -625,6 +635,8 @@ function MonitoringPage() {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   )
 }

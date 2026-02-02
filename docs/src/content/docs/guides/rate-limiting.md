@@ -18,17 +18,17 @@ Rate limiting in Fluxbase provides:
 
 ### Default Rate Limits
 
-| Endpoint Type | Anonymous (IP) | Authenticated User | API Key |
-|---------------|----------------|-------------------|---------|
-| **Global API** | 100 req/min | 500 req/min | 1000 req/min |
-| **Login** | 10 req/15min | N/A | N/A |
-| **Signup** | 10 req/15min | N/A | N/A |
-| **Password Reset** | 5 req/15min | N/A | N/A |
-| **Magic Link** | 5 req/15min | N/A | N/A |
-| **2FA Verification** | 5 req/5min | N/A | N/A |
-| **Token Refresh** | 10 req/min | 10 req/min | N/A |
-| **Admin Setup** | 5 req/15min | N/A | N/A |
-| **Admin Login** | 4 req/min | N/A | N/A |
+| Endpoint Type        | Anonymous (IP) | Authenticated User | API Key      |
+| -------------------- | -------------- | ------------------ | ------------ |
+| **Global API**       | 100 req/min    | 500 req/min        | 1000 req/min |
+| **Login**            | 10 req/15min   | N/A                | N/A          |
+| **Signup**           | 10 req/15min   | N/A                | N/A          |
+| **Password Reset**   | 5 req/15min    | N/A                | N/A          |
+| **Magic Link**       | 5 req/15min    | N/A                | N/A          |
+| **2FA Verification** | 5 req/5min     | N/A                | N/A          |
+| **Token Refresh**    | 10 req/min     | 10 req/min         | N/A          |
+| **Admin Setup**      | 5 req/15min    | N/A                | N/A          |
+| **Admin Login**      | 4 req/min      | N/A                | N/A          |
 
 ## Quick Start
 
@@ -70,6 +70,7 @@ Response when rate limit is exceeded:
 ```
 
 ---
+
 ## Configuration
 
 ### Global API Rate Limiting
@@ -82,6 +83,8 @@ FLUXBASE_SECURITY_ENABLE_GLOBAL_RATE_LIMIT=true
 ```
 
 **Default**: 100 requests per minute per IP (when enabled)
+
+**Admin Exemption**: Admin users (`admin`, `dashboard_admin`, and `service_role`) are automatically exempt from global rate limiting. This ensures that dashboard administrators can use the admin interface without being rate-limited.
 
 ### Authentication Endpoint Rate Limits
 
@@ -130,8 +133,7 @@ security:
   admin_login_rate_window: 1m
 ```
 
-**Default**: 10 attempts per minute per IP
----
+## **Default**: 10 attempts per minute per IP
 
 ## Rate Limiting by Endpoint
 
@@ -146,6 +148,7 @@ Fluxbase applies different rate limits to different endpoints automatically:
 **Purpose**: Prevent brute-force login attacks
 
 **Response on limit**:
+
 ```json
 {
   "error": "Rate limit exceeded",
@@ -161,6 +164,7 @@ Fluxbase applies different rate limits to different endpoints automatically:
 **Purpose**: Prevent spam account creation
 
 **Response on limit**:
+
 ```json
 {
   "error": "Rate limit exceeded",
@@ -178,6 +182,7 @@ Fluxbase applies different rate limits to different endpoints automatically:
 **Key**: Based on email address (if provided) or IP
 
 **Response on limit**:
+
 ```json
 {
   "error": "Rate limit exceeded",
@@ -193,6 +198,7 @@ Fluxbase applies different rate limits to different endpoints automatically:
 **Purpose**: Prevent email bombing
 
 **Response on limit**:
+
 ```json
 {
   "error": "Rate limit exceeded",
@@ -208,6 +214,7 @@ Fluxbase applies different rate limits to different endpoints automatically:
 **Purpose**: Prevent brute-force attacks on 6-digit TOTP codes
 
 **Response on limit**:
+
 ```json
 {
   "error": "Rate limit exceeded",
@@ -233,6 +240,7 @@ Fluxbase applies different rate limits to different endpoints automatically:
 **Purpose**: Prevent brute-force on initial setup
 
 **Response on limit**:
+
 ```json
 {
   "error": "Rate limit exceeded",
@@ -252,6 +260,23 @@ Fluxbase applies different rate limits to different endpoints automatically:
 ## Tiered Rate Limiting
 
 Fluxbase implements tiered rate limiting based on authentication level:
+
+### Admin Users (Exempt)
+
+**Limit**: No rate limit
+
+**Roles**: `admin`, `dashboard_admin`, `service_role`
+
+**Use case**: Dashboard administrators, trusted service keys
+
+Admin users are exempt from global rate limiting to ensure they can use the admin interface and admin-only endpoints without interruption.
+
+```bash
+# Example: Dashboard admin user
+curl http://localhost:8080/api/v1/realtime/stats \
+  -H "Authorization: Bearer admin-jwt-token"
+# No rate limiting applied
+```
 
 ### Anonymous (IP-based)
 
@@ -359,6 +384,7 @@ curl -X POST http://localhost:8080/api/v1/admin/client-keys \
 ```
 
 Response:
+
 ```json
 {
   "id": "apikey-uuid",
@@ -380,10 +406,10 @@ Fluxbase's built-in rate limiting uses **in-memory storage per instance**. In mu
 
 ### Current Behavior
 
-| Deployment | Rate Limiting Behavior |
-|------------|------------------------|
+| Deployment      | Rate Limiting Behavior                        |
+| --------------- | --------------------------------------------- |
 | Single instance | Full protection - all requests share counters |
-| Multi-instance | Per-instance only - counters are NOT shared |
+| Multi-instance  | Per-instance only - counters are NOT shared   |
 
 ### Recommended Solutions for Multi-Instance
 
@@ -481,6 +507,7 @@ kubectl logs -f deployment/fluxbase -n fluxbase | grep "rate limit"
 ```
 
 Sample log output:
+
 ```
 {"level":"warn","time":"2024-01-26T10:30:00Z","ip":"192.168.1.100","endpoint":"/api/v1/auth/signin","message":"rate limit exceeded"}
 ```
@@ -494,25 +521,25 @@ Sample log output:
 The SDK automatically handles rate limit responses with exponential backoff:
 
 ```typescript
-import { createClient } from '@fluxbase/sdk'
+import { createClient } from "@fluxbase/sdk";
 
 const client = createClient({
-  baseUrl: 'http://localhost:8080',
-})
+  baseUrl: "http://localhost:8080",
+});
 
 // The SDK automatically retries on 429 responses
-const { data: posts } = await client.from('posts').select()
+const { data: posts } = await client.from("posts").select();
 ```
 
 If you need custom retry logic, you can catch the error:
 
 ```typescript
 try {
-  const { data } = await client.from('posts').select()
+  const { data } = await client.from("posts").select();
 } catch (error) {
   if (error.status === 429) {
-    const retryAfter = error.headers?.get('Retry-After') || 60
-    console.warn(`Rate limited. Retry after ${retryAfter} seconds`)
+    const retryAfter = error.headers?.get("Retry-After") || 60;
+    console.warn(`Rate limited. Retry after ${retryAfter} seconds`);
   }
 }
 ```
@@ -524,14 +551,11 @@ Reduce rate limit impact by using efficient queries:
 ```typescript
 // Bad: Many individual requests
 for (const id of userIds) {
-  await client.from('users').select().eq('id', id).single()
+  await client.from("users").select().eq("id", id).single();
 }
 
 // Good: Single query with filter
-const { data: users } = await client
-  .from('users')
-  .select()
-  .in('id', userIds)
+const { data: users } = await client.from("users").select().in("id", userIds);
 ```
 
 ---
@@ -548,6 +572,7 @@ FLUXBASE_SECURITY_ENABLE_GLOBAL_RATE_LIMIT=true
 ### 2. Use Stricter Limits for Sensitive Endpoints
 
 Authentication endpoints have built-in strict limits:
+
 - Login: 10 attempts per 15 minutes
 - Signup: 10 per 15 minutes
 - Password reset: 5 per 15 minutes
@@ -649,12 +674,14 @@ done
 **Solution**: Configure load balancer to forward real client IP
 
 **Nginx**:
+
 ```nginx
 proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ```
 
 **Kubernetes Ingress**:
+
 ```yaml
 annotations:
   nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
@@ -675,9 +702,9 @@ Rate limiting adds minimal overhead:
 **Benchmarks** (single instance):
 
 | Storage | Requests/sec | Avg Latency | p99 Latency |
-|---------|--------------|-------------|-------------|
-| Memory | 10,000 | 0.5ms | 2ms |
-| Redis | 8,000 | 2ms | 10ms |
+| ------- | ------------ | ----------- | ----------- |
+| Memory  | 10,000       | 0.5ms       | 2ms         |
+| Redis   | 8,000        | 2ms         | 10ms        |
 
 ---
 
@@ -687,20 +714,22 @@ Rate limiting adds minimal overhead:
 
 Supabase uses Kong for rate limiting. Fluxbase provides similar functionality:
 
-| Supabase (Kong) | Fluxbase |
-|----------------|----------|
-| Anonymous: 60 req/min | Anonymous: 100 req/min |
-| Authenticated: 600 req/min | Authenticated: 500 req/min |
-| Service key: Unlimited | API Key: 1000 req/min (configurable) |
+| Supabase (Kong)            | Fluxbase                             |
+| -------------------------- | ------------------------------------ |
+| Anonymous: 60 req/min      | Anonymous: 100 req/min               |
+| Authenticated: 600 req/min | Authenticated: 500 req/min           |
+| Service key: Unlimited     | API Key: 1000 req/min (configurable) |
 
 **Migration steps**:
 
 1. Enable rate limiting:
+
    ```bash
    FLUXBASE_SECURITY_ENABLE_GLOBAL_RATE_LIMIT=true
    ```
 
 2. Adjust limits to match Supabase (if needed):
+
    ```go
    // Custom configuration (if extending)
    GlobalAPILimiter(60) // Match Supabase anonymous limit

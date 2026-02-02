@@ -551,9 +551,26 @@ print(data)`
   }
 
   return (
-    <div className='flex h-full'>
-      {/* Left Sidebar - Endpoint Browser or Saved/History */}
-      {showEndpointBrowser ? (
+    <div className='flex h-full flex-col'>
+      {/* Header */}
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <Play className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>REST API Explorer</h1>
+            <p className='text-muted-foreground text-sm'>
+              Build and test API requests against your Fluxbase backend
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className='flex flex-1 overflow-hidden p-6'>
+        {/* Left Sidebar - Endpoint Browser or Saved/History */}
+        {showEndpointBrowser ? (
         <div className='bg-muted/10 w-80 border-r'>
           <div className='flex items-center justify-between border-b p-4'>
             <h3 className='flex items-center gap-2 font-semibold'>
@@ -1208,6 +1225,7 @@ print(data)`
         onConfirm={handleSaveRequestConfirm}
         validation={(value) => (value.trim() ? null : 'Name is required')}
       />
+      </div>
     </div>
   )
 }
