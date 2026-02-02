@@ -293,3 +293,128 @@ func TestMetrics_AllMethods(t *testing.T) {
 		assert.NotNil(t, middleware)
 	})
 }
+
+// =============================================================================
+// MetricsServer Tests
+// =============================================================================
+
+func TestNewMetricsServer(t *testing.T) {
+	t.Run("creates server with valid config", func(t *testing.T) {
+		server := NewMetricsServer(9090, "/metrics")
+
+		require.NotNil(t, server)
+		assert.Equal(t, 9090, server.port)
+		assert.Equal(t, "/metrics", server.path)
+		assert.Nil(t, server.server) // Not started yet
+	})
+
+	t.Run("creates server with custom path", func(t *testing.T) {
+		server := NewMetricsServer(8080, "/custom/metrics")
+
+		assert.Equal(t, 8080, server.port)
+		assert.Equal(t, "/custom/metrics", server.path)
+	})
+
+	t.Run("creates server with zero port", func(t *testing.T) {
+		server := NewMetricsServer(0, "/metrics")
+
+		assert.Equal(t, 0, server.port)
+	})
+}
+
+func TestMetricsServer_Shutdown(t *testing.T) {
+	t.Run("shutdown with nil server is safe", func(t *testing.T) {
+		ms := &MetricsServer{
+			port:   9090,
+			path:   "/metrics",
+			server: nil,
+		}
+
+		// Should not panic and return nil
+		err := ms.Shutdown(nil)
+		assert.NoError(t, err)
+	})
+}
+
+// =============================================================================
+// Additional Edge Case Tests
+// =============================================================================
+
+func TestStatusClass_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   int
+		expected string
+	}{
+		{"boundary 199", 199, "unknown"},
+		{"boundary 200", 200, "2xx"},
+		{"boundary 299", 299, "2xx"},
+		{"boundary 300", 300, "3xx"},
+		{"boundary 399", 399, "3xx"},
+		{"boundary 400", 400, "4xx"},
+		{"boundary 499", 499, "4xx"},
+		{"boundary 500", 500, "5xx"},
+		{"very high status", 999, "5xx"},
+		{"negative status", -1, "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := statusClass(tt.status)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestNormalizePath_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+	}{
+		{"exactly 50 chars", "/api/v1/tables/users/records/123456789012345", "/api/v1/tables/users/records/123456789012345"},
+		{"51 chars", "/api/v1/tables/users/records/1234567890123456", "long_path"},
+		{"special characters", "/api/v1/users?filter=name%3Djohn", "/api/v1/users?filter=name%3Djohn"},
+		{"unicode path", "/api/v1/用户/数据", "/api/v1/用户/数据"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := normalizePath(tt.path)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// =============================================================================
+// Benchmarks for Helper Functions
+// =============================================================================
+
+func BenchmarkStatusClass(b *testing.B) {
+	statuses := []int{200, 201, 301, 400, 404, 500, 503}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, s := range statuses {
+			_ = statusClass(s)
+		}
+	}
+}
+
+func BenchmarkNormalizePath_Short(b *testing.B) {
+	path := "/api/v1/users"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = normalizePath(path)
+	}
+}
+
+func BenchmarkNormalizePath_Long(b *testing.B) {
+	path := "/api/v1/tables/users/records/12345678901234567890/attachments/files/metadata"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = normalizePath(path)
+	}
+}

@@ -420,3 +420,107 @@ func BenchmarkTruncateQuery_Long(b *testing.B) {
 		_ = truncateQuery(query, 100)
 	}
 }
+
+// =============================================================================
+// quoteIdentifier Tests
+// =============================================================================
+
+func TestQuoteIdentifier(t *testing.T) {
+	tests := []struct {
+		name       string
+		identifier string
+		expected   string
+	}{
+		{
+			name:       "simple table name",
+			identifier: "users",
+			expected:   `"users"`,
+		},
+		{
+			name:       "table name with underscore",
+			identifier: "user_profiles",
+			expected:   `"user_profiles"`,
+		},
+		{
+			name:       "schema qualified name",
+			identifier: "public.users",
+			expected:   `"public.users"`,
+		},
+		{
+			name:       "identifier with embedded quote",
+			identifier: `my"table`,
+			expected:   `"my""table"`,
+		},
+		{
+			name:       "identifier with multiple quotes",
+			identifier: `test"with"quotes`,
+			expected:   `"test""with""quotes"`,
+		},
+		{
+			name:       "empty identifier",
+			identifier: "",
+			expected:   `""`,
+		},
+		{
+			name:       "identifier with spaces",
+			identifier: "my table",
+			expected:   `"my table"`,
+		},
+		{
+			name:       "reserved keyword",
+			identifier: "select",
+			expected:   `"select"`,
+		},
+		{
+			name:       "mixed case identifier",
+			identifier: "MyTable",
+			expected:   `"MyTable"`,
+		},
+		{
+			name:       "identifier with special characters",
+			identifier: "user@data",
+			expected:   `"user@data"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := quoteIdentifier(tt.identifier)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestQuoteIdentifier_SQLInjectionPrevention(t *testing.T) {
+	t.Run("prevents basic injection", func(t *testing.T) {
+		// Attempt SQL injection via identifier
+		malicious := `users"; DROP TABLE users; --`
+		result := quoteIdentifier(malicious)
+
+		// The result should be safely quoted, making injection impossible
+		assert.Equal(t, `"users""; DROP TABLE users; --"`, result)
+		assert.Contains(t, result, `""`)
+	})
+
+	t.Run("handles multiple injection attempts", func(t *testing.T) {
+		malicious := `"";--`
+		result := quoteIdentifier(malicious)
+
+		// Embedded quotes should be doubled
+		assert.Equal(t, `"""""";--"`, result)
+	})
+}
+
+func BenchmarkQuoteIdentifier_Simple(b *testing.B) {
+	identifier := "users"
+	for i := 0; i < b.N; i++ {
+		_ = quoteIdentifier(identifier)
+	}
+}
+
+func BenchmarkQuoteIdentifier_WithQuotes(b *testing.B) {
+	identifier := `table"with"quotes`
+	for i := 0; i < b.N; i++ {
+		_ = quoteIdentifier(identifier)
+	}
+}
