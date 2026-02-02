@@ -575,6 +575,38 @@ describe('FluxbaseFetch', () => {
       await expect(fluxFetch.getBlob('/api/files/missing.txt'))
         .rejects.toThrow('Not Found')
     })
+
+    it('should log debug message when debug enabled', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const debugFetch = new FluxbaseFetch('http://localhost:8080', { debug: true })
+
+      const mockBlob = new Blob(['content'])
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        blob: async () => mockBlob,
+      })
+
+      await debugFetch.getBlob('/api/files/test.txt')
+
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('GET (blob)'))
+      consoleSpy.mockRestore()
+    })
+
+    it('should handle AbortError (timeout)', async () => {
+      const abortError = new Error('Aborted')
+      abortError.name = 'AbortError'
+      mockFetch.mockRejectedValueOnce(abortError)
+
+      await expect(fluxFetch.getBlob('/api/files/large.bin'))
+        .rejects.toThrow('Request timeout')
+    })
+
+    it('should handle non-Error exceptions', async () => {
+      mockFetch.mockRejectedValueOnce('string error')
+
+      await expect(fluxFetch.getBlob('/api/files/test.txt'))
+        .rejects.toThrow('Unknown error occurred')
+    })
   })
 
   describe('error handling', () => {
@@ -652,6 +684,110 @@ describe('FluxbaseFetch', () => {
       expect(refreshCallback).toHaveBeenCalled()
       expect(mockFetch).toHaveBeenCalledTimes(2)
       expect(result.data).toEqual({ data: 'success' })
+    })
+
+    it('should handle FormData body in requestWithHeaders', async () => {
+      const formData = new FormData()
+      formData.append('file', new Blob(['test']))
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ uploaded: true }),
+      })
+
+      const result = await fluxFetch.postWithHeaders('/api/upload', formData)
+
+      const callArgs = mockFetch.mock.calls[0][1]
+      expect(callArgs.body).toBe(formData)
+      expect(callArgs.headers['Content-Type']).toBeUndefined()
+      expect(result.data).toEqual({ uploaded: true })
+    })
+
+    it('should handle text response in requestWithHeaders', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'text/plain' }),
+        text: async () => 'plain text response',
+      })
+
+      const result = await fluxFetch.getWithHeaders('/api/text')
+
+      expect(result.data).toBe('plain text response')
+      expect(result.status).toBe(200)
+    })
+
+    it('should handle AbortError in requestWithHeaders', async () => {
+      const abortError = new Error('Aborted')
+      abortError.name = 'AbortError'
+      mockFetch.mockRejectedValueOnce(abortError)
+
+      await expect(fluxFetch.getWithHeaders('/api/test'))
+        .rejects.toThrow('Request timeout')
+    })
+
+    it('should handle non-Error exceptions in requestWithHeaders', async () => {
+      mockFetch.mockRejectedValueOnce('string error')
+
+      await expect(fluxFetch.getWithHeaders('/api/test'))
+        .rejects.toThrow('Unknown error occurred')
+    })
+
+    it('should not refresh when skipAutoRefresh is true in requestWithHeaders', async () => {
+      const refreshCallback: RefreshTokenCallback = vi.fn().mockResolvedValue(true)
+      fluxFetch.setRefreshTokenCallback(refreshCallback)
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ error: 'Token expired' }),
+      })
+
+      await expect(fluxFetch.requestWithHeaders('/api/auth', {
+        method: 'POST',
+        skipAutoRefresh: true,
+      })).rejects.toThrow()
+
+      expect(refreshCallback).not.toHaveBeenCalled()
+    })
+
+    it('should log debug messages in requestWithHeaders', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const debugFetch = new FluxbaseFetch('http://localhost:8080', { debug: true })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ data: 'test' }),
+      })
+
+      await debugFetch.getWithHeaders('/api/test')
+
+      expect(consoleSpy).toHaveBeenCalled()
+      consoleSpy.mockRestore()
+    })
+
+    it('should include error status and details in requestWithHeaders', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ error: 'Invalid input', details: { field: 'name' } }),
+      })
+
+      try {
+        await fluxFetch.getWithHeaders('/api/test')
+        expect.fail('Should have thrown')
+      } catch (err: any) {
+        expect(err.status).toBe(400)
+        expect(err.details).toEqual({ error: 'Invalid input', details: { field: 'name' } })
+      }
     })
   })
 })

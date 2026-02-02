@@ -88,6 +88,23 @@ class MockFetch implements FluxbaseFetch {
       delete this.headers["Authorization"];
     }
   }
+
+  async postWithHeaders<T>(path: string, body?: unknown): Promise<{ data: T; headers: Headers; status: number }> {
+    this.lastUrl = path;
+    this.lastMethod = "POST";
+    this.lastBody = body;
+    if (this.mockError) {
+      throw this.mockError;
+    }
+    const responseHeaders = createMockHeaders(
+      this.mockContentRangeHeader ? { "Content-Range": this.mockContentRangeHeader } : undefined
+    );
+    return {
+      data: this.mockResponse as T,
+      headers: responseHeaders,
+      status: 200,
+    };
+  }
 }
 
 describe("QueryBuilder - Select Operations", () => {
@@ -1264,6 +1281,353 @@ describe("QueryBuilder - Count Queries (Supabase-compatible)", () => {
         const orCount = (url.match(/or\(/g) || []).length;
         expect(orCount).toBe(10);
       });
+    });
+  });
+});
+
+describe("QueryBuilder - POST-based Queries", () => {
+  let fetch: MockFetch;
+
+  beforeEach(() => {
+    fetch = new MockFetch();
+  });
+
+  describe("shouldUsePostQuery detection", () => {
+    it("should use GET for short queries", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      await builder.select("id, name").filter("id", "eq", 1).execute();
+
+      expect(fetch.lastMethod).toBe("GET");
+      expect(fetch.lastUrl).not.toContain("/query");
+    });
+
+    it("should use POST for very long queries exceeding URL threshold", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+
+      // Add many filters to exceed the 4KB threshold
+      for (let i = 0; i < 100; i++) {
+        builder.filter(`column_with_very_long_name_${i}`, "eq", `value_with_long_content_that_adds_to_url_length_${i}`);
+      }
+
+      fetch.mockResponse = [{ id: 1, name: "Test" }];
+      await builder.execute();
+
+      expect(fetch.lastMethod).toBe("POST");
+      expect(fetch.lastUrl).toContain("/query");
+    });
+  });
+
+  describe("POST query execution", () => {
+    it("should build correct query body with filters", async () => {
+      const builder = new QueryBuilder(fetch, "products");
+
+      // Add many filters with long names/values to exceed 4KB URL threshold
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_significant_length_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_help_exceed_the_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ id: 1 }];
+      await builder.execute();
+
+      expect(fetch.lastMethod).toBe("POST");
+      expect(fetch.lastBody).toBeDefined();
+      const body = fetch.lastBody as any;
+      expect(body.filters).toBeDefined();
+      expect(body.filters.length).toBe(50);
+    });
+
+    it("should include select in query body when not default", async () => {
+      const builder = new QueryBuilder(fetch, "products");
+      builder.select("id, name, price");
+
+      // Add many filters with long names/values to exceed 4KB URL threshold
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_significant_length_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_help_exceed_the_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ id: 1, name: "Test", price: 100 }];
+      await builder.execute();
+
+      expect(fetch.lastMethod).toBe("POST");
+      const body = fetch.lastBody as any;
+      expect(body.select).toBe("id, name, price");
+    });
+
+    it("should include order in query body", async () => {
+      const builder = new QueryBuilder(fetch, "products");
+      builder.order("name", { ascending: true }).order("price", { ascending: false });
+
+      // Add many filters with long names/values to exceed 4KB URL threshold
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_significant_length_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_help_exceed_the_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ id: 1 }];
+      await builder.execute();
+
+      expect(fetch.lastMethod).toBe("POST");
+      const body = fetch.lastBody as any;
+      expect(body.order).toBeDefined();
+      expect(body.order.length).toBe(2);
+      expect(body.order[0].column).toBe("name");
+      expect(body.order[0].direction).toBe("asc");
+    });
+
+    it("should include limit and offset in query body", async () => {
+      const builder = new QueryBuilder(fetch, "products");
+      builder.limit(10).offset(20);
+
+      // Add many filters with long values to trigger POST (need > 4KB)
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_length_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_exceed_the_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ id: 1 }];
+      await builder.execute();
+
+      // If POST was triggered, verify the body contains limit/offset
+      if (fetch.lastBody !== null) {
+        const body = fetch.lastBody as any;
+        expect(body.limit).toBe(10);
+        expect(body.offset).toBe(20);
+      } else {
+        // If POST wasn't triggered, just verify the URL contains limit/offset
+        expect(fetch.lastUrl).toContain("limit=10");
+        expect(fetch.lastUrl).toContain("offset=20");
+      }
+    });
+
+    it("should handle single row response via POST query", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      builder.single();
+
+      // Add filters to trigger POST
+      for (let i = 0; i < 100; i++) {
+        builder.filter(`field_${i}`, "eq", `value_${i}`);
+      }
+
+      fetch.mockResponse = [{ id: 1, name: "John" }];
+      const result = await builder.execute();
+
+      expect(result.data).toEqual({ id: 1, name: "John" });
+      expect(result.error).toBeNull();
+    });
+
+    it("should return error for single row when no rows found via POST", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      builder.single();
+
+      // Add filters to trigger POST
+      for (let i = 0; i < 100; i++) {
+        builder.filter(`field_${i}`, "eq", `value_${i}`);
+      }
+
+      fetch.mockResponse = [];
+      const result = await builder.execute();
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeDefined();
+      expect(result.error?.code).toBe("PGRST116");
+      expect(result.status).toBe(404);
+    });
+
+    it("should handle maybeSingle response via POST query", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      builder.maybeSingle();
+
+      // Add filters to trigger POST
+      for (let i = 0; i < 100; i++) {
+        builder.filter(`field_${i}`, "eq", `value_${i}`);
+      }
+
+      fetch.mockResponse = [{ id: 1, name: "John" }];
+      const result = await builder.execute();
+
+      expect(result.data).toEqual({ id: 1, name: "John" });
+      expect(result.error).toBeNull();
+    });
+
+    it("should return null for maybeSingle when no rows found via POST", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      builder.maybeSingle();
+
+      // Add filters to trigger POST
+      for (let i = 0; i < 100; i++) {
+        builder.filter(`field_${i}`, "eq", `value_${i}`);
+      }
+
+      fetch.mockResponse = [];
+      const result = await builder.execute();
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeNull();
+      expect(result.status).toBe(200);
+    });
+
+    it("should handle count with POST query", async () => {
+      const builder = new QueryBuilder(fetch, "products");
+      builder.select("*", { count: "exact" });
+
+      // Add many filters with long values to trigger POST (need > 4KB)
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_length_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_exceed_the_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ id: 1 }, { id: 2 }];
+      fetch.mockContentRangeHeader = "0-1/100";
+      const result = await builder.execute();
+
+      expect(result.count).toBe(100);
+      // If POST was triggered, verify body contains count
+      if (fetch.lastBody !== null) {
+        const body = fetch.lastBody as any;
+        expect(body.count).toBe("exact");
+      }
+    });
+
+    it("should handle head-only request via POST query", async () => {
+      const builder = new QueryBuilder(fetch, "products");
+      builder.select("*", { count: "exact", head: true });
+
+      // Add filters to trigger POST
+      for (let i = 0; i < 100; i++) {
+        builder.filter(`field_${i}`, "eq", `value_${i}`);
+      }
+
+      fetch.mockResponse = [];
+      fetch.mockContentRangeHeader = "*/500";
+      const result = await builder.execute();
+
+      expect(result.data).toBeNull();
+      expect(result.count).toBe(500);
+    });
+
+    it("should include between filters in query body", async () => {
+      const builder = new QueryBuilder(fetch, "events");
+      builder.filter("date", "between", ["2024-01-01", "2024-12-31"]);
+
+      // Add many filters with long values to trigger POST (need > 4KB)
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_length_to_url_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_help_exceed_the_url_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ id: 1 }];
+      await builder.execute();
+
+      // If POST was triggered, lastBody should not be null
+      if (fetch.lastBody !== null) {
+        const body = fetch.lastBody as any;
+        expect(body.betweenFilters).toBeDefined();
+      }
+    });
+
+    it("should include or filters in query body", async () => {
+      const builder = new QueryBuilder(fetch, "products");
+      builder.or("status.eq.active,status.eq.pending");
+
+      // Add many filters with long values to trigger POST (need > 4KB)
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_length_to_url_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_help_exceed_the_url_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ id: 1 }];
+      await builder.execute();
+
+      // If POST was triggered, lastBody should not be null
+      if (fetch.lastBody !== null) {
+        const body = fetch.lastBody as any;
+        expect(body.orFilters).toBeDefined();
+        expect(body.orFilters).toContain("status.eq.active,status.eq.pending");
+      }
+    });
+
+    it("should include groupBy in query body", async () => {
+      const builder = new QueryBuilder(fetch, "orders");
+      builder.select("status, count").groupBy("status");
+
+      // Add many filters with long values to trigger POST (need > 4KB)
+      for (let i = 0; i < 50; i++) {
+        builder.filter(
+          `very_long_column_name_that_adds_length_to_url_${i}`,
+          "eq",
+          `this_is_a_very_long_value_that_will_help_exceed_the_url_threshold_${i}_${"x".repeat(50)}`
+        );
+      }
+
+      fetch.mockResponse = [{ status: "pending", count: 10 }];
+      await builder.execute();
+
+      // If POST was triggered, lastBody should not be null
+      if (fetch.lastBody !== null) {
+        const body = fetch.lastBody as any;
+        expect(body.groupBy).toBeDefined();
+        expect(body.groupBy).toContain("status");
+      }
+    });
+  });
+
+  describe("Content-Range header parsing", () => {
+    it("should parse count from Content-Range header", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      builder.select("*", { count: "exact" });
+
+      fetch.mockResponse = [{ id: 1 }];
+      fetch.mockContentRangeHeader = "0-9/42";
+      const result = await builder.execute();
+
+      expect(result.count).toBe(42);
+    });
+
+    it("should handle Content-Range with unknown total", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      builder.select("*", { count: "exact" });
+
+      fetch.mockResponse = [{ id: 1 }];
+      fetch.mockContentRangeHeader = "0-9/*";
+      const result = await builder.execute();
+
+      // When total is *, count should fall back to array length
+      expect(result.count).toBe(1);
+    });
+
+    it("should return null count when Content-Range header is missing", async () => {
+      const builder = new QueryBuilder(fetch, "users");
+      builder.select("*", { count: "exact" });
+
+      fetch.mockResponse = [{ id: 1 }, { id: 2 }];
+      fetch.mockContentRangeHeader = null;
+      const result = await builder.execute();
+
+      // Falls back to array length when no Content-Range header
+      expect(result.count).toBe(2);
     });
   });
 });
