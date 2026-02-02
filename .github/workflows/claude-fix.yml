@@ -66,7 +66,7 @@ jobs:
 
       - name: Upload issue body
         if: steps.check.outputs.should_run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: issue-body
           path: /tmp/issue_body.txt
@@ -78,25 +78,25 @@ jobs:
     if: needs.check-label.outputs.should_run == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Download issue body
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: issue-body
           path: /tmp
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24.13.0'
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.25.6'
 
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
