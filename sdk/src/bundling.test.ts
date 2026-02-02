@@ -452,5 +452,120 @@ describe('Bundling Module', () => {
         })
       )
     })
+
+    it('should handle import map with http:// imports as external', async () => {
+      const mockEsbuild = await import('esbuild')
+      vi.mocked(mockEsbuild.build).mockResolvedValue({
+        outputFiles: [{ text: 'code' }],
+        errors: [],
+        warnings: [],
+      } as any)
+
+      await bundleCode({
+        code: 'import { something } from "insecure-lib"',
+        importMap: {
+          'insecure-lib': 'http://example.com/lib.js',
+        },
+      })
+
+      expect(mockEsbuild.build).toHaveBeenCalledWith(
+        expect.objectContaining({
+          external: expect.arrayContaining(['insecure-lib']),
+        })
+      )
+    })
+
+    it('should handle import map with absolute path imports as aliases', async () => {
+      const mockEsbuild = await import('esbuild')
+      vi.mocked(mockEsbuild.build).mockResolvedValue({
+        outputFiles: [{ text: 'code' }],
+        errors: [],
+        warnings: [],
+      } as any)
+
+      await bundleCode({
+        code: 'import { util } from "@shared"',
+        importMap: {
+          '@shared': '/home/user/shared/utils.ts',
+        },
+      })
+
+      expect(mockEsbuild.build).toHaveBeenCalledWith(
+        expect.objectContaining({
+          alias: { '@shared': '/home/user/shared/utils.ts' },
+        })
+      )
+    })
+
+    it('should handle import map with parent path imports as aliases', async () => {
+      const mockEsbuild = await import('esbuild')
+      vi.mocked(mockEsbuild.build).mockResolvedValue({
+        outputFiles: [{ text: 'code' }],
+        errors: [],
+        warnings: [],
+      } as any)
+
+      await bundleCode({
+        code: 'import { common } from "@common"',
+        importMap: {
+          '@common': '../common/index.ts',
+        },
+      })
+
+      expect(mockEsbuild.build).toHaveBeenCalledWith(
+        expect.objectContaining({
+          alias: { '@common': '../common/index.ts' },
+        })
+      )
+    })
+
+    it('should not add alias when import map is empty', async () => {
+      const mockEsbuild = await import('esbuild')
+      vi.mocked(mockEsbuild.build).mockResolvedValue({
+        outputFiles: [{ text: 'code' }],
+        errors: [],
+        warnings: [],
+      } as any)
+
+      await bundleCode({
+        code: 'export default 1',
+        importMap: {},
+      })
+
+      const buildCall = mockEsbuild.build.mock.calls[0][0]
+      expect(buildCall.alias).toBeUndefined()
+    })
+
+    it('should not add nodePaths when not provided', async () => {
+      const mockEsbuild = await import('esbuild')
+      vi.mocked(mockEsbuild.build).mockResolvedValue({
+        outputFiles: [{ text: 'code' }],
+        errors: [],
+        warnings: [],
+      } as any)
+
+      await bundleCode({
+        code: 'export default 1',
+      })
+
+      const buildCall = mockEsbuild.build.mock.calls[0][0]
+      expect(buildCall.nodePaths).toBeUndefined()
+    })
+
+    it('should not add define when not provided', async () => {
+      const mockEsbuild = await import('esbuild')
+      vi.mocked(mockEsbuild.build).mockResolvedValue({
+        outputFiles: [{ text: 'code' }],
+        errors: [],
+        warnings: [],
+      } as any)
+
+      await bundleCode({
+        code: 'export default 1',
+      })
+
+      const buildCall = mockEsbuild.build.mock.calls[0][0]
+      expect(buildCall.define).toBeUndefined()
+    })
   })
 })

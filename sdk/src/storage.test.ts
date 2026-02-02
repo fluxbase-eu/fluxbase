@@ -2099,3 +2099,57 @@ describe('StorageBucket - AbortResumableUpload Error Path', () => {
     expect(error?.message).toContain('Server Error')
   })
 })
+
+describe('StorageBucket - File Operations Error Handling', () => {
+  let fetch: MockFetch
+  let bucket: StorageBucket
+
+  beforeEach(() => {
+    fetch = new MockFetch()
+    bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'test-bucket')
+  })
+
+  it('should handle createSignedUrl error', async () => {
+    fetch.post = vi.fn().mockRejectedValue(new Error('Access denied'))
+
+    const { data, error } = await bucket.createSignedUrl('private/file.pdf', 3600)
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Access denied')
+  })
+
+  it('should handle createSignedUrl error with transform options', async () => {
+    fetch.post = vi.fn().mockRejectedValue(new Error('File not found'))
+
+    const { data, error } = await bucket.createSignedUrl('missing/image.jpg', 3600, {
+      transform: {
+        width: 100,
+        height: 100,
+        format: 'webp',
+        quality: 80,
+        fit: 'cover',
+      }
+    })
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('File not found')
+  })
+
+  it('should handle move error', async () => {
+    fetch.post = vi.fn().mockRejectedValue(new Error('Destination already exists'))
+
+    const { data, error } = await bucket.move('source/file.txt', 'dest/file.txt')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Destination already exists')
+  })
+
+  it('should handle copy error', async () => {
+    fetch.post = vi.fn().mockRejectedValue(new Error('Source file not found'))
+
+    const { data, error } = await bucket.copy('missing/file.txt', 'dest/file.txt')
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('Source file not found')
+  })
+})
