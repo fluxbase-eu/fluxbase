@@ -1553,3 +1553,228 @@ func TestDataCloneModeConstants(t *testing.T) {
 		assert.Equal(t, "seed_data", DataCloneModeSeedData)
 	})
 }
+
+func TestMCPConfig_SetOAuthDefaults(t *testing.T) {
+	t.Run("sets default token expiry when zero", func(t *testing.T) {
+		config := MCPConfig{}
+		config.SetOAuthDefaults()
+		assert.Equal(t, time.Hour, config.OAuth.TokenExpiry)
+	})
+
+	t.Run("sets default refresh token expiry when zero", func(t *testing.T) {
+		config := MCPConfig{}
+		config.SetOAuthDefaults()
+		assert.Equal(t, 168*time.Hour, config.OAuth.RefreshTokenExpiry)
+	})
+
+	t.Run("sets default redirect URIs when empty", func(t *testing.T) {
+		config := MCPConfig{}
+		config.SetOAuthDefaults()
+		assert.NotEmpty(t, config.OAuth.AllowedRedirectURIs)
+		assert.Equal(t, DefaultMCPOAuthRedirectURIs(), config.OAuth.AllowedRedirectURIs)
+	})
+
+	t.Run("preserves custom token expiry", func(t *testing.T) {
+		config := MCPConfig{
+			OAuth: MCPOAuthConfig{
+				TokenExpiry: 2 * time.Hour,
+			},
+		}
+		config.SetOAuthDefaults()
+		assert.Equal(t, 2*time.Hour, config.OAuth.TokenExpiry)
+	})
+
+	t.Run("preserves custom refresh token expiry", func(t *testing.T) {
+		config := MCPConfig{
+			OAuth: MCPOAuthConfig{
+				RefreshTokenExpiry: 24 * time.Hour,
+			},
+		}
+		config.SetOAuthDefaults()
+		assert.Equal(t, 24*time.Hour, config.OAuth.RefreshTokenExpiry)
+	})
+
+	t.Run("preserves custom redirect URIs", func(t *testing.T) {
+		customURIs := []string{"http://custom.example.com/callback"}
+		config := MCPConfig{
+			OAuth: MCPOAuthConfig{
+				AllowedRedirectURIs: customURIs,
+			},
+		}
+		config.SetOAuthDefaults()
+		assert.Equal(t, customURIs, config.OAuth.AllowedRedirectURIs)
+	})
+}
+
+func TestDefaultMCPOAuthRedirectURIs(t *testing.T) {
+	uris := DefaultMCPOAuthRedirectURIs()
+
+	t.Run("returns non-empty list", func(t *testing.T) {
+		assert.NotEmpty(t, uris)
+	})
+
+	t.Run("includes Claude Desktop URIs", func(t *testing.T) {
+		assert.Contains(t, uris, "https://claude.ai/api/mcp/auth_callback")
+		assert.Contains(t, uris, "https://claude.com/api/mcp/auth_callback")
+	})
+
+	t.Run("includes Cursor URIs", func(t *testing.T) {
+		found := false
+		for _, uri := range uris {
+			if uri == "cursor://" || uri == "cursor://anysphere.cursor-mcp/oauth/*/callback" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "should include Cursor redirect URIs")
+	})
+
+	t.Run("includes VS Code URIs", func(t *testing.T) {
+		assert.Contains(t, uris, "vscode://")
+	})
+
+	t.Run("includes localhost wildcards for development", func(t *testing.T) {
+		assert.Contains(t, uris, "http://localhost:*")
+		assert.Contains(t, uris, "http://127.0.0.1:*")
+	})
+
+	t.Run("includes MCP Inspector for development", func(t *testing.T) {
+		assert.Contains(t, uris, "http://localhost:6274/oauth/callback")
+	})
+
+	t.Run("includes ChatGPT", func(t *testing.T) {
+		assert.Contains(t, uris, "https://chatgpt.com/connector_platform_oauth_redirect")
+	})
+}
+
+func TestMCPConfig_ValidateOAuth(t *testing.T) {
+	validConfig := func() MCPConfig {
+		return MCPConfig{
+			Enabled:  true,
+			BasePath: "/mcp",
+			OAuth: MCPOAuthConfig{
+				Enabled:            true,
+				TokenExpiry:        time.Hour,
+				RefreshTokenExpiry: 168 * time.Hour,
+			},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		modify  func(*MCPConfig)
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid OAuth config",
+			modify:  func(c *MCPConfig) {},
+			wantErr: false,
+		},
+		{
+			name:    "negative token expiry",
+			modify:  func(c *MCPConfig) { c.OAuth.TokenExpiry = -1 * time.Hour },
+			wantErr: true,
+			errMsg:  "mcp oauth token_expiry cannot be negative",
+		},
+		{
+			name:    "negative refresh token expiry",
+			modify:  func(c *MCPConfig) { c.OAuth.RefreshTokenExpiry = -1 * time.Hour },
+			wantErr: true,
+			errMsg:  "mcp oauth refresh_token_expiry cannot be negative",
+		},
+		{
+			name:    "zero token expiry is valid",
+			modify:  func(c *MCPConfig) { c.OAuth.TokenExpiry = 0 },
+			wantErr: false,
+		},
+		{
+			name:    "zero refresh token expiry is valid",
+			modify:  func(c *MCPConfig) { c.OAuth.RefreshTokenExpiry = 0 },
+			wantErr: false,
+		},
+		{
+			name:    "OAuth disabled skips OAuth validation",
+			modify:  func(c *MCPConfig) { c.OAuth.Enabled = false; c.OAuth.TokenExpiry = -1 },
+			wantErr: false,
+		},
+		{
+			name:    "DCR enabled is valid",
+			modify:  func(c *MCPConfig) { c.OAuth.DCREnabled = true },
+			wantErr: false,
+		},
+		{
+			name:    "custom redirect URIs",
+			modify:  func(c *MCPConfig) { c.OAuth.AllowedRedirectURIs = []string{"http://example.com"} },
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := validConfig()
+			tt.modify(&config)
+			err := config.Validate()
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBranchingConfig_MaxBranchesPerUser(t *testing.T) {
+	validConfig := func() BranchingConfig {
+		return BranchingConfig{
+			Enabled:            true,
+			MaxTotalBranches:   50,
+			MaxBranchesPerUser: 5,
+			DatabasePrefix:     "branch_",
+		}
+	}
+
+	tests := []struct {
+		name    string
+		modify  func(*BranchingConfig)
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid max branches per user",
+			modify:  func(c *BranchingConfig) {},
+			wantErr: false,
+		},
+		{
+			name:    "negative max branches per user",
+			modify:  func(c *BranchingConfig) { c.MaxBranchesPerUser = -1 },
+			wantErr: true,
+			errMsg:  "branching max_branches_per_user cannot be negative",
+		},
+		{
+			name:    "zero max branches per user is valid (unlimited)",
+			modify:  func(c *BranchingConfig) { c.MaxBranchesPerUser = 0 },
+			wantErr: false,
+		},
+		{
+			name:    "high max branches per user is valid",
+			modify:  func(c *BranchingConfig) { c.MaxBranchesPerUser = 100 },
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := validConfig()
+			tt.modify(&config)
+			err := config.Validate()
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
