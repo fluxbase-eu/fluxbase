@@ -34,7 +34,7 @@ export function Tables() {
 
   return (
     <Main className='h-[calc(100vh-4rem)] p-0'>
-      <Group orientation='horizontal' id='tables-group-v2'>
+      <Group orientation='horizontal' id='tables-group-v2' className='w-full h-full'>
         <Panel id='table-selector' defaultSize='25' minSize='20' maxSize='40'>
           <TableSelector
             selectedTable={selectedTable}

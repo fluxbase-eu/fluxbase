@@ -308,15 +308,24 @@ const ChatbotsPage = () => {
   }
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold'>AI Chatbots</h1>
-          <p className='text-muted-foreground'>
-            Manage AI-powered chatbots for database interactions
-          </p>
+    <div className='flex h-full flex-col'>
+      {/* Header */}
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <Bot className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>AI Chatbots</h1>
+            <p className='text-muted-foreground text-sm'>
+              Manage AI-powered chatbots for database interactions
+            </p>
+          </div>
         </div>
       </div>
+
+      <div className='flex-1 overflow-auto p-6'>
+        <div className='flex flex-col gap-6'>
 
       <div className='flex items-center justify-between'>
         <div className='flex gap-4 text-sm'>
@@ -492,6 +501,8 @@ const ChatbotsPage = () => {
           onOpenChange={(open) => !open && setTestChatbot(null)}
         />
       )}
+        </div>
+      </div>
     </div>
   )
 }

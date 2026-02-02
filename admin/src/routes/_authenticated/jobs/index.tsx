@@ -953,13 +953,18 @@ function JobsPage() {
   }
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold'>Background Jobs</h1>
-          <p className='text-muted-foreground'>
-            Manage job functions and monitor background task execution
-          </p>
+    <div className='flex h-full flex-col'>
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <ListTodo className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>Background Jobs</h1>
+            <p className='text-muted-foreground text-sm'>
+              Manage job functions and monitor background task execution
+            </p>
+          </div>
         </div>
         <div className='flex items-center gap-2'>
           <ImpersonationPopover
@@ -973,6 +978,7 @@ function JobsPage() {
         </div>
       </div>
 
+      <div className='flex-1 overflow-auto p-6'>
       {/* Stats (Past 24 hours) */}
       <Card className='!gap-0 !py-0'>
         <CardContent className='px-4 py-2'>
@@ -2115,6 +2121,7 @@ function JobsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

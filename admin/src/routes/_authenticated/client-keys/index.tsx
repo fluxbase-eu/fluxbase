@@ -334,18 +334,25 @@ const ClientKeysPage = () => {
   )
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div>
-        <h1 className='flex items-center gap-2 text-3xl font-bold tracking-tight'>
-          <Key className='h-8 w-8' />
-          Client Keys
-        </h1>
-        <p className='text-muted-foreground mt-2'>
-          Generate and manage client keys for programmatic access
-        </p>
+    <div className='flex h-full flex-col'>
+      {/* Header */}
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <Key className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>Client Keys</h1>
+            <p className='text-muted-foreground text-sm'>
+              Generate and manage client keys for programmatic access
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      <div className='flex-1 overflow-auto p-6'>
+        <div className='flex flex-col gap-6'>
+          {/* Stats Cards */}
       <div className='grid gap-4 md:grid-cols-3'>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -787,6 +794,8 @@ const ClientKeysPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   )
 }

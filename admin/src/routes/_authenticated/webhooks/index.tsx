@@ -267,16 +267,22 @@ function WebhooksPage() {
   }
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div>
-        <h1 className='flex items-center gap-2 text-3xl font-bold tracking-tight'>
-          <Webhook className='h-8 w-8' />
-          Webhooks
-        </h1>
-        <p className='text-muted-foreground mt-2'>
-          Configure webhooks to receive real-time event notifications
-        </p>
+    <div className='flex h-full flex-col'>
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <Webhook className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>Webhooks</h1>
+            <p className='text-muted-foreground text-sm'>
+              Configure webhooks to receive real-time event notifications
+            </p>
+          </div>
+        </div>
       </div>
+
+      <div className='flex-1 overflow-auto p-6'>
 
       {/* Stats Cards */}
       <div className='grid gap-4 md:grid-cols-3'>
@@ -805,6 +811,7 @@ function WebhooksPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

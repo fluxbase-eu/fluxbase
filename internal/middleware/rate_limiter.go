@@ -255,11 +255,20 @@ func GlobalAPILimiter() fiber.Handler {
 // DynamicGlobalAPILimiter creates a rate limiter that respects the dynamic setting
 // It checks the settings cache on each request, allowing real-time toggling of rate limiting
 // without server restart
+// Admin users (admin, dashboard_admin, service_role) are exempt from rate limiting
 func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 	// Create the actual rate limiter once
 	rateLimiter := GlobalAPILimiter()
 
 	return func(c *fiber.Ctx) error {
+		// Exempt admin users from rate limiting
+		// This includes: admin (dashboard super admins), dashboard_admin (dashboard users),
+		// and service_role (trusted service keys/JWT tokens)
+		role := c.Locals("user_role")
+		if role == "admin" || role == "dashboard_admin" || role == "service_role" {
+			return c.Next()
+		}
+
 		// Check if rate limiting is enabled via settings cache
 		ctx := c.Context()
 		isEnabled := settingsCache.GetBool(ctx, "app.security.enable_global_rate_limit", false)
