@@ -295,11 +295,11 @@ func TestLogQueryParameterParsing(t *testing.T) {
 	t.Run("parses start_time in RFC3339 format", func(t *testing.T) {
 		startTimeStr := "2026-01-15T10:30:00Z"
 
-		t, err := time.Parse(time.RFC3339, startTimeStr)
+		parsedTime, err := time.Parse(time.RFC3339, startTimeStr)
 		assert.NoError(t, err)
-		assert.Equal(t, 2026, t.Year())
-		assert.Equal(t, time.January, t.Month())
-		assert.Equal(t, 15, t.Day())
+		assert.Equal(t, 2026, parsedTime.Year())
+		assert.Equal(t, time.January, parsedTime.Month())
+		assert.Equal(t, 15, parsedTime.Day())
 	})
 
 	t.Run("parses limit parameter", func(t *testing.T) {

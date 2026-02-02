@@ -22,8 +22,8 @@ func TestPostQueryRequest_Struct(t *testing.T) {
 			Filters: []PostQueryFilter{
 				{Column: "status", Operator: "eq", Value: "active"},
 			},
-			OrFilters:      []string{"type.eq.admin,type.eq.superuser"},
-			AndFilters:     []string{"active.eq.true"},
+			OrFilters:  []string{"type.eq.admin,type.eq.superuser"},
+			AndFilters: []string{"active.eq.true"},
 			BetweenFilters: []PostQueryBetweenFilter{
 				{Column: "age", Min: 18, Max: 65, Negated: false},
 			},
@@ -503,7 +503,7 @@ func TestFilterOperatorConversion(t *testing.T) {
 // Content-Range Header Tests
 // =============================================================================
 
-func TestContentRangeHeader(t *testing.T) {
+func TestContentRangeHeaderQuery(t *testing.T) {
 	t.Run("calculates range with offset", func(t *testing.T) {
 		offset := 10
 		resultsLen := 25

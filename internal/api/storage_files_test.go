@@ -334,7 +334,7 @@ func TestDetectContentType(t *testing.T) {
 	}
 }
 
-func TestGetUserID(t *testing.T) {
+func TestGetUserIDStorage(t *testing.T) {
 	tests := []struct {
 		name     string
 		userID   interface{}

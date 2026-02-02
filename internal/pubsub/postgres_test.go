@@ -284,7 +284,10 @@ func TestQuoteIdentifier(t *testing.T) {
 	t.Run("handles only double quotes", func(t *testing.T) {
 		result := quoteIdentifier(`"""`)
 
-		assert.Equal(t, `"""""""`, result)
+		// Input: 3 quotes
+		// Each quote is escaped by doubling: "" + "" + "" = 6 quotes
+		// Wrapped with quotes: " + 6 quotes + " = 8 quotes total
+		assert.Equal(t, `""""""""`, result)
 	})
 }
 
@@ -404,7 +407,7 @@ func TestSubscriberChannel(t *testing.T) {
 // Channel Constants Tests
 // =============================================================================
 
-func TestChannelConstants(t *testing.T) {
+func TestChannelConstantsPostgres(t *testing.T) {
 	t.Run("BroadcastChannel has colon", func(t *testing.T) {
 		assert.Contains(t, BroadcastChannel, ":")
 		assert.Equal(t, "fluxbase:broadcast", BroadcastChannel)
