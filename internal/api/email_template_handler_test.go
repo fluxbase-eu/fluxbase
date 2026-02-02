@@ -84,10 +84,13 @@ func TestEmailTemplate_Struct(t *testing.T) {
 		data, err := json.Marshal(template)
 		require.NoError(t, err)
 
+		// Note: Go's JSON encoder escapes HTML characters by default (< becomes \u003c, > becomes \u003e)
 		assert.Contains(t, string(data), `"id":"550e8400-e29b-41d4-a716-446655440000"`)
 		assert.Contains(t, string(data), `"template_type":"email_verification"`)
 		assert.Contains(t, string(data), `"subject":"Verify Email"`)
-		assert.Contains(t, string(data), `"html_body":"<p>Verify</p>"`)
+		// Check for HTML body - Go's json.Marshal escapes < and > by default
+		assert.Contains(t, string(data), `"html_body":"`)
+		assert.Contains(t, string(data), `Verify`)
 		assert.Contains(t, string(data), `"text_body":"Test text"`)
 		assert.Contains(t, string(data), `"is_custom":true`)
 		assert.Contains(t, string(data), `"created_at"`)
@@ -173,7 +176,8 @@ func TestUpdateTemplateRequest_Struct(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, string(data), `"subject":"Test"`)
-		assert.Contains(t, string(data), `"html_body":"<p>Test</p>"`)
+		// JSON encoder escapes HTML characters by default: < becomes \u003c and > becomes \u003e
+		assert.Contains(t, string(data), `"html_body":"\u003cp\u003eTest\u003c/p\u003e"`)
 		assert.Contains(t, string(data), `"text_body":"Plain"`)
 	})
 }

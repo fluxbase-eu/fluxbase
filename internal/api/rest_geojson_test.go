@@ -110,8 +110,8 @@ func TestIsGeoJSON_GeoTypes(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "empty map",
-			input: map[string]interface{}{},
+			name:     "empty map",
+			input:    map[string]interface{}{},
 			expected: false,
 		},
 		{
@@ -211,7 +211,7 @@ func TestIsGeometryColumn_DataTypes(t *testing.T) {
 		{"json column", "json", false},
 		{"jsonb column", "jsonb", false},
 		{"empty string", "", false},
-		{"similar but not geometry", "geometrical", true}, // contains geometry
+		{"similar but not geometry", "geometrical", false}, // does not actually contain "geometry"
 		{"point without geometry prefix", "Point", false},
 	}
 

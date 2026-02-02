@@ -60,6 +60,13 @@ type SchemaGraphResponse struct {
 // GetSchemaGraph returns all tables and relationships for ERD visualization
 // GET /api/v1/admin/schema/graph
 func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
+	// Check if database connection is available
+	if s.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 	schemasParam := c.Query("schemas", "public")
 	schemaList := strings.Split(schemasParam, ",")
@@ -422,6 +429,13 @@ func (s *Server) GetTableRelationships(c *fiber.Ctx) error {
 
 	if schema == "" || table == "" {
 		return SendBadRequest(c, "schema and table are required", "MISSING_PARAMS")
+	}
+
+	// Check if database connection is available
+	if s.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	query := `

@@ -71,6 +71,13 @@ type UpdateServiceKeyRequest struct {
 
 // ListServiceKeys lists all service keys
 func (h *ServiceKeyHandler) ListServiceKeys(c *fiber.Ctx) error {
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	rows, err := h.db.Query(c.Context(), `
 		SELECT id, name, description, key_prefix, scopes, enabled,
 		       rate_limit_per_minute, rate_limit_per_hour,
@@ -118,6 +125,13 @@ func (h *ServiceKeyHandler) GetServiceKey(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	var key ServiceKey
 	err = h.db.QueryRow(c.Context(), `
 		SELECT id, name, description, key_prefix, scopes, enabled,
@@ -151,6 +165,13 @@ func (h *ServiceKeyHandler) CreateServiceKey(c *fiber.Ctx) error {
 	if req.Name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Name is required",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -285,6 +306,13 @@ func (h *ServiceKeyHandler) UpdateServiceKey(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	// Build SET clause dynamically
 	setClause := ""
 	args := make([]interface{}, 0, len(updates)+1)
@@ -339,6 +367,13 @@ func (h *ServiceKeyHandler) DeleteServiceKey(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	result, err := h.db.Exec(c.Context(), `
 		DELETE FROM auth.service_keys WHERE id = $1
 	`, id)
@@ -369,6 +404,13 @@ func (h *ServiceKeyHandler) DisableServiceKey(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid service key ID",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -405,6 +447,13 @@ func (h *ServiceKeyHandler) EnableServiceKey(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid service key ID",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -465,6 +514,13 @@ func (h *ServiceKeyHandler) RevokeServiceKey(c *fiber.Ctx) error {
 	adminUUID, err := uuid.Parse(adminID)
 	if err != nil {
 		return SendUnauthorized(c, "Invalid user ID", ErrCodeInvalidUserID)
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	// Get the key prefix for audit log
@@ -559,6 +615,13 @@ func (h *ServiceKeyHandler) DeprecateServiceKey(c *fiber.Ctx) error {
 		gracePeriod = 720
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	graceEndTime := time.Now().Add(time.Duration(gracePeriod) * time.Hour)
 
 	result, err := h.db.Exec(c.Context(), `
@@ -610,6 +673,13 @@ func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
 	var req RotateServiceKeyRequest
 	if err := c.BodyParser(&req); err != nil {
 		return SendInvalidBody(c)
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	// Get the old key details
@@ -750,6 +820,13 @@ func (h *ServiceKeyHandler) GetRevocationHistory(c *fiber.Ctx) error {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		return SendInvalidID(c, "service key ID")
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	rows, err := h.db.Query(c.Context(), `

@@ -126,6 +126,13 @@ var samlProviderNamePattern = regexp.MustCompile(`^[a-z][a-z0-9_-]{1,49}$`)
 func (h *SAMLProviderHandler) ListSAMLProviders(c *fiber.Ctx) error {
 	ctx := c.Context()
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	// Get database-managed providers
 	query := `
 		SELECT id, name, COALESCE(display_name, name), enabled, entity_id, acs_url,
@@ -221,6 +228,13 @@ func (h *SAMLProviderHandler) GetSAMLProvider(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	query := `
 		SELECT id, name, COALESCE(display_name, name), enabled, entity_id, acs_url,
 		       idp_metadata_url, idp_metadata_xml, attribute_mapping, auto_create_users,
@@ -285,6 +299,13 @@ func (h *SAMLProviderHandler) CreateSAMLProvider(c *fiber.Ctx) error {
 		(req.IdPMetadataXML == nil || *req.IdPMetadataXML == "") {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Either idp_metadata_url or idp_metadata_xml must be provided",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -410,6 +431,13 @@ func (h *SAMLProviderHandler) UpdateSAMLProvider(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid provider ID",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -589,6 +617,13 @@ func (h *SAMLProviderHandler) DeleteSAMLProvider(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid provider ID",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 

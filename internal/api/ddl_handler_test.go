@@ -46,18 +46,18 @@ func TestIdentifierPattern(t *testing.T) {
 	}
 
 	invalidIdentifiers := []string{
-		"123table",      // starts with number
-		"my-table",      // contains hyphen
-		"my table",      // contains space
-		"my.table",      // contains dot
-		"",              // empty
-		"table!",        // contains special char
-		"table@name",    // contains @
-		"table#1",       // contains #
-		"select*",       // contains *
-		"table;drop",    // contains semicolon
-		"table'name",    // contains quote
-		`table"name`,    // contains double quote
+		"123table",   // starts with number
+		"my-table",   // contains hyphen
+		"my table",   // contains space
+		"my.table",   // contains dot
+		"",           // empty
+		"table!",     // contains special char
+		"table@name", // contains @
+		"table#1",    // contains #
+		"select*",    // contains *
+		"table;drop", // contains semicolon
+		"table'name", // contains quote
+		`table"name`, // contains double quote
 	}
 
 	for _, id := range validIdentifiers {

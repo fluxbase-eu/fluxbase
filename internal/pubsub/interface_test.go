@@ -30,9 +30,9 @@ func TestChannelConstants_Interface(t *testing.T) {
 
 	t.Run("channels are unique", func(t *testing.T) {
 		channels := map[string]bool{
-			BroadcastChannel:    true,
-			PresenceChannel:     true,
-			SchemaCacheChannel:  true,
+			BroadcastChannel:   true,
+			PresenceChannel:    true,
+			SchemaCacheChannel: true,
 		}
 		assert.Equal(t, 3, len(channels), "All channels should be unique")
 	})

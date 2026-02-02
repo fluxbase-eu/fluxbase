@@ -405,7 +405,7 @@ func TestSystemSettingsInternalErrors(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
 		json.Unmarshal(body, &result)
-		assert.Equal(t, "Failed to retrieve system settings", result["error"])
+		assert.Equal(t, "Settings service not initialized", result["error"])
 	})
 
 	t.Run("delete setting with nil service returns 500", func(t *testing.T) {
@@ -423,7 +423,7 @@ func TestSystemSettingsInternalErrors(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
 		json.Unmarshal(body, &result)
-		assert.Equal(t, "Failed to delete setting", result["error"])
+		assert.Equal(t, "Settings service not initialized", result["error"])
 	})
 }
 

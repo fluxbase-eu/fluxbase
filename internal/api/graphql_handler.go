@@ -329,6 +329,10 @@ func convertErrors(errors []gqlerrors.FormattedError) []GraphQLError {
 
 // calculateQueryDepth returns the maximum depth of a GraphQL query
 func calculateQueryDepth(query string) (int, error) {
+	if query == "" {
+		return 0, fmt.Errorf("query cannot be empty")
+	}
+
 	doc, err := parser.Parse(parser.ParseParams{Source: query})
 	if err != nil {
 		return 0, err

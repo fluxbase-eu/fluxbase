@@ -138,6 +138,13 @@ func (h *ClientKeyHandler) ListClientKeys(c *fiber.Ctx) error {
 	}
 	// Admins without filter: show all keys (userID stays nil)
 
+	// Nil check for service (can happen in tests)
+	if h.clientKeyService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Client key service not initialized",
+		})
+	}
+
 	clientKeys, err := h.clientKeyService.ListClientKeys(c.Context(), userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -151,11 +158,19 @@ func (h *ClientKeyHandler) ListClientKeys(c *fiber.Ctx) error {
 // GetClientKey retrieves a single client key
 // Non-admin users can only view their own keys
 func (h *ClientKeyHandler) GetClientKey(c *fiber.Ctx) error {
+	// Validate ID format first (validation should come before nil checks)
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid client key ID",
+		})
+	}
+
+	// Nil check for service (can happen in tests)
+	if h.clientKeyService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Client key service not initialized",
 		})
 	}
 
@@ -191,6 +206,7 @@ func (h *ClientKeyHandler) GetClientKey(c *fiber.Ctx) error {
 
 // UpdateClientKey updates a client key's metadata
 func (h *ClientKeyHandler) UpdateClientKey(c *fiber.Ctx) error {
+	// Validate ID format first
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -199,10 +215,18 @@ func (h *ClientKeyHandler) UpdateClientKey(c *fiber.Ctx) error {
 		})
 	}
 
+	// Parse request body before checking service
 	var req UpdateClientKeyRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
+		})
+	}
+
+	// Nil check for service (can happen in tests)
+	if h.clientKeyService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Client key service not initialized",
 		})
 	}
 
@@ -221,11 +245,19 @@ func (h *ClientKeyHandler) UpdateClientKey(c *fiber.Ctx) error {
 
 // RevokeClientKey revokes a client key
 func (h *ClientKeyHandler) RevokeClientKey(c *fiber.Ctx) error {
+	// Validate ID format first
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid client key ID",
+		})
+	}
+
+	// Nil check for service (can happen in tests)
+	if h.clientKeyService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Client key service not initialized",
 		})
 	}
 
@@ -244,11 +276,19 @@ func (h *ClientKeyHandler) RevokeClientKey(c *fiber.Ctx) error {
 
 // DeleteClientKey permanently deletes a client key
 func (h *ClientKeyHandler) DeleteClientKey(c *fiber.Ctx) error {
+	// Validate ID format first
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid client key ID",
+		})
+	}
+
+	// Nil check for service (can happen in tests)
+	if h.clientKeyService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Client key service not initialized",
 		})
 	}
 

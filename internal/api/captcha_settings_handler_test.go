@@ -604,9 +604,9 @@ func TestCaptchaRequests_JSONSerialization(t *testing.T) {
 
 func TestScoreThresholdBoundaries(t *testing.T) {
 	testCases := []struct {
-		name        string
-		threshold   float64
-		shouldFail  bool
+		name       string
+		threshold  float64
+		shouldFail bool
 	}{
 		{"valid 0.0", 0.0, false},
 		{"valid 0.1", 0.1, false},

@@ -214,6 +214,14 @@ func (h *CaptchaSettingsHandler) UpdateSettings(c *fiber.Ctx) error {
 		}
 	}
 
+	// Nil check for dependencies (can happen in tests)
+	if h.settingsService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Settings service not initialized",
+			"code":  "NOT_INITIALIZED",
+		})
+	}
+
 	// Track which settings were updated
 	var updatedKeys []string
 

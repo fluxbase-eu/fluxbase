@@ -8,9 +8,9 @@ import (
 
 func TestDetectContentType_Utils(t *testing.T) {
 	tests := []struct {
-		name        string
-		filename    string
-		expected    string
+		name     string
+		filename string
+		expected string
 	}{
 		// Image types
 		{"jpg extension", "photo.jpg", "image/jpeg"},

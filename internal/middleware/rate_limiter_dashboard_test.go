@@ -84,13 +84,13 @@ func TestExtractRoleFromToken(t *testing.T) {
 func TestExtractRoleFromToken_RealWorldJWT(t *testing.T) {
 	// Test with a more realistic JWT payload structure
 	payload := map[string]interface{}{
-		"role":     "dashboard_admin",
-		"sub":      "550e8400-e29b-41d4-a716-446655440000",
-		"email":    "admin@example.com",
-		"iat":      1234567890,
-		"exp":      1234567890 + 3600,
-		"aud":      "authenticated",
-		"iss":      "fluxbase",
+		"role":  "dashboard_admin",
+		"sub":   "550e8400-e29b-41d4-a716-446655440000",
+		"email": "admin@example.com",
+		"iat":   1234567890,
+		"exp":   1234567890 + 3600,
+		"aud":   "authenticated",
+		"iss":   "fluxbase",
 	}
 
 	payloadBytes, err := json.Marshal(payload)

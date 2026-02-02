@@ -465,14 +465,14 @@ func TestSAMLProviderNamePattern(t *testing.T) {
 	}
 
 	invalidNames := []string{
-		"",            // empty
-		"a",           // too short (must be 2-50 chars)
-		"1okta",       // starts with number
-		"Okta",        // starts with uppercase
-		"OKTA",        // all uppercase
-		"-okta",       // starts with hyphen
-		"_okta",       // starts with underscore
-		"okta!",       // special character
+		"",              // empty
+		"a",             // too short (must be 2-50 chars)
+		"1okta",         // starts with number
+		"Okta",          // starts with uppercase
+		"OKTA",          // all uppercase
+		"-okta",         // starts with hyphen
+		"_okta",         // starts with underscore
+		"okta!",         // special character
 		"okta provider", // space
 		"okta.provider", // dot
 		"okta@provider", // @ sign
@@ -873,9 +873,9 @@ func TestProviderSource(t *testing.T) {
 func TestAttributeMapping(t *testing.T) {
 	t.Run("common attribute mappings", func(t *testing.T) {
 		mapping := map[string]string{
-			"email": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
-			"name":  "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
-			"given_name": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+			"email":       "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+			"name":        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+			"given_name":  "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
 			"family_name": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
 		}
 
@@ -889,8 +889,8 @@ func TestAttributeMapping(t *testing.T) {
 
 	t.Run("custom attribute mapping", func(t *testing.T) {
 		mapping := map[string]string{
-			"email":      "customEmailClaim",
-			"department": "customDepartment",
+			"email":       "customEmailClaim",
+			"department":  "customDepartment",
 			"employee_id": "customEmployeeId",
 		}
 

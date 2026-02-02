@@ -30,9 +30,9 @@ func TestNewBranchHandler(t *testing.T) {
 
 	t.Run("creates handler with config", func(t *testing.T) {
 		cfg := config.BranchingConfig{
-			Enabled:           true,
+			Enabled:            true,
 			MaxBranchesPerUser: 10,
-			MaxTotalBranches:  50,
+			MaxTotalBranches:   50,
 		}
 		handler := NewBranchHandler(nil, nil, cfg)
 		assert.NotNil(t, handler)
@@ -157,7 +157,7 @@ func TestUpsertGitHubConfigRequest_Struct(t *testing.T) {
 			"repository": "fluxbase/fluxbase",
 			"auto_create_on_pr": true,
 			"auto_delete_on_merge": true,
-			"default_data_clone_mode": "full"
+			"default_data_clone_mode": "full_clone"
 		}`
 
 		var req UpsertGitHubConfigRequest

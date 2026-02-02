@@ -351,12 +351,12 @@ func TestAuthSettings_Struct(t *testing.T) {
 
 	t.Run("JSON serialization", func(t *testing.T) {
 		settings := AuthSettings{
-			SignupEnabled:            true,
-			MagicLinkEnabled:         true,
-			PasswordMinLength:        8,
-			SessionTimeoutMinutes:    60,
-			MaxSessionsPerUser:       5,
-			Overrides:                make(map[string]SettingOverride),
+			SignupEnabled:         true,
+			MagicLinkEnabled:      true,
+			PasswordMinLength:     8,
+			SessionTimeoutMinutes: 60,
+			MaxSessionsPerUser:    5,
+			Overrides:             make(map[string]SettingOverride),
 		}
 
 		data, err := json.Marshal(settings)

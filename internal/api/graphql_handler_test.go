@@ -701,4 +701,3 @@ func TestGraphQLConfig_Integration(t *testing.T) {
 		assert.Nil(t, handler.config)
 	})
 }
-

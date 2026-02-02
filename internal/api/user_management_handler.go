@@ -23,6 +23,13 @@ func NewUserManagementHandler(userMgmtService *auth.UserManagementService, authS
 
 // ListUsers lists all users with enriched metadata
 func (h *UserManagementHandler) ListUsers(c *fiber.Ctx) error {
+	// Nil check for service (can happen in tests)
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	const defaultLimit = 100
 	const maxLimit = 1000
 
@@ -99,6 +106,12 @@ func (h *UserManagementHandler) ListUsers(c *fiber.Ctx) error {
 
 // GetUserByID gets a single user by ID with enriched metadata
 func (h *UserManagementHandler) GetUserByID(c *fiber.Ctx) error {
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
@@ -126,6 +139,12 @@ func (h *UserManagementHandler) InviteUser(c *fiber.Ctx) error {
 		})
 	}
 
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
 	resp, err := h.userMgmtService.InviteUser(c.Context(), req, userType)
@@ -140,6 +159,12 @@ func (h *UserManagementHandler) InviteUser(c *fiber.Ctx) error {
 
 // DeleteUser deletes a user
 func (h *UserManagementHandler) DeleteUser(c *fiber.Ctx) error {
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
@@ -174,6 +199,12 @@ func (h *UserManagementHandler) UpdateUserRole(c *fiber.Ctx) error {
 		})
 	}
 
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	user, err := h.userMgmtService.UpdateUserRole(c.Context(), userID, req.Role, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
@@ -201,6 +232,12 @@ func (h *UserManagementHandler) UpdateUser(c *fiber.Ctx) error {
 		})
 	}
 
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	user, err := h.userMgmtService.UpdateUser(c.Context(), userID, req, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
@@ -218,6 +255,12 @@ func (h *UserManagementHandler) UpdateUser(c *fiber.Ctx) error {
 
 // ResetUserPassword resets a user's password
 func (h *UserManagementHandler) ResetUserPassword(c *fiber.Ctx) error {
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
@@ -240,6 +283,12 @@ func (h *UserManagementHandler) ResetUserPassword(c *fiber.Ctx) error {
 
 // LockUser locks a user account
 func (h *UserManagementHandler) LockUser(c *fiber.Ctx) error {
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	userID := c.Params("id")
 	userType := c.Query("type", "app")
 
@@ -262,6 +311,12 @@ func (h *UserManagementHandler) LockUser(c *fiber.Ctx) error {
 
 // UnlockUser unlocks a user account
 func (h *UserManagementHandler) UnlockUser(c *fiber.Ctx) error {
+	if h.userMgmtService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "User management service not initialized",
+		})
+	}
+
 	userID := c.Params("id")
 	userType := c.Query("type", "app")
 
