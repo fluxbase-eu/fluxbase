@@ -17,7 +17,7 @@ import {
   Braces,
 } from 'lucide-react'
 import type { editor, IDisposable } from 'monaco-editor'
-import { Panel, Group, Separator } from 'react-resizable-panels'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { toast } from 'sonner'
 import { useImpersonationStore } from '@/stores/impersonation-store'
 import api from '@/lib/api'
@@ -591,7 +591,7 @@ function SQLEditorPage() {
 
       {/* Editor and Results */}
       <div className='flex flex-1 overflow-hidden p-6'>
-        <Group orientation='vertical'>
+        <PanelGroup direction='vertical'>
           {/* Query Editor */}
           <Panel defaultSize={35} minSize={20}>
             <Card className='h-full overflow-hidden'>
@@ -620,7 +620,7 @@ function SQLEditorPage() {
             </Card>
           </Panel>
 
-          <Separator className='bg-border hover:bg-primary my-2 h-1 transition-colors' />
+          <PanelResizeHandle className='bg-border hover:bg-primary my-2 h-1 transition-colors' />
 
           {/* Results */}
           <Panel defaultSize={65} minSize={30}>
@@ -1031,7 +1031,7 @@ function SQLEditorPage() {
               )}
             </Card>
           </Panel>
-        </Group>
+        </PanelGroup>
       </div>
     </div>
   )

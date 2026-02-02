@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
-import { Panel, Group, Separator } from 'react-resizable-panels'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Main } from '@/components/layout/main'
 import { TableSelector } from './components/table-selector'
 import { TableViewer } from './components/table-viewer'
@@ -34,7 +34,7 @@ export function Tables() {
 
   return (
     <Main className='h-[calc(100vh-4rem)] p-0'>
-      <Group orientation='horizontal'>
+      <PanelGroup direction='horizontal'>
         <Panel defaultSize={20} minSize={15} maxSize={40}>
           <TableSelector
             selectedTable={selectedTable}
@@ -43,7 +43,7 @@ export function Tables() {
             onSchemaChange={handleSchemaChange}
           />
         </Panel>
-        <Separator className='bg-border hover:bg-primary w-1 transition-colors' />
+        <PanelResizeHandle className='bg-border hover:bg-primary w-1 transition-colors' />
         <Panel>
           <main className='h-full overflow-auto'>
             {selectedTable ? (
@@ -57,7 +57,7 @@ export function Tables() {
             )}
           </main>
         </Panel>
-      </Group>
+      </PanelGroup>
     </Main>
   )
 }
