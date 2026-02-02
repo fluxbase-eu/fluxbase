@@ -506,8 +506,8 @@ func TestQuoteIdentifier_SQLInjectionPrevention(t *testing.T) {
 		malicious := `"";--`
 		result := quoteIdentifier(malicious)
 
-		// Embedded quotes should be doubled
-		assert.Equal(t, `"""""";--"`, result)
+		// Embedded quotes should be doubled (2 quotes become 4, plus 2 wrapper quotes = 6 total)
+		assert.Equal(t, `""""";--"`, result)
 	})
 }
 

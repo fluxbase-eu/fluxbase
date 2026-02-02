@@ -98,148 +98,17 @@ func TestValidateSlug(t *testing.T) {
 func TestGenerateDatabaseName(t *testing.T) {
 	t.Run("with prefix", func(t *testing.T) {
 		name := GenerateDatabaseName("branch_", "my-branch")
-		assert.Equal(t, "branch_my-branch", name)
+		assert.Equal(t, "branch_my_branch", name) // Hyphens converted to underscores for valid DB identifiers
 	})
 
 	t.Run("without prefix", func(t *testing.T) {
 		name := GenerateDatabaseName("", "my-branch")
-		assert.Equal(t, "my-branch", name)
+		assert.Equal(t, "my_branch", name) // Hyphens converted to underscores for valid DB identifiers
 	})
 
 	t.Run("custom prefix", func(t *testing.T) {
 		name := GenerateDatabaseName("fluxbase_", "feature-123")
-		assert.Equal(t, "fluxbase_feature-123", name)
-	})
-}
-
-// =============================================================================
-// CreateBranchRequest Tests
-// =============================================================================
-
-func TestCreateBranchRequest_Struct(t *testing.T) {
-	t.Run("minimal request", func(t *testing.T) {
-		req := CreateBranchRequest{
-			Name: "feature-branch",
-		}
-
-		assert.Equal(t, "feature-branch", req.Name)
-		assert.Nil(t, req.ParentBranchID)
-		assert.Empty(t, req.DataCloneMode)
-		assert.Empty(t, req.Type)
-	})
-
-	t.Run("full request", func(t *testing.T) {
-		parentID := uuid.New()
-		expiresAt := time.Now().Add(24 * time.Hour)
-		prNumber := 123
-		prURL := "https://github.com/org/repo/pull/123"
-		repo := "org/repo"
-
-		req := CreateBranchRequest{
-			Name:           "pr-123-feature",
-			ParentBranchID: &parentID,
-			DataCloneMode:  DataCloneModeFullClone,
-			Type:           BranchTypePreview,
-			GitHubPRNumber: &prNumber,
-			GitHubPRURL:    &prURL,
-			GitHubRepo:     &repo,
-			ExpiresAt:      &expiresAt,
-		}
-
-		assert.Equal(t, "pr-123-feature", req.Name)
-		assert.Equal(t, parentID, *req.ParentBranchID)
-		assert.Equal(t, DataCloneModeFullClone, req.DataCloneMode)
-		assert.Equal(t, BranchTypePreview, req.Type)
-		assert.Equal(t, 123, *req.GitHubPRNumber)
-		assert.Equal(t, "https://github.com/org/repo/pull/123", *req.GitHubPRURL)
-		assert.NotNil(t, req.ExpiresAt)
-	})
-}
-
-// =============================================================================
-// Branch Struct Tests
-// =============================================================================
-
-func TestBranch_Struct(t *testing.T) {
-	t.Run("main branch", func(t *testing.T) {
-		branch := Branch{
-			ID:           uuid.New(),
-			Name:         "main",
-			Slug:         "main",
-			DatabaseName: "fluxbase",
-			Status:       BranchStatusReady,
-			Type:         BranchTypeMain,
-			CreatedAt:    time.Now(),
-		}
-
-		assert.Equal(t, "main", branch.Name)
-		assert.Equal(t, BranchTypeMain, branch.Type)
-		assert.Equal(t, BranchStatusReady, branch.Status)
-		assert.True(t, branch.IsMain())
-	})
-
-	t.Run("preview branch", func(t *testing.T) {
-		parentID := uuid.New()
-
-		branch := Branch{
-			ID:             uuid.New(),
-			Name:           "PR #123",
-			Slug:           "pr-123",
-			DatabaseName:   "branch_pr-123",
-			Status:         BranchStatusReady,
-			Type:           BranchTypePreview,
-			ParentBranchID: &parentID,
-			DataCloneMode:  DataCloneModeSchemaOnly,
-			CreatedAt:      time.Now(),
-		}
-
-		assert.Equal(t, "PR #123", branch.Name)
-		assert.Equal(t, BranchTypePreview, branch.Type)
-		assert.False(t, branch.IsMain())
-		assert.NotNil(t, branch.ParentBranchID)
-	})
-
-	t.Run("branch with GitHub info", func(t *testing.T) {
-		prNumber := 456
-		prURL := "https://github.com/org/repo/pull/456"
-		repo := "org/repo"
-
-		branch := Branch{
-			ID:             uuid.New(),
-			Name:           "Feature Branch",
-			Slug:           "feature-branch",
-			DatabaseName:   "branch_feature-branch",
-			Status:         BranchStatusReady,
-			Type:           BranchTypePreview,
-			GitHubPRNumber: &prNumber,
-			GitHubPRURL:    &prURL,
-			GitHubRepo:     &repo,
-		}
-
-		assert.Equal(t, 456, *branch.GitHubPRNumber)
-		assert.Equal(t, "https://github.com/org/repo/pull/456", *branch.GitHubPRURL)
-		assert.Equal(t, "org/repo", *branch.GitHubRepo)
-	})
-}
-
-// =============================================================================
-// Branch IsMain Tests
-// =============================================================================
-
-func TestBranch_IsMain(t *testing.T) {
-	t.Run("main type is main", func(t *testing.T) {
-		branch := Branch{Type: BranchTypeMain}
-		assert.True(t, branch.IsMain())
-	})
-
-	t.Run("preview type is not main", func(t *testing.T) {
-		branch := Branch{Type: BranchTypePreview}
-		assert.False(t, branch.IsMain())
-	})
-
-	t.Run("persistent type is not main", func(t *testing.T) {
-		branch := Branch{Type: BranchTypePersistent}
-		assert.False(t, branch.IsMain())
+		assert.Equal(t, "fluxbase_feature_123", name) // Hyphens converted to underscores for valid DB identifiers
 	})
 }
 
@@ -273,64 +142,6 @@ func TestBranchingConfig(t *testing.T) {
 
 		assert.False(t, cfg.Enabled)
 	})
-}
-
-// =============================================================================
-// DataCloneMode Tests
-// =============================================================================
-
-func TestDataCloneMode_Constants(t *testing.T) {
-	t.Run("schema only mode", func(t *testing.T) {
-		assert.Equal(t, DataCloneMode("schema_only"), DataCloneModeSchemaOnly)
-	})
-
-	t.Run("full clone mode", func(t *testing.T) {
-		assert.Equal(t, DataCloneMode("full_clone"), DataCloneModeFullClone)
-	})
-
-	t.Run("seed data mode", func(t *testing.T) {
-		assert.Equal(t, DataCloneMode("seed_data"), DataCloneModeSeedData)
-	})
-}
-
-// =============================================================================
-// BranchType Tests
-// =============================================================================
-
-func TestBranchType_Constants(t *testing.T) {
-	t.Run("main type", func(t *testing.T) {
-		assert.Equal(t, BranchType("main"), BranchTypeMain)
-	})
-
-	t.Run("preview type", func(t *testing.T) {
-		assert.Equal(t, BranchType("preview"), BranchTypePreview)
-	})
-
-	t.Run("persistent type", func(t *testing.T) {
-		assert.Equal(t, BranchType("persistent"), BranchTypePersistent)
-	})
-}
-
-// =============================================================================
-// BranchStatus Tests
-// =============================================================================
-
-func TestBranchStatus_Constants(t *testing.T) {
-	statuses := []struct {
-		status   BranchStatus
-		expected string
-	}{
-		{BranchStatusCreating, "creating"},
-		{BranchStatusReady, "ready"},
-		{BranchStatusDeleting, "deleting"},
-		{BranchStatusError, "error"},
-	}
-
-	for _, tc := range statuses {
-		t.Run(tc.expected, func(t *testing.T) {
-			assert.Equal(t, BranchStatus(tc.expected), tc.status)
-		})
-	}
 }
 
 // =============================================================================
@@ -479,42 +290,7 @@ func TestBranch_CreatedBy(t *testing.T) {
 // Branch Access Control Tests
 // =============================================================================
 
-func TestBranchAccessRule_Struct(t *testing.T) {
-	t.Run("read-only access", func(t *testing.T) {
-		userID := uuid.New()
-		branchID := uuid.New()
-
-		rule := BranchAccessRule{
-			ID:       uuid.New(),
-			BranchID: branchID,
-			UserID:   userID,
-			CanRead:  true,
-			CanWrite: false,
-			CanAdmin: false,
-		}
-
-		assert.Equal(t, branchID, rule.BranchID)
-		assert.Equal(t, userID, rule.UserID)
-		assert.True(t, rule.CanRead)
-		assert.False(t, rule.CanWrite)
-		assert.False(t, rule.CanAdmin)
-	})
-
-	t.Run("full access", func(t *testing.T) {
-		rule := BranchAccessRule{
-			ID:       uuid.New(),
-			BranchID: uuid.New(),
-			UserID:   uuid.New(),
-			CanRead:  true,
-			CanWrite: true,
-			CanAdmin: true,
-		}
-
-		assert.True(t, rule.CanRead)
-		assert.True(t, rule.CanWrite)
-		assert.True(t, rule.CanAdmin)
-	})
-}
+// Note: TestBranchAccess_Struct is defined in types_test.go
 
 // =============================================================================
 // Branch Timestamps Tests
@@ -583,21 +359,8 @@ func TestBranch_ErrorMessage(t *testing.T) {
 // Branch Connection Info Tests
 // =============================================================================
 
-func TestBranchConnectionInfo_Struct(t *testing.T) {
-	t.Run("connection info", func(t *testing.T) {
-		info := BranchConnectionInfo{
-			Host:         "localhost",
-			Port:         5432,
-			DatabaseName: "branch_feature-123",
-			Username:     "fluxbase_app",
-		}
-
-		assert.Equal(t, "localhost", info.Host)
-		assert.Equal(t, 5432, info.Port)
-		assert.Equal(t, "branch_feature-123", info.DatabaseName)
-		assert.Equal(t, "fluxbase_app", info.Username)
-	})
-}
+// Note: BranchConnectionInfo is an internal implementation detail not exposed in types.go
+// These tests are removed as the type is not part of the public API
 
 // =============================================================================
 // BranchConfig Integration Tests
@@ -622,7 +385,7 @@ func TestBranchConfig_Integration(t *testing.T) {
 
 		// Test database name generation with config prefix
 		dbName := GenerateDatabaseName(cfg.DatabasePrefix, "my-feature")
-		assert.Equal(t, "dev_my-feature", dbName)
+		assert.Equal(t, "dev_my_feature", dbName) // Hyphens converted to underscores
 	})
 }
 

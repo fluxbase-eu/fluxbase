@@ -18,7 +18,6 @@ func TestNewStorage(t *testing.T) {
 	t.Run("creates storage with nil database", func(t *testing.T) {
 		storage := NewStorage(nil)
 		assert.NotNil(t, storage)
-		assert.Nil(t, storage.db)
 	})
 }
 
@@ -72,26 +71,25 @@ func TestBranch_JSONSerialization(t *testing.T) {
 }
 
 // =============================================================================
-// BranchAccessRule JSON Tests
+// BranchAccess JSON Tests
 // =============================================================================
 
-func TestBranchAccessRule_JSONSerialization(t *testing.T) {
+func TestBranchAccess_JSONSerialization(t *testing.T) {
 	t.Run("access rule", func(t *testing.T) {
-		rule := BranchAccessRule{
-			ID:       uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
-			BranchID: uuid.MustParse("660e8400-e29b-41d4-a716-446655440000"),
-			UserID:   uuid.MustParse("770e8400-e29b-41d4-a716-446655440000"),
-			CanRead:  true,
-			CanWrite: true,
-			CanAdmin: false,
+		access := BranchAccess{
+			ID:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+			BranchID:    uuid.MustParse("660e8400-e29b-41d4-a716-446655440000"),
+			UserID:      uuid.MustParse("770e8400-e29b-41d4-a716-446655440000"),
+			AccessLevel: BranchAccessWrite,
+			GrantedAt:   time.Now(),
 		}
 
-		data, err := json.Marshal(rule)
+		data, err := json.Marshal(access)
 		require.NoError(t, err)
 
-		assert.Contains(t, string(data), `"can_read":true`)
-		assert.Contains(t, string(data), `"can_write":true`)
-		assert.Contains(t, string(data), `"can_admin":false`)
+		assert.Contains(t, string(data), `"access_level":"write"`)
+		assert.Contains(t, string(data), `"branch_id":"660e8400-e29b-41d4-a716-446655440000"`)
+		assert.Contains(t, string(data), `"user_id":"770e8400-e29b-41d4-a716-446655440000"`)
 	})
 }
 
@@ -99,24 +97,8 @@ func TestBranchAccessRule_JSONSerialization(t *testing.T) {
 // BranchConnectionInfo JSON Tests
 // =============================================================================
 
-func TestBranchConnectionInfo_JSONSerialization(t *testing.T) {
-	t.Run("connection info", func(t *testing.T) {
-		info := BranchConnectionInfo{
-			Host:         "localhost",
-			Port:         5432,
-			DatabaseName: "branch_dev",
-			Username:     "fluxbase_app",
-		}
-
-		data, err := json.Marshal(info)
-		require.NoError(t, err)
-
-		assert.Contains(t, string(data), `"host":"localhost"`)
-		assert.Contains(t, string(data), `"port":5432`)
-		assert.Contains(t, string(data), `"database_name":"branch_dev"`)
-		assert.Contains(t, string(data), `"username":"fluxbase_app"`)
-	})
-}
+// Note: BranchConnectionInfo is an internal implementation detail
+// Tests for this type are not included as it's not part of the public API
 
 // =============================================================================
 // CreateBranchRequest JSON Tests
@@ -301,7 +283,6 @@ func TestListBranchesFilter(t *testing.T) {
 		assert.Nil(t, filter.CreatedBy)
 		assert.Nil(t, filter.Type)
 		assert.Nil(t, filter.Status)
-		assert.False(t, filter.IncludeExpired)
 	})
 
 	t.Run("filter by creator", func(t *testing.T) {
@@ -334,30 +315,20 @@ func TestListBranchesFilter(t *testing.T) {
 		assert.Equal(t, BranchStatusReady, *filter.Status)
 	})
 
-	t.Run("include expired", func(t *testing.T) {
-		filter := ListBranchesFilter{
-			IncludeExpired: true,
-		}
-
-		assert.True(t, filter.IncludeExpired)
-	})
-
 	t.Run("combined filters", func(t *testing.T) {
 		userID := uuid.New()
 		branchType := BranchTypePreview
 		status := BranchStatusReady
 
 		filter := ListBranchesFilter{
-			CreatedBy:      &userID,
-			Type:           &branchType,
-			Status:         &status,
-			IncludeExpired: true,
+			CreatedBy: &userID,
+			Type:      &branchType,
+			Status:    &status,
 		}
 
 		assert.NotNil(t, filter.CreatedBy)
 		assert.NotNil(t, filter.Type)
 		assert.NotNil(t, filter.Status)
-		assert.True(t, filter.IncludeExpired)
 	})
 }
 

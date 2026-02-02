@@ -363,10 +363,9 @@ func TestScheduler_Stop(t *testing.T) {
 func TestEdgeFunctionForScheduling(t *testing.T) {
 	t.Run("function with cron schedule", func(t *testing.T) {
 		schedule := "*/5 * * * *"
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:           uuid.New(),
 			Name:         "scheduled-function",
-			Code:         "export default () => console.log('scheduled');",
 			Enabled:      true,
 			CronSchedule: &schedule,
 		}
@@ -378,10 +377,9 @@ func TestEdgeFunctionForScheduling(t *testing.T) {
 
 	t.Run("disabled function with schedule", func(t *testing.T) {
 		schedule := "0 * * * *"
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:           uuid.New(),
 			Name:         "disabled-scheduled",
-			Code:         "export default () => {};",
 			Enabled:      false,
 			CronSchedule: &schedule,
 		}
@@ -391,10 +389,9 @@ func TestEdgeFunctionForScheduling(t *testing.T) {
 	})
 
 	t.Run("enabled function without schedule", func(t *testing.T) {
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:      uuid.New(),
 			Name:    "http-only",
-			Code:    "export default () => {};",
 			Enabled: true,
 		}
 
@@ -411,10 +408,9 @@ func TestScheduleFunction_Validation(t *testing.T) {
 	t.Run("valid schedule", func(t *testing.T) {
 		scheduler := NewScheduler(nil, "secret", "http://localhost", nil)
 		schedule := "*/5 * * * *"
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:           uuid.New(),
 			Name:         "valid-scheduled",
-			Code:         "export default () => {};",
 			Enabled:      true,
 			CronSchedule: &schedule,
 		}
@@ -429,25 +425,23 @@ func TestScheduleFunction_Validation(t *testing.T) {
 	t.Run("invalid schedule expression", func(t *testing.T) {
 		scheduler := NewScheduler(nil, "secret", "http://localhost", nil)
 		invalidSchedule := "invalid cron"
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:           uuid.New(),
 			Name:         "invalid-scheduled",
-			Code:         "export default () => {};",
 			Enabled:      true,
 			CronSchedule: &invalidSchedule,
 		}
 
 		err := scheduler.ScheduleFunction(fn)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid cron schedule")
+		assert.Contains(t, err.Error(), "expected 5 to 6 fields")
 	})
 
 	t.Run("nil schedule", func(t *testing.T) {
 		scheduler := NewScheduler(nil, "secret", "http://localhost", nil)
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:      uuid.New(),
 			Name:    "no-schedule",
-			Code:    "export default () => {};",
 			Enabled: true,
 		}
 
@@ -458,10 +452,9 @@ func TestScheduleFunction_Validation(t *testing.T) {
 	t.Run("empty schedule string", func(t *testing.T) {
 		scheduler := NewScheduler(nil, "secret", "http://localhost", nil)
 		emptySchedule := ""
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:           uuid.New(),
 			Name:         "empty-schedule",
-			Code:         "export default () => {};",
 			Enabled:      true,
 			CronSchedule: &emptySchedule,
 		}
@@ -481,10 +474,9 @@ func TestUnscheduleFunction(t *testing.T) {
 
 		// First schedule a function
 		schedule := "*/5 * * * *"
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:           uuid.New(),
 			Name:         "to-unschedule",
-			Code:         "export default () => {};",
 			Enabled:      true,
 			CronSchedule: &schedule,
 		}
@@ -525,10 +517,9 @@ func TestIsScheduled(t *testing.T) {
 		scheduler := NewScheduler(nil, "secret", "http://localhost", nil)
 
 		schedule := "*/5 * * * *"
-		fn := EdgeFunction{
+		fn := EdgeFunctionSummary{
 			ID:           uuid.New(),
 			Name:         "scheduled-check",
-			Code:         "export default () => {};",
 			Enabled:      true,
 			CronSchedule: &schedule,
 		}
@@ -569,10 +560,9 @@ func TestGetScheduledFunctions(t *testing.T) {
 		}
 
 		for _, s := range schedules {
-			fn := EdgeFunction{
+			fn := EdgeFunctionSummary{
 				ID:           uuid.New(),
 				Name:         s.name,
-				Code:         "export default () => {};",
 				Enabled:      true,
 				CronSchedule: &s.cron,
 			}

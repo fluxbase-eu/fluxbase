@@ -372,8 +372,8 @@ func TestNormalizePath_EdgeCases(t *testing.T) {
 		path     string
 		expected string
 	}{
-		{"exactly 50 chars", "/api/v1/tables/users/records/123456789012345", "/api/v1/tables/users/records/123456789012345"},
-		{"51 chars", "/api/v1/tables/users/records/1234567890123456", "long_path"},
+		{"exactly 50 chars", "/api/v1/tables/users/records/000000000000000000000", "/api/v1/tables/users/records/000000000000000000000"},
+		{"51 chars", "/api/v1/tables/users/records/0000000000000000000000", "long_path"},
 		{"special characters", "/api/v1/users?filter=name%3Djohn", "/api/v1/users?filter=name%3Djohn"},
 		{"unicode path", "/api/v1/用户/数据", "/api/v1/用户/数据"},
 	}

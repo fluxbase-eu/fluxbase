@@ -336,7 +336,8 @@ func TestFunctionFile_Struct(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, string(data), `"file_path":"db.ts"`)
-		assert.Contains(t, string(data), `"content":"export const query = () => {}"`)
+		// Note: JSON encoder escapes > as \u003e for HTML safety
+		assert.Contains(t, string(data), `"content":"export const query = () =`)
 	})
 }
 

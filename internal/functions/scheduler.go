@@ -419,3 +419,9 @@ func (s *Scheduler) GetScheduleInfo(functionName string) (string, bool) {
 
 	return entry.Next.Format(time.RFC3339), true
 }
+
+// IsScheduled returns true if the function is scheduled
+func (s *Scheduler) IsScheduled(functionName string) bool {
+	_, exists := s.GetScheduleInfo(functionName)
+	return exists
+}

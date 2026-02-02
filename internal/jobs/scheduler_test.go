@@ -352,17 +352,17 @@ func TestScheduleCalculation(t *testing.T) {
 func TestScheduler_IsScheduled(t *testing.T) {
 	t.Run("returns false for unscheduled job", func(t *testing.T) {
 		scheduler := NewScheduler(nil)
-		assert.False(t, scheduler.IsScheduled("non-existent"))
+		assert.False(t, scheduler.IsScheduled("default", "non-existent"))
 	})
 
 	t.Run("returns true for scheduled job", func(t *testing.T) {
 		scheduler := NewScheduler(nil)
 
 		scheduler.jobsMu.Lock()
-		scheduler.jobEntries["scheduled-job"] = cron.EntryID(1)
+		scheduler.jobEntries["default/scheduled-job"] = cron.EntryID(1) // Use "/" separator as expected by IsScheduled()
 		scheduler.jobsMu.Unlock()
 
-		assert.True(t, scheduler.IsScheduled("scheduled-job"))
+		assert.True(t, scheduler.IsScheduled("default", "scheduled-job"))
 	})
 }
 
@@ -387,8 +387,14 @@ func TestScheduler_GetScheduledJobs(t *testing.T) {
 
 		jobs := scheduler.GetScheduledJobs()
 		assert.Len(t, jobs, 2)
-		assert.Contains(t, jobs, "job-1")
-		assert.Contains(t, jobs, "job-2")
+
+		// Check that the keys are present
+		keys := make([]string, len(jobs))
+		for i, job := range jobs {
+			keys[i] = job.Key
+		}
+		assert.Contains(t, keys, "job-1")
+		assert.Contains(t, keys, "job-2")
 	})
 }
 
@@ -401,18 +407,18 @@ func TestScheduler_UnscheduleJob(t *testing.T) {
 		scheduler := NewScheduler(nil)
 
 		scheduler.jobsMu.Lock()
-		scheduler.jobEntries["to-remove"] = cron.EntryID(1)
+		scheduler.jobEntries["default:to-remove"] = cron.EntryID(1)
 		scheduler.jobsMu.Unlock()
 
-		scheduler.UnscheduleJob("to-remove")
+		scheduler.UnscheduleJob("default", "to-remove")
 
-		assert.False(t, scheduler.IsScheduled("to-remove"))
+		assert.False(t, scheduler.IsScheduled("default", "to-remove"))
 	})
 
 	t.Run("handles non-existent job gracefully", func(t *testing.T) {
 		scheduler := NewScheduler(nil)
 
 		// Should not panic
-		scheduler.UnscheduleJob("non-existent")
+		scheduler.UnscheduleJob("default", "non-existent")
 	})
 }

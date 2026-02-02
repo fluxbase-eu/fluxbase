@@ -42,7 +42,7 @@ func TestHandler_SetScheduler(t *testing.T) {
 
 		assert.Nil(t, handler.scheduler)
 
-		scheduler := NewScheduler(nil)
+		scheduler := NewScheduler(nil, nil)
 		handler.SetScheduler(scheduler)
 
 		assert.Equal(t, scheduler, handler.scheduler)

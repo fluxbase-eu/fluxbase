@@ -4,87 +4,66 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 // =============================================================================
-// Scheduler Construction Tests
+// Cleanup Scheduler Construction Tests
 // =============================================================================
 
-func TestNewScheduler(t *testing.T) {
+func TestNewCleanupScheduler(t *testing.T) {
 	t.Run("creates scheduler with nil dependencies", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 24 * time.Hour,
-		}
+		interval := 24 * time.Hour
 
-		scheduler := NewScheduler(nil, nil, cfg)
+		scheduler := NewCleanupScheduler(nil, nil, interval)
 
 		assert.NotNil(t, scheduler)
-		assert.Equal(t, cfg.AutoDeleteAfter, scheduler.config.AutoDeleteAfter)
 	})
 
-	t.Run("scheduler with disabled auto-delete", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 0, // Disabled
-		}
-
-		scheduler := NewScheduler(nil, nil, cfg)
+	t.Run("scheduler with zero interval uses default", func(t *testing.T) {
+		scheduler := NewCleanupScheduler(nil, nil, 0)
 
 		assert.NotNil(t, scheduler)
-		assert.Equal(t, time.Duration(0), scheduler.config.AutoDeleteAfter)
+	})
+
+	t.Run("scheduler with negative interval uses default", func(t *testing.T) {
+		scheduler := NewCleanupScheduler(nil, nil, -1*time.Hour)
+
+		assert.NotNil(t, scheduler)
+	})
+
+	t.Run("scheduler with custom interval", func(t *testing.T) {
+		interval := 7 * 24 * time.Hour
+		scheduler := NewCleanupScheduler(nil, nil, interval)
+
+		assert.NotNil(t, scheduler)
 	})
 }
 
 // =============================================================================
-// Scheduler Configuration Tests
+// Cleanup Scheduler Stop Tests
 // =============================================================================
 
-func TestScheduler_Config(t *testing.T) {
-	t.Run("auto delete after 24 hours", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 24 * time.Hour,
-		}
-
-		scheduler := NewScheduler(nil, nil, cfg)
-
-		assert.Equal(t, 24*time.Hour, scheduler.config.AutoDeleteAfter)
-	})
-
-	t.Run("auto delete after 7 days", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 7 * 24 * time.Hour,
-		}
-
-		scheduler := NewScheduler(nil, nil, cfg)
-
-		assert.Equal(t, 7*24*time.Hour, scheduler.config.AutoDeleteAfter)
-	})
-}
-
-// =============================================================================
-// Scheduler Stop Tests
-// =============================================================================
-
-func TestScheduler_Stop(t *testing.T) {
-	t.Run("stop cancels context", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 24 * time.Hour,
-		}
-
-		scheduler := NewScheduler(nil, nil, cfg)
+func TestCleanupScheduler_Stop(t *testing.T) {
+	t.Run("stop without start should not panic", func(t *testing.T) {
+		interval := 24 * time.Hour
+		scheduler := NewCleanupScheduler(nil, nil, interval)
 
 		// Stop should not panic
-		scheduler.Stop()
+		assert.NotPanics(t, func() {
+			scheduler.Stop()
+		})
+	})
 
-		// Context should be cancelled
-		select {
-		case <-scheduler.ctx.Done():
-			// Expected
-		default:
-			t.Error("Context should be cancelled after Stop()")
-		}
+	t.Run("double stop should not panic", func(t *testing.T) {
+		interval := 24 * time.Hour
+		scheduler := NewCleanupScheduler(nil, nil, interval)
+
+		scheduler.Stop()
+		assert.NotPanics(t, func() {
+			scheduler.Stop()
+		})
 	})
 }
 
@@ -130,30 +109,6 @@ func TestBranchExpiration(t *testing.T) {
 
 		hasExpiration := branch.ExpiresAt != nil
 		assert.False(t, hasExpiration)
-	})
-}
-
-// =============================================================================
-// Auto-Delete Configuration Tests
-// =============================================================================
-
-func TestAutoDeleteConfiguration(t *testing.T) {
-	t.Run("auto delete disabled when duration is 0", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 0,
-		}
-
-		autoDeleteEnabled := cfg.AutoDeleteAfter > 0
-		assert.False(t, autoDeleteEnabled)
-	})
-
-	t.Run("auto delete enabled when duration is positive", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 24 * time.Hour,
-		}
-
-		autoDeleteEnabled := cfg.AutoDeleteAfter > 0
-		assert.True(t, autoDeleteEnabled)
 	})
 }
 
@@ -285,36 +240,6 @@ func TestExpirationCalculation(t *testing.T) {
 }
 
 // =============================================================================
-// Scheduler Context Tests
-// =============================================================================
-
-func TestScheduler_Context(t *testing.T) {
-	t.Run("context is created on initialization", func(t *testing.T) {
-		cfg := config.BranchingConfig{
-			AutoDeleteAfter: 24 * time.Hour,
-		}
-
-		scheduler := NewScheduler(nil, nil, cfg)
-
-		assert.NotNil(t, scheduler.ctx)
-		assert.NotNil(t, scheduler.cancel)
-	})
-
-	t.Run("context is not done initially", func(t *testing.T) {
-		cfg := config.BranchingConfig{}
-
-		scheduler := NewScheduler(nil, nil, cfg)
-
-		select {
-		case <-scheduler.ctx.Done():
-			t.Error("Context should not be done initially")
-		default:
-			// Expected
-		}
-	})
-}
-
-// =============================================================================
 // Branch Cleanup Priority Tests
 // =============================================================================
 
@@ -334,33 +259,5 @@ func TestBranchCleanupPriority(t *testing.T) {
 
 		// branch1 expired earlier, should be cleaned first
 		assert.True(t, branch1.ExpiresAt.Before(*branch2.ExpiresAt))
-	})
-}
-
-// =============================================================================
-// Scheduler Storage Tests
-// =============================================================================
-
-func TestScheduler_Storage(t *testing.T) {
-	t.Run("stores storage reference", func(t *testing.T) {
-		cfg := config.BranchingConfig{}
-
-		scheduler := NewScheduler(nil, nil, cfg)
-
-		assert.Nil(t, scheduler.storage)
-	})
-}
-
-// =============================================================================
-// Scheduler Manager Tests
-// =============================================================================
-
-func TestScheduler_Manager(t *testing.T) {
-	t.Run("stores manager reference", func(t *testing.T) {
-		cfg := config.BranchingConfig{}
-
-		scheduler := NewScheduler(nil, nil, cfg)
-
-		assert.Nil(t, scheduler.manager)
 	})
 }

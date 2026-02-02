@@ -18,7 +18,6 @@ func TestNewStorage(t *testing.T) {
 	t.Run("creates storage with nil database", func(t *testing.T) {
 		storage := NewStorage(nil)
 		assert.NotNil(t, storage)
-		assert.Nil(t, storage.db)
 	})
 }
 
@@ -29,122 +28,107 @@ func TestNewStorage(t *testing.T) {
 func TestJob_Struct(t *testing.T) {
 	t.Run("basic job", func(t *testing.T) {
 		job := Job{
-			ID:           uuid.New(),
-			Namespace:    "default",
-			FunctionName: "process-data",
-			Status:       JobStatusPending,
-			Priority:     JobPriorityNormal,
-			CreatedAt:    time.Now(),
+			ID:        uuid.New(),
+			Namespace: "default",
+			JobName:   "process-data",
+			Status:    JobStatusPending,
+			Priority:  5, // Normal priority
+			CreatedAt: time.Now(),
 		}
 
 		assert.NotEqual(t, uuid.Nil, job.ID)
 		assert.Equal(t, "default", job.Namespace)
-		assert.Equal(t, "process-data", job.FunctionName)
+		assert.Equal(t, "process-data", job.JobName)
 		assert.Equal(t, JobStatusPending, job.Status)
-		assert.Equal(t, JobPriorityNormal, job.Priority)
+		assert.Equal(t, 5, job.Priority)
 	})
 
 	t.Run("job with all fields", func(t *testing.T) {
 		workerID := uuid.New()
 		startedAt := time.Now()
 		completedAt := startedAt.Add(5 * time.Second)
-		retryCount := 2
-		maxRetries := 3
-		params := `{"batch_size": 100}`
+		payload := `{"batch_size": 100}`
 		result := `{"processed": 100}`
 
 		job := Job{
-			ID:           uuid.New(),
-			Namespace:    "production",
-			FunctionName: "batch-processor",
-			Status:       JobStatusCompleted,
-			Priority:     JobPriorityHigh,
-			Params:       &params,
-			Result:       &result,
-			WorkerID:     &workerID,
-			StartedAt:    &startedAt,
-			CompletedAt:  &completedAt,
-			RetryCount:   &retryCount,
-			MaxRetries:   &maxRetries,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			ID:          uuid.New(),
+			Namespace:   "production",
+			JobName:     "batch-processor",
+			Status:      JobStatusCompleted,
+			Priority:    10, // High priority
+			Payload:     &payload,
+			Result:      &result,
+			WorkerID:    &workerID,
+			StartedAt:   &startedAt,
+			CompletedAt: &completedAt,
+			RetryCount:  2,
+			MaxRetries:  3,
+			CreatedAt:   time.Now(),
 		}
 
 		assert.Equal(t, "production", job.Namespace)
 		assert.Equal(t, JobStatusCompleted, job.Status)
-		assert.Equal(t, JobPriorityHigh, job.Priority)
-		assert.NotNil(t, job.Params)
+		assert.Equal(t, 10, job.Priority)
+		assert.NotNil(t, job.Payload)
 		assert.NotNil(t, job.Result)
 		assert.NotNil(t, job.WorkerID)
 		assert.NotNil(t, job.StartedAt)
 		assert.NotNil(t, job.CompletedAt)
-		assert.Equal(t, 2, *job.RetryCount)
-		assert.Equal(t, 3, *job.MaxRetries)
+		assert.Equal(t, 2, job.RetryCount)
+		assert.Equal(t, 3, job.MaxRetries)
 	})
 
 	t.Run("job with error", func(t *testing.T) {
 		errorMsg := "Connection timeout"
-		errorStack := "Error: Connection timeout\n    at connect (db.ts:45)"
 
 		job := Job{
 			ID:           uuid.New(),
-			FunctionName: "failing-job",
+			JobName:      "failing-job",
 			Status:       JobStatusFailed,
 			ErrorMessage: &errorMsg,
-			ErrorStack:   &errorStack,
 		}
 
 		assert.Equal(t, JobStatusFailed, job.Status)
 		assert.Equal(t, "Connection timeout", *job.ErrorMessage)
-		assert.Contains(t, *job.ErrorStack, "connect")
 	})
 }
 
 // =============================================================================
-// Job Status Constants Tests
+// Job Priority Tests
 // =============================================================================
 
-func TestJobStatus_Constants(t *testing.T) {
-	statuses := []struct {
-		status   JobStatus
-		expected string
-	}{
-		{JobStatusPending, "pending"},
-		{JobStatusQueued, "queued"},
-		{JobStatusRunning, "running"},
-		{JobStatusCompleted, "completed"},
-		{JobStatusFailed, "failed"},
-		{JobStatusCancelled, "cancelled"},
-		{JobStatusTimeout, "timeout"},
-	}
+func TestJobPriority(t *testing.T) {
+	t.Run("low priority", func(t *testing.T) {
+		job := Job{
+			ID:       uuid.New(),
+			Priority: 1,
+		}
+		assert.Equal(t, 1, job.Priority)
+	})
 
-	for _, tc := range statuses {
-		t.Run(tc.expected, func(t *testing.T) {
-			assert.Equal(t, JobStatus(tc.expected), tc.status)
-		})
-	}
-}
+	t.Run("normal priority", func(t *testing.T) {
+		job := Job{
+			ID:       uuid.New(),
+			Priority: 5,
+		}
+		assert.Equal(t, 5, job.Priority)
+	})
 
-// =============================================================================
-// Job Priority Constants Tests
-// =============================================================================
+	t.Run("high priority", func(t *testing.T) {
+		job := Job{
+			ID:       uuid.New(),
+			Priority: 10,
+		}
+		assert.Equal(t, 10, job.Priority)
+	})
 
-func TestJobPriority_Constants(t *testing.T) {
-	priorities := []struct {
-		priority JobPriority
-		expected int
-	}{
-		{JobPriorityLow, 1},
-		{JobPriorityNormal, 5},
-		{JobPriorityHigh, 10},
-		{JobPriorityCritical, 20},
-	}
-
-	for _, tc := range priorities {
-		t.Run(string(rune(tc.expected)), func(t *testing.T) {
-			assert.Equal(t, JobPriority(tc.expected), tc.priority)
-		})
-	}
+	t.Run("critical priority", func(t *testing.T) {
+		job := Job{
+			ID:       uuid.New(),
+			Priority: 20,
+		}
+		assert.Equal(t, 20, job.Priority)
+	})
 }
 
 // =============================================================================
@@ -154,19 +138,19 @@ func TestJobPriority_Constants(t *testing.T) {
 func TestJob_JSONSerialization(t *testing.T) {
 	t.Run("basic job serialization", func(t *testing.T) {
 		job := Job{
-			ID:           uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
-			Namespace:    "default",
-			FunctionName: "test-job",
-			Status:       JobStatusPending,
-			Priority:     JobPriorityNormal,
-			CreatedAt:    time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC),
+			ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+			Namespace: "default",
+			JobName:   "test-job",
+			Status:    JobStatusPending,
+			Priority:  5,
+			CreatedAt: time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC),
 		}
 
 		data, err := json.Marshal(job)
 		require.NoError(t, err)
 
 		assert.Contains(t, string(data), `"namespace":"default"`)
-		assert.Contains(t, string(data), `"function_name":"test-job"`)
+		assert.Contains(t, string(data), `"job_name":"test-job"`)
 		assert.Contains(t, string(data), `"status":"pending"`)
 	})
 
@@ -174,7 +158,7 @@ func TestJob_JSONSerialization(t *testing.T) {
 		jsonData := `{
 			"id": "550e8400-e29b-41d4-a716-446655440000",
 			"namespace": "test",
-			"function_name": "deserialize-test",
+			"job_name": "deserialize-test",
 			"status": "running",
 			"priority": 10
 		}`
@@ -184,173 +168,14 @@ func TestJob_JSONSerialization(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "test", job.Namespace)
-		assert.Equal(t, "deserialize-test", job.FunctionName)
+		assert.Equal(t, "deserialize-test", job.JobName)
 		assert.Equal(t, JobStatusRunning, job.Status)
-		assert.Equal(t, JobPriorityHigh, job.Priority)
+		assert.Equal(t, 10, job.Priority)
 	})
 }
 
-// =============================================================================
-// JobFunction Struct Tests
-// =============================================================================
-
-func TestJobFunction_Struct(t *testing.T) {
-	t.Run("basic job function", func(t *testing.T) {
-		fn := JobFunction{
-			ID:        uuid.New(),
-			Namespace: "default",
-			Name:      "data-processor",
-			Code:      "export default async () => { console.log('processing'); }",
-			Enabled:   true,
-		}
-
-		assert.NotEqual(t, uuid.Nil, fn.ID)
-		assert.Equal(t, "default", fn.Namespace)
-		assert.Equal(t, "data-processor", fn.Name)
-		assert.True(t, fn.Enabled)
-	})
-
-	t.Run("job function with schedule", func(t *testing.T) {
-		schedule := `{"cron_expression": "*/5 * * * *"}`
-
-		fn := JobFunction{
-			ID:             uuid.New(),
-			Name:           "scheduled-processor",
-			Code:           "export default async () => {}",
-			Enabled:        true,
-			ScheduleConfig: &schedule,
-		}
-
-		assert.NotNil(t, fn.ScheduleConfig)
-		assert.Contains(t, *fn.ScheduleConfig, "cron_expression")
-	})
-
-	t.Run("job function with all fields", func(t *testing.T) {
-		description := "Processes batch data every hour"
-		schedule := `{"cron_expression": "0 * * * *"}`
-		creatorID := uuid.New()
-		maxDuration := 30 * time.Minute
-		maxRetries := 3
-		retryDelay := time.Minute
-
-		fn := JobFunction{
-			ID:                 uuid.New(),
-			Namespace:          "production",
-			Name:               "hourly-batch",
-			Description:        &description,
-			Code:               "export default async (params) => { ... }",
-			Enabled:            true,
-			ScheduleConfig:     &schedule,
-			TimeoutSeconds:     int(maxDuration.Seconds()),
-			MaxRetries:         maxRetries,
-			RetryDelaySeconds:  int(retryDelay.Seconds()),
-			DisableProgressLog: false,
-			CreatedBy:          &creatorID,
-			CreatedAt:          time.Now(),
-			UpdatedAt:          time.Now(),
-		}
-
-		assert.Equal(t, "production", fn.Namespace)
-		assert.Equal(t, "Processes batch data every hour", *fn.Description)
-		assert.Equal(t, 1800, fn.TimeoutSeconds)
-		assert.Equal(t, 3, fn.MaxRetries)
-		assert.Equal(t, 60, fn.RetryDelaySeconds)
-		assert.False(t, fn.DisableProgressLog)
-	})
-}
-
-// =============================================================================
-// JobProgress Struct Tests
-// =============================================================================
-
-func TestJobProgress_Struct(t *testing.T) {
-	t.Run("basic progress", func(t *testing.T) {
-		progress := JobProgress{
-			JobID:      uuid.New(),
-			Progress:   50,
-			Total:      100,
-			Message:    "Processing items",
-			RecordedAt: time.Now(),
-		}
-
-		assert.Equal(t, 50, progress.Progress)
-		assert.Equal(t, 100, progress.Total)
-		assert.Equal(t, "Processing items", progress.Message)
-	})
-
-	t.Run("progress with ETA", func(t *testing.T) {
-		eta := 5 * time.Minute
-
-		progress := JobProgress{
-			JobID:           uuid.New(),
-			Progress:        75,
-			Total:           100,
-			Message:         "75% complete",
-			EstimatedTimeMs: int64(eta.Milliseconds()),
-		}
-
-		assert.Equal(t, 75, progress.Progress)
-		assert.Equal(t, int64(300000), progress.EstimatedTimeMs)
-	})
-
-	t.Run("JSON serialization", func(t *testing.T) {
-		progress := JobProgress{
-			JobID:    uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
-			Progress: 30,
-			Total:    100,
-			Message:  "In progress",
-		}
-
-		data, err := json.Marshal(progress)
-		require.NoError(t, err)
-
-		assert.Contains(t, string(data), `"progress":30`)
-		assert.Contains(t, string(data), `"total":100`)
-		assert.Contains(t, string(data), `"message":"In progress"`)
-	})
-}
-
-// =============================================================================
-// JobLog Struct Tests
-// =============================================================================
-
-func TestJobLog_Struct(t *testing.T) {
-	t.Run("info log", func(t *testing.T) {
-		log := JobLog{
-			JobID:     uuid.New(),
-			Level:     "info",
-			Message:   "Job started",
-			Timestamp: time.Now(),
-		}
-
-		assert.Equal(t, "info", log.Level)
-		assert.Equal(t, "Job started", log.Message)
-	})
-
-	t.Run("error log", func(t *testing.T) {
-		log := JobLog{
-			JobID:     uuid.New(),
-			Level:     "error",
-			Message:   "Failed to connect to database",
-			Timestamp: time.Now(),
-		}
-
-		assert.Equal(t, "error", log.Level)
-	})
-
-	t.Run("log with line number", func(t *testing.T) {
-		lineNum := 42
-
-		log := JobLog{
-			JobID:      uuid.New(),
-			Level:      "debug",
-			Message:    "Processing item",
-			LineNumber: &lineNum,
-		}
-
-		assert.Equal(t, 42, *log.LineNumber)
-	})
-}
+// Note: Progress struct tests are in types_test.go
+// Note: Job execution logs are now in the central logging schema (logging.entries)
 
 // =============================================================================
 // Job Retry Logic Tests
@@ -359,64 +184,58 @@ func TestJobLog_Struct(t *testing.T) {
 func TestJob_RetryLogic(t *testing.T) {
 	t.Run("job with no retries", func(t *testing.T) {
 		job := Job{
-			ID:           uuid.New(),
-			FunctionName: "no-retry",
-			Status:       JobStatusFailed,
+			ID:         uuid.New(),
+			JobName:    "no-retry",
+			Status:     JobStatusFailed,
+			RetryCount: 0,
+			MaxRetries: 0,
 		}
 
-		assert.Nil(t, job.RetryCount)
-		assert.Nil(t, job.MaxRetries)
+		assert.Equal(t, 0, job.RetryCount)
+		assert.Equal(t, 0, job.MaxRetries)
 	})
 
 	t.Run("job with retry configuration", func(t *testing.T) {
-		retryCount := 0
-		maxRetries := 3
-
 		job := Job{
-			ID:           uuid.New(),
-			FunctionName: "retry-job",
-			Status:       JobStatusPending,
-			RetryCount:   &retryCount,
-			MaxRetries:   &maxRetries,
+			ID:         uuid.New(),
+			JobName:    "retry-job",
+			Status:     JobStatusPending,
+			RetryCount: 0,
+			MaxRetries: 3,
 		}
 
-		assert.Equal(t, 0, *job.RetryCount)
-		assert.Equal(t, 3, *job.MaxRetries)
+		assert.Equal(t, 0, job.RetryCount)
+		assert.Equal(t, 3, job.MaxRetries)
 	})
 
 	t.Run("job after retry", func(t *testing.T) {
-		retryCount := 2
-		maxRetries := 3
-
 		job := Job{
-			ID:           uuid.New(),
-			FunctionName: "retrying-job",
-			Status:       JobStatusQueued,
-			RetryCount:   &retryCount,
-			MaxRetries:   &maxRetries,
+			ID:         uuid.New(),
+			JobName:    "retrying-job",
+			Status:     JobStatusPending,
+			RetryCount: 2,
+			MaxRetries: 3,
 		}
 
 		// Check if more retries available
-		hasMoreRetries := *job.RetryCount < *job.MaxRetries
+		hasMoreRetries := job.RetryCount < job.MaxRetries
 		assert.True(t, hasMoreRetries)
 	})
 
 	t.Run("job exhausted retries", func(t *testing.T) {
-		retryCount := 3
-		maxRetries := 3
 		errorMsg := "Max retries exceeded"
 
 		job := Job{
 			ID:           uuid.New(),
-			FunctionName: "exhausted-retries",
+			JobName:      "exhausted-retries",
 			Status:       JobStatusFailed,
-			RetryCount:   &retryCount,
-			MaxRetries:   &maxRetries,
+			RetryCount:   3,
+			MaxRetries:   3,
 			ErrorMessage: &errorMsg,
 		}
 
 		// Check if more retries available
-		hasMoreRetries := *job.RetryCount < *job.MaxRetries
+		hasMoreRetries := job.RetryCount < job.MaxRetries
 		assert.False(t, hasMoreRetries)
 		assert.Equal(t, JobStatusFailed, job.Status)
 	})
@@ -429,26 +248,26 @@ func TestJob_RetryLogic(t *testing.T) {
 func TestJob_Scheduling(t *testing.T) {
 	t.Run("immediate job (no schedule)", func(t *testing.T) {
 		job := Job{
-			ID:           uuid.New(),
-			FunctionName: "immediate-job",
-			Status:       JobStatusPending,
+			ID:      uuid.New(),
+			JobName: "immediate-job",
+			Status:  JobStatusPending,
 		}
 
-		assert.Nil(t, job.ScheduledFor)
+		assert.Nil(t, job.ScheduledAt)
 	})
 
 	t.Run("scheduled job", func(t *testing.T) {
-		scheduledFor := time.Now().Add(time.Hour)
+		scheduledAt := time.Now().Add(time.Hour)
 
 		job := Job{
-			ID:           uuid.New(),
-			FunctionName: "scheduled-job",
-			Status:       JobStatusPending,
-			ScheduledFor: &scheduledFor,
+			ID:          uuid.New(),
+			JobName:     "scheduled-job",
+			Status:      JobStatusPending,
+			ScheduledAt: &scheduledAt,
 		}
 
-		assert.NotNil(t, job.ScheduledFor)
-		assert.True(t, job.ScheduledFor.After(time.Now()))
+		assert.NotNil(t, job.ScheduledAt)
+		assert.True(t, job.ScheduledAt.After(time.Now()))
 	})
 }
 
@@ -493,9 +312,9 @@ func TestJob_Duration(t *testing.T) {
 func TestJob_Namespace(t *testing.T) {
 	t.Run("default namespace", func(t *testing.T) {
 		job := Job{
-			ID:           uuid.New(),
-			Namespace:    "default",
-			FunctionName: "test",
+			ID:        uuid.New(),
+			Namespace: "default",
+			JobName:   "test",
 		}
 
 		assert.Equal(t, "default", job.Namespace)
@@ -503,9 +322,9 @@ func TestJob_Namespace(t *testing.T) {
 
 	t.Run("custom namespace", func(t *testing.T) {
 		job := Job{
-			ID:           uuid.New(),
-			Namespace:    "production",
-			FunctionName: "test",
+			ID:        uuid.New(),
+			Namespace: "production",
+			JobName:   "test",
 		}
 
 		assert.Equal(t, "production", job.Namespace)
@@ -513,9 +332,9 @@ func TestJob_Namespace(t *testing.T) {
 
 	t.Run("empty namespace", func(t *testing.T) {
 		job := Job{
-			ID:           uuid.New(),
-			Namespace:    "",
-			FunctionName: "test",
+			ID:        uuid.New(),
+			Namespace: "",
+			JobName:   "test",
 		}
 
 		assert.Empty(t, job.Namespace)

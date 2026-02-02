@@ -52,7 +52,7 @@ func (m *mockProvider) Delete(ctx context.Context, bucket, key string) error {
 	return nil
 }
 
-func (m *mockProvider) List(ctx context.Context, bucket, prefix string, opts *ListOptions) (*ListResult, error) {
+func (m *mockProvider) List(ctx context.Context, bucket string, opts *ListOptions) (*ListResult, error) {
 	return &ListResult{}, nil
 }
 
@@ -62,6 +62,14 @@ func (m *mockProvider) GetMetadata(ctx context.Context, bucket, key string) (*Ob
 
 func (m *mockProvider) SetMetadata(ctx context.Context, bucket, key string, metadata map[string]string) error {
 	return nil
+}
+
+func (m *mockProvider) Exists(ctx context.Context, bucket, key string) (bool, error) {
+	return true, nil
+}
+
+func (m *mockProvider) GetObject(ctx context.Context, bucket, key string) (*Object, error) {
+	return &Object{Key: key, Bucket: bucket}, nil
 }
 
 func (m *mockProvider) BucketExists(ctx context.Context, bucket string) (bool, error) {
@@ -89,12 +97,28 @@ func (m *mockProvider) Move(ctx context.Context, srcBucket, srcKey, dstBucket, d
 	return nil
 }
 
+func (m *mockProvider) CopyObject(ctx context.Context, srcBucket, srcKey, destBucket, destKey string) error {
+	return nil
+}
+
+func (m *mockProvider) MoveObject(ctx context.Context, srcBucket, srcKey, destBucket, destKey string) error {
+	return nil
+}
+
 func (m *mockProvider) GetSignedURL(ctx context.Context, bucket, key string, expiry int64) (string, error) {
 	return fmt.Sprintf("http://example.com/%s/%s", bucket, key), nil
 }
 
 func (m *mockProvider) GetSignedUploadURL(ctx context.Context, bucket, key string, expiry int64) (string, error) {
 	return fmt.Sprintf("http://example.com/upload/%s/%s", bucket, key), nil
+}
+
+func (m *mockProvider) GenerateSignedURL(ctx context.Context, bucket, key string, opts *SignedURLOptions) (string, error) {
+	return fmt.Sprintf("http://example.com/signed/%s/%s", bucket, key), nil
+}
+
+func (m *mockProvider) Health(ctx context.Context) error {
+	return nil
 }
 
 // =============================================================================
