@@ -171,13 +171,13 @@ func TestCronParser(t *testing.T) {
 	t.Run("rejects invalid expressions", func(t *testing.T) {
 		invalidExprs := []string{
 			"invalid",
-			"* * *",              // too few fields
-			"* * * * * * *",      // too many fields
-			"60 * * * *",         // invalid minute
-			"* 25 * * *",         // invalid hour
-			"* * 32 * *",         // invalid day
-			"* * * 13 *",         // invalid month
-			"* * * * 8",          // invalid day of week
+			"* * *",         // too few fields
+			"* * * * * * *", // too many fields
+			"60 * * * *",    // invalid minute
+			"* 25 * * *",    // invalid hour
+			"* * 32 * *",    // invalid day
+			"* * * 13 *",    // invalid month
+			"* * * * 8",     // invalid day of week
 		}
 
 		for _, expr := range invalidExprs {

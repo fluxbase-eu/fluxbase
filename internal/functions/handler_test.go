@@ -466,15 +466,15 @@ func TestRateLimitConfiguration(t *testing.T) {
 func TestCronSchedule(t *testing.T) {
 	t.Run("valid cron expressions", func(t *testing.T) {
 		schedules := []string{
-			"* * * * *",           // Every minute
-			"*/5 * * * *",         // Every 5 minutes
-			"0 * * * *",           // Every hour
-			"0 0 * * *",           // Every day at midnight
-			"0 0 * * 0",           // Every Sunday at midnight
-			"0 0 1 * *",           // First of every month
-			"0 0 1 1 *",           // January 1st
-			"0 */5 * * * *",       // Every 5 minutes (6-field with seconds)
-			"30 0 0 * * *",        // Every day at midnight + 30 seconds
+			"* * * * *",     // Every minute
+			"*/5 * * * *",   // Every 5 minutes
+			"0 * * * *",     // Every hour
+			"0 0 * * *",     // Every day at midnight
+			"0 0 * * 0",     // Every Sunday at midnight
+			"0 0 1 * *",     // First of every month
+			"0 0 1 1 *",     // January 1st
+			"0 */5 * * * *", // Every 5 minutes (6-field with seconds)
+			"30 0 0 * * *",  // Every day at midnight + 30 seconds
 		}
 
 		for _, schedule := range schedules {

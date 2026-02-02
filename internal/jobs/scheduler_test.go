@@ -43,21 +43,21 @@ func TestNewScheduler(t *testing.T) {
 func TestValidateCronSchedule(t *testing.T) {
 	t.Run("accepts valid cron expressions", func(t *testing.T) {
 		validExprs := []string{
-			"* * * * *",       // Every minute
-			"*/5 * * * *",     // Every 5 minutes
-			"0 * * * *",       // Every hour
-			"0 0 * * *",       // Every day at midnight
-			"0 12 * * *",      // Every day at noon
-			"0 0 * * 0",       // Every Sunday at midnight
-			"0 0 1 * *",       // First of every month
-			"0 0 1 1 *",       // January 1st
-			"30 4 1,15 * *",   // 1st and 15th at 4:30
-			"0 22 * * 1-5",    // Weekdays at 10pm
-			"@hourly",         // Every hour
-			"@daily",          // Every day
-			"@weekly",         // Every week
-			"@monthly",        // Every month
-			"@yearly",         // Every year
+			"* * * * *",     // Every minute
+			"*/5 * * * *",   // Every 5 minutes
+			"0 * * * *",     // Every hour
+			"0 0 * * *",     // Every day at midnight
+			"0 12 * * *",    // Every day at noon
+			"0 0 * * 0",     // Every Sunday at midnight
+			"0 0 1 * *",     // First of every month
+			"0 0 1 1 *",     // January 1st
+			"30 4 1,15 * *", // 1st and 15th at 4:30
+			"0 22 * * 1-5",  // Weekdays at 10pm
+			"@hourly",       // Every hour
+			"@daily",        // Every day
+			"@weekly",       // Every week
+			"@monthly",      // Every month
+			"@yearly",       // Every year
 		}
 
 		for _, expr := range validExprs {
@@ -71,13 +71,13 @@ func TestValidateCronSchedule(t *testing.T) {
 	t.Run("rejects invalid cron expressions", func(t *testing.T) {
 		invalidExprs := []string{
 			"invalid",
-			"* * *",              // Too few fields
-			"* * * * * * *",      // Too many fields
-			"60 * * * *",         // Invalid minute
-			"* 25 * * *",         // Invalid hour
-			"* * 32 * *",         // Invalid day
-			"* * * 13 *",         // Invalid month
-			"* * * * 8",          // Invalid day of week
+			"* * *",         // Too few fields
+			"* * * * * * *", // Too many fields
+			"60 * * * *",    // Invalid minute
+			"* 25 * * *",    // Invalid hour
+			"* * 32 * *",    // Invalid day
+			"* * * 13 *",    // Invalid month
+			"* * * * 8",     // Invalid day of week
 		}
 
 		for _, expr := range invalidExprs {
@@ -91,9 +91,9 @@ func TestValidateCronSchedule(t *testing.T) {
 	t.Run("rejects schedules that run too frequently", func(t *testing.T) {
 		// Schedules that would run more frequently than once per minute
 		frequentExprs := []string{
-			"*/30 * * * * *",   // Every 30 seconds
-			"*/10 * * * * *",   // Every 10 seconds
-			"* * * * * *",      // Every second
+			"*/30 * * * * *", // Every 30 seconds
+			"*/10 * * * * *", // Every 10 seconds
+			"* * * * * *",    // Every second
 		}
 
 		for _, expr := range frequentExprs {
