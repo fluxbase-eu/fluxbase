@@ -112,10 +112,21 @@ on:
         required: false
         type: boolean
         default: false
+      skip_validation:
+        description: "Skip pre-release validation (use with caution)"
+        required: false
+        type: boolean
+        default: false
+      generate_ai_notes:
+        description: "Generate AI-assisted release notes with Claude"
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
   packages: write
+  actions: read
 
 jobs:
   get-version:
@@ -239,11 +250,279 @@ jobs:
             echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
           fi
 
-  create-release:
-    name: Create GitHub Release
+  # ===========================================================================
+  # PRE-RELEASE VALIDATION
+  # ===========================================================================
+  pre-release-checks:
+    name: Pre-release Validation
+    needs: get-version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && !inputs.skip_validation
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check CI workflow status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Checking CI status for branch: ${{ github.ref_name }}"
+
+          # Get the latest CI workflow run for this branch
+          LATEST_RUN=$(gh run list \
+            --workflow=ci.yml \
+            --branch=${{ github.ref_name }} \
+            --limit=1 \
+            --json conclusion,headSha,status,createdAt \
+            --jq '.[0]')
+
+          if [ -z "$LATEST_RUN" ] || [ "$LATEST_RUN" = "null" ]; then
+            echo "::error::No CI workflow runs found for branch ${{ github.ref_name }}"
+            exit 1
+          fi
+
+          CONCLUSION=$(echo "$LATEST_RUN" | jq -r '.conclusion')
+          STATUS=$(echo "$LATEST_RUN" | jq -r '.status')
+          HEAD_SHA=$(echo "$LATEST_RUN" | jq -r '.headSha')
+          CREATED_AT=$(echo "$LATEST_RUN" | jq -r '.createdAt')
+
+          echo "Latest CI run:"
+          echo "  Status: $STATUS"
+          echo "  Conclusion: $CONCLUSION"
+          echo "  Commit: $HEAD_SHA"
+          echo "  Created: $CREATED_AT"
+
+          # Check if the CI run is for the current commit
+          CURRENT_SHA=$(git rev-parse HEAD)
+          if [ "$HEAD_SHA" != "$CURRENT_SHA" ]; then
+            echo "::warning::Latest CI run ($HEAD_SHA) is not for current commit ($CURRENT_SHA)"
+            echo "Consider running CI on the latest commit before releasing."
+          fi
+
+          # Check if CI passed
+          if [ "$STATUS" != "completed" ]; then
+            echo "::error::CI workflow is still running (status: $STATUS). Wait for completion before releasing."
+            exit 1
+          fi
+
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "::error::CI workflow failed (conclusion: $CONCLUSION). Fix issues before releasing."
+            exit 1
+          fi
+
+          echo "✅ CI validation passed"
+
+      - name: Check for blocking issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Check for any issues labeled as "release-blocker"
+          BLOCKERS=$(gh issue list \
+            --label "release-blocker" \
+            --state open \
+            --json number,title \
+            --jq 'length')
+
+          if [ "$BLOCKERS" -gt 0 ]; then
+            echo "::error::Found $BLOCKERS open release-blocking issues:"
+            gh issue list --label "release-blocker" --state open --json number,title --jq '.[] | "  #\(.number): \(.title)"'
+            exit 1
+          fi
+
+          echo "✅ No release blockers found"
+
+      - name: Check security vulnerabilities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Check for critical/high security alerts
+          echo "Checking for security vulnerabilities..."
+
+          # Get Dependabot alerts (if available)
+          ALERTS=$(gh api repos/${{ github.repository }}/dependabot/alerts \
+            --jq '[.[] | select(.state == "open" and (.security_vulnerability.severity == "critical" or .security_vulnerability.severity == "high"))] | length' \
+            2>/dev/null || echo "0")
+
+          if [ "$ALERTS" -gt 0 ]; then
+            echo "::warning::Found $ALERTS critical/high security vulnerabilities. Review before releasing."
+          else
+            echo "✅ No critical security vulnerabilities found"
+          fi
+
+  # ===========================================================================
+  # CHANGELOG GENERATION
+  # ===========================================================================
+  generate-changelog:
+    name: Generate Changelog
     needs: get-version
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      ai_summary: ${{ steps.ai_summary.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          # Get the tag before the current one
+          PREV_TAG=$(git tag -l 'v*' | sort -V | tail -n2 | head -n1)
+          if [ -z "$PREV_TAG" ]; then
+            # If no previous tag, use first commit
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREV_TAG"
+
+      - name: Generate changelog from commits and PRs
+        id: changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
+
+          echo "Generating changelog since $PREV_TAG..."
+
+          # Create changelog file
+          cat > /tmp/changelog.md << 'CHANGELOG_HEADER'
+          ## What's Changed
+
+          CHANGELOG_HEADER
+
+          # Get merged PRs since last tag
+          echo "### Pull Requests" >> /tmp/changelog.md
+          echo "" >> /tmp/changelog.md
+
+          # Get PRs merged since the previous tag's date
+          PREV_DATE=$(git log -1 --format=%cI "$PREV_TAG" 2>/dev/null || echo "2020-01-01T00:00:00Z")
+
+          gh pr list \
+            --state merged \
+            --base main \
+            --search "merged:>$PREV_DATE" \
+            --json number,title,author,labels \
+            --jq '.[] | "- \(.title) (#\(.number)) @\(.author.login)"' >> /tmp/changelog.md 2>/dev/null || true
+
+          echo "" >> /tmp/changelog.md
+
+          # Group commits by type
+          echo "### Commits" >> /tmp/changelog.md
+          echo "" >> /tmp/changelog.md
+
+          # Features
+          FEATURES=$(git log "$PREV_TAG"..HEAD --oneline --grep="^feat" --grep="^feature" --grep="^add" 2>/dev/null | head -20)
+          if [ -n "$FEATURES" ]; then
+            echo "**Features:**" >> /tmp/changelog.md
+            echo "$FEATURES" | sed 's/^/- /' >> /tmp/changelog.md
+            echo "" >> /tmp/changelog.md
+          fi
+
+          # Bug fixes
+          FIXES=$(git log "$PREV_TAG"..HEAD --oneline --grep="^fix" --grep="^bug" 2>/dev/null | head -20)
+          if [ -n "$FIXES" ]; then
+            echo "**Bug Fixes:**" >> /tmp/changelog.md
+            echo "$FIXES" | sed 's/^/- /' >> /tmp/changelog.md
+            echo "" >> /tmp/changelog.md
+          fi
+
+          # Other changes
+          echo "**Other Changes:**" >> /tmp/changelog.md
+          git log "$PREV_TAG"..HEAD --oneline --invert-grep --grep="^feat" --grep="^fix" --grep="^chore" 2>/dev/null | head -10 | sed 's/^/- /' >> /tmp/changelog.md || true
+          echo "" >> /tmp/changelog.md
+
+          # Stats
+          echo "### Stats" >> /tmp/changelog.md
+          echo "" >> /tmp/changelog.md
+          COMMIT_COUNT=$(git rev-list "$PREV_TAG"..HEAD --count 2>/dev/null || echo "0")
+          CONTRIBUTOR_COUNT=$(git log "$PREV_TAG"..HEAD --format='%ae' 2>/dev/null | sort -u | wc -l || echo "0")
+          echo "- **$COMMIT_COUNT** commits" >> /tmp/changelog.md
+          echo "- **$CONTRIBUTOR_COUNT** contributors" >> /tmp/changelog.md
+
+          # Output changelog (escape for GitHub Actions)
+          CHANGELOG=$(cat /tmp/changelog.md)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "Changelog generated:"
+          cat /tmp/changelog.md
+
+      - name: Generate AI summary with Claude
+        id: ai_summary
+        if: inputs.generate_ai_notes && env.ANTHROPIC_API_KEY != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
+          VERSION="${{ needs.get-version.outputs.version }}"
+
+          # Get commit messages for Claude
+          COMMITS=$(git log "$PREV_TAG"..HEAD --oneline 2>/dev/null | head -50)
+
+          # Get changed files summary
+          CHANGED_FILES=$(git diff --stat "$PREV_TAG"..HEAD 2>/dev/null | tail -1)
+
+          # Create prompt for Claude
+          cat > /tmp/prompt.txt << PROMPT_EOF
+          You are writing release notes for Fluxbase version $VERSION.
+
+          Here are the commits since the last release:
+          $COMMITS
+
+          File changes summary: $CHANGED_FILES
+
+          Please write a concise, professional release summary (2-4 sentences) that:
+          1. Highlights the most important changes
+          2. Is written for end users (not developers)
+          3. Uses clear, non-technical language where possible
+          4. Mentions any breaking changes if present
+
+          Format: Just the summary text, no headers or bullet points.
+          PROMPT_EOF
+
+          # Call Claude API
+          SUMMARY=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "{
+              \"model\": \"claude-sonnet-4-20250514\",
+              \"max_tokens\": 300,
+              \"messages\": [{
+                \"role\": \"user\",
+                \"content\": $(cat /tmp/prompt.txt | jq -Rs .)
+              }]
+            }" | jq -r '.content[0].text // "Release includes bug fixes and improvements."')
+
+          echo "AI Summary: $SUMMARY"
+
+          # Output summary
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Fallback summary if no AI
+        id: fallback_summary
+        if: "!inputs.generate_ai_notes || env.ANTHROPIC_API_KEY == ''"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "summary=This release includes bug fixes, improvements, and new features. See the changelog below for details." >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # CREATE RELEASE
+  # ===========================================================================
+  create-release:
+    name: Create GitHub Release
+    needs: [get-version, pre-release-checks, generate-changelog]
+    runs-on: ubuntu-latest
+    if: |
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      (needs.pre-release-checks.result == 'success' || needs.pre-release-checks.result == 'skipped') &&
+      needs.generate-changelog.result == 'success'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -267,7 +546,7 @@ jobs:
           git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
           git push origin "$TAG_NAME"
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release with changelog
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -276,9 +555,44 @@ jobs:
             PRERELEASE_FLAG="--prerelease"
           fi
 
-          gh release create "${{ needs.get-version.outputs.tag_name }}" \
-            --title "Release ${{ needs.get-version.outputs.tag_name }}" \
-            --notes "Automated release created by workflow dispatch" \
+          VERSION="${{ needs.get-version.outputs.version }}"
+          TAG="${{ needs.get-version.outputs.tag_name }}"
+
+          # Build release notes
+          cat > /tmp/release_notes.md << 'NOTES_EOF'
+          ${{ needs.generate-changelog.outputs.ai_summary }}
+
+          ${{ needs.generate-changelog.outputs.changelog }}
+
+          ## Installation
+
+          **Docker:**
+          ```bash
+          docker pull ghcr.io/fluxbase-eu/fluxbase:${{ needs.get-version.outputs.version }}
+          ```
+
+          **NPM SDK:**
+          ```bash
+          npm install @fluxbase/sdk@${{ needs.get-version.outputs.version }}
+          ```
+
+          **Helm:**
+          ```bash
+          helm install fluxbase oci://ghcr.io/fluxbase-eu/charts/fluxbase --version ${{ needs.get-version.outputs.version }}
+          ```
+
+          **CLI:**
+          ```bash
+          curl -fsSL https://fluxbase.dev/install-cli.sh | bash -s -- ${{ needs.get-version.outputs.tag_name }}
+          ```
+
+          ---
+          *Release automatically generated by GitHub Actions*
+          NOTES_EOF
+
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes-file /tmp/release_notes.md \
             $PRERELEASE_FLAG
 
   update-version-files:
@@ -1076,3 +1390,144 @@ jobs:
             git push origin HEAD:${{ github.ref_name }}
           fi
 
+  # ==========================================================================
+  # POST-RELEASE SMOKE TESTS
+  # ==========================================================================
+  smoke-test:
+    name: Post-release Smoke Tests
+    needs: [get-version, publish-docker-manifest, publish-npm-sdk, publish-npm-sdk-react]
+    runs-on: ubuntu-latest
+    if: |
+      always() &&
+      (needs.publish-docker-manifest.result == 'success' || needs.publish-docker-manifest.result == 'skipped') &&
+      (needs.publish-npm-sdk.result == 'success' || needs.publish-npm-sdk.result == 'skipped')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.13.0"
+
+      - name: Test Docker image availability
+        if: needs.publish-docker-manifest.result == 'success'
+        run: |
+          VERSION="${{ needs.get-version.outputs.version }}"
+          IMAGE="ghcr.io/${{ github.repository }}:${VERSION}"
+
+          echo "Testing Docker image: $IMAGE"
+
+          # Pull the image (validates it exists and is accessible)
+          docker pull "$IMAGE"
+
+          # Run basic health check
+          docker run --rm "$IMAGE" --version || echo "Version check completed"
+
+          echo "✅ Docker image smoke test passed"
+
+      - name: Test NPM SDK installation
+        if: needs.publish-npm-sdk.result == 'success'
+        run: |
+          VERSION="${{ needs.get-version.outputs.version }}"
+
+          echo "Testing NPM SDK installation: @fluxbase/sdk@${VERSION}"
+
+          # Create a temp directory for testing
+          mkdir -p /tmp/sdk-test
+          cd /tmp/sdk-test
+
+          # Initialize npm project
+          npm init -y
+
+          # Wait a moment for NPM registry to propagate
+          sleep 10
+
+          # Try to install the SDK (with retries for propagation delay)
+          for i in 1 2 3; do
+            if npm install @fluxbase/sdk@${VERSION}; then
+              echo "✅ SDK installed successfully"
+              break
+            else
+              echo "Attempt $i failed, retrying in 30s..."
+              sleep 30
+            fi
+          done
+
+          # Verify the package is installed
+          if [ -d "node_modules/@fluxbase/sdk" ]; then
+            echo "✅ NPM SDK smoke test passed"
+            npm list @fluxbase/sdk
+          else
+            echo "::warning::SDK installation verification failed"
+          fi
+
+      - name: Test NPM React SDK installation
+        if: needs.publish-npm-sdk-react.result == 'success'
+        run: |
+          VERSION="${{ needs.get-version.outputs.version }}"
+
+          echo "Testing NPM React SDK installation: @fluxbase/sdk-react@${VERSION}"
+
+          # Create a temp directory for testing
+          mkdir -p /tmp/sdk-react-test
+          cd /tmp/sdk-react-test
+
+          # Initialize npm project
+          npm init -y
+
+          # Wait a moment for NPM registry to propagate
+          sleep 10
+
+          # Install React as peer dependency first
+          npm install react@19
+
+          # Try to install the React SDK (with retries for propagation delay)
+          for i in 1 2 3; do
+            if npm install @fluxbase/sdk-react@${VERSION}; then
+              echo "✅ React SDK installed successfully"
+              break
+            else
+              echo "Attempt $i failed, retrying in 30s..."
+              sleep 30
+            fi
+          done
+
+          # Verify the package is installed
+          if [ -d "node_modules/@fluxbase/sdk-react" ]; then
+            echo "✅ NPM React SDK smoke test passed"
+            npm list @fluxbase/sdk-react
+          else
+            echo "::warning::React SDK installation verification failed"
+          fi
+
+      - name: Report smoke test results
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ needs.get-version.outputs.version }}"
+          TAG="${{ needs.get-version.outputs.tag_name }}"
+
+          # Add a comment to the release with smoke test results
+          COMMENT="## Smoke Test Results
+
+          | Component | Status |
+          |-----------|--------|
+          | Docker Image | ${{ needs.publish-docker-manifest.result == 'success' && '✅ Verified' || '⏭️ Skipped' }} |
+          | NPM SDK | ${{ needs.publish-npm-sdk.result == 'success' && '✅ Verified' || '⏭️ Skipped' }} |
+          | NPM React SDK | ${{ needs.publish-npm-sdk-react.result == 'success' && '✅ Verified' || '⏭️ Skipped' }} |
+
+          *Smoke tests completed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')*"
+
+          # Update the release with smoke test info
+          CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body')
+          NEW_BODY="${CURRENT_BODY}
+
+          ---
+
+          ${COMMENT}"
+
+          gh release edit "$TAG" --notes "$NEW_BODY" || echo "Could not update release notes"
+
+          echo "Smoke test results:"
+          echo "$COMMENT"

@@ -390,4 +390,8 @@ const (
 	ScopeBranchRead   = "branch:read"   // List and get branch details
 	ScopeBranchWrite  = "branch:write"  // Create, delete, reset branches
 	ScopeBranchAccess = "branch:access" // Grant/revoke branch access
+
+	// GitHub scopes
+	ScopeGitHubRead  = "github:read"  // Read GitHub issues and PRs
+	ScopeGitHubWrite = "github:write" // Create/update GitHub issues, PRs, and comments
 )

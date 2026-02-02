@@ -352,6 +352,141 @@ Perform semantic similarity search.
 }
 ```
 
+## GitHub Tools
+
+Tools for interacting with GitHub issues and pull requests. Requires a GitHub token to be configured.
+
+### list_github_issues
+
+List issues in a repository with filtering options.
+
+**Scope Required:** `github:read`
+
+```json
+{
+  "name": "list_github_issues",
+  "arguments": {
+    "repository": "owner/repo",
+    "state": "open",
+    "labels": "bug,priority:high",
+    "assignee": "username",
+    "limit": 30
+  }
+}
+```
+
+**Response:**
+
+```json
+[
+  {
+    "number": 42,
+    "title": "Fix authentication bug",
+    "state": "open",
+    "labels": ["bug", "priority:high"],
+    "assignees": ["developer"],
+    "html_url": "https://github.com/..."
+  }
+]
+```
+
+### get_github_issue
+
+Get details of a specific issue.
+
+**Scope Required:** `github:read`
+
+```json
+{
+  "name": "get_github_issue",
+  "arguments": {
+    "repository": "owner/repo",
+    "issue_number": 42
+  }
+}
+```
+
+### create_github_issue
+
+Create a new issue.
+
+**Scope Required:** `github:write`
+
+```json
+{
+  "name": "create_github_issue",
+  "arguments": {
+    "repository": "owner/repo",
+    "title": "Bug: Login fails with special characters",
+    "body": "## Description\n\nLogin fails when...",
+    "labels": "bug,triage",
+    "assignees": "developer"
+  }
+}
+```
+
+### create_github_issue_comment
+
+Add a comment to an issue.
+
+**Scope Required:** `github:write`
+
+```json
+{
+  "name": "create_github_issue_comment",
+  "arguments": {
+    "repository": "owner/repo",
+    "issue_number": 42,
+    "body": "I've investigated this issue and found..."
+  }
+}
+```
+
+### update_github_issue_labels
+
+Add or remove labels from an issue.
+
+**Scope Required:** `github:write`
+
+```json
+{
+  "name": "update_github_issue_labels",
+  "arguments": {
+    "repository": "owner/repo",
+    "issue_number": 42,
+    "add_labels": "in-progress,assigned",
+    "remove_labels": "triage"
+  }
+}
+```
+
+### trigger_claude_fix
+
+Trigger the Claude Fix automation for an issue by adding the `claude-fix` label.
+
+**Scope Required:** `github:write`
+
+```json
+{
+  "name": "trigger_claude_fix",
+  "arguments": {
+    "repository": "owner/repo",
+    "issue_number": 42
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "status": "triggered",
+  "issue_number": 42,
+  "repository": "owner/repo",
+  "message": "Claude fix workflow triggered..."
+}
+```
+
 ## Error Handling
 
 All tools return errors in a consistent format:
