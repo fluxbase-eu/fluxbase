@@ -1021,10 +1021,9 @@ func TestBranchRequests_JSONSerialization(t *testing.T) {
 func TestBranchTypes(t *testing.T) {
 	t.Run("valid branch types", func(t *testing.T) {
 		types := []branching.BranchType{
+			branching.BranchTypeMain,
 			branching.BranchTypePreview,
-			branching.BranchTypePreview,
-			branching.BranchTypeDevelopment,
-			branching.BranchTypeStaging,
+			branching.BranchTypePersistent,
 		}
 
 		for _, bt := range types {

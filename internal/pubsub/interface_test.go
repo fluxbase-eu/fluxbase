@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestChannelConstants(t *testing.T) {
+func TestChannelConstants_Interface(t *testing.T) {
 	t.Run("BroadcastChannel has expected value", func(t *testing.T) {
 		assert.Equal(t, "fluxbase:broadcast", BroadcastChannel)
 	})
