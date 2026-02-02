@@ -15,9 +15,9 @@ import (
 func TestNewSESService(t *testing.T) {
 	t.Run("returns error for missing region", func(t *testing.T) {
 		cfg := &config.EmailConfig{
-			Provider:   "ses",
-			SESRegion:  "",
-			FromName:   "Test",
+			Provider:    "ses",
+			SESRegion:   "",
+			FromName:    "Test",
 			FromAddress: "test@example.com",
 		}
 

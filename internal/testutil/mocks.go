@@ -457,9 +457,9 @@ type MockSAMLService struct {
 	OnLogout         func(ctx context.Context, sessionID string) error
 
 	// State tracking for assertions
-	Providers    map[string]bool // provider name -> enabled
-	Sessions     map[string]string // session ID -> user ID
-	UsedAssertions map[string]bool // assertion ID -> used (for replay detection)
+	Providers      map[string]bool   // provider name -> enabled
+	Sessions       map[string]string // session ID -> user ID
+	UsedAssertions map[string]bool   // assertion ID -> used (for replay detection)
 }
 
 // NewMockSAMLService creates a new mock SAML service

@@ -102,35 +102,35 @@ func TestIsValidIdentifier(t *testing.T) {
 
 	t.Run("rejects identifiers with special characters", func(t *testing.T) {
 		invalidIdentifiers := []string{
-			"user-accounts",     // hyphen
-			"user accounts",     // space
-			"user.table",        // dot
-			"user;drop",         // semicolon
-			`user"inject`,       // double quote
-			"user'inject",       // single quote
-			"user\ninjection",   // newline
-			"user\tinjection",   // tab
-			"user$var",          // dollar sign
-			"user@domain",       // at sign
-			"user#comment",      // hash
-			"user%encode",       // percent
-			"user&and",          // ampersand
-			"user*star",         // asterisk
-			"user(parens)",      // parentheses
-			"user[brackets]",    // brackets
-			"user{braces}",      // braces
-			"user|pipe",         // pipe
-			"user\\backslash",   // backslash
-			"user/slash",        // slash
-			"user?question",     // question mark
-			"user<less",         // less than
-			"user>greater",      // greater than
-			"user=equals",       // equals
-			"user+plus",         // plus
-			"user~tilde",        // tilde
-			"user`backtick",     // backtick
-			"user!exclaim",      // exclamation
-			"user^caret",        // caret
+			"user-accounts",   // hyphen
+			"user accounts",   // space
+			"user.table",      // dot
+			"user;drop",       // semicolon
+			`user"inject`,     // double quote
+			"user'inject",     // single quote
+			"user\ninjection", // newline
+			"user\tinjection", // tab
+			"user$var",        // dollar sign
+			"user@domain",     // at sign
+			"user#comment",    // hash
+			"user%encode",     // percent
+			"user&and",        // ampersand
+			"user*star",       // asterisk
+			"user(parens)",    // parentheses
+			"user[brackets]",  // brackets
+			"user{braces}",    // braces
+			"user|pipe",       // pipe
+			"user\\backslash", // backslash
+			"user/slash",      // slash
+			"user?question",   // question mark
+			"user<less",       // less than
+			"user>greater",    // greater than
+			"user=equals",     // equals
+			"user+plus",       // plus
+			"user~tilde",      // tilde
+			"user`backtick",   // backtick
+			"user!exclaim",    // exclamation
+			"user^caret",      // caret
 		}
 
 		for _, id := range invalidIdentifiers {

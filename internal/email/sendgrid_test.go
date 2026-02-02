@@ -195,10 +195,10 @@ func TestSendGridService_StatusCodeHandling(t *testing.T) {
 func TestSendGridService_ReplyToConfiguration(t *testing.T) {
 	t.Run("configures reply-to when set", func(t *testing.T) {
 		cfg := &config.EmailConfig{
-			Provider:        "sendgrid",
-			SendGridAPIKey:  "SG.test-key",
-			FromAddress:     "noreply@example.com",
-			ReplyToAddress:  "support@example.com",
+			Provider:       "sendgrid",
+			SendGridAPIKey: "SG.test-key",
+			FromAddress:    "noreply@example.com",
+			ReplyToAddress: "support@example.com",
 		}
 
 		service, err := NewSendGridService(cfg)
