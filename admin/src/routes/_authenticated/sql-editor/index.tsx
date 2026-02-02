@@ -591,9 +591,9 @@ function SQLEditorPage() {
 
       {/* Editor and Results */}
       <div className='flex flex-1 overflow-hidden p-6'>
-        <Group orientation='vertical'>
+        <Group orientation='vertical' id='sql-editor-group-v2'>
           {/* Query Editor */}
-          <Panel defaultSize={35} minSize={20}>
+          <Panel id='query-editor' defaultSize='35' minSize='20' maxSize='80'>
             <Card className='h-full overflow-hidden'>
               <Editor
                 height='100%'
@@ -620,10 +620,10 @@ function SQLEditorPage() {
             </Card>
           </Panel>
 
-          <Separator className='bg-border hover:bg-primary my-2 h-1 transition-colors' />
+          <Separator className='bg-border hover:bg-primary my-2 h-2 cursor-row-resize transition-colors' />
 
           {/* Results */}
-          <Panel defaultSize={65} minSize={30}>
+          <Panel id='query-results' defaultSize='65' minSize='20'>
             <Card className='flex h-full flex-col overflow-hidden'>
               {queryHistory.length === 0 ? (
                 <div className='flex h-full items-center justify-center'>

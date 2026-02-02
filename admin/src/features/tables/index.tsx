@@ -34,8 +34,8 @@ export function Tables() {
 
   return (
     <Main className='h-[calc(100vh-4rem)] p-0'>
-      <Group orientation='horizontal'>
-        <Panel defaultSize={20} minSize={15} maxSize={40}>
+      <Group orientation='horizontal' id='tables-group-v2'>
+        <Panel id='table-selector' defaultSize='25' minSize='20' maxSize='40'>
           <TableSelector
             selectedTable={selectedTable}
             selectedSchema={selectedSchema}
@@ -43,8 +43,8 @@ export function Tables() {
             onSchemaChange={handleSchemaChange}
           />
         </Panel>
-        <Separator className='bg-border hover:bg-primary w-1 transition-colors' />
-        <Panel>
+        <Separator className='bg-border hover:bg-primary w-2 cursor-col-resize transition-colors' />
+        <Panel id='table-content' minSize='50'>
           <main className='h-full overflow-auto'>
             {selectedTable ? (
               <TableViewer tableName={selectedTable} schema={selectedSchema} />
