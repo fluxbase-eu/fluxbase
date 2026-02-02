@@ -127,7 +127,7 @@ func TestPgTypeToTS(t *testing.T) {
 	}
 }
 
-func TestToPascalCase(t *testing.T) {
+func TestToPascalCase_SchemaExport(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string

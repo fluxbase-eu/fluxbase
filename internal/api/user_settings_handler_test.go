@@ -454,7 +454,7 @@ func TestGetUserSecretValue_Validation(t *testing.T) {
 // GetSetting Handler Validation Tests (with fallback)
 // =============================================================================
 
-func TestGetSetting_Validation(t *testing.T) {
+func TestGetSetting_UserSettings_Validation(t *testing.T) {
 	t.Run("empty key returns error", func(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
@@ -627,7 +627,7 @@ func TestSetSetting_Validation(t *testing.T) {
 // DeleteSetting Handler Validation Tests
 // =============================================================================
 
-func TestDeleteSetting_Validation(t *testing.T) {
+func TestDeleteSetting_UserSettings_Validation(t *testing.T) {
 	t.Run("missing user context returns unauthorized", func(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)

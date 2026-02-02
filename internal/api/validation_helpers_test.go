@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNormalizePaginationParams(t *testing.T) {
+func TestNormalizePaginationParams_Helpers(t *testing.T) {
 	tests := []struct {
 		name          string
 		limit         int

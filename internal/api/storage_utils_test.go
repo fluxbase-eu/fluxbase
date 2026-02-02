@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDetectContentType(t *testing.T) {
+func TestDetectContentType_Utils(t *testing.T) {
 	tests := []struct {
 		name        string
 		filename    string
@@ -89,7 +89,7 @@ func TestDetectContentType_AllKnownTypes(t *testing.T) {
 	}
 }
 
-func TestGetUserID(t *testing.T) {
+func TestGetUserID_Utils(t *testing.T) {
 	// Note: This function depends on Fiber context which requires more complex mocking.
 	// These are placeholder tests - actual testing would require HTTP test framework.
 

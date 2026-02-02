@@ -57,7 +57,7 @@ func TestCreateBranchRequest_Struct(t *testing.T) {
 			Name:           "feature-branch",
 			ParentBranchID: &parentID,
 			DataCloneMode:  branching.DataCloneModeSchemaOnly,
-			Type:           branching.BranchTypeFeature,
+			Type:           branching.BranchTypePreview,
 			GitHubPRNumber: &prNumber,
 			GitHubPRURL:    &prURL,
 			GitHubRepo:     &repo,
@@ -67,7 +67,7 @@ func TestCreateBranchRequest_Struct(t *testing.T) {
 		assert.Equal(t, "feature-branch", req.Name)
 		assert.Equal(t, parentID, *req.ParentBranchID)
 		assert.Equal(t, branching.DataCloneModeSchemaOnly, req.DataCloneMode)
-		assert.Equal(t, branching.BranchTypeFeature, req.Type)
+		assert.Equal(t, branching.BranchTypePreview, req.Type)
 		assert.Equal(t, 123, *req.GitHubPRNumber)
 		assert.Equal(t, "https://github.com/owner/repo/pull/123", *req.GitHubPRURL)
 		assert.Equal(t, "owner/repo", *req.GitHubRepo)
@@ -167,7 +167,7 @@ func TestUpsertGitHubConfigRequest_Struct(t *testing.T) {
 		assert.Equal(t, "fluxbase/fluxbase", req.Repository)
 		assert.True(t, *req.AutoCreateOnPR)
 		assert.True(t, *req.AutoDeleteOnMerge)
-		assert.Equal(t, branching.DataCloneModeFull, req.DefaultDataCloneMode)
+		assert.Equal(t, branching.DataCloneModeFullClone, req.DefaultDataCloneMode)
 	})
 
 	t.Run("minimal request", func(t *testing.T) {
@@ -1021,7 +1021,7 @@ func TestBranchRequests_JSONSerialization(t *testing.T) {
 func TestBranchTypes(t *testing.T) {
 	t.Run("valid branch types", func(t *testing.T) {
 		types := []branching.BranchType{
-			branching.BranchTypeFeature,
+			branching.BranchTypePreview,
 			branching.BranchTypePreview,
 			branching.BranchTypeDevelopment,
 			branching.BranchTypeStaging,
@@ -1037,7 +1037,7 @@ func TestDataCloneModes(t *testing.T) {
 	t.Run("valid data clone modes", func(t *testing.T) {
 		modes := []branching.DataCloneMode{
 			branching.DataCloneModeSchemaOnly,
-			branching.DataCloneModeFull,
+			branching.DataCloneModeFullClone,
 		}
 
 		for _, mode := range modes {
