@@ -1511,9 +1511,11 @@ func (s *Server) setupRoutes() {
 		s.branchHandler.RegisterRoutes(branchAPI)
 
 		// GitHub webhook endpoint (no auth, uses signature verification)
-		// Rate limited to prevent abuse
-		webhookAPI := s.app.Group("/api/v1", middleware.GitHubWebhookLimiter())
-		s.githubWebhook.RegisterRoutes(webhookAPI)
+		// Rate limited to prevent abuse - use specific path to avoid affecting other /api/v1 routes
+		s.app.Post("/api/v1/webhooks/github",
+			middleware.GitHubWebhookLimiter(),
+			s.githubWebhook.HandleWebhook,
+		)
 
 		log.Debug().Msg("Database Branching routes registered")
 	}
