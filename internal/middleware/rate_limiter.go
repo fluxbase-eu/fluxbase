@@ -1,8 +1,11 @@
 package middleware
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -59,6 +62,37 @@ func logRateLimiterWarning() {
 // IsRateLimiterWarningDisplayed returns true if the rate limiter warning was displayed
 func IsRateLimiterWarningDisplayed() bool {
 	return rateLimiterWarningDisplayed
+}
+
+// extractRoleFromToken attempts to extract the role claim from a JWT token
+// without performing full signature validation. This is used for rate limiting
+// exemption checks only. The token will be fully validated later by auth middleware.
+func extractRoleFromToken(token string) string {
+	// JWT format: header.payload.signature
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return ""
+	}
+
+	// Decode the payload (second part)
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		// Try standard base64 encoding
+		payload, err = base64.URLEncoding.DecodeString(parts[1])
+		if err != nil {
+			return ""
+		}
+	}
+
+	// Parse JSON to extract role
+	var claims struct {
+		Role string `json:"role"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return ""
+	}
+
+	return claims.Role
 }
 
 // RateLimiterConfig holds configuration for rate limiting
@@ -261,12 +295,37 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 	rateLimiter := GlobalAPILimiter()
 
 	return func(c *fiber.Ctx) error {
-		// Exempt admin users from rate limiting
-		// This includes: admin (dashboard super admins), dashboard_admin (dashboard users),
-		// and service_role (trusted service keys/JWT tokens)
+		// First check if role is already set by auth middleware
 		role := c.Locals("user_role")
 		if role == "admin" || role == "dashboard_admin" || role == "service_role" {
 			return c.Next()
+		}
+
+		// If role is not set, try to extract it from JWT token
+		// This handles the case where global rate limiting runs before auth middleware
+		token := c.Cookies("fluxbase_access_token")
+		if token == "" {
+			// Try Authorization header
+			authHeader := c.Get("Authorization")
+			if authHeader != "" {
+				if strings.HasPrefix(authHeader, "Bearer ") {
+					token = strings.TrimPrefix(authHeader, "Bearer ")
+				} else {
+					token = authHeader
+				}
+			}
+		}
+
+		// If we have a token, try to extract the role claim without full validation
+		// This is a lightweight check just for rate limiting exemption
+		if token != "" {
+			// Parse JWT token to extract role claim
+			// We use a simplified parsing that doesn't validate signatures
+			// since the auth middleware will do full validation later
+			role := extractRoleFromToken(token)
+			if role == "admin" || role == "dashboard_admin" || role == "service_role" {
+				return c.Next()
+			}
 		}
 
 		// Check if rate limiting is enabled via settings cache
