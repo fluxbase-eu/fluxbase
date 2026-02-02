@@ -741,10 +741,27 @@ function StorageBrowser() {
   const selectedCount = selectedFiles.size
 
   return (
-    <div className='flex h-full'>
-      {/* Sidebar - Buckets */}
-      <div className='bg-muted/10 w-64 space-y-4 border-r p-4'>
-        <div className='flex items-center justify-between'>
+    <div className='flex h-full flex-col'>
+      {/* Header */}
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <HardDrive className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>Storage</h1>
+            <p className='text-muted-foreground text-sm'>
+              Manage files and buckets in your storage backend
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className='flex flex-1 overflow-hidden p-6'>
+        {/* Sidebar - Buckets */}
+        <div className='bg-muted/10 flex h-full w-64 flex-col border-r p-4'>
+        <div className='mb-4 flex items-center justify-between'>
           <h3 className='font-semibold'>Buckets</h3>
           <Button
             variant='ghost'
@@ -755,7 +772,7 @@ function StorageBrowser() {
           </Button>
         </div>
 
-        <ScrollArea className='h-[calc(100vh-200px)]'>
+        <ScrollArea className='min-h-0 flex-1'>
           <div className='space-y-1'>
             {buckets.map((bucket) => (
               <div
@@ -1585,6 +1602,7 @@ function StorageBrowser() {
           )}
         </SheetContent>
       </Sheet>
+      </div>
     </div>
   )
 }

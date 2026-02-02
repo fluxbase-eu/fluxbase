@@ -96,22 +96,28 @@ const AuthenticationPage = () => {
   const navigate = route.useNavigate()
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div>
-        <h1 className='flex items-center gap-2 text-3xl font-bold tracking-tight'>
-          <Shield className='h-8 w-8' />
-          Authentication
-        </h1>
-        <p className='text-muted-foreground mt-2'>
-          Manage OAuth providers, auth settings, and user sessions
-        </p>
+    <div className='flex h-full flex-col'>
+      {/* Header */}
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <Shield className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>Authentication</h1>
+            <p className='text-muted-foreground text-sm'>
+              Manage OAuth providers, auth settings, and user sessions
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Tabs
-        value={search.tab || 'providers'}
-        onValueChange={(tab) => navigate({ search: { tab } })}
-        className='w-full'
-      >
+      <div className='flex-1 overflow-auto p-6'>
+        <Tabs
+          value={search.tab || 'providers'}
+          onValueChange={(tab) => navigate({ search: { tab } })}
+          className='w-full'
+        >
         <TabsList className='grid w-full grid-cols-4'>
           <TabsTrigger value='providers'>
             <Key className='mr-2 h-4 w-4' />
@@ -146,7 +152,8 @@ const AuthenticationPage = () => {
         <TabsContent value='sessions' className='space-y-4'>
           <ActiveSessionsTab />
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
   )
 }

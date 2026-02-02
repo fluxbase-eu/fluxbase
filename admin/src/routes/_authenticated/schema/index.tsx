@@ -246,17 +246,19 @@ function SchemaViewerPage() {
   }
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
+    <div className='flex h-full flex-col'>
       {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='flex items-center gap-2 text-3xl font-bold tracking-tight'>
-            <GitFork className='h-8 w-8' />
-            Schema Viewer
-          </h1>
-          <p className='text-muted-foreground mt-2 text-sm'>
-            Visualize database tables and their relationships
-          </p>
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <GitFork className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>Schema Viewer</h1>
+            <p className='text-muted-foreground text-sm'>
+              Visualize database tables and their relationships
+            </p>
+          </div>
         </div>
         <div className='flex items-center gap-2'>
           <Button
@@ -278,6 +280,7 @@ function SchemaViewerPage() {
         </div>
       </div>
 
+      <div className='flex-1 overflow-auto p-6'>
       {/* Filters */}
       <div className='flex items-center gap-4'>
         <div className='relative max-w-sm flex-1'>
@@ -338,7 +341,7 @@ function SchemaViewerPage() {
           <Loader2 className='text-muted-foreground h-8 w-8 animate-spin' />
         </div>
       ) : viewMode === 'erd' ? (
-        <div className='flex flex-1 gap-6'>
+        <div className='flex flex-1 gap-6' style={{ minHeight: 'calc(100vh - 16rem)' }}>
           {/* ERD Canvas */}
           <div className='bg-muted/20 flex-1 overflow-auto rounded-lg border' style={{ minWidth: 0 }}>
             <ERDCanvas
@@ -809,6 +812,7 @@ function SchemaViewerPage() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   )
 }

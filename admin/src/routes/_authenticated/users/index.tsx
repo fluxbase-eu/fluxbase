@@ -76,19 +76,21 @@ function UsersPage() {
 
   return (
     <UsersProvider userType={activeTab}>
-      <div className='flex h-full flex-col gap-6 p-6'>
+      <div className='flex h-full flex-col'>
         {/* Header */}
-        <div className='flex items-center justify-between'>
-          <div>
-            <h1 className='flex items-center gap-2 text-3xl font-bold tracking-tight'>
-              <Users className='h-8 w-8' />
-              Users
-            </h1>
-            <p className='text-muted-foreground mt-2'>
-              {activeTab === 'app'
-                ? 'Manage application users who access your app through the REST API'
-                : 'Manage Fluxbase dashboard administrators and operators'}
-            </p>
+        <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+          <div className='flex items-center gap-3'>
+            <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+              <Users className='text-primary h-5 w-5' />
+            </div>
+            <div>
+              <h1 className='text-xl font-semibold'>Users</h1>
+              <p className='text-muted-foreground text-sm'>
+                {activeTab === 'app'
+                  ? 'Manage application users who access your app through the REST API'
+                  : 'Manage Fluxbase dashboard administrators and operators'}
+              </p>
+            </div>
           </div>
           <Button onClick={() => setInviteDialogOpen(true)}>
             <UserPlus className='mr-2 h-4 w-4' />
@@ -97,6 +99,7 @@ function UsersPage() {
         </div>
 
         {/* Tabs for User Types */}
+        <div className='flex-1 overflow-auto p-6'>
         <Tabs
           value={activeTab}
           onValueChange={(value) => {
@@ -179,6 +182,7 @@ function UsersPage() {
             <UsersTable data={users} />
           </TabsContent>
         </Tabs>
+        </div>
 
         {/* Invite Dialog */}
         <UsersInviteDialog

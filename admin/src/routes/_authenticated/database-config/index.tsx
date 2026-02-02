@@ -41,16 +41,23 @@ const DatabaseConfigPage = () => {
   })
 
   return (
-    <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div>
-        <h1 className='flex items-center gap-2 text-3xl font-bold tracking-tight'>
-          <Database className='h-8 w-8' />
-          Database
-        </h1>
-        <p className='text-muted-foreground mt-2 text-sm'>
-          PostgreSQL connection settings and connection pool configuration
-        </p>
+    <div className='flex h-full flex-col'>
+      {/* Header */}
+      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
+        <div className='flex items-center gap-3'>
+          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
+            <Database className='text-primary h-5 w-5' />
+          </div>
+          <div>
+            <h1 className='text-xl font-semibold'>Database</h1>
+            <p className='text-muted-foreground text-sm'>
+              PostgreSQL connection settings and connection pool configuration
+            </p>
+          </div>
+        </div>
       </div>
+
+      <div className='flex-1 overflow-auto p-6'>
 
       <Card>
         <CardHeader>
@@ -173,6 +180,7 @@ const DatabaseConfigPage = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
