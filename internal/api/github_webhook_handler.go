@@ -48,16 +48,16 @@ type GitHubWebhookPayload struct {
 
 // GitHubIssue represents a GitHub issue
 type GitHubIssue struct {
-	Number    int            `json:"number"`
-	State     string         `json:"state"`
-	Title     string         `json:"title"`
-	Body      string         `json:"body"`
-	HTMLURL   string         `json:"html_url"`
-	Labels    []GitHubLabel  `json:"labels"`
-	Assignees []GitHubUser   `json:"assignees"`
-	User      *GitHubUser    `json:"user,omitempty"`
-	CreatedAt string         `json:"created_at"`
-	UpdatedAt string         `json:"updated_at"`
+	Number    int           `json:"number"`
+	State     string        `json:"state"`
+	Title     string        `json:"title"`
+	Body      string        `json:"body"`
+	HTMLURL   string        `json:"html_url"`
+	Labels    []GitHubLabel `json:"labels"`
+	Assignees []GitHubUser  `json:"assignees"`
+	User      *GitHubUser   `json:"user,omitempty"`
+	CreatedAt string        `json:"created_at"`
+	UpdatedAt string        `json:"updated_at"`
 }
 
 // GitHubLabel represents a GitHub label
