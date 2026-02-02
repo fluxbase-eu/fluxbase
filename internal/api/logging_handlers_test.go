@@ -208,9 +208,9 @@ func TestLogStatsResponse_Struct(t *testing.T) {
 		resp := LogStatsResponse{
 			TotalEntries: 1000,
 			EntriesByCategory: map[string]int64{
-				"system":    500,
-				"http":      300,
-				"security":  200,
+				"system":   500,
+				"http":     300,
+				"security": 200,
 			},
 			EntriesByLevel: map[string]int64{
 				"info":  700,

@@ -23,10 +23,10 @@ type mockToolHandler struct {
 	executeErr     error
 }
 
-func (m *mockToolHandler) Name() string                   { return m.name }
-func (m *mockToolHandler) Description() string            { return m.description }
-func (m *mockToolHandler) InputSchema() map[string]any    { return m.inputSchema }
-func (m *mockToolHandler) RequiredScopes() []string       { return m.requiredScopes }
+func (m *mockToolHandler) Name() string                { return m.name }
+func (m *mockToolHandler) Description() string         { return m.description }
+func (m *mockToolHandler) InputSchema() map[string]any { return m.inputSchema }
+func (m *mockToolHandler) RequiredScopes() []string    { return m.requiredScopes }
 func (m *mockToolHandler) Execute(ctx context.Context, args map[string]any, authCtx *mcp.AuthContext) (*mcp.ToolResult, error) {
 	return m.executeResult, m.executeErr
 }

@@ -235,9 +235,9 @@ func TestServer_SerializeResponse(t *testing.T) {
 		server := NewServer(cfg)
 
 		response := &Response{
-			JSONRPCVersion: "2.0",
-			ID:             "test-id",
-			Result:         map[string]string{"status": "ok"},
+			JSONRPC: "2.0",
+			ID:      "test-id",
+			Result:  map[string]string{"status": "ok"},
 		}
 
 		data, err := server.SerializeResponse(response)
@@ -253,8 +253,8 @@ func TestServer_SerializeResponse(t *testing.T) {
 		server := NewServer(cfg)
 
 		response := &Response{
-			JSONRPCVersion: "2.0",
-			ID:             "error-id",
+			JSONRPC: "2.0",
+			ID:      "error-id",
 			Error: &Error{
 				Code:    -32600,
 				Message: "Invalid Request",
@@ -375,9 +375,9 @@ func TestServer_dispatch(t *testing.T) {
 		server := NewServer(cfg)
 
 		req := &Request{
-			JSONRPCVersion: "2.0",
-			ID:             1,
-			Method:         MethodInitialize,
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  MethodInitialize,
 			Params: json.RawMessage(`{
 				"protocolVersion": "2024-11-05",
 				"clientInfo": {"name": "Test", "version": "1.0"}
@@ -394,9 +394,9 @@ func TestServer_dispatch(t *testing.T) {
 		server := NewServer(cfg)
 
 		req := &Request{
-			JSONRPCVersion: "2.0",
-			ID:             1,
-			Method:         MethodPing,
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  MethodPing,
 		}
 
 		response := server.dispatch(context.Background(), req, &AuthContext{})
@@ -409,9 +409,9 @@ func TestServer_dispatch(t *testing.T) {
 		server := NewServer(cfg)
 
 		req := &Request{
-			JSONRPCVersion: "2.0",
-			ID:             1,
-			Method:         "unknown/method",
+			JSONRPC: "2.0",
+			ID:      1,
+			Method:  "unknown/method",
 		}
 
 		response := server.dispatch(context.Background(), req, &AuthContext{})
@@ -463,9 +463,9 @@ func BenchmarkServer_SerializeResponse(b *testing.B) {
 	cfg := &config.MCPConfig{}
 	server := NewServer(cfg)
 	response := &Response{
-		JSONRPCVersion: "2.0",
-		ID:             "test-id",
-		Result:         map[string]string{"status": "ok"},
+		JSONRPC: "2.0",
+		ID:      "test-id",
+		Result:  map[string]string{"status": "ok"},
 	}
 
 	b.ResetTimer()

@@ -191,7 +191,7 @@ func TestContainsAt(t *testing.T) {
 // CustomTool Struct Tests (from types.go)
 // =============================================================================
 
-func TestCustomTool_Struct(t *testing.T) {
+func TestCustomToolStorage_Struct(t *testing.T) {
 	t.Run("stores all fields correctly", func(t *testing.T) {
 		id := uuid.New()
 		createdBy := uuid.New()
@@ -250,7 +250,7 @@ func TestCustomTool_Struct(t *testing.T) {
 // CustomResource Struct Tests (from types.go)
 // =============================================================================
 
-func TestCustomResource_Struct(t *testing.T) {
+func TestCustomResourceStorage_Struct(t *testing.T) {
 	t.Run("stores all fields correctly", func(t *testing.T) {
 		id := uuid.New()
 		createdBy := uuid.New()

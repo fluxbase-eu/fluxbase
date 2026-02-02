@@ -24,10 +24,10 @@ type mockProvider struct {
 	readErr        error
 }
 
-func (m *mockProvider) URI() string            { return m.uri }
-func (m *mockProvider) Name() string           { return m.name }
-func (m *mockProvider) Description() string    { return m.description }
-func (m *mockProvider) MimeType() string       { return m.mimeType }
+func (m *mockProvider) URI() string              { return m.uri }
+func (m *mockProvider) Name() string             { return m.name }
+func (m *mockProvider) Description() string      { return m.description }
+func (m *mockProvider) MimeType() string         { return m.mimeType }
 func (m *mockProvider) RequiredScopes() []string { return m.requiredScopes }
 func (m *mockProvider) Read(ctx context.Context, authCtx *mcp.AuthContext) ([]mcp.Content, error) {
 	return m.content, m.readErr
@@ -36,11 +36,11 @@ func (m *mockProvider) Read(ctx context.Context, authCtx *mcp.AuthContext) ([]mc
 // mockTemplateProvider is a template resource provider for testing
 type mockTemplateProvider struct {
 	mockProvider
-	isTemplate      bool
-	matchParams     map[string]string
-	matchResult     bool
-	readWithParams  []mcp.Content
-	readParamsErr   error
+	isTemplate     bool
+	matchParams    map[string]string
+	matchResult    bool
+	readWithParams []mcp.Content
+	readParamsErr  error
 }
 
 func (m *mockTemplateProvider) IsTemplate() bool {
@@ -631,11 +631,11 @@ func TestResourceTemplate_Struct(t *testing.T) {
 func TestContent_Struct(t *testing.T) {
 	t.Run("stores text content", func(t *testing.T) {
 		content := mcp.Content{
-			Type: "text",
+			Type: mcp.ContentTypeText,
 			Text: "Hello, World!",
 		}
 
-		assert.Equal(t, "text", content.Type)
+		assert.Equal(t, mcp.ContentTypeText, content.Type)
 		assert.Equal(t, "Hello, World!", content.Text)
 	})
 }

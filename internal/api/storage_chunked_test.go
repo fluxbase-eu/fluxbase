@@ -318,8 +318,8 @@ func TestTotalChunksCalculation(t *testing.T) {
 	})
 
 	t.Run("handles small file (single chunk)", func(t *testing.T) {
-		totalSize := int64(500 * 1024)        // 500KB
-		chunkSize := int64(5 * 1024 * 1024)   // 5MB
+		totalSize := int64(500 * 1024)      // 500KB
+		chunkSize := int64(5 * 1024 * 1024) // 5MB
 
 		totalChunks := int(totalSize / chunkSize)
 		if totalSize%chunkSize > 0 {

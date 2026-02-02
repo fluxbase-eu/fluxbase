@@ -1,7 +1,6 @@
 package custom
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
@@ -177,7 +176,7 @@ func TestExecutor_parseToolResult(t *testing.T) {
 		require.NotNil(t, toolResult)
 		assert.False(t, toolResult.IsError)
 		require.Len(t, toolResult.Content, 1)
-		assert.Equal(t, "text", toolResult.Content[0].Type)
+		assert.Equal(t, mcp.ContentTypeText, toolResult.Content[0].Type)
 		assert.Equal(t, "Hello World", toolResult.Content[0].Text)
 	})
 
@@ -274,7 +273,7 @@ func TestExecutor_parseResourceResult(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, contents, 1)
-		assert.Equal(t, "text", contents[0].Type)
+		assert.Equal(t, mcp.ContentTypeText, contents[0].Type)
 		assert.Equal(t, "Resource data", contents[0].Text)
 	})
 
@@ -562,7 +561,7 @@ func TestFluxbaseSDKCode(t *testing.T) {
 
 func TestCustomTool_Struct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
-		inputSchema := json.RawMessage(`{"type":"object"}`)
+		inputSchema := map[string]any{"type": "object"}
 		tool := &CustomTool{
 			Name:           "my_tool",
 			Description:    "A test tool",
@@ -576,8 +575,6 @@ func TestCustomTool_Struct(t *testing.T) {
 			AllowWrite:     false,
 			MemoryLimitMB:  64,
 			TimeoutSeconds: 30,
-			Source:         SourceDatabase,
-			FilePath:       "/path/to/tool.ts",
 		}
 
 		assert.Equal(t, "my_tool", tool.Name)
@@ -592,8 +589,6 @@ func TestCustomTool_Struct(t *testing.T) {
 		assert.False(t, tool.AllowWrite)
 		assert.Equal(t, 64, tool.MemoryLimitMB)
 		assert.Equal(t, 30, tool.TimeoutSeconds)
-		assert.Equal(t, SourceDatabase, tool.Source)
-		assert.Equal(t, "/path/to/tool.ts", tool.FilePath)
 	})
 }
 
@@ -601,7 +596,7 @@ func TestCustomTool_Struct(t *testing.T) {
 // CustomResource Struct Tests
 // =============================================================================
 
-func TestCustomResource_Struct(t *testing.T) {
+func TestCustomResourceExecutor_Struct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		resource := &CustomResource{
 			URI:            "test://resource/{id}",
@@ -613,8 +608,6 @@ func TestCustomResource_Struct(t *testing.T) {
 			RequiredScopes: []string{"read"},
 			IsTemplate:     true,
 			TimeoutSeconds: 15,
-			Source:         SourceFilesystem,
-			FilePath:       "/path/to/resource.ts",
 		}
 
 		assert.Equal(t, "test://resource/{id}", resource.URI)
@@ -626,22 +619,6 @@ func TestCustomResource_Struct(t *testing.T) {
 		assert.Equal(t, []string{"read"}, resource.RequiredScopes)
 		assert.True(t, resource.IsTemplate)
 		assert.Equal(t, 15, resource.TimeoutSeconds)
-		assert.Equal(t, SourceFilesystem, resource.Source)
-		assert.Equal(t, "/path/to/resource.ts", resource.FilePath)
-	})
-}
-
-// =============================================================================
-// Source Constants Tests
-// =============================================================================
-
-func TestSourceConstants(t *testing.T) {
-	t.Run("source database value", func(t *testing.T) {
-		assert.Equal(t, Source("database"), SourceDatabase)
-	})
-
-	t.Run("source filesystem value", func(t *testing.T) {
-		assert.Equal(t, Source("filesystem"), SourceFilesystem)
 	})
 }
 
@@ -653,14 +630,14 @@ func TestMCPContent_Helpers(t *testing.T) {
 	t.Run("TextContent creates text content", func(t *testing.T) {
 		content := mcp.TextContent("Hello World")
 
-		assert.Equal(t, "text", content.Type)
+		assert.Equal(t, mcp.ContentTypeText, content.Type)
 		assert.Equal(t, "Hello World", content.Text)
 	})
 
 	t.Run("ErrorContent creates error content", func(t *testing.T) {
 		content := mcp.ErrorContent("Something failed")
 
-		assert.Equal(t, "text", content.Type)
+		assert.Equal(t, mcp.ContentTypeText, content.Type)
 		assert.Contains(t, content.Text, "Something failed")
 	})
 }
