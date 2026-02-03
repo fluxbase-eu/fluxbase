@@ -104,12 +104,12 @@ func TestIsValidMigrationName(t *testing.T) {
 
 	t.Run("invalid names", func(t *testing.T) {
 		invalidNames := []string{
-			"",                    // empty
-			"1_migration",         // starts with number
-			"-migration",          // starts with hyphen
-			"my migration",        // contains space
-			"migration.up",        // contains dot
-			"migration@v1",        // contains special char
+			"",             // empty
+			"1_migration",  // starts with number
+			"-migration",   // starts with hyphen
+			"my migration", // contains space
+			"migration.up", // contains dot
+			"migration@v1", // contains special char
 		}
 
 		for _, name := range invalidNames {

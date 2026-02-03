@@ -350,12 +350,12 @@ func TestIsValidFunctionName(t *testing.T) {
 
 	t.Run("invalid names", func(t *testing.T) {
 		invalidNames := []string{
-			"",                                                             // empty
-			"1function",                                                    // starts with number
-			"-function",                                                    // starts with hyphen
-			"my function",                                                  // contains space
-			"my.function",                                                  // contains dot
-			"my@function",                                                  // contains special char
+			"",            // empty
+			"1function",   // starts with number
+			"-function",   // starts with hyphen
+			"my function", // contains space
+			"my.function", // contains dot
+			"my@function", // contains special char
 			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // > 63 chars
 		}
 

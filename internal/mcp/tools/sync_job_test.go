@@ -233,18 +233,18 @@ export default function() {}`
 func TestIsValidCronExpression(t *testing.T) {
 	t.Run("valid expressions", func(t *testing.T) {
 		validExpressions := []string{
-			"* * * * *",           // Every minute
-			"0 * * * *",           // Every hour
-			"0 0 * * *",           // Daily at midnight
-			"0 0 * * 0",           // Weekly on Sunday
-			"0 0 1 * *",           // Monthly on 1st
-			"*/5 * * * *",         // Every 5 minutes
-			"0 */2 * * *",         // Every 2 hours
-			"0 0 */3 * *",         // Every 3 days
-			"0 9-17 * * 1-5",      // Weekdays 9-5
-			"0 0,12 * * *",        // Noon and midnight
-			"0 0 1,15 * *",        // 1st and 15th
-			"0 0 * * * *",         // 6-field (with seconds)
+			"* * * * *",      // Every minute
+			"0 * * * *",      // Every hour
+			"0 0 * * *",      // Daily at midnight
+			"0 0 * * 0",      // Weekly on Sunday
+			"0 0 1 * *",      // Monthly on 1st
+			"*/5 * * * *",    // Every 5 minutes
+			"0 */2 * * *",    // Every 2 hours
+			"0 0 */3 * *",    // Every 3 days
+			"0 9-17 * * 1-5", // Weekdays 9-5
+			"0 0,12 * * *",   // Noon and midnight
+			"0 0 1,15 * *",   // 1st and 15th
+			"0 0 * * * *",    // 6-field (with seconds)
 		}
 
 		for _, expr := range validExpressions {
@@ -254,11 +254,11 @@ func TestIsValidCronExpression(t *testing.T) {
 
 	t.Run("invalid expressions", func(t *testing.T) {
 		invalidExpressions := []string{
-			"",                    // Empty
-			"* * * *",             // Too few fields
-			"* * * * * * *",       // Too many fields
-			"abc * * * *",         // Invalid characters
-			"* * * * * hello",     // Invalid characters in field
+			"",                // Empty
+			"* * * *",         // Too few fields
+			"* * * * * * *",   // Too many fields
+			"abc * * * *",     // Invalid characters
+			"* * * * * hello", // Invalid characters in field
 		}
 
 		for _, expr := range invalidExpressions {
@@ -268,11 +268,11 @@ func TestIsValidCronExpression(t *testing.T) {
 
 	t.Run("special cron characters", func(t *testing.T) {
 		specialExpressions := []string{
-			"0 0 L * *",      // Last day of month
-			"0 0 W * *",      // Nearest weekday
-			"0 0 * * 1#2",    // Second Monday
-			"0 0 15W * *",    // Nearest weekday to 15th
-			"? * * * *",      // Question mark (no specific value)
+			"0 0 L * *",   // Last day of month
+			"0 0 W * *",   // Nearest weekday
+			"0 0 * * 1#2", // Second Monday
+			"0 0 15W * *", // Nearest weekday to 15th
+			"? * * * *",   // Question mark (no specific value)
 		}
 
 		for _, expr := range specialExpressions {

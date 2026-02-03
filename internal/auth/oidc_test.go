@@ -173,8 +173,8 @@ func TestOIDCVerifier_IsProviderConfigured(t *testing.T) {
 		}
 
 		assert.True(t, v.IsProviderConfigured("google"))
-		assert.True(t, v.IsProviderConfigured("Google"))  // case insensitive
-		assert.True(t, v.IsProviderConfigured("GOOGLE"))  // case insensitive
+		assert.True(t, v.IsProviderConfigured("Google")) // case insensitive
+		assert.True(t, v.IsProviderConfigured("GOOGLE")) // case insensitive
 		assert.False(t, v.IsProviderConfigured("apple"))
 	})
 }
