@@ -347,15 +347,9 @@ jobs:
           # Run unit tests with -short flag to skip integration tests
           # Integration tests require database setup and can be slow
           # Note: We run go test directly here for coverage, not through test-runner.sh
-          go test -v -short -race -timeout=3m -coverprofile=coverage.out -covermode=atomic $(go list ./... | grep -v '/test/e2e' | grep -v '/test$')
-          go tool cover -html=coverage.out -o coverage.html
+          go test -v -short -race -timeout=3m -coverprofile=coverage-unit.out -covermode=atomic $(go list ./... | grep -v '/test/e2e' | grep -v '/test$')
 
-      - name: Check coverage thresholds
-        run: |
-          go install github.com/vladopajic/go-test-coverage/v2@latest
-          go-test-coverage --config=.testcoverage.yml
-
-      - name: Run e2e tests
+      - name: Run e2e tests with coverage
         timeout-minutes: 15
         env:
           FLUXBASE_DATABASE_HOST: localhost
@@ -373,8 +367,23 @@ jobs:
         run: |
           # Run e2e tests with fluxbase_app user for proper RLS testing
           # Use -parallel=1 within each package to run test functions sequentially (avoid DB connection exhaustion)
-          # Run directly to see raw output and identify where tests hang
-          go test -v -race -parallel=1 -timeout=10m ./test/e2e/...
+          # Run with coverage to include in combined coverage report
+          go test -v -race -parallel=1 -timeout=10m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/...
+
+      - name: Merge coverage reports
+        run: |
+          # Install gocovmerge to combine coverage profiles
+          go install github.com/wadey/gocovmerge@latest
+          # Merge unit and e2e coverage into combined report
+          gocovmerge coverage-unit.out coverage-e2e.out > coverage.out
+          # Generate HTML report from combined coverage
+          go tool cover -html=coverage.out -o coverage.html
+
+      - name: Check coverage thresholds
+        run: |
+          go install github.com/vladopajic/go-test-coverage/v2@latest
+          # Check thresholds against combined (unit + e2e) coverage
+          go-test-coverage --config=.testcoverage.yml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
