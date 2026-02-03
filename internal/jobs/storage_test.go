@@ -373,3 +373,255 @@ func TestJobFunction_Timeout(t *testing.T) {
 		assert.Equal(t, 86400, fn.TimeoutSeconds)
 	})
 }
+
+// =============================================================================
+// ComputeDeduplicationKey Tests
+// =============================================================================
+
+func TestComputeDeduplicationKey(t *testing.T) {
+	t.Run("same inputs produce same key", func(t *testing.T) {
+		key1 := ComputeDeduplicationKey("default", "process-data", nil)
+		key2 := ComputeDeduplicationKey("default", "process-data", nil)
+		assert.Equal(t, key1, key2)
+	})
+
+	t.Run("different namespaces produce different keys", func(t *testing.T) {
+		key1 := ComputeDeduplicationKey("default", "process-data", nil)
+		key2 := ComputeDeduplicationKey("production", "process-data", nil)
+		assert.NotEqual(t, key1, key2)
+	})
+
+	t.Run("different job names produce different keys", func(t *testing.T) {
+		key1 := ComputeDeduplicationKey("default", "process-data", nil)
+		key2 := ComputeDeduplicationKey("default", "send-email", nil)
+		assert.NotEqual(t, key1, key2)
+	})
+
+	t.Run("different payloads produce different keys", func(t *testing.T) {
+		payload1 := `{"batch_id": 1}`
+		payload2 := `{"batch_id": 2}`
+		key1 := ComputeDeduplicationKey("default", "process-data", &payload1)
+		key2 := ComputeDeduplicationKey("default", "process-data", &payload2)
+		assert.NotEqual(t, key1, key2)
+	})
+
+	t.Run("nil payload vs empty payload", func(t *testing.T) {
+		emptyPayload := ""
+		key1 := ComputeDeduplicationKey("default", "process-data", nil)
+		key2 := ComputeDeduplicationKey("default", "process-data", &emptyPayload)
+		// nil and empty string should produce the same key (both are treated as no payload)
+		assert.Equal(t, key1, key2)
+	})
+
+	t.Run("payload with content vs nil", func(t *testing.T) {
+		payload := `{"key": "value"}`
+		key1 := ComputeDeduplicationKey("default", "process-data", nil)
+		key2 := ComputeDeduplicationKey("default", "process-data", &payload)
+		assert.NotEqual(t, key1, key2)
+	})
+
+	t.Run("key is hex encoded sha256", func(t *testing.T) {
+		key := ComputeDeduplicationKey("default", "job", nil)
+		// SHA256 produces 64 hex characters
+		assert.Len(t, key, 64)
+		// Should only contain hex characters
+		for _, c := range key {
+			isHex := (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')
+			assert.True(t, isHex, "character %c should be hex", c)
+		}
+	})
+
+	t.Run("empty namespace and job name", func(t *testing.T) {
+		key := ComputeDeduplicationKey("", "", nil)
+		// Should still produce a valid key
+		assert.Len(t, key, 64)
+	})
+
+	t.Run("special characters in payload", func(t *testing.T) {
+		payload := `{"message": "Hello, 世界! 🎉"}`
+		key := ComputeDeduplicationKey("default", "unicode-job", &payload)
+		assert.Len(t, key, 64)
+	})
+
+	t.Run("large payload", func(t *testing.T) {
+		largePayload := string(make([]byte, 10000))
+		key := ComputeDeduplicationKey("default", "large-payload", &largePayload)
+		assert.Len(t, key, 64)
+	})
+}
+
+// =============================================================================
+// ProgressToJSON Tests
+// =============================================================================
+
+func TestProgressToJSON(t *testing.T) {
+	t.Run("nil progress returns nil", func(t *testing.T) {
+		result, err := ProgressToJSON(nil)
+		require.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("basic progress", func(t *testing.T) {
+		progress := &Progress{
+			Current: 50,
+			Total:   100,
+			Message: "Processing...",
+		}
+
+		result, err := ProgressToJSON(progress)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		assert.Contains(t, *result, `"current":50`)
+		assert.Contains(t, *result, `"total":100`)
+		assert.Contains(t, *result, `"message":"Processing..."`)
+	})
+
+	t.Run("progress with all fields", func(t *testing.T) {
+		progress := &Progress{
+			Current: 75,
+			Total:   100,
+			Message: "Almost done",
+			Details: map[string]interface{}{
+				"items_processed": 75,
+				"errors":          0,
+			},
+		}
+
+		result, err := ProgressToJSON(progress)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		// Verify it's valid JSON
+		var parsed map[string]interface{}
+		err = json.Unmarshal([]byte(*result), &parsed)
+		require.NoError(t, err)
+
+		assert.Equal(t, float64(75), parsed["current"])
+		assert.Equal(t, float64(100), parsed["total"])
+	})
+
+	t.Run("progress with zero values", func(t *testing.T) {
+		progress := &Progress{
+			Current: 0,
+			Total:   0,
+			Message: "",
+		}
+
+		result, err := ProgressToJSON(progress)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		// Should still produce valid JSON
+		var parsed Progress
+		err = json.Unmarshal([]byte(*result), &parsed)
+		require.NoError(t, err)
+	})
+
+	t.Run("progress with special characters", func(t *testing.T) {
+		progress := &Progress{
+			Current: 10,
+			Total:   20,
+			Message: `Processing "file.txt" with special chars: <>&`,
+		}
+
+		result, err := ProgressToJSON(progress)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		// Should be valid JSON
+		var parsed Progress
+		err = json.Unmarshal([]byte(*result), &parsed)
+		require.NoError(t, err)
+		assert.Equal(t, `Processing "file.txt" with special chars: <>&`, parsed.Message)
+	})
+}
+
+// =============================================================================
+// JSONToProgress Tests
+// =============================================================================
+
+func TestJSONToProgress(t *testing.T) {
+	t.Run("nil input returns nil", func(t *testing.T) {
+		result, err := JSONToProgress(nil)
+		require.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("empty string returns nil", func(t *testing.T) {
+		empty := ""
+		result, err := JSONToProgress(&empty)
+		require.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("valid JSON parses correctly", func(t *testing.T) {
+		jsonStr := `{"current":50,"total":100,"message":"Half done"}`
+		result, err := JSONToProgress(&jsonStr)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		assert.Equal(t, int64(50), result.Current)
+		assert.Equal(t, int64(100), result.Total)
+		assert.Equal(t, "Half done", result.Message)
+	})
+
+	t.Run("invalid JSON returns error", func(t *testing.T) {
+		invalidJSON := `{invalid json}`
+		result, err := JSONToProgress(&invalidJSON)
+		assert.Error(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("partial JSON parses available fields", func(t *testing.T) {
+		partialJSON := `{"current":25}`
+		result, err := JSONToProgress(&partialJSON)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		assert.Equal(t, int64(25), result.Current)
+		assert.Equal(t, int64(0), result.Total)
+		assert.Equal(t, "", result.Message)
+	})
+
+	t.Run("JSON with extra fields ignores unknown fields", func(t *testing.T) {
+		jsonWithExtra := `{"current":10,"total":20,"message":"test","unknown_field":"ignored"}`
+		result, err := JSONToProgress(&jsonWithExtra)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		assert.Equal(t, int64(10), result.Current)
+		assert.Equal(t, int64(20), result.Total)
+	})
+
+	t.Run("JSON with details", func(t *testing.T) {
+		jsonStr := `{"current":5,"total":10,"message":"Processing","details":{"batch":1}}`
+		result, err := JSONToProgress(&jsonStr)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		assert.Equal(t, int64(5), result.Current)
+		assert.NotNil(t, result.Details)
+	})
+
+	t.Run("roundtrip ProgressToJSON and JSONToProgress", func(t *testing.T) {
+		original := &Progress{
+			Current: 42,
+			Total:   100,
+			Message: "Processing items",
+			Details: map[string]interface{}{
+				"processed": float64(42),
+			},
+		}
+
+		jsonStr, err := ProgressToJSON(original)
+		require.NoError(t, err)
+
+		parsed, err := JSONToProgress(jsonStr)
+		require.NoError(t, err)
+
+		assert.Equal(t, original.Current, parsed.Current)
+		assert.Equal(t, original.Total, parsed.Total)
+		assert.Equal(t, original.Message, parsed.Message)
+	})
+}
