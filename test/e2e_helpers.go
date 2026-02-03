@@ -1578,12 +1578,33 @@ func (tc *TestContext) EnsureAuthSchema() {
 // Note: In most cases, migrations will have already created these tables. This function
 // only creates them if they don't exist (for isolated test environments without migrations).
 func (tc *TestContext) EnsureStorageSchema() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	// Verify database connection is alive before proceeding
-	err := tc.DB.Health(ctx)
-	require.NoError(tc.T, err, "Database connection health check failed")
+	// Verify database connection is alive before proceeding with retry logic
+	// This prevents "conn closed" errors in CI environments where connection
+	// pool may close idle connections during slow test setup
+	const maxRetries = 3
+	var err error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err = tc.DB.Health(ctx)
+		if err == nil {
+			// Connection is alive, proceed
+			break
+		}
+
+		if attempt < maxRetries {
+			// Log the failure and retry with exponential backoff
+			backoff := time.Duration(1<<uint(attempt-1)) * time.Second // 1s, 2s, 4s
+			log.Warn().
+				Err(err).
+				Int("attempt", attempt).
+				Dur("backoff", backoff).
+				Msg("Database health check failed in EnsureStorageSchema, retrying...")
+			time.Sleep(backoff)
+		}
+	}
+	require.NoError(tc.T, err, "Database connection health check failed after %d attempts", maxRetries)
 
 	queries := []string{
 		`CREATE SCHEMA IF NOT EXISTS storage`,
@@ -1618,12 +1639,33 @@ func (tc *TestContext) EnsureStorageSchema() {
 
 // EnsureFunctionsSchema ensures functions schema and tables exist
 func (tc *TestContext) EnsureFunctionsSchema() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	// Verify database connection is alive before proceeding
-	err := tc.DB.Health(ctx)
-	require.NoError(tc.T, err, "Database connection health check failed")
+	// Verify database connection is alive before proceeding with retry logic
+	// This prevents "conn closed" errors in CI environments where connection
+	// pool may close idle connections during slow test setup
+	const maxRetries = 3
+	var err error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err = tc.DB.Health(ctx)
+		if err == nil {
+			// Connection is alive, proceed
+			break
+		}
+
+		if attempt < maxRetries {
+			// Log the failure and retry with exponential backoff
+			backoff := time.Duration(1<<uint(attempt-1)) * time.Second // 1s, 2s, 4s
+			log.Warn().
+				Err(err).
+				Int("attempt", attempt).
+				Dur("backoff", backoff).
+				Msg("Database health check failed in EnsureFunctionsSchema, retrying...")
+			time.Sleep(backoff)
+		}
+	}
+	require.NoError(tc.T, err, "Database connection health check failed after %d attempts", maxRetries)
 
 	queries := []string{
 		`CREATE SCHEMA IF NOT EXISTS functions`,

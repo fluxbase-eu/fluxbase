@@ -317,7 +317,6 @@ func TestJobsHandler_JobStruct(t *testing.T) {
 			StartedAt:              &now,
 			CompletedAt:            &later,
 			CreatedAt:              now,
-			UpdatedAt:              now,
 		}
 
 		assert.Equal(t, id, job.ID)
