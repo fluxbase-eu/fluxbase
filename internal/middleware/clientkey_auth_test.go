@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,13 +19,13 @@ func TestRequireScope_ClientKeyWithAllScopes(t *testing.T) {
 	app := fiber.New()
 
 	// Set up middleware chain
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "clientkey")
 		c.Locals("client_key_scopes", []string{"read", "write", "delete"})
 		return c.Next()
 	})
 	app.Use(RequireScope("read", "write"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -39,13 +39,13 @@ func TestRequireScope_ClientKeyWithAllScopes(t *testing.T) {
 func TestRequireScope_ClientKeyWithWildcard(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "clientkey")
 		c.Locals("client_key_scopes", []string{"*"})
 		return c.Next()
 	})
 	app.Use(RequireScope("read", "write", "admin"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -59,13 +59,13 @@ func TestRequireScope_ClientKeyWithWildcard(t *testing.T) {
 func TestRequireScope_ClientKeyMissingScope(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "clientkey")
 		c.Locals("client_key_scopes", []string{"read"})
 		return c.Next()
 	})
 	app.Use(RequireScope("read", "write"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -83,13 +83,13 @@ func TestRequireScope_ClientKeyMissingScope(t *testing.T) {
 func TestRequireScope_ClientKeyNoScopes(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "clientkey")
 		// No scopes set
 		return c.Next()
 	})
 	app.Use(RequireScope("read"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -103,13 +103,13 @@ func TestRequireScope_ClientKeyNoScopes(t *testing.T) {
 func TestRequireScope_ServiceKeyWithAllScopes(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "service_key")
 		c.Locals("service_key_scopes", []string{"api:read", "api:write"})
 		return c.Next()
 	})
 	app.Use(RequireScope("api:read"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -123,13 +123,13 @@ func TestRequireScope_ServiceKeyWithAllScopes(t *testing.T) {
 func TestRequireScope_ServiceKeyMissingScope(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "service_key")
 		c.Locals("service_key_scopes", []string{"api:read"})
 		return c.Next()
 	})
 	app.Use(RequireScope("api:admin"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -144,13 +144,13 @@ func TestRequireScope_JWTAuthAllowed(t *testing.T) {
 	// JWT auth doesn't use scopes yet, so should be allowed through
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "jwt")
 		c.Locals("user_id", "user-123")
 		return c.Next()
 	})
 	app.Use(RequireScope("read"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -166,7 +166,7 @@ func TestRequireScope_NoAuthType(t *testing.T) {
 	app := fiber.New()
 
 	app.Use(RequireScope("read"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -184,13 +184,13 @@ func TestRequireScope_NoAuthType(t *testing.T) {
 func TestRequireAdmin_ServiceKey(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "service_key")
 		c.Locals("user_role", "service_role")
 		return c.Next()
 	})
 	app.Use(RequireAdmin())
-	app.Get("/admin", func(c *fiber.Ctx) error {
+	app.Get("/admin", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -204,13 +204,13 @@ func TestRequireAdmin_ServiceKey(t *testing.T) {
 func TestRequireAdmin_ServiceRoleJWT(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "service_role_jwt")
 		c.Locals("user_role", "service_role")
 		return c.Next()
 	})
 	app.Use(RequireAdmin())
-	app.Get("/admin", func(c *fiber.Ctx) error {
+	app.Get("/admin", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -224,13 +224,13 @@ func TestRequireAdmin_ServiceRoleJWT(t *testing.T) {
 func TestRequireAdmin_DashboardAdmin(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "jwt")
 		c.Locals("user_role", "dashboard_admin")
 		return c.Next()
 	})
 	app.Use(RequireAdmin())
-	app.Get("/admin", func(c *fiber.Ctx) error {
+	app.Get("/admin", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -244,13 +244,13 @@ func TestRequireAdmin_DashboardAdmin(t *testing.T) {
 func TestRequireAdmin_RegularUser(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "jwt")
 		c.Locals("user_role", "authenticated")
 		return c.Next()
 	})
 	app.Use(RequireAdmin())
-	app.Get("/admin", func(c *fiber.Ctx) error {
+	app.Get("/admin", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -267,13 +267,13 @@ func TestRequireAdmin_RegularUser(t *testing.T) {
 func TestRequireAdmin_AnonUser(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "service_role_jwt")
 		c.Locals("user_role", "anon")
 		return c.Next()
 	})
 	app.Use(RequireAdmin())
-	app.Get("/admin", func(c *fiber.Ctx) error {
+	app.Get("/admin", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -289,7 +289,7 @@ func TestRequireAdmin_NoAuth(t *testing.T) {
 
 	// No auth locals set
 	app.Use(RequireAdmin())
-	app.Get("/admin", func(c *fiber.Ctx) error {
+	app.Get("/admin", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -308,7 +308,7 @@ func TestContextLocals_ClientKeyInfo(t *testing.T) {
 	app := fiber.New()
 
 	// Simulate authenticated client key
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("client_key_id", "ck-123")
 		c.Locals("client_key_name", "Test Key")
 		c.Locals("client_key_scopes", []string{"read", "write"})
@@ -316,7 +316,7 @@ func TestContextLocals_ClientKeyInfo(t *testing.T) {
 		c.Locals("user_id", "user-456")
 		return c.Next()
 	})
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		keyID := c.Locals("client_key_id").(string)
 		keyName := c.Locals("client_key_name").(string)
 		scopes := c.Locals("client_key_scopes").([]string)
@@ -341,7 +341,7 @@ func TestContextLocals_JWTInfo(t *testing.T) {
 	app := fiber.New()
 
 	// Simulate authenticated JWT
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "user-123")
 		c.Locals("user_email", "test@example.com")
 		c.Locals("user_role", "authenticated")
@@ -350,7 +350,7 @@ func TestContextLocals_JWTInfo(t *testing.T) {
 		c.Locals("is_anonymous", false)
 		return c.Next()
 	})
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		userID := c.Locals("user_id").(string)
 		email := c.Locals("user_email").(string)
 		role := c.Locals("user_role").(string)
@@ -380,7 +380,7 @@ func TestContextLocals_JWTInfo(t *testing.T) {
 func TestHeaderParsing_BearerToken(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 
 		return c.JSON(fiber.Map{
@@ -399,7 +399,7 @@ func TestHeaderParsing_BearerToken(t *testing.T) {
 func TestHeaderParsing_XClientKey(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		clientKey := c.Get("X-Client-Key")
 
 		return c.JSON(fiber.Map{
@@ -418,7 +418,7 @@ func TestHeaderParsing_XClientKey(t *testing.T) {
 func TestHeaderParsing_XServiceKey(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		serviceKey := c.Get("X-Service-Key")
 
 		return c.JSON(fiber.Map{
@@ -441,11 +441,11 @@ func TestHeaderParsing_XServiceKey(t *testing.T) {
 func TestAllowedNamespaces_Set(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("allowed_namespaces", []string{"ns1", "ns2"})
 		return c.Next()
 	})
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		namespaces := c.Locals("allowed_namespaces").([]string)
 		return c.JSON(fiber.Map{
 			"namespaces": namespaces,
@@ -462,7 +462,7 @@ func TestAllowedNamespaces_Set(t *testing.T) {
 func TestAllowedNamespaces_NotSet(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		namespaces := c.Locals("allowed_namespaces")
 		if namespaces == nil {
 			return c.JSON(fiber.Map{
@@ -488,12 +488,12 @@ func TestAllowedNamespaces_NotSet(t *testing.T) {
 func TestRLSContext_ServiceRole(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("rls_role", "service_role")
 		c.Locals("rls_user_id", nil)
 		return c.Next()
 	})
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		role := c.Locals("rls_role").(string)
 		userID := c.Locals("rls_user_id")
 
@@ -513,12 +513,12 @@ func TestRLSContext_ServiceRole(t *testing.T) {
 func TestRLSContext_AuthenticatedUser(t *testing.T) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("rls_role", "authenticated")
 		c.Locals("rls_user_id", "user-123")
 		return c.Next()
 	})
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		role := c.Locals("rls_role").(string)
 		userID := c.Locals("rls_user_id").(string)
 
@@ -542,13 +542,13 @@ func TestRLSContext_AuthenticatedUser(t *testing.T) {
 func BenchmarkRequireScope_SingleScope(b *testing.B) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "clientkey")
 		c.Locals("client_key_scopes", []string{"read", "write", "delete"})
 		return c.Next()
 	})
 	app.Use(RequireScope("read"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
@@ -563,13 +563,13 @@ func BenchmarkRequireScope_SingleScope(b *testing.B) {
 func BenchmarkRequireScope_MultipleScopes(b *testing.B) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "clientkey")
 		c.Locals("client_key_scopes", []string{"read", "write", "delete", "admin"})
 		return c.Next()
 	})
 	app.Use(RequireScope("read", "write", "admin"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
@@ -584,13 +584,13 @@ func BenchmarkRequireScope_MultipleScopes(b *testing.B) {
 func BenchmarkRequireAdmin(b *testing.B) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "service_key")
 		c.Locals("user_role", "service_role")
 		return c.Next()
 	})
 	app.Use(RequireAdmin())
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 

@@ -71,7 +71,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/pubsub"
 	"github.com/fluxbase-eu/fluxbase/internal/ratelimit"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -748,7 +748,7 @@ func (r *APIRequest) Send() *APIResponse {
 	}
 
 	// Execute request with 15 second timeout (to accommodate race detector slowness)
-	resp, err := r.tc.App.Test(req, 15000) // 15 second timeout
+	resp, err := r.tc.App.Test(req, fiber.TestConfig{Timeout: 15000}) // 15 second timeout
 	require.NoError(r.tc.T, err)
 
 	return &APIResponse{
@@ -846,7 +846,7 @@ func (b *TestDataBuilder) Insert() {
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/rest/%s", b.tableName), bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err := b.tc.App.Test(req, -1)
+		resp, err := b.tc.App.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(b.tc.T, err)
 		require.Equal(b.tc.T, fiber.StatusCreated, resp.StatusCode,
 			"Failed to insert test data into %s", b.tableName)

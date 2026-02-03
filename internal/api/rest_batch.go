@@ -9,13 +9,13 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
 // batchInsert handles batch insert operations
-func (h *RESTHandler) batchInsert(ctx context.Context, c *fiber.Ctx, table database.TableInfo, dataArray []map[string]interface{}, isUpsert bool, ignoreDuplicates bool, defaultToNull bool, onConflict string) error {
+func (h *RESTHandler) batchInsert(ctx context.Context, c fiber.Ctx, table database.TableInfo, dataArray []map[string]interface{}, isUpsert bool, ignoreDuplicates bool, defaultToNull bool, onConflict string) error {
 	if len(dataArray) == 0 {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Empty array provided",
@@ -213,12 +213,12 @@ func (h *RESTHandler) batchInsert(ctx context.Context, c *fiber.Ctx, table datab
 
 // makeBatchPatchHandler creates a PATCH handler for batch updates with filters
 func (h *RESTHandler) makeBatchPatchHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 
 		// Parse request body
 		var data map[string]interface{}
-		if err := c.BodyParser(&data); err != nil {
+		if err := c.Bind().Body(&data); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"error": "Invalid request body",
 			})
@@ -333,8 +333,8 @@ func (h *RESTHandler) makeBatchPatchHandler(table database.TableInfo) fiber.Hand
 
 // makeBatchDeleteHandler creates a DELETE handler for batch deletes with filters
 func (h *RESTHandler) makeBatchDeleteHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 
 		// Parse raw query string to preserve multiple values for the same key
 		rawQuery := string(c.Request().URI().QueryString())
@@ -408,3 +408,5 @@ func (h *RESTHandler) makeBatchDeleteHandler(table database.TableInfo) fiber.Han
 		}
 	}
 }
+
+// fiber:context-methods migrated

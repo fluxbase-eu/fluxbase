@@ -19,7 +19,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/crypto"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/email"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -104,9 +104,9 @@ func (h *DashboardAuthHandler) RegisterRoutes(app *fiber.App) {
 
 // Signup creates a new dashboard user account
 // Only allowed if no dashboard users exist yet (first user self-registration)
-func (h *DashboardAuthHandler) Signup(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) Signup(c fiber.Ctx) error {
 	// Check if any dashboard users exist
-	hasUsers, err := h.authService.HasExistingUsers(c.Context())
+	hasUsers, err := h.authService.HasExistingUsers(c.RequestCtx())
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to check existing users")
 	}
@@ -122,7 +122,7 @@ func (h *DashboardAuthHandler) Signup(c *fiber.Ctx) error {
 		FullName string `json:"full_name"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
 	}
 
@@ -130,7 +130,7 @@ func (h *DashboardAuthHandler) Signup(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Email, password, and full name are required")
 	}
 
-	user, err := h.authService.CreateUser(c.Context(), req.Email, req.Password, req.FullName)
+	user, err := h.authService.CreateUser(c.RequestCtx(), req.Email, req.Password, req.FullName)
 	if err != nil {
 		// Check for validation errors
 		errMsg := err.Error()
@@ -149,9 +149,9 @@ func (h *DashboardAuthHandler) Signup(c *fiber.Ctx) error {
 }
 
 // Login authenticates a dashboard user
-func (h *DashboardAuthHandler) Login(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) Login(c fiber.Ctx) error {
 	// Check if password login is disabled
-	if h.isPasswordLoginDisabled(c.Context()) {
+	if h.isPasswordLoginDisabled(c.RequestCtx()) {
 		return fiber.NewError(fiber.StatusForbidden, "Password login is disabled. Please use SSO to sign in.")
 	}
 
@@ -160,7 +160,7 @@ func (h *DashboardAuthHandler) Login(c *fiber.Ctx) error {
 		Password string `json:"password"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -171,7 +171,7 @@ func (h *DashboardAuthHandler) Login(c *fiber.Ctx) error {
 	ipAddress := getIPAddress(c)
 	userAgent := string(c.Request().Header.UserAgent())
 
-	user, loginResp, err := h.authService.Login(c.Context(), req.Email, req.Password, ipAddress, userAgent)
+	user, loginResp, err := h.authService.Login(c.RequestCtx(), req.Email, req.Password, ipAddress, userAgent)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) || err.Error() == "invalid credentials" {
 			return fiber.NewError(fiber.StatusUnauthorized, "Invalid email or password")
@@ -204,12 +204,12 @@ func (h *DashboardAuthHandler) Login(c *fiber.Ctx) error {
 }
 
 // RefreshToken handles token refresh for dashboard users
-func (h *DashboardAuthHandler) RefreshToken(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) RefreshToken(c fiber.Ctx) error {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -217,7 +217,7 @@ func (h *DashboardAuthHandler) RefreshToken(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Refresh token is required")
 	}
 
-	loginResp, err := h.authService.RefreshToken(c.Context(), req.RefreshToken)
+	loginResp, err := h.authService.RefreshToken(c.RequestCtx(), req.RefreshToken)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid or expired refresh token")
 	}
@@ -230,13 +230,13 @@ func (h *DashboardAuthHandler) RefreshToken(c *fiber.Ctx) error {
 }
 
 // VerifyTOTP verifies a TOTP code during login
-func (h *DashboardAuthHandler) VerifyTOTP(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) VerifyTOTP(c fiber.Ctx) error {
 	var req struct {
 		UserID string `json:"user_id"`
 		Code   string `json:"code"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -249,13 +249,13 @@ func (h *DashboardAuthHandler) VerifyTOTP(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid user ID")
 	}
 
-	err = h.authService.VerifyTOTP(c.Context(), userID, req.Code)
+	err = h.authService.VerifyTOTP(c.RequestCtx(), userID, req.Code)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid 2FA code")
 	}
 
 	// Get user after successful 2FA
-	user, err := h.authService.GetUserByID(c.Context(), userID)
+	user, err := h.authService.GetUserByID(c.RequestCtx(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to fetch user")
 	}
@@ -275,10 +275,10 @@ func (h *DashboardAuthHandler) VerifyTOTP(c *fiber.Ctx) error {
 }
 
 // GetCurrentUser returns the currently authenticated dashboard user
-func (h *DashboardAuthHandler) GetCurrentUser(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) GetCurrentUser(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
-	user, err := h.authService.GetUserByID(c.Context(), userID)
+	user, err := h.authService.GetUserByID(c.RequestCtx(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "User not found")
 	}
@@ -290,7 +290,7 @@ func (h *DashboardAuthHandler) GetCurrentUser(c *fiber.Ctx) error {
 }
 
 // UpdateProfile updates the current user's profile
-func (h *DashboardAuthHandler) UpdateProfile(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) UpdateProfile(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	var req struct {
@@ -298,7 +298,7 @@ func (h *DashboardAuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		AvatarURL *string `json:"avatar_url"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -306,7 +306,7 @@ func (h *DashboardAuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Full name is required")
 	}
 
-	err := h.authService.UpdateProfile(c.Context(), userID, req.FullName, req.AvatarURL)
+	err := h.authService.UpdateProfile(c.RequestCtx(), userID, req.FullName, req.AvatarURL)
 	if err != nil {
 		// Check for validation errors
 		errMsg := err.Error()
@@ -317,12 +317,12 @@ func (h *DashboardAuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update profile")
 	}
 
-	user, _ := h.authService.GetUserByID(c.Context(), userID)
+	user, _ := h.authService.GetUserByID(c.RequestCtx(), userID)
 	return c.JSON(user)
 }
 
 // ChangePassword changes the current user's password
-func (h *DashboardAuthHandler) ChangePassword(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) ChangePassword(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	var req struct {
@@ -330,7 +330,7 @@ func (h *DashboardAuthHandler) ChangePassword(c *fiber.Ctx) error {
 		NewPassword     string `json:"new_password"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -341,7 +341,7 @@ func (h *DashboardAuthHandler) ChangePassword(c *fiber.Ctx) error {
 	ipAddress := getIPAddress(c)
 	userAgent := string(c.Request().Header.UserAgent())
 
-	err := h.authService.ChangePassword(c.Context(), userID, req.CurrentPassword, req.NewPassword, ipAddress, userAgent)
+	err := h.authService.ChangePassword(c.RequestCtx(), userID, req.CurrentPassword, req.NewPassword, ipAddress, userAgent)
 	if err != nil {
 		errMsg := err.Error()
 		if errMsg == "current password is incorrect" {
@@ -360,14 +360,14 @@ func (h *DashboardAuthHandler) ChangePassword(c *fiber.Ctx) error {
 }
 
 // DeleteAccount deletes the current user's account
-func (h *DashboardAuthHandler) DeleteAccount(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) DeleteAccount(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	var req struct {
 		Password string `json:"password"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -378,7 +378,7 @@ func (h *DashboardAuthHandler) DeleteAccount(c *fiber.Ctx) error {
 	ipAddress := getIPAddress(c)
 	userAgent := string(c.Request().Header.UserAgent())
 
-	err := h.authService.DeleteAccount(c.Context(), userID, req.Password, ipAddress, userAgent)
+	err := h.authService.DeleteAccount(c.RequestCtx(), userID, req.Password, ipAddress, userAgent)
 	if err != nil {
 		if err.Error() == "password is incorrect" {
 			return fiber.NewError(fiber.StatusUnauthorized, "Password is incorrect")
@@ -392,10 +392,10 @@ func (h *DashboardAuthHandler) DeleteAccount(c *fiber.Ctx) error {
 }
 
 // SetupTOTP generates a new TOTP secret for 2FA
-func (h *DashboardAuthHandler) SetupTOTP(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) SetupTOTP(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
-	user, err := h.authService.GetUserByID(c.Context(), userID)
+	user, err := h.authService.GetUserByID(c.RequestCtx(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "User not found")
 	}
@@ -405,9 +405,9 @@ func (h *DashboardAuthHandler) SetupTOTP(c *fiber.Ctx) error {
 		Issuer string `json:"issuer"` // Optional: custom issuer name for the QR code
 	}
 	// Ignore parse errors - issuer is optional and will default to config value
-	_ = c.BodyParser(&req)
+	_ = c.Bind().Body(&req)
 
-	secret, qrURL, err := h.authService.SetupTOTP(c.Context(), userID, user.Email, req.Issuer)
+	secret, qrURL, err := h.authService.SetupTOTP(c.RequestCtx(), userID, user.Email, req.Issuer)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to setup 2FA")
 	}
@@ -419,14 +419,14 @@ func (h *DashboardAuthHandler) SetupTOTP(c *fiber.Ctx) error {
 }
 
 // EnableTOTP enables 2FA after verifying the TOTP code
-func (h *DashboardAuthHandler) EnableTOTP(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) EnableTOTP(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	var req struct {
 		Code string `json:"code"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -437,7 +437,7 @@ func (h *DashboardAuthHandler) EnableTOTP(c *fiber.Ctx) error {
 	ipAddress := getIPAddress(c)
 	userAgent := string(c.Request().Header.UserAgent())
 
-	backupCodes, err := h.authService.EnableTOTP(c.Context(), userID, req.Code, ipAddress, userAgent)
+	backupCodes, err := h.authService.EnableTOTP(c.RequestCtx(), userID, req.Code, ipAddress, userAgent)
 	if err != nil {
 		if err.Error() == "invalid TOTP code" {
 			return fiber.NewError(fiber.StatusUnauthorized, "Invalid 2FA code")
@@ -452,14 +452,14 @@ func (h *DashboardAuthHandler) EnableTOTP(c *fiber.Ctx) error {
 }
 
 // DisableTOTP disables 2FA for the current user
-func (h *DashboardAuthHandler) DisableTOTP(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) DisableTOTP(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	var req struct {
 		Password string `json:"password"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -470,7 +470,7 @@ func (h *DashboardAuthHandler) DisableTOTP(c *fiber.Ctx) error {
 	ipAddress := getIPAddress(c)
 	userAgent := string(c.Request().Header.UserAgent())
 
-	err := h.authService.DisableTOTP(c.Context(), userID, req.Password, ipAddress, userAgent)
+	err := h.authService.DisableTOTP(c.RequestCtx(), userID, req.Password, ipAddress, userAgent)
 	if err != nil {
 		if err.Error() == "password is incorrect" {
 			return fiber.NewError(fiber.StatusUnauthorized, "Password is incorrect")
@@ -484,7 +484,7 @@ func (h *DashboardAuthHandler) DisableTOTP(c *fiber.Ctx) error {
 }
 
 // RequestPasswordReset initiates a password reset for a dashboard user
-func (h *DashboardAuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) RequestPasswordReset(c fiber.Ctx) error {
 	// Check if email service is configured
 	if h.emailService == nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -497,7 +497,7 @@ func (h *DashboardAuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
 		Email string `json:"email"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -505,7 +505,7 @@ func (h *DashboardAuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Email is required")
 	}
 
-	token, err := h.authService.RequestPasswordReset(c.Context(), req.Email)
+	token, err := h.authService.RequestPasswordReset(c.RequestCtx(), req.Email)
 	if err != nil {
 		// Log the error but don't reveal details to user
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to request password reset")
@@ -515,7 +515,7 @@ func (h *DashboardAuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
 	// If we got a token, send the password reset email
 	if token != "" {
 		resetLink := h.baseURL + "/admin/reset-password?token=" + token
-		if err := h.emailService.SendPasswordReset(c.Context(), req.Email, token, resetLink); err != nil {
+		if err := h.emailService.SendPasswordReset(c.RequestCtx(), req.Email, token, resetLink); err != nil {
 			log.Error().Err(err).Str("email", req.Email).Msg("Failed to send password reset email")
 			// Don't return error to prevent email enumeration
 		} else {
@@ -530,12 +530,12 @@ func (h *DashboardAuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
 }
 
 // VerifyPasswordResetToken verifies a password reset token is valid
-func (h *DashboardAuthHandler) VerifyPasswordResetToken(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) VerifyPasswordResetToken(c fiber.Ctx) error {
 	var req struct {
 		Token string `json:"token"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -543,7 +543,7 @@ func (h *DashboardAuthHandler) VerifyPasswordResetToken(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Token is required")
 	}
 
-	valid, err := h.authService.VerifyPasswordResetToken(c.Context(), req.Token)
+	valid, err := h.authService.VerifyPasswordResetToken(c.RequestCtx(), req.Token)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify token")
 	}
@@ -562,13 +562,13 @@ func (h *DashboardAuthHandler) VerifyPasswordResetToken(c *fiber.Ctx) error {
 }
 
 // ConfirmPasswordReset resets the password using a valid reset token
-func (h *DashboardAuthHandler) ConfirmPasswordReset(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) ConfirmPasswordReset(c fiber.Ctx) error {
 	var req struct {
 		Token       string `json:"token"`
 		NewPassword string `json:"new_password"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
@@ -576,7 +576,7 @@ func (h *DashboardAuthHandler) ConfirmPasswordReset(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Token and new password are required")
 	}
 
-	err := h.authService.ResetPassword(c.Context(), req.Token, req.NewPassword)
+	err := h.authService.ResetPassword(c.RequestCtx(), req.Token, req.NewPassword)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "invalid or expired") {
@@ -594,7 +594,7 @@ func (h *DashboardAuthHandler) ConfirmPasswordReset(c *fiber.Ctx) error {
 }
 
 // RequireDashboardAuth is a middleware that requires dashboard authentication
-func (h *DashboardAuthHandler) RequireDashboardAuth(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) RequireDashboardAuth(c fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization header")
@@ -636,7 +636,7 @@ func (h *DashboardAuthHandler) RequireDashboardAuth(c *fiber.Ctx) error {
 }
 
 // getIPAddress extracts the client IP address from the request
-func getIPAddress(c *fiber.Ctx) net.IP {
+func getIPAddress(c fiber.Ctx) net.IP {
 	// Try X-Forwarded-For header first (for proxies)
 	xff := c.Get("X-Forwarded-For")
 	if xff != "" {
@@ -692,8 +692,8 @@ type SSOProvider struct {
 }
 
 // GetSSOProviders returns the list of SSO providers available for dashboard login
-func (h *DashboardAuthHandler) GetSSOProviders(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *DashboardAuthHandler) GetSSOProviders(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	providers := []SSOProvider{}
 
 	// Get OAuth providers with allow_dashboard_login = true
@@ -762,10 +762,10 @@ func (h *DashboardAuthHandler) getOAuthProvidersForDashboard(ctx context.Context
 }
 
 // InitiateOAuthLogin initiates an OAuth login flow for dashboard SSO
-func (h *DashboardAuthHandler) InitiateOAuthLogin(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) InitiateOAuthLogin(c fiber.Ctx) error {
 	providerID := c.Params("provider")
 	redirectTo := c.Query("redirect_to", "/")
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Fetch the OAuth provider configuration
 	var clientID, clientSecret, providerName string
@@ -922,11 +922,11 @@ func (h *DashboardAuthHandler) buildOAuthConfig(provider, clientID, clientSecret
 }
 
 // OAuthCallback handles the OAuth callback for dashboard SSO
-func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) OAuthCallback(c fiber.Ctx) error {
 	code := c.Query("code")
 	state := c.Query("state")
 	errorParam := c.Query("error")
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	codePreview := code
 	if len(code) > 10 {
@@ -946,17 +946,17 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 		log.Warn().
 			Str("state", state).
 			Msg("Invalid or missing OAuth state in dashboard callback")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Invalid or expired state"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Invalid or expired state"))
 	}
 
 	// This is a dashboard OAuth callback, process it
 	if errorParam != "" {
 		errorDesc := c.Query("error_description", errorParam)
-		return c.Redirect("/admin/login?error=" + url.QueryEscape(errorDesc))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape(errorDesc))
 	}
 
 	if code == "" || state == "" {
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Missing authorization code or state"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Missing authorization code or state"))
 	}
 
 	// Build OAuth config using provider from database and redirect_uri from state metadata
@@ -1033,7 +1033,7 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 			Err(err).
 			Str("provider", providerID).
 			Msg("Failed to fetch OAuth provider configuration")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("OAuth provider not found"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("OAuth provider not found"))
 	}
 
 	// Log OAuth config details for debugging
@@ -1054,7 +1054,7 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 			Str("redirect_uri", stateMetadata.RedirectURI).
 			Str("config_redirect_uri", config.RedirectURL).
 			Msg("Failed to exchange OAuth authorization code")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Failed to exchange authorization code"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Failed to exchange authorization code"))
 	}
 
 	// Fetch provider configuration for RBAC validation
@@ -1072,13 +1072,13 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 			Err(err).
 			Str("provider", providerID).
 			Msg("Failed to fetch OAuth provider config for RBAC validation")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("OAuth provider configuration error"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("OAuth provider configuration error"))
 	}
 
 	// Get user info from provider (includes ID token claims)
 	userInfo, err := h.getUserInfoFromOAuth(ctx, config, token, userInfoURL)
 	if err != nil {
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Failed to get user info from provider"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Failed to get user info from provider"))
 	}
 
 	// Extract ID token claims (if available)
@@ -1125,7 +1125,7 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 				Str("provider", providerID).
 				Interface("claims", idTokenClaims).
 				Msg("Dashboard OAuth access denied due to claims validation")
-			return c.Redirect("/admin/login?error=" + url.QueryEscape(err.Error()))
+			return c.Redirect().To("/admin/login?error=" + url.QueryEscape(err.Error()))
 		}
 	}
 
@@ -1140,7 +1140,7 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 	}
 
 	if email == "" {
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Email not provided by OAuth provider"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Email not provided by OAuth provider"))
 	}
 
 	// Find or create dashboard user
@@ -1153,7 +1153,7 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 			Str("provider", providerName).
 			Str("provider_user_id", providerUserID).
 			Msg("Failed to create or find dashboard user via SSO")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Failed to create or find user"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Failed to create or find user"))
 	}
 
 	// Login via SSO
@@ -1167,13 +1167,13 @@ func (h *DashboardAuthHandler) OAuthCallback(c *fiber.Ctx) error {
 		} else if err.Error() == "account is inactive" {
 			errMsg = "Account is inactive"
 		}
-		return c.Redirect("/admin/login?error=" + url.QueryEscape(errMsg))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape(errMsg))
 	}
 
 	// Redirect with tokens in URL fragment (for SPA to capture)
 	// Always redirect to /admin after dashboard OAuth login
 	redirectURL := "/admin"
-	return c.Redirect(fmt.Sprintf("/admin/login/callback?access_token=%s&refresh_token=%s&redirect_to=%s",
+	return c.Redirect().To(fmt.Sprintf("/admin/login/callback?access_token=%s&refresh_token=%s&redirect_to=%s",
 		url.QueryEscape(loginResp.AccessToken),
 		url.QueryEscape(loginResp.RefreshToken),
 		url.QueryEscape(redirectURL)))
@@ -1265,10 +1265,10 @@ func (h *DashboardAuthHandler) getUserInfoFromOAuth(ctx context.Context, config 
 }
 
 // InitiateSAMLLogin initiates a SAML login flow for dashboard SSO
-func (h *DashboardAuthHandler) InitiateSAMLLogin(c *fiber.Ctx) error {
+func (h *DashboardAuthHandler) InitiateSAMLLogin(c fiber.Ctx) error {
 	providerIDOrName := c.Params("provider")
 	redirectTo := c.Query("redirect_to", "/")
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	if h.samlService == nil {
 		log.Error().Msg("SAML service not configured for dashboard")
@@ -1322,16 +1322,16 @@ func (h *DashboardAuthHandler) InitiateSAMLLogin(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create SAML request: %v", err))
 	}
 
-	return c.Redirect(authURL)
+	return c.Redirect().To(authURL)
 }
 
 // SAMLACSCallback handles the SAML Assertion Consumer Service callback for dashboard SSO
-func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *DashboardAuthHandler) SAMLACSCallback(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	if h.samlService == nil {
 		log.Error().Msg("SAML service not configured for dashboard")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("SAML not configured"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("SAML not configured"))
 	}
 
 	// Parse SAML response
@@ -1339,7 +1339,7 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 	relayState := c.FormValue("RelayState")
 
 	if samlResponse == "" {
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Missing SAML response"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Missing SAML response"))
 	}
 
 	// Find the provider from relay state or try all dashboard-enabled providers
@@ -1353,7 +1353,7 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 	// If no dashboard providers configured
 	if len(dashboardProviders) == 0 {
 		log.Warn().Msg("No SAML providers enabled for dashboard login")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("No SAML providers configured for dashboard"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("No SAML providers configured for dashboard"))
 	}
 
 	for _, provider := range dashboardProviders {
@@ -1366,14 +1366,14 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 
 	if assertion == nil {
 		log.Warn().Err(parseErr).Msg("Could not parse SAML assertion with any dashboard provider")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Invalid SAML assertion"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Invalid SAML assertion"))
 	}
 
 	// Check if provider allows dashboard login
 	provider, _ := h.samlService.GetProvider(providerName)
 	if provider == nil || !provider.AllowDashboardLogin {
 		log.Warn().Str("provider", providerName).Msg("SAML provider not enabled for dashboard login")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("SAML provider not enabled for dashboard login"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("SAML provider not enabled for dashboard login"))
 	}
 
 	// Extract user info using the service method
@@ -1410,7 +1410,7 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 	}
 
 	if email == "" {
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Email not provided in SAML assertion"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Email not provided in SAML assertion"))
 	}
 
 	// RBAC: Validate group membership if configured
@@ -1423,7 +1423,7 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 				Str("email", email).
 				Strs("groups", groups).
 				Msg("Dashboard SSO access denied due to group membership")
-			return c.Redirect("/admin/login?error=" + url.QueryEscape(err.Error()))
+			return c.Redirect().To("/admin/login?error=" + url.QueryEscape(err.Error()))
 		}
 	}
 
@@ -1437,7 +1437,7 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 			Str("provider", samlProviderName).
 			Str("provider_user_id", providerUserID).
 			Msg("Failed to create or find dashboard user via SAML SSO")
-		return c.Redirect("/admin/login?error=" + url.QueryEscape("Failed to create or find user"))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape("Failed to create or find user"))
 	}
 
 	// Login via SSO
@@ -1451,7 +1451,7 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 		} else if err.Error() == "account is inactive" {
 			errMsg = "Account is inactive"
 		}
-		return c.Redirect("/admin/login?error=" + url.QueryEscape(errMsg))
+		return c.Redirect().To("/admin/login?error=" + url.QueryEscape(errMsg))
 	}
 
 	// Create SAML session for SLO support
@@ -1476,7 +1476,7 @@ func (h *DashboardAuthHandler) SAMLACSCallback(c *fiber.Ctx) error {
 	if redirectURL == "" || redirectURL == "/" {
 		redirectURL = "/admin"
 	}
-	return c.Redirect(fmt.Sprintf("/admin/login/callback?access_token=%s&refresh_token=%s&redirect_to=%s",
+	return c.Redirect().To(fmt.Sprintf("/admin/login/callback?access_token=%s&refresh_token=%s&redirect_to=%s",
 		url.QueryEscape(loginResp.AccessToken),
 		url.QueryEscape(loginResp.RefreshToken),
 		url.QueryEscape(redirectURL)))
@@ -1526,3 +1526,5 @@ func capitalizeWords(s string) string {
 	}
 	return strings.Join(words, " ")
 }
+
+// fiber:context-methods migrated

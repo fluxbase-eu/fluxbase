@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -492,7 +492,7 @@ func TestGetIPAddress(t *testing.T) {
 			app := fiber.New()
 
 			var capturedIP string
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				ip := getIPAddress(c)
 				if ip != nil {
 					capturedIP = ip.String()
@@ -615,7 +615,7 @@ func TestRequireDashboardAuth(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(handler.RequireDashboardAuth)
-	app.Get("/protected", func(c *fiber.Ctx) error {
+	app.Get("/protected", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -703,8 +703,8 @@ func TestDashboardAuthHandler_SAMLACSCallback_SAMLNotConfigured(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
-	// Should redirect to login with error
-	assert.Equal(t, 302, resp.StatusCode)
+	// Should redirect to login with error (303 See Other is correct for POST → GET redirect)
+	assert.Equal(t, 303, resp.StatusCode)
 	location := resp.Header.Get("Location")
 	assert.Contains(t, location, "/admin/login")
 	// URL may encode space as %20 or +, both are valid
@@ -731,7 +731,8 @@ func TestDashboardAuthHandler_SAMLACSCallback_MissingResponse(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
-	assert.Equal(t, 302, resp.StatusCode)
+	// 303 See Other is correct for POST → GET redirect in Fiber v3
+	assert.Equal(t, 303, resp.StatusCode)
 }
 
 // =============================================================================

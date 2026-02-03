@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -184,11 +184,9 @@ func TestCustomErrorHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New(fiber.Config{
-				ErrorHandler: customErrorHandler,
-			})
+			app := fiber.New(fiber.Config{ErrorHandler: customErrorHandler})
 
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				return tt.err
 			})
 
@@ -255,13 +253,13 @@ func TestAdminRoleCheckingInFiberContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
-			app.Use(func(c *fiber.Ctx) error {
+			app.Use(func(c fiber.Ctx) error {
 				if tt.role != nil {
 					c.Locals("user_role", tt.role)
 				}
 				return c.Next()
 			})
-			app.Get("/admin-only", func(c *fiber.Ctx) error {
+			app.Get("/admin-only", func(c fiber.Ctx) error {
 				role, _ := c.Locals("user_role").(string)
 				if role != "admin" && role != "dashboard_admin" && role != "service_role" {
 					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -287,11 +285,9 @@ func TestAdminRoleCheckingInFiberContext(t *testing.T) {
 
 func TestFiberAppConfiguration(t *testing.T) {
 	t.Run("default error handler returns JSON", func(t *testing.T) {
-		app := fiber.New(fiber.Config{
-			ErrorHandler: customErrorHandler,
-		})
+		app := fiber.New(fiber.Config{ErrorHandler: customErrorHandler})
 
-		app.Get("/error", func(c *fiber.Ctx) error {
+		app.Get("/error", func(c fiber.Ctx) error {
 			return errors.New("test error")
 		})
 
@@ -348,7 +344,7 @@ func TestSchemaQueryParsing(t *testing.T) {
 	app := fiber.New()
 
 	var capturedSchema string
-	app.Get("/tables", func(c *fiber.Ctx) error {
+	app.Get("/tables", func(c fiber.Ctx) error {
 		capturedSchema = c.Query("schema")
 		return c.SendStatus(200)
 	})
@@ -401,11 +397,9 @@ func BenchmarkAdminRoleCheck(b *testing.B) {
 }
 
 func BenchmarkCustomErrorHandler(b *testing.B) {
-	app := fiber.New(fiber.Config{
-		ErrorHandler: customErrorHandler,
-	})
+	app := fiber.New(fiber.Config{ErrorHandler: customErrorHandler})
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Test error")
 	})
 

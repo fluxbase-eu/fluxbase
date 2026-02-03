@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -69,7 +69,7 @@ func TestIsAdminUser(t *testing.T) {
 			app := fiber.New()
 
 			var result bool
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				if tt.role != nil {
 					c.Locals("user_role", tt.role)
 				}

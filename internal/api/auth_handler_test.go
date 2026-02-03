@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -225,7 +225,7 @@ func TestGetAccessToken_FromCookie(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getAccessToken(c)
 		return c.SendString(token)
 	})
@@ -247,7 +247,7 @@ func TestGetAccessToken_FromBearerHeader(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getAccessToken(c)
 		return c.SendString(token)
 	})
@@ -266,7 +266,7 @@ func TestGetAccessToken_CookiePriority(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getAccessToken(c)
 		return c.SendString(token)
 	})
@@ -290,7 +290,7 @@ func TestGetAccessToken_HeaderWithoutBearer(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getAccessToken(c)
 		return c.SendString(token)
 	})
@@ -309,7 +309,7 @@ func TestGetAccessToken_Empty(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getAccessToken(c)
 		return c.SendString(token)
 	})
@@ -327,7 +327,7 @@ func TestGetAccessToken_ShortBearerHeader(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getAccessToken(c)
 		return c.SendString(token)
 	})
@@ -352,7 +352,7 @@ func TestGetRefreshToken_FromCookie(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getRefreshToken(c)
 		return c.SendString(token)
 	})
@@ -374,7 +374,7 @@ func TestGetRefreshToken_Empty(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		token := handler.getRefreshToken(c)
 		return c.SendString(token)
 	})
@@ -396,7 +396,7 @@ func TestSetAuthCookies(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		handler.setAuthCookies(c, "access_token_test", "refresh_token_test", 3600)
 		return c.SendString("OK")
 	})
@@ -434,7 +434,7 @@ func TestSetAuthCookies_Secure(t *testing.T) {
 	handler.SetSecureCookie(true)
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		handler.setAuthCookies(c, "token", "refresh", 3600)
 		return c.SendString("OK")
 	})
@@ -455,7 +455,7 @@ func TestClearAuthCookies(t *testing.T) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		handler.clearAuthCookies(c)
 		return c.SendString("OK")
 	})
@@ -505,7 +505,7 @@ func TestGetCSRFToken_ReturnsToken(t *testing.T) {
 	app := fiber.New()
 
 	// Simulate CSRF middleware setting the cookie
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Cookie(&fiber.Cookie{
 			Name:  "csrf_token",
 			Value: "test_csrf_token",
@@ -638,9 +638,9 @@ func TestGetTOTPStatus_NoAuth(t *testing.T) {
 func BenchmarkGetAccessToken_Cookie(b *testing.B) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 	app := fiber.New()
-	var captured *fiber.Ctx
+	var captured fiber.Ctx
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		captured = c
 		return nil
 	})
@@ -665,9 +665,9 @@ func BenchmarkGetAccessToken_Cookie(b *testing.B) {
 func BenchmarkGetAccessToken_Header(b *testing.B) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 	app := fiber.New()
-	var captured *fiber.Ctx
+	var captured fiber.Ctx
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		captured = c
 		return nil
 	})
@@ -690,7 +690,7 @@ func BenchmarkSetAuthCookies(b *testing.B) {
 	handler := NewAuthHandler(nil, nil, nil, "")
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		handler.setAuthCookies(c, "access", "refresh", 3600)
 		return nil
 	})

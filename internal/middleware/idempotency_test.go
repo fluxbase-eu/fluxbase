@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,14 +34,14 @@ func TestIdempotencyMiddleware_SkipsGET(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(mw.Middleware())
-	app.Get("/api/v1/test", func(c *fiber.Ctx) error {
+	app.Get("/api/v1/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.Header.Set("Idempotency-Key", "test-key-123")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -53,14 +53,14 @@ func TestIdempotencyMiddleware_SkipsNonAPIPaths(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(mw.Middleware())
-	app.Post("/health", func(c *fiber.Ctx) error {
+	app.Post("/health", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
 	req := httptest.NewRequest(http.MethodPost, "/health", nil)
 	req.Header.Set("Idempotency-Key", "test-key-123")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -73,7 +73,7 @@ func TestIdempotencyMiddleware_NoKeyProcessesNormally(t *testing.T) {
 	handlerCalled := false
 	app := fiber.New()
 	app.Use(mw.Middleware())
-	app.Post("/api/v1/test", func(c *fiber.Ctx) error {
+	app.Post("/api/v1/test", func(c fiber.Ctx) error {
 		handlerCalled = true
 		return c.Status(201).JSON(fiber.Map{"created": true})
 	})
@@ -82,7 +82,7 @@ func TestIdempotencyMiddleware_NoKeyProcessesNormally(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	// No Idempotency-Key header
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	assert.True(t, handlerCalled, "handler should be called without idempotency key")
@@ -96,7 +96,7 @@ func TestIdempotencyMiddleware_RejectsLongKey(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(mw.Middleware())
-	app.Post("/api/v1/test", func(c *fiber.Ctx) error {
+	app.Post("/api/v1/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -105,7 +105,7 @@ func TestIdempotencyMiddleware_RejectsLongKey(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/test", nil)
 	req.Header.Set("Idempotency-Key", longKey)
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -118,14 +118,14 @@ func TestIdempotencyMiddleware_SkipsExcludedPaths(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(mw.Middleware())
-	app.Post("/api/v1/auth/refresh", func(c *fiber.Ctx) error {
+	app.Post("/api/v1/auth/refresh", func(c fiber.Ctx) error {
 		return c.SendString("Refreshed")
 	})
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
 	req.Header.Set("Idempotency-Key", "test-key")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -158,18 +158,18 @@ func TestIdempotencyMiddleware_ShouldApply(t *testing.T) {
 			app := fiber.New()
 			var shouldApplyResult bool
 
-			app.Use(func(c *fiber.Ctx) error {
+			app.Use(func(c fiber.Ctx) error {
 				shouldApplyResult = mw.shouldApply(c)
 				return c.SendString("OK")
 			})
 
 			// Add route for all methods
-			app.All(tt.path, func(c *fiber.Ctx) error {
+			app.All(tt.path, func(c fiber.Ctx) error {
 				return c.SendString("OK")
 			})
 
 			req := httptest.NewRequest(tt.method, tt.path, nil)
-			_, err := app.Test(req, -1)
+			_, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 			require.NoError(t, err)
 
 			// Note: Without DB configured, shouldApply will always return false
@@ -191,13 +191,13 @@ func TestCalculateRequestHash(t *testing.T) {
 	t.Run("empty body returns empty hash", func(t *testing.T) {
 		app := fiber.New()
 		var hash string
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			hash = mw.calculateRequestHash(c)
 			return c.SendString("OK")
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/test", nil)
-		_, err := app.Test(req, -1)
+		_, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.Empty(t, hash)
 	})
@@ -205,7 +205,7 @@ func TestCalculateRequestHash(t *testing.T) {
 	t.Run("same body produces same hash", func(t *testing.T) {
 		app := fiber.New()
 		var hashes []string
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			hashes = append(hashes, mw.calculateRequestHash(c))
 			return c.SendString("OK")
 		})
@@ -214,12 +214,12 @@ func TestCalculateRequestHash(t *testing.T) {
 
 		req1 := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
 		req1.Header.Set("Content-Type", "application/json")
-		_, err := app.Test(req1, -1)
+		_, err := app.Test(req1, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 
 		req2 := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
 		req2.Header.Set("Content-Type", "application/json")
-		_, err = app.Test(req2, -1)
+		_, err = app.Test(req2, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 
 		assert.Equal(t, hashes[0], hashes[1])
@@ -228,19 +228,19 @@ func TestCalculateRequestHash(t *testing.T) {
 	t.Run("different body produces different hash", func(t *testing.T) {
 		app := fiber.New()
 		var hashes []string
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			hashes = append(hashes, mw.calculateRequestHash(c))
 			return c.SendString("OK")
 		})
 
 		req1 := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"name":"test1"}`))
 		req1.Header.Set("Content-Type", "application/json")
-		_, err := app.Test(req1, -1)
+		_, err := app.Test(req1, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 
 		req2 := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"name":"test2"}`))
 		req2.Header.Set("Content-Type", "application/json")
-		_, err = app.Test(req2, -1)
+		_, err = app.Test(req2, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 
 		assert.NotEqual(t, hashes[0], hashes[1])
@@ -251,14 +251,14 @@ func TestIdempotencyKeyHelpers(t *testing.T) {
 	t.Run("GetIdempotencyKey extracts header", func(t *testing.T) {
 		app := fiber.New()
 		var key string
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			key = GetIdempotencyKey(c)
 			return c.SendString("OK")
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 		req.Header.Set("Idempotency-Key", "my-key-123")
-		_, err := app.Test(req, -1)
+		_, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.Equal(t, "my-key-123", key)
 	})
@@ -266,14 +266,14 @@ func TestIdempotencyKeyHelpers(t *testing.T) {
 	t.Run("HasIdempotencyKey returns true when present", func(t *testing.T) {
 		app := fiber.New()
 		var hasKey bool
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			hasKey = HasIdempotencyKey(c)
 			return c.SendString("OK")
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 		req.Header.Set("Idempotency-Key", "my-key-123")
-		_, err := app.Test(req, -1)
+		_, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.True(t, hasKey)
 	})
@@ -281,13 +281,13 @@ func TestIdempotencyKeyHelpers(t *testing.T) {
 	t.Run("HasIdempotencyKey returns false when absent", func(t *testing.T) {
 		app := fiber.New()
 		var hasKey bool
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			hasKey = HasIdempotencyKey(c)
 			return c.SendString("OK")
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/test", nil)
-		_, err := app.Test(req, -1)
+		_, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.False(t, hasKey)
 	})

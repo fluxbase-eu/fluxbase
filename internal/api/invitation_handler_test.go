@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -316,7 +316,7 @@ func TestCreateInvitation_InvalidBody(t *testing.T) {
 	handler := NewInvitationHandler(nil, nil, nil, "https://example.com")
 
 	// Middleware to set user_id
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 		return c.Next()
 	})
@@ -347,7 +347,7 @@ func TestCreateInvitation_InvalidUserID(t *testing.T) {
 	handler := NewInvitationHandler(nil, nil, nil, "https://example.com")
 
 	// Middleware to set invalid user_id
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "not-a-valid-uuid")
 		return c.Next()
 	})

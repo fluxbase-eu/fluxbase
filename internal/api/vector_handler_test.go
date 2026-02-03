@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -599,12 +599,12 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 		app := fiber.New()
 
 		// Middleware to set admin role
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_role", "admin")
 			return c.Next()
 		})
 
-		app.Get("/capabilities/vector", func(c *fiber.Ctx) error {
+		app.Get("/capabilities/vector", func(c fiber.Ctx) error {
 			role, _ := c.Locals("user_role").(string)
 			isAdmin := role == "admin" || role == "dashboard_admin" || role == "service_role"
 
@@ -649,12 +649,12 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 		app := fiber.New()
 
 		// Middleware to set regular user role
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_role", "user")
 			return c.Next()
 		})
 
-		app.Get("/capabilities/vector", func(c *fiber.Ctx) error {
+		app.Get("/capabilities/vector", func(c fiber.Ctx) error {
 			role, _ := c.Locals("user_role").(string)
 			isAdmin := role == "admin" || role == "dashboard_admin" || role == "service_role"
 

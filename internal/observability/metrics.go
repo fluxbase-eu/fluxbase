@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -392,7 +392,7 @@ func createMetrics() *Metrics {
 
 // MetricsMiddleware returns a Fiber middleware that collects HTTP metrics
 func (m *Metrics) MetricsMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 		m.httpRequestsInFlight.Inc()
 		defer m.httpRequestsInFlight.Dec()

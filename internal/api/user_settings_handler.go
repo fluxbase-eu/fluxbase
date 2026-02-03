@@ -6,7 +6,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -34,8 +34,8 @@ func (h *UserSettingsHandler) SetSecretsService(secretsService *settings.Secrets
 
 // CreateSecret creates a new encrypted user-specific secret setting
 // POST /api/v1/settings/secret
-func (h *UserSettingsHandler) CreateSecret(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) CreateSecret(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Get user ID from context
 	userIDStr := c.Locals("user_id")
@@ -54,7 +54,7 @@ func (h *UserSettingsHandler) CreateSecret(c *fiber.Ctx) error {
 	}
 
 	var req settings.CreateSecretSettingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -110,8 +110,8 @@ func (h *UserSettingsHandler) CreateSecret(c *fiber.Ctx) error {
 
 // GetSecret returns metadata for a user's secret setting (never returns the value)
 // GET /api/v1/settings/secret/*
-func (h *UserSettingsHandler) GetSecret(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) GetSecret(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("*")
 
 	if key == "" {
@@ -160,8 +160,8 @@ func (h *UserSettingsHandler) GetSecret(c *fiber.Ctx) error {
 
 // UpdateSecret updates a user's secret setting
 // PUT /api/v1/settings/secret/*
-func (h *UserSettingsHandler) UpdateSecret(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) UpdateSecret(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("*")
 
 	if key == "" {
@@ -187,7 +187,7 @@ func (h *UserSettingsHandler) UpdateSecret(c *fiber.Ctx) error {
 	}
 
 	var req settings.UpdateSecretSettingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -223,8 +223,8 @@ func (h *UserSettingsHandler) UpdateSecret(c *fiber.Ctx) error {
 
 // DeleteSecret deletes a user's secret setting
 // DELETE /api/v1/settings/secret/*
-func (h *UserSettingsHandler) DeleteSecret(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) DeleteSecret(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("*")
 
 	if key == "" {
@@ -275,8 +275,8 @@ func (h *UserSettingsHandler) DeleteSecret(c *fiber.Ctx) error {
 
 // ListSecrets returns metadata for all user's secret settings
 // GET /api/v1/settings/secrets
-func (h *UserSettingsHandler) ListSecrets(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) ListSecrets(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Get user ID from context
 	userIDStr := c.Locals("user_id")
@@ -314,8 +314,8 @@ func (h *UserSettingsHandler) ListSecrets(c *fiber.Ctx) error {
 // GetUserSecretValue retrieves the decrypted value of a specific user's secret
 // This is a privileged operation that requires service_role
 // GET /api/v1/admin/settings/user/:user_id/secret/:key/decrypt
-func (h *UserSettingsHandler) GetUserSecretValue(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) GetUserSecretValue(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Require service_role for this privileged operation
 	role := c.Locals("user_role")
@@ -387,8 +387,8 @@ func (h *UserSettingsHandler) GetUserSecretValue(c *fiber.Ctx) error {
 
 // GetSetting retrieves a setting with user -> system fallback
 // GET /api/v1/settings/user/:key
-func (h *UserSettingsHandler) GetSetting(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) GetSetting(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("key")
 
 	if key == "" {
@@ -437,8 +437,8 @@ func (h *UserSettingsHandler) GetSetting(c *fiber.Ctx) error {
 
 // GetUserOwnSetting retrieves only the user's own setting (no fallback)
 // GET /api/v1/settings/user/own/:key
-func (h *UserSettingsHandler) GetUserOwnSetting(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) GetUserOwnSetting(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("key")
 
 	if key == "" {
@@ -487,8 +487,8 @@ func (h *UserSettingsHandler) GetUserOwnSetting(c *fiber.Ctx) error {
 
 // GetSystemSettingPublic retrieves a system-level setting (user_id IS NULL)
 // GET /api/v1/settings/user/system/:key
-func (h *UserSettingsHandler) GetSystemSettingPublic(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) GetSystemSettingPublic(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("key")
 
 	if key == "" {
@@ -525,8 +525,8 @@ func (h *UserSettingsHandler) GetSystemSettingPublic(c *fiber.Ctx) error {
 
 // SetSetting creates or updates a user setting
 // PUT /api/v1/settings/user/:key
-func (h *UserSettingsHandler) SetSetting(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) SetSetting(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("key")
 
 	if key == "" {
@@ -552,7 +552,7 @@ func (h *UserSettingsHandler) SetSetting(c *fiber.Ctx) error {
 	}
 
 	var req settings.CreateUserSettingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -599,8 +599,8 @@ func (h *UserSettingsHandler) SetSetting(c *fiber.Ctx) error {
 
 // DeleteSetting removes a user's setting
 // DELETE /api/v1/settings/user/:key
-func (h *UserSettingsHandler) DeleteSetting(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) DeleteSetting(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	key := c.Params("key")
 
 	if key == "" {
@@ -651,8 +651,8 @@ func (h *UserSettingsHandler) DeleteSetting(c *fiber.Ctx) error {
 
 // ListSettings returns all user's own settings
 // GET /api/v1/settings/user/list
-func (h *UserSettingsHandler) ListSettings(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *UserSettingsHandler) ListSettings(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Get user ID from context
 	userIDStr := c.Locals("user_id")
@@ -691,3 +691,5 @@ func (h *UserSettingsHandler) ListSettings(c *fiber.Ctx) error {
 
 	return c.JSON(userSettings)
 }
+
+// fiber:context-methods migrated

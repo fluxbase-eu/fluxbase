@@ -14,8 +14,8 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/logging"
 	"github.com/fluxbase-eu/fluxbase/internal/mcp"
 	"github.com/fluxbase-eu/fluxbase/internal/observability"
-	"github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/contrib/v3/websocket"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -173,7 +173,7 @@ type ChatContext struct {
 }
 
 // HandleWebSocket handles a WebSocket chat connection upgrade
-func (h *ChatHandler) HandleWebSocket(c *fiber.Ctx) error {
+func (h *ChatHandler) HandleWebSocket(c fiber.Ctx) error {
 	// Check if WebSocket upgrade
 	if !websocket.IsWebSocketUpgrade(c) {
 		return fiber.ErrUpgradeRequired

@@ -7,7 +7,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -42,7 +42,7 @@ type BatchSettingsResponse struct {
 
 // GetSetting retrieves a single setting with RLS enforcement
 // GET /api/v1/settings/:key
-func (h *SettingsHandler) GetSetting(c *fiber.Ctx) error {
+func (h *SettingsHandler) GetSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("key")
 
@@ -109,11 +109,11 @@ func (h *SettingsHandler) GetSetting(c *fiber.Ctx) error {
 
 // GetSettings retrieves multiple settings with RLS enforcement
 // POST /api/v1/settings/batch
-func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
+func (h *SettingsHandler) GetSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	var req BatchSettingsRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse batch settings request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",

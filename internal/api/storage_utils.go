@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -43,7 +43,7 @@ func detectContentType(filename string) string {
 }
 
 // parseMetadata parses metadata from form fields starting with "metadata_"
-func parseMetadata(c *fiber.Ctx) map[string]string {
+func parseMetadata(c fiber.Ctx) map[string]string {
 	metadata := make(map[string]string)
 
 	for key, value := range c.Request().PostArgs().All() {
@@ -58,7 +58,7 @@ func parseMetadata(c *fiber.Ctx) map[string]string {
 }
 
 // getUserID gets the user ID from Fiber context
-func getUserID(c *fiber.Ctx) string {
+func getUserID(c fiber.Ctx) string {
 	if userID := c.Locals("user_id"); userID != nil {
 		if id, ok := userID.(string); ok {
 			return id
@@ -68,7 +68,7 @@ func getUserID(c *fiber.Ctx) string {
 }
 
 // setRLSContext sets PostgreSQL session variables for RLS enforcement in a transaction
-func (h *StorageHandler) setRLSContext(ctx context.Context, tx pgx.Tx, c *fiber.Ctx) error {
+func (h *StorageHandler) setRLSContext(ctx context.Context, tx pgx.Tx, c fiber.Ctx) error {
 	// Get user ID and role from context
 	userID := c.Locals("user_id")
 	role := c.Locals("user_role")

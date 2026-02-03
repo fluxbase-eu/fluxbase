@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -13,7 +13,7 @@ import (
 
 // AuthMiddleware creates a middleware for JWT authentication
 func AuthMiddleware(authService *auth.Service) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Try to get token from cookie first (httpOnly cookie)
 		token := c.Cookies(AccessTokenCookieName)
 
@@ -39,7 +39,7 @@ func AuthMiddleware(authService *auth.Service) fiber.Handler {
 		}
 
 		// Check if token has been revoked
-		isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+		isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to check token revocation status")
 			// Continue anyway - revocation check failure shouldn't block valid tokens
@@ -63,7 +63,7 @@ func AuthMiddleware(authService *auth.Service) fiber.Handler {
 // OptionalAuthMiddleware creates a middleware that validates JWT but doesn't require it
 // Useful for endpoints that work both authenticated and unauthenticated
 func OptionalAuthMiddleware(authService *auth.Service) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Try to get token from cookie first (httpOnly cookie)
 		token := c.Cookies(AccessTokenCookieName)
 
@@ -99,7 +99,7 @@ func OptionalAuthMiddleware(authService *auth.Service) fiber.Handler {
 		}
 
 		// Check if token has been revoked
-		isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+		isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to check token revocation status in optional auth")
 			// Continue anyway - revocation check failure shouldn't block valid tokens
@@ -128,7 +128,7 @@ func OptionalAuthMiddleware(authService *auth.Service) fiber.Handler {
 // RequireRole creates a middleware that requires a specific role
 // Must be used after AuthMiddleware
 func RequireRole(allowedRoles ...string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		userRole := c.Locals("user_role")
 		if userRole == nil {
 			return SendUnauthorized(c, "Unauthorized", ErrCodeAuthRequired)
@@ -150,7 +150,7 @@ func RequireRole(allowedRoles ...string) fiber.Handler {
 }
 
 // GetUserID is a helper to extract user ID from context
-func GetUserID(c *fiber.Ctx) (string, bool) {
+func GetUserID(c fiber.Ctx) (string, bool) {
 	userID := c.Locals("user_id")
 	if userID == nil {
 		return "", false
@@ -160,7 +160,7 @@ func GetUserID(c *fiber.Ctx) (string, bool) {
 }
 
 // GetUserEmail is a helper to extract user email from context
-func GetUserEmail(c *fiber.Ctx) (string, bool) {
+func GetUserEmail(c fiber.Ctx) (string, bool) {
 	email := c.Locals("user_email")
 	if email == nil {
 		return "", false
@@ -170,7 +170,7 @@ func GetUserEmail(c *fiber.Ctx) (string, bool) {
 }
 
 // GetUserRole is a helper to extract user role from context
-func GetUserRole(c *fiber.Ctx) (string, bool) {
+func GetUserRole(c fiber.Ctx) (string, bool) {
 	role := c.Locals("user_role")
 	if role == nil {
 		return "", false
@@ -184,7 +184,7 @@ func GetUserRole(c *fiber.Ctx) (string, bool) {
 // The db parameter is used to check the actual role from auth.users when JWT role is "authenticated",
 // allowing role changes to take effect immediately without requiring re-login.
 func UnifiedAuthMiddleware(authService *auth.Service, jwtManager *auth.JWTManager, db *pgxpool.Pool) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Try to get token from cookie first (httpOnly cookie)
 		token := c.Cookies(AccessTokenCookieName)
 
@@ -224,7 +224,7 @@ func UnifiedAuthMiddleware(authService *auth.Service, jwtManager *auth.JWTManage
 
 			// Successfully validated as auth.users token
 			// Check if token has been revoked
-			isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+			isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to check token revocation status")
 				// Continue anyway - revocation check failure shouldn't block valid tokens
@@ -243,7 +243,7 @@ func UnifiedAuthMiddleware(authService *auth.Service, jwtManager *auth.JWTManage
 			// This allows role changes to take effect immediately without re-login
 			effectiveRole := claims.Role
 			if claims.Role == "authenticated" && db != nil {
-				dbRole, err := getUserRoleFromDB(c.Context(), db, claims.UserID)
+				dbRole, err := getUserRoleFromDB(c.RequestCtx(), db, claims.UserID)
 				if err == nil && (dbRole == "admin" || dbRole == "service_role") {
 					effectiveRole = dbRole
 					log.Debug().
@@ -308,3 +308,5 @@ func getUserRoleFromDB(ctx context.Context, db *pgxpool.Pool, userID string) (st
 	// app_metadata.role is NOT used for privilege elevation as it could be user-editable
 	return role, nil
 }
+
+// fiber:context-methods migrated

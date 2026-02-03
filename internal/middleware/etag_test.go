@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func TestGenerateETag(t *testing.T) {
@@ -165,7 +165,7 @@ func TestETagMiddleware(t *testing.T) {
 	t.Run("adds ETag header to GET response", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(ETag())
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"id": 1, "name": "test"})
 		})
 
@@ -184,7 +184,7 @@ func TestETagMiddleware(t *testing.T) {
 	t.Run("skips ETag for non-GET methods", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(ETag())
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"id": 1})
 		})
 
@@ -206,7 +206,7 @@ func TestETagMiddleware(t *testing.T) {
 			Weak:              true,
 			EnableConditional: true,
 		}))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"id": 1, "name": "test"})
 		})
 
@@ -237,7 +237,7 @@ func TestETagMiddleware(t *testing.T) {
 	t.Run("returns full response when ETag doesn't match", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(ETag())
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"id": 1, "name": "test"})
 		})
 
@@ -264,7 +264,7 @@ func TestETagMiddleware(t *testing.T) {
 			Weak:      true,
 			SkipPaths: []string{"/health"},
 		}))
-		app.Get("/health", func(c *fiber.Ctx) error {
+		app.Get("/health", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"status": "ok"})
 		})
 
@@ -283,7 +283,7 @@ func TestETagMiddleware(t *testing.T) {
 	t.Run("no ETag for error responses", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(ETag())
-		app.Get("/error", func(c *fiber.Ctx) error {
+		app.Get("/error", func(c fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": "internal error"})
 		})
 
@@ -304,7 +304,7 @@ func TestCacheControlMiddleware(t *testing.T) {
 	t.Run("sets max-age", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(CacheControl(CacheControlConfig{MaxAge: 3600}))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"data": "test"})
 		})
 
@@ -326,7 +326,7 @@ func TestCacheControlMiddleware(t *testing.T) {
 	t.Run("sets no-store", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(CacheControl(CacheControlConfig{NoStore: true}))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"data": "test"})
 		})
 
@@ -349,7 +349,7 @@ func TestCacheControlMiddleware(t *testing.T) {
 			MaxAge:         300,
 			MustRevalidate: true,
 		}))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"data": "test"})
 		})
 
@@ -368,7 +368,7 @@ func TestCacheControlMiddleware(t *testing.T) {
 	t.Run("skips non-GET methods", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(CacheControl(CacheControlConfig{MaxAge: 3600}))
-		app.Post("/test", func(c *fiber.Ctx) error {
+		app.Post("/test", func(c fiber.Ctx) error {
 			return c.JSON(fiber.Map{"data": "test"})
 		})
 

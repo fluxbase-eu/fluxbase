@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
@@ -15,7 +15,7 @@ import (
 // ClientKeyAuth creates middleware that authenticates requests using client keys
 // Client key must be provided via X-Client-Key header (query parameter removed for security)
 func ClientKeyAuth(clientKeyService *auth.ClientKeyService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Get client key from X-Client-Key header only (query parameter removed for security)
 		clientKey := c.Get("X-Client-Key")
 
@@ -27,7 +27,7 @@ func ClientKeyAuth(clientKeyService *auth.ClientKeyService) fiber.Handler {
 		}
 
 		// Validate the client key
-		validatedKey, err := clientKeyService.ValidateClientKey(c.Context(), clientKey)
+		validatedKey, err := clientKeyService.ValidateClientKey(c.RequestCtx(), clientKey)
 		if err != nil {
 			log.Debug().Err(err).Msg("Invalid client key")
 
@@ -75,7 +75,7 @@ func ClientKeyAuth(clientKeyService *auth.ClientKeyService) fiber.Handler {
 // OptionalClientKeyAuth allows both JWT and client key authentication
 // Tries JWT first, then client key
 func OptionalClientKeyAuth(authService *auth.Service, clientKeyService *auth.ClientKeyService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Try JWT authentication first
 		authHeader := c.Get("Authorization")
 		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
@@ -85,7 +85,7 @@ func OptionalClientKeyAuth(authService *auth.Service, clientKeyService *auth.Cli
 			claims, err := authService.ValidateToken(token)
 			if err == nil {
 				// Check if token has been revoked
-				isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+				isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 				if err == nil && !isRevoked {
 					// Valid JWT token
 					c.Locals("user_id", claims.UserID)
@@ -103,7 +103,7 @@ func OptionalClientKeyAuth(authService *auth.Service, clientKeyService *auth.Cli
 		clientKey := c.Get("X-Client-Key")
 
 		if clientKey != "" {
-			validatedKey, err := clientKeyService.ValidateClientKey(c.Context(), clientKey)
+			validatedKey, err := clientKeyService.ValidateClientKey(c.RequestCtx(), clientKey)
 			if err == nil {
 				// Valid client key
 				c.Locals("client_key_id", validatedKey.ID)
@@ -132,7 +132,7 @@ func OptionalClientKeyAuth(authService *auth.Service, clientKeyService *auth.Cli
 // RequireEitherAuth requires either JWT or client key authentication
 // This is the recommended middleware for protecting API endpoints
 func RequireEitherAuth(authService *auth.Service, clientKeyService *auth.ClientKeyService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Try JWT authentication first
 		authHeader := c.Get("Authorization")
 		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
@@ -142,7 +142,7 @@ func RequireEitherAuth(authService *auth.Service, clientKeyService *auth.ClientK
 			claims, err := authService.ValidateToken(token)
 			if err == nil {
 				// Check if token has been revoked
-				isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+				isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 				if err == nil && !isRevoked {
 					// Valid JWT token
 					c.Locals("user_id", claims.UserID)
@@ -160,7 +160,7 @@ func RequireEitherAuth(authService *auth.Service, clientKeyService *auth.ClientK
 		clientKey := c.Get("X-Client-Key")
 
 		if clientKey != "" {
-			validatedKey, err := clientKeyService.ValidateClientKey(c.Context(), clientKey)
+			validatedKey, err := clientKeyService.ValidateClientKey(c.RequestCtx(), clientKey)
 			if err == nil {
 				// Valid client key
 				c.Locals("client_key_id", validatedKey.ID)
@@ -197,7 +197,7 @@ func RequireEitherAuth(authService *auth.Service, clientKeyService *auth.ClientK
 
 // RequireScope checks if the authenticated user/client key/service key has required scopes
 func RequireScope(requiredScopes ...string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		authType := c.Locals("auth_type")
 
 		// If authenticated via client key, check scopes
@@ -264,7 +264,7 @@ func RequireScope(requiredScopes ...string) fiber.Handler {
 // RequireAuthOrServiceKey requires either JWT, client key, OR service key authentication
 // This is the most comprehensive auth middleware that accepts all authentication methods
 func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.ClientKeyService, db *pgxpool.Pool, jwtManager ...*auth.JWTManager) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Debug logging for service_role troubleshooting
 		log.Debug().
 			Str("path", c.Path()).
@@ -361,7 +361,7 @@ func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.C
 				}
 
 				// Check if token has been revoked
-				isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+				isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 				if err == nil && !isRevoked {
 					// Valid JWT token
 					c.Locals("user_id", claims.UserID)
@@ -433,7 +433,7 @@ func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.C
 		clientKey := c.Get("X-Client-Key")
 
 		if clientKey != "" {
-			validatedKey, err := clientKeyService.ValidateClientKey(c.Context(), clientKey)
+			validatedKey, err := clientKeyService.ValidateClientKey(c.RequestCtx(), clientKey)
 			if err == nil {
 				// Valid client key
 				c.Locals("client_key_id", validatedKey.ID)
@@ -481,7 +481,7 @@ func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.C
 // - X-Service-Key header with hashed service key or service role JWT
 // - Dashboard admin JWT tokens (when jwtManager is provided)
 func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.ClientKeyService, db *pgxpool.Pool, jwtManager ...*auth.JWTManager) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// First, try service key authentication (highest privilege)
 		serviceKey := c.Get("X-Service-Key")
 		authHeader := c.Get("Authorization")
@@ -542,7 +542,7 @@ func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.
 			claims, err := authService.ValidateToken(token)
 			if err == nil {
 				// Check if token has been revoked
-				isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+				isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 				if err == nil && !isRevoked {
 					// Valid JWT token
 					c.Locals("user_id", claims.UserID)
@@ -631,7 +631,7 @@ func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.
 			claims, err := authService.ValidateToken(fluxbaseClientKey)
 			if err == nil {
 				// Check if token has been revoked
-				isRevoked, err := authService.IsTokenRevoked(c.Context(), claims.ID)
+				isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 				if err == nil && !isRevoked {
 					// Valid user JWT token via clientkey header
 					c.Locals("user_id", claims.UserID)
@@ -689,7 +689,7 @@ func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.
 		}
 
 		if clientKey != "" {
-			validatedKey, err := clientKeyService.ValidateClientKey(c.Context(), clientKey)
+			validatedKey, err := clientKeyService.ValidateClientKey(c.RequestCtx(), clientKey)
 			if err == nil {
 				// Valid client key
 				c.Locals("client_key_id", validatedKey.ID)
@@ -731,7 +731,7 @@ func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.
 
 // validateServiceKey validates a service key and sets context if valid
 // Returns true if valid, false otherwise
-func validateServiceKey(c *fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
+func validateServiceKey(c fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
 	// Extract key prefix (first 16 chars for identification)
 	// This includes "sk_test_" (8 chars) plus some random chars to ensure uniqueness
 	if len(serviceKey) < 16 || !strings.HasPrefix(serviceKey, "sk_") {
@@ -749,7 +749,7 @@ func validateServiceKey(c *fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool 
 	var rateLimitPerMinute *int
 	var rateLimitPerHour *int
 
-	err := db.QueryRow(c.Context(),
+	err := db.QueryRow(c.RequestCtx(),
 		`SELECT id, name, key_hash, scopes, enabled, expires_at,
 		        rate_limit_per_minute, rate_limit_per_hour
 		 FROM auth.service_keys
@@ -821,7 +821,7 @@ func validateServiceKey(c *fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool 
 // Allows: service_role (from service keys or service_role JWT) and dashboard_admin users
 // This should be used after authentication middleware (RequireAuthOrServiceKey)
 func RequireAdmin() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		authType, _ := c.Locals("auth_type").(string)
 		role, _ := c.Locals("user_role").(string)
 
@@ -859,9 +859,9 @@ func RequireAdmin() fiber.Handler {
 // If the setting is enabled (default), allows regular users through.
 // If the setting is disabled, requires admin access (service_role or dashboard_admin).
 func RequireAdminIfClientKeysDisabled(settingsCache *auth.SettingsCache) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Check if user client keys are allowed
-		allowUserKeys := settingsCache.GetBool(c.Context(), "app.auth.allow_user_client_keys", true)
+		allowUserKeys := settingsCache.GetBool(c.RequestCtx(), "app.auth.allow_user_client_keys", true)
 
 		if allowUserKeys {
 			// Setting is enabled - allow regular users to manage their own keys
@@ -872,3 +872,5 @@ func RequireAdminIfClientKeysDisabled(settingsCache *auth.SettingsCache) fiber.H
 		return RequireAdmin()(c)
 	}
 }
+
+// fiber:context-methods migrated

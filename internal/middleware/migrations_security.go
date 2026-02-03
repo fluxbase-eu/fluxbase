@@ -8,7 +8,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +17,7 @@ import (
 // RequireMigrationsEnabled checks if migrations API is enabled
 // If disabled, returns HTTP 404 to hide the feature entirely
 func RequireMigrationsEnabled(cfg *config.MigrationsConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		if !cfg.Enabled {
 			log.Warn().
 				Str("path", c.Path()).
@@ -46,7 +46,7 @@ func RequireMigrationsIPAllowlist(cfg *config.MigrationsConfig) fiber.Handler {
 		allowedNets = append(allowedNets, network)
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Skip if no IP ranges configured (allows all)
 		if len(allowedNets) == 0 {
 			return c.Next()
@@ -82,7 +82,7 @@ func RequireMigrationsIPAllowlist(cfg *config.MigrationsConfig) fiber.Handler {
 // Accepts: 1) Service keys (sk_*) via X-Service-Key, Authorization, or clientkey headers
 //  2. JWT tokens with service_role via Authorization or clientkey headers
 func RequireServiceKeyOnly(db *pgxpool.Pool, authService *auth.Service) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Try JWT authentication first (from clientkey or Authorization header)
 		authHeader := c.Get("Authorization")
 		clientkey := c.Get("clientkey")
@@ -194,7 +194,7 @@ func min(a, b int) int {
 // RequireMigrationScope checks if authentication has migrations permissions
 // Accepts both service_role JWT (full access) and service keys with migrations:execute scope
 func RequireMigrationScope() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		authType := c.Locals("auth_type")
 
 		// JWT with service_role has full access (no scope check needed)
@@ -257,7 +257,7 @@ func RequireMigrationScope() fiber.Handler {
 
 // MigrationsAuditLog logs all migrations API requests for security auditing
 func MigrationsAuditLog() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 
 		// Get service key info before processing
@@ -291,7 +291,7 @@ func MigrationsAuditLog() fiber.Handler {
 }
 
 // getClientIP extracts real client IP from headers (for proxy environments)
-func getClientIP(c *fiber.Ctx) net.IP {
+func getClientIP(c fiber.Ctx) net.IP {
 	// Try X-Forwarded-For header first (for proxies)
 	xff := c.Get("X-Forwarded-For")
 	if xff != "" {
@@ -320,7 +320,7 @@ func getClientIP(c *fiber.Ctx) net.IP {
 
 // validateMigrationServiceKey validates a service key for migrations API
 // This is similar to validateServiceKey but sets auth_type to "service_key"
-func validateMigrationServiceKey(c *fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
+func validateMigrationServiceKey(c fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
 	// Extract key prefix (first 16 chars for identification)
 	if len(serviceKey) < 16 || !strings.HasPrefix(serviceKey, "sk_") {
 		return false
@@ -335,7 +335,7 @@ func validateMigrationServiceKey(c *fiber.Ctx, db *pgxpool.Pool, serviceKey stri
 	var enabled bool
 	var expiresAt *time.Time
 
-	err := db.QueryRow(c.Context(),
+	err := db.QueryRow(c.RequestCtx(),
 		`SELECT id, name, key_hash, scopes, enabled, expires_at
 		 FROM auth.service_keys
 		 WHERE key_prefix = $1`,
@@ -390,3 +390,5 @@ func validateMigrationServiceKey(c *fiber.Ctx, db *pgxpool.Pool, serviceKey stri
 
 	return true
 }
+
+// fiber:context-methods migrated

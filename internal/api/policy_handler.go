@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // validPolicyNameRegex ensures policy names are safe PostgreSQL identifiers
@@ -61,8 +61,8 @@ type CreatePolicyRequest struct {
 
 // ListPolicies returns all RLS policies
 // GET /api/v1/admin/policies
-func (s *Server) ListPolicies(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) ListPolicies(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Query("schema", "")
 
 	query := `
@@ -112,8 +112,8 @@ func (s *Server) ListPolicies(c *fiber.Ctx) error {
 
 // GetTablesWithRLS returns all tables with their RLS status and policies
 // GET /api/v1/admin/tables/rls
-func (s *Server) GetTablesWithRLS(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) GetTablesWithRLS(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Query("schema", "public")
 
 	// Get tables with RLS status (excluding extension-owned tables like spatial_ref_sys)
@@ -215,8 +215,8 @@ func (s *Server) GetTablesWithRLS(c *fiber.Ctx) error {
 
 // GetTableRLSStatus returns RLS status and policies for a specific table
 // GET /api/v1/admin/tables/:schema/:table/rls
-func (s *Server) GetTableRLSStatus(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) GetTableRLSStatus(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -267,15 +267,15 @@ func (s *Server) GetTableRLSStatus(c *fiber.Ctx) error {
 
 // ToggleTableRLS enables or disables RLS on a table
 // POST /api/v1/admin/tables/:schema/:table/rls/toggle
-func (s *Server) ToggleTableRLS(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) ToggleTableRLS(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Params("schema")
 	table := c.Params("table")
 
 	var req struct {
 		Enabled bool `json:"enabled"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendBadRequest(c, "Invalid request body", "INVALID_BODY")
 	}
 
@@ -318,11 +318,11 @@ func (s *Server) ToggleTableRLS(c *fiber.Ctx) error {
 
 // CreatePolicy creates a new RLS policy
 // POST /api/v1/admin/policies
-func (s *Server) CreatePolicy(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) CreatePolicy(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	var req CreatePolicyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendBadRequest(c, "Invalid request body", "INVALID_BODY")
 	}
 
@@ -386,8 +386,8 @@ func (s *Server) CreatePolicy(c *fiber.Ctx) error {
 
 // DeletePolicy drops an RLS policy
 // DELETE /api/v1/admin/policies/:schema/:table/:policy
-func (s *Server) DeletePolicy(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) DeletePolicy(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Params("schema")
 	table := c.Params("table")
 	policy := c.Params("policy")
@@ -418,14 +418,14 @@ type UpdatePolicyRequest struct {
 // PUT /api/v1/admin/policies/:schema/:table/:policy
 // Note: PostgreSQL's ALTER POLICY can only change roles, USING, and WITH CHECK.
 // It cannot change the policy name, command type, or permissive/restrictive mode.
-func (s *Server) UpdatePolicy(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) UpdatePolicy(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Params("schema")
 	table := c.Params("table")
 	policyName := c.Params("policy")
 
 	var req UpdatePolicyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendBadRequest(c, "Invalid request body", "INVALID_BODY")
 	}
 
@@ -478,8 +478,8 @@ func (s *Server) UpdatePolicy(c *fiber.Ctx) error {
 
 // GetSecurityWarnings scans for security issues
 // GET /api/v1/admin/security/warnings
-func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) GetSecurityWarnings(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	warnings := []SecurityWarning{}
 
 	// Check 1: Tables in public schema without RLS (excluding extension-owned tables)
@@ -730,7 +730,7 @@ func (s *Server) GetSecurityWarnings(c *fiber.Ctx) error {
 
 // GetPolicyTemplates returns pre-built policy templates
 // GET /api/v1/admin/policies/templates
-func (s *Server) GetPolicyTemplates(c *fiber.Ctx) error {
+func (s *Server) GetPolicyTemplates(c fiber.Ctx) error {
 	templates := []fiber.Map{
 		{
 			"id":          "user-owns-row",
@@ -784,3 +784,5 @@ func (s *Server) GetPolicyTemplates(c *fiber.Ctx) error {
 
 	return c.JSON(templates)
 }
+
+// fiber:context-methods migrated

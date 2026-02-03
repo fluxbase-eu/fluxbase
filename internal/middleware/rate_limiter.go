@@ -11,8 +11,8 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/observability"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/storage/memory/v2"
 	"github.com/rs/zerolog/log"
 )
@@ -97,11 +97,11 @@ func extractRoleFromToken(token string) string {
 
 // RateLimiterConfig holds configuration for rate limiting
 type RateLimiterConfig struct {
-	Name       string                  // Name of the rate limiter (for metrics)
-	Max        int                     // Maximum number of requests
-	Expiration time.Duration           // Time window for the rate limit
-	KeyFunc    func(*fiber.Ctx) string // Function to generate the key for rate limiting
-	Message    string                  // Custom error message
+	Name       string                 // Name of the rate limiter (for metrics)
+	Max        int                    // Maximum number of requests
+	Expiration time.Duration          // Time window for the rate limit
+	KeyFunc    func(fiber.Ctx) string // Function to generate the key for rate limiting
+	Message    string                 // Custom error message
 }
 
 // NewRateLimiter creates a new rate limiter middleware with custom configuration.
@@ -128,7 +128,7 @@ func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
 
 	// Default key function uses IP address
 	if config.KeyFunc == nil {
-		config.KeyFunc = func(c *fiber.Ctx) string {
+		config.KeyFunc = func(c fiber.Ctx) string {
 			return c.IP()
 		}
 	}
@@ -149,7 +149,7 @@ func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
 		Max:          config.Max,
 		Expiration:   config.Expiration,
 		KeyGenerator: config.KeyFunc,
-		LimitReached: func(c *fiber.Ctx) error {
+		LimitReached: func(c fiber.Ctx) error {
 			// Record rate limit hit metric
 			if rateLimiterMetrics != nil {
 				rateLimiterMetrics.RecordRateLimitHit(limiterName, c.IP())
@@ -174,7 +174,7 @@ func AuthLoginLimiter() fiber.Handler {
 		Name:       "auth_login",
 		Max:        10,
 		Expiration: 15 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "login:" + c.IP()
 		},
 		Message: "Too many login attempts. Please try again in 15 minutes.",
@@ -187,7 +187,7 @@ func AuthSignupLimiter() fiber.Handler {
 		Name:       "auth_signup",
 		Max:        10,
 		Expiration: 15 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "signup:" + c.IP()
 		},
 		Message: "Too many signup attempts. Please try again in 15 minutes.",
@@ -200,7 +200,7 @@ func AuthPasswordResetLimiter() fiber.Handler {
 		Name:       "auth_password_reset",
 		Max:        5,
 		Expiration: 15 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "password_reset:" + c.IP()
 		},
 		Message: "Too many password reset requests. Please try again in 15 minutes.",
@@ -214,7 +214,7 @@ func Auth2FALimiter() fiber.Handler {
 		Name:       "auth_2fa",
 		Max:        5,
 		Expiration: 5 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "2fa:" + c.IP()
 		},
 		Message: "Too many 2FA verification attempts. Please try again in 5 minutes.",
@@ -227,12 +227,12 @@ func AuthRefreshLimiter() fiber.Handler {
 		Name:       "auth_refresh",
 		Max:        10,
 		Expiration: 1 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			// Try to get token from request body
 			var req struct {
 				RefreshToken string `json:"refresh_token"`
 			}
-			if err := c.BodyParser(&req); err == nil && req.RefreshToken != "" {
+			if err := c.Bind().Body(&req); err == nil && req.RefreshToken != "" {
 				return "refresh:" + req.RefreshToken[:20] // Use first 20 chars as key
 			}
 			// Fallback to IP if no token found
@@ -248,7 +248,7 @@ func AuthMagicLinkLimiter() fiber.Handler {
 		Name:       "auth_magic_link",
 		Max:        5,
 		Expiration: 15 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "magiclink:" + c.IP()
 		},
 		Message: "Too many magic link requests. Please try again in 15 minutes.",
@@ -260,11 +260,11 @@ func AuthEmailBasedLimiter(prefix string, max int, expiration time.Duration) fib
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        max,
 		Expiration: expiration,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			var req struct {
 				Email string `json:"email"`
 			}
-			if err := c.BodyParser(&req); err == nil && req.Email != "" {
+			if err := c.Bind().Body(&req); err == nil && req.Email != "" {
 				return prefix + ":" + req.Email
 			}
 			// Fallback to IP if no email found
@@ -279,7 +279,7 @@ func GlobalAPILimiter() fiber.Handler {
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        100,
 		Expiration: 1 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "global:" + c.IP()
 		},
 		Message: "API rate limit exceeded. Maximum 100 requests per minute allowed.",
@@ -294,7 +294,7 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 	// Create the actual rate limiter once
 	rateLimiter := GlobalAPILimiter()
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// First check if role is already set by auth middleware
 		role := c.Locals("user_role")
 		if role == "admin" || role == "dashboard_admin" || role == "service_role" {
@@ -329,7 +329,7 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 		}
 
 		// Check if rate limiting is enabled via settings cache
-		ctx := c.Context()
+		ctx := c.RequestCtx()
 		isEnabled := settingsCache.GetBool(ctx, "app.security.enable_global_rate_limit", false)
 
 		if !isEnabled {
@@ -346,7 +346,7 @@ func AuthenticatedUserLimiter() fiber.Handler {
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        500, // Higher limit for authenticated users
 		Expiration: 1 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			// Try to get user ID from locals (set by auth middleware)
 			userID := c.Locals("user_id")
 			if userID != nil {
@@ -367,7 +367,7 @@ func ClientKeyLimiter(maxRequests int, duration time.Duration) fiber.Handler {
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        maxRequests,
 		Expiration: duration,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			// Try to get client key ID from locals (set by client key auth middleware)
 			keyID := c.Locals("client_key_id")
 			if keyID != nil {
@@ -395,7 +395,7 @@ func PerUserOrIPLimiter(anonMax, userMax, clientKeyMax int, duration time.Durati
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        anonMax, // Base max (will be adjusted by key function)
 		Expiration: duration,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			// Priority 1: Check for client key
 			clientKeyID := c.Locals("client_key_id")
 			if clientKeyID != nil {
@@ -427,7 +427,7 @@ func AdminSetupLimiter() fiber.Handler {
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        5,
 		Expiration: 15 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "admin_setup:" + c.IP()
 		},
 		Message: "Too many admin setup attempts. Please try again in 15 minutes.",
@@ -440,7 +440,7 @@ func AdminLoginLimiter() fiber.Handler {
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        4,
 		Expiration: 1 * time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "admin_login:" + c.IP()
 		},
 		Message: "Too many admin login attempts. Please try again in 1 minute.",
@@ -453,7 +453,7 @@ func GitHubWebhookLimiter() fiber.Handler {
 	return NewRateLimiter(RateLimiterConfig{
 		Max:        30,              // 30 requests
 		Expiration: 1 * time.Minute, // per minute per IP
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "github_webhook:" + c.IP()
 		},
 		Message: "GitHub webhook rate limit exceeded. Maximum 30 requests per minute allowed.",
@@ -470,7 +470,7 @@ func MigrationAPILimiter() fiber.Handler {
 	defaultRateLimiter := NewRateLimiter(RateLimiterConfig{
 		Max:        10,            // 10 requests
 		Expiration: 1 * time.Hour, // per hour
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			keyID := c.Locals("service_key_id")
 			if keyID != nil {
 				if kid, ok := keyID.(string); ok && kid != "" {
@@ -486,7 +486,7 @@ func MigrationAPILimiter() fiber.Handler {
 	perKeyLimiters := make(map[string]fiber.Handler)
 	var limiterMu sync.RWMutex
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// service_role tokens bypass rate limiting entirely
 		// This applies to both JWT tokens and service keys with service_role
 		role := c.Locals("user_role")
@@ -531,7 +531,7 @@ func MigrationAPILimiter() fiber.Handler {
 			limiter = NewRateLimiter(RateLimiterConfig{
 				Max:        limit,
 				Expiration: 1 * time.Hour,
-				KeyFunc: func(c *fiber.Ctx) string {
+				KeyFunc: func(c fiber.Ctx) string {
 					keyID := c.Locals("service_key_id")
 					if keyID != nil {
 						if kid, ok := keyID.(string); ok && kid != "" {
@@ -552,3 +552,5 @@ func MigrationAPILimiter() fiber.Handler {
 		return limiter(c)
 	}
 }
+
+// fiber:context-methods migrated

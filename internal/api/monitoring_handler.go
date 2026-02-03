@@ -10,7 +10,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/fluxbase-eu/fluxbase/internal/realtime"
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -120,7 +120,7 @@ var startTime = time.Now()
 
 // GetMetrics returns system metrics
 // Admin-only endpoint - non-admin users receive 403 Forbidden
-func (h *MonitoringHandler) GetMetrics(c *fiber.Ctx) error {
+func (h *MonitoringHandler) GetMetrics(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	if role != "admin" && role != "dashboard_admin" && role != "service_role" {
@@ -194,13 +194,13 @@ func (h *MonitoringHandler) GetMetrics(c *fiber.Ctx) error {
 
 	// Storage stats (if available)
 	if h.storageProvider != nil {
-		buckets, err := h.storageProvider.ListBuckets(c.Context())
+		buckets, err := h.storageProvider.ListBuckets(c.RequestCtx())
 		if err == nil {
 			totalFiles := 0
 			var totalSize int64
 
 			for _, bucket := range buckets {
-				result, err := h.storageProvider.List(c.Context(), bucket, &storage.ListOptions{MaxKeys: 10000})
+				result, err := h.storageProvider.List(c.RequestCtx(), bucket, &storage.ListOptions{MaxKeys: 10000})
 				if err == nil && result != nil {
 					totalFiles += len(result.Objects)
 					for _, file := range result.Objects {
@@ -222,7 +222,7 @@ func (h *MonitoringHandler) GetMetrics(c *fiber.Ctx) error {
 
 // GetHealth returns the health status of all system components
 // Admin-only endpoint - non-admin users receive 403 Forbidden
-func (h *MonitoringHandler) GetHealth(c *fiber.Ctx) error {
+func (h *MonitoringHandler) GetHealth(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	if role != "admin" && role != "dashboard_admin" && role != "service_role" {
@@ -275,7 +275,7 @@ func (h *MonitoringHandler) GetHealth(c *fiber.Ctx) error {
 	// Check storage health (if available)
 	if h.storageProvider != nil {
 		storageStart := time.Now()
-		_, err := h.storageProvider.ListBuckets(c.Context())
+		_, err := h.storageProvider.ListBuckets(c.RequestCtx())
 		storageLatency := time.Since(storageStart).Milliseconds()
 
 		if err != nil {
@@ -315,7 +315,7 @@ type LogEntry struct {
 
 // GetLogs returns recent application logs
 // Admin-only endpoint - non-admin users receive 403 Forbidden
-func (h *MonitoringHandler) GetLogs(c *fiber.Ctx) error {
+func (h *MonitoringHandler) GetLogs(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	if role != "admin" && role != "dashboard_admin" && role != "service_role" {
@@ -371,15 +371,15 @@ func (h *MonitoringHandler) GetLogs(c *fiber.Ctx) error {
 	}
 
 	// Parse pagination
-	limit := c.QueryInt("limit", 100)
+	limit := fiber.Query[int](c, "limit", 100)
 	if limit > 1000 {
 		limit = 1000 // Cap at 1000
 	}
 	opts.Limit = limit
-	opts.Offset = c.QueryInt("offset", 0)
+	opts.Offset = fiber.Query[int](c, "offset", 0)
 
 	// Query logs from storage
-	result, err := h.loggingService.Storage().Query(c.Context(), opts)
+	result, err := h.loggingService.Storage().Query(c.RequestCtx(), opts)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to query logs: " + err.Error(),
@@ -414,3 +414,5 @@ func (h *MonitoringHandler) GetLogs(c *fiber.Ctx) error {
 		"hasMore": result.TotalCount > int64(opts.Offset+len(logs)),
 	})
 }
+
+// fiber:context-methods migrated

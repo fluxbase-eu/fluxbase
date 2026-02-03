@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,7 +72,7 @@ func TestRequireInternal(t *testing.T) {
 			// Create a mock IP extractor that returns the test IP
 			// This is needed because Fiber's app.Test() doesn't properly propagate
 			// req.RemoteAddr to fasthttp's context
-			mockExtractor := func(_ *fiber.Ctx) net.IP {
+			mockExtractor := func(_ fiber.Ctx) net.IP {
 				return net.ParseIP(tt.ip)
 			}
 
@@ -80,7 +80,7 @@ func TestRequireInternal(t *testing.T) {
 			app.Use(RequireInternalWithExtractor(mockExtractor))
 
 			// Add a test handler
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				return c.SendString("OK")
 			})
 
@@ -99,7 +99,7 @@ func TestRequireInternal_IgnoresProxyHeaders(t *testing.T) {
 
 	// Create a mock IP extractor that simulates an external connection
 	// The headers should be ignored - only the "connection" IP matters
-	mockExtractor := func(_ *fiber.Ctx) net.IP {
+	mockExtractor := func(_ fiber.Ctx) net.IP {
 		// Simulate external IP from real connection (not from headers)
 		return net.ParseIP("192.168.1.100")
 	}
@@ -107,7 +107,7 @@ func TestRequireInternal_IgnoresProxyHeaders(t *testing.T) {
 	// Apply the middleware with mock extractor
 	app.Use(RequireInternalWithExtractor(mockExtractor))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -131,7 +131,7 @@ func TestGetDirectIP(t *testing.T) {
 	app := fiber.New()
 
 	var extractedIP net.IP
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		extractedIP = getDirectIP(c)
 		return c.SendString("OK")
 	})

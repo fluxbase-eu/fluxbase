@@ -5,12 +5,12 @@ import (
 	"mime/multipart"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // MultipartUpload handles multipart upload
 // POST /api/v1/storage/:bucket/multipart
-func (h *StorageHandler) MultipartUpload(c *fiber.Ctx) error {
+func (h *StorageHandler) MultipartUpload(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 
 	if bucket == "" {
@@ -73,7 +73,7 @@ func (h *StorageHandler) MultipartUpload(c *fiber.Ctx) error {
 }
 
 // uploadMultipartFile uploads a single file from multipart form
-func uploadMultipartFile(c *fiber.Ctx, svc *storage.Service, bucket, key string, file *multipart.FileHeader) error {
+func uploadMultipartFile(c fiber.Ctx, svc *storage.Service, bucket, key string, file *multipart.FileHeader) error {
 	src, err := file.Open()
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
@@ -89,6 +89,8 @@ func uploadMultipartFile(c *fiber.Ctx, svc *storage.Service, bucket, key string,
 		ContentType: contentType,
 	}
 
-	_, err = svc.Provider.Upload(c.Context(), bucket, key, src, file.Size, opts)
+	_, err = svc.Provider.Upload(c.RequestCtx(), bucket, key, src, file.Size, opts)
 	return err
 }
+
+// fiber:context-methods migrated

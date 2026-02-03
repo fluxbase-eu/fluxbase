@@ -7,7 +7,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -127,7 +127,7 @@ func (h *Handler) RegisterRoutes(app fiber.Router) {
 }
 
 // handleHealth handles health check requests
-func (h *Handler) handleHealth(c *fiber.Ctx) error {
+func (h *Handler) handleHealth(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":          "healthy",
 		"protocolVersion": MCPVersion,
@@ -136,7 +136,7 @@ func (h *Handler) handleHealth(c *fiber.Ctx) error {
 }
 
 // handlePost handles JSON-RPC POST requests
-func (h *Handler) handlePost(c *fiber.Ctx) error {
+func (h *Handler) handlePost(c fiber.Ctx) error {
 	// Check content type
 	contentType := c.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
@@ -181,7 +181,7 @@ func (h *Handler) handlePost(c *fiber.Ctx) error {
 		Msg("MCP: Handling POST request")
 
 	// Process the request
-	response := h.server.HandleRequest(c.Context(), c.Body(), authCtx)
+	response := h.server.HandleRequest(c.RequestCtx(), c.Body(), authCtx)
 
 	// Check Accept header for response format
 	accept := c.Get("Accept")
@@ -196,7 +196,7 @@ func (h *Handler) handlePost(c *fiber.Ctx) error {
 }
 
 // handleGet handles GET requests for SSE stream initiation
-func (h *Handler) handleGet(c *fiber.Ctx) error {
+func (h *Handler) handleGet(c fiber.Ctx) error {
 	// Check if client accepts SSE
 	accept := c.Get("Accept")
 	if !strings.Contains(accept, "text/event-stream") {
@@ -213,13 +213,13 @@ func (h *Handler) handleGet(c *fiber.Ctx) error {
 }
 
 // sendJSONResponse sends a JSON-RPC response
-func (h *Handler) sendJSONResponse(c *fiber.Ctx, response *Response) error {
+func (h *Handler) sendJSONResponse(c fiber.Ctx, response *Response) error {
 	c.Set("Content-Type", "application/json")
 	return c.JSON(response)
 }
 
 // sendSSEResponse sends a response as an SSE event
-func (h *Handler) sendSSEResponse(c *fiber.Ctx, response *Response) error {
+func (h *Handler) sendSSEResponse(c fiber.Ctx, response *Response) error {
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
@@ -235,3 +235,5 @@ func (h *Handler) sendSSEResponse(c *fiber.Ctx, response *Response) error {
 	// Format: "data: <json>\n\n"
 	return c.SendString("data: " + string(data) + "\n\n")
 }
+
+// fiber:context-methods migrated

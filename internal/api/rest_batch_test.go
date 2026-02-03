@@ -9,7 +9,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -160,9 +160,9 @@ func TestBatchInsert_EmptyArray(t *testing.T) {
 		},
 	}
 
-	app.Post("/items", func(c *fiber.Ctx) error {
+	app.Post("/items", func(c fiber.Ctx) error {
 		// Simulate batch insert with empty array
-		return handler.batchInsert(c.Context(), c, table, []map[string]interface{}{}, false, false, false, "")
+		return handler.batchInsert(c.RequestCtx(), c, table, []map[string]interface{}{}, false, false, false, "")
 	})
 
 	req := httptest.NewRequest("POST", "/items", nil)
@@ -191,11 +191,11 @@ func TestBatchInsert_UnknownColumn(t *testing.T) {
 		},
 	}
 
-	app.Post("/items", func(c *fiber.Ctx) error {
+	app.Post("/items", func(c fiber.Ctx) error {
 		data := []map[string]interface{}{
 			{"unknown_column": "value"},
 		}
-		return handler.batchInsert(c.Context(), c, table, data, false, false, false, "")
+		return handler.batchInsert(c.RequestCtx(), c, table, data, false, false, false, "")
 	})
 
 	req := httptest.NewRequest("POST", "/items", nil)
@@ -224,11 +224,11 @@ func TestBatchInsert_UpsertWithoutPrimaryKey(t *testing.T) {
 		},
 	}
 
-	app.Post("/logs", func(c *fiber.Ctx) error {
+	app.Post("/logs", func(c fiber.Ctx) error {
 		data := []map[string]interface{}{
 			{"message": "test"},
 		}
-		return handler.batchInsert(c.Context(), c, table, data, true, false, false, "") // isUpsert = true
+		return handler.batchInsert(c.RequestCtx(), c, table, data, true, false, false, "") // isUpsert = true
 	})
 
 	req := httptest.NewRequest("POST", "/logs", nil)
@@ -258,11 +258,11 @@ func TestBatchInsert_UpsertWithUnknownConflictColumn(t *testing.T) {
 		},
 	}
 
-	app.Post("/items", func(c *fiber.Ctx) error {
+	app.Post("/items", func(c fiber.Ctx) error {
 		data := []map[string]interface{}{
 			{"id": "123", "name": "test"},
 		}
-		return handler.batchInsert(c.Context(), c, table, data, true, false, false, "unknown_column") // Invalid on_conflict
+		return handler.batchInsert(c.RequestCtx(), c, table, data, true, false, false, "unknown_column") // Invalid on_conflict
 	})
 
 	req := httptest.NewRequest("POST", "/items", nil)
@@ -591,7 +591,7 @@ func TestXAffectedCountHeader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
 			app := fiber.New()
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				affectedCount := tt.count
 				c.Set("X-Affected-Count", fmt.Sprintf("%d", affectedCount))
 				return c.SendStatus(200)
@@ -621,7 +621,7 @@ func TestContentRangeHeader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
 			app := fiber.New()
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				affectedCount := tt.count
 				c.Set("Content-Range", fmt.Sprintf("*/%d", affectedCount))
 				return c.SendStatus(200)
@@ -636,3 +636,5 @@ func TestContentRangeHeader(t *testing.T) {
 		})
 	}
 }
+
+// fiber:context-methods migrated

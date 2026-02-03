@@ -10,7 +10,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/branching"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -422,7 +422,7 @@ func TestListBranches_ParameterParsing(t *testing.T) {
 		handler := NewBranchHandler(nil, nil, config.BranchingConfig{})
 
 		// Middleware to set user_id
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return c.Next()
 		})

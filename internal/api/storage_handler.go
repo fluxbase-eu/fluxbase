@@ -8,7 +8,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 )
@@ -165,7 +165,7 @@ type TransformConfigResponse struct {
 
 // GetTransformConfig returns the image transformation configuration
 // This is a public endpoint that returns configuration info for the admin dashboard
-func (h *StorageHandler) GetTransformConfig(c *fiber.Ctx) error {
+func (h *StorageHandler) GetTransformConfig(c fiber.Ctx) error {
 	if h.transformConfig == nil {
 		return c.JSON(TransformConfigResponse{
 			Enabled: false,

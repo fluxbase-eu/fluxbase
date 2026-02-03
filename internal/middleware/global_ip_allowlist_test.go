@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +23,7 @@ func TestRequireGlobalIPAllowlist_AllowsAllWhenEmpty(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -101,7 +101,7 @@ func TestRequireGlobalIPAllowlist_AllowsIPInRange(t *testing.T) {
 			}
 
 			app.Use(RequireGlobalIPAllowlist(cfg))
-			app.Get("/api/test", func(c *fiber.Ctx) error {
+			app.Get("/api/test", func(c fiber.Ctx) error {
 				return c.SendString("OK")
 			})
 
@@ -134,7 +134,7 @@ func TestRequireGlobalIPAllowlist_MultipleRanges(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -177,7 +177,7 @@ func TestRequireGlobalIPAllowlist_ErrorResponse(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -206,7 +206,7 @@ func TestRequireGlobalIPAllowlist_InvalidCIDR(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -233,7 +233,7 @@ func TestRequireGlobalIPAllowlist_AllInvalidCIDRs(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -255,7 +255,7 @@ func TestRequireGlobalIPAllowlist_XRealIP(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -278,7 +278,7 @@ func TestRequireGlobalIPAllowlist_ProxyChain(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -301,7 +301,7 @@ func TestRequireGlobalIPAllowlist_ProxyChain_DeniedClient(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -325,7 +325,7 @@ func TestRequireGlobalIPAllowlist_LocalhostIPv6(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -350,7 +350,7 @@ func TestRequireGlobalIPAllowlist_MixedIPv4IPv6(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -408,7 +408,7 @@ func TestRequireGlobalIPAllowlist_LargeNetwork(t *testing.T) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -439,7 +439,7 @@ func BenchmarkRequireGlobalIPAllowlist_EmptyConfig(b *testing.B) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -460,7 +460,7 @@ func BenchmarkRequireGlobalIPAllowlist_SingleRange(b *testing.B) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -488,7 +488,7 @@ func BenchmarkRequireGlobalIPAllowlist_MultipleRanges(b *testing.B) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -510,7 +510,7 @@ func BenchmarkRequireGlobalIPAllowlist_Denied(b *testing.B) {
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

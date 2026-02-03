@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,7 +23,7 @@ func RequireGlobalIPAllowlist(cfg *config.ServerConfig) fiber.Handler {
 		allowedNets = append(allowedNets, network)
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Skip if no IP ranges configured (allows all - backward compatible)
 		if len(allowedNets) == 0 {
 			return c.Next()

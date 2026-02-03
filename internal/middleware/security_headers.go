@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // SecurityHeadersConfig holds configuration for security headers
@@ -52,7 +52,7 @@ func SecurityHeaders(config ...SecurityHeadersConfig) fiber.Handler {
 		cfg = config[0]
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Content Security Policy
 		if cfg.ContentSecurityPolicy != "" {
 			c.Set("Content-Security-Policy", cfg.ContentSecurityPolicy)

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -294,7 +294,7 @@ func TestOpenAPIHandler_GetOpenAPISpec(t *testing.T) {
 		handler := NewOpenAPIHandler(nil)
 
 		app := fiber.New()
-		app.Get("/openapi.json", func(c *fiber.Ctx) error {
+		app.Get("/openapi.json", func(c fiber.Ctx) error {
 			c.Locals("user_role", "authenticated")
 			return handler.GetOpenAPISpec(c)
 		})
@@ -311,7 +311,7 @@ func TestOpenAPIHandler_GetOpenAPISpec(t *testing.T) {
 		handler := NewOpenAPIHandler(nil)
 
 		app := fiber.New()
-		app.Get("/openapi.json", func(c *fiber.Ctx) error {
+		app.Get("/openapi.json", func(c fiber.Ctx) error {
 			c.Locals("user_role", "anon")
 			return handler.GetOpenAPISpec(c)
 		})

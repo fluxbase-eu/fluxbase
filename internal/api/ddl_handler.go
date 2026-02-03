@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -71,9 +71,9 @@ type CreateColumnRequest struct {
 }
 
 // CreateSchema creates a new database schema
-func (h *DDLHandler) CreateSchema(c *fiber.Ctx) error {
+func (h *DDLHandler) CreateSchema(c fiber.Ctx) error {
 	var req CreateSchemaRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -93,7 +93,7 @@ func (h *DDLHandler) CreateSchema(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if schema already exists
 	exists, err := h.schemaExists(ctx, req.Name)
@@ -134,9 +134,9 @@ func (h *DDLHandler) CreateSchema(c *fiber.Ctx) error {
 }
 
 // CreateTable creates a new table with specified columns
-func (h *DDLHandler) CreateTable(c *fiber.Ctx) error {
+func (h *DDLHandler) CreateTable(c fiber.Ctx) error {
 	var req CreateTableRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -170,7 +170,7 @@ func (h *DDLHandler) CreateTable(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if schema exists
 	exists, err := h.schemaExists(ctx, req.Schema)
@@ -236,7 +236,7 @@ func (h *DDLHandler) CreateTable(c *fiber.Ctx) error {
 }
 
 // DeleteTable drops a table from the database
-func (h *DDLHandler) DeleteTable(c *fiber.Ctx) error {
+func (h *DDLHandler) DeleteTable(c fiber.Ctx) error {
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -259,7 +259,7 @@ func (h *DDLHandler) DeleteTable(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if table exists
 	exists, err := h.tableExists(ctx, schema, table)
@@ -307,7 +307,7 @@ type AddColumnRequest struct {
 }
 
 // AddColumn adds a new column to an existing table
-func (h *DDLHandler) AddColumn(c *fiber.Ctx) error {
+func (h *DDLHandler) AddColumn(c fiber.Ctx) error {
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -320,7 +320,7 @@ func (h *DDLHandler) AddColumn(c *fiber.Ctx) error {
 	}
 
 	var req AddColumnRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -342,7 +342,7 @@ func (h *DDLHandler) AddColumn(c *fiber.Ctx) error {
 		return SendBadRequest(c, fmt.Sprintf("Invalid data type '%s'", req.Type), ErrCodeInvalidInput)
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if table exists
 	exists, err := h.tableExists(ctx, schema, table)
@@ -402,7 +402,7 @@ func (h *DDLHandler) AddColumn(c *fiber.Ctx) error {
 }
 
 // DropColumn removes a column from a table
-func (h *DDLHandler) DropColumn(c *fiber.Ctx) error {
+func (h *DDLHandler) DropColumn(c fiber.Ctx) error {
 	schema := c.Params("schema")
 	table := c.Params("table")
 	column := c.Params("column")
@@ -425,7 +425,7 @@ func (h *DDLHandler) DropColumn(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if table exists
 	exists, err := h.tableExists(ctx, schema, table)
@@ -474,7 +474,7 @@ type RenameTableRequest struct {
 }
 
 // RenameTable renames a table
-func (h *DDLHandler) RenameTable(c *fiber.Ctx) error {
+func (h *DDLHandler) RenameTable(c fiber.Ctx) error {
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -487,7 +487,7 @@ func (h *DDLHandler) RenameTable(c *fiber.Ctx) error {
 	}
 
 	var req RenameTableRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -503,7 +503,7 @@ func (h *DDLHandler) RenameTable(c *fiber.Ctx) error {
 		return SendBadRequest(c, err.Error(), ErrCodeValidationFailed)
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if source table exists
 	exists, err := h.tableExists(ctx, schema, table)
@@ -667,7 +667,7 @@ func escapeLiteral(value string) string {
 }
 
 // ListSchemas returns all user schemas (excluding system schemas)
-func (h *DDLHandler) ListSchemas(c *fiber.Ctx) error {
+func (h *DDLHandler) ListSchemas(c fiber.Ctx) error {
 	// Check if database connection is available
 	if h.db == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -675,7 +675,7 @@ func (h *DDLHandler) ListSchemas(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	schemas, err := h.db.Inspector().GetSchemas(ctx)
 	if err != nil {
@@ -701,7 +701,7 @@ func (h *DDLHandler) ListSchemas(c *fiber.Ctx) error {
 }
 
 // ListTables returns all tables, optionally filtered by schema
-func (h *DDLHandler) ListTables(c *fiber.Ctx) error {
+func (h *DDLHandler) ListTables(c fiber.Ctx) error {
 	// Check if database connection is available
 	if h.db == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -709,7 +709,7 @@ func (h *DDLHandler) ListTables(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 	schemaParam := c.Query("schema")
 
 	var schemasToQuery []string
@@ -754,3 +754,5 @@ func (h *DDLHandler) ListTables(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"tables": tables})
 }
+
+// fiber:context-methods migrated

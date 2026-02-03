@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // UserManagementHandler handles admin user management operations
@@ -22,7 +22,7 @@ func NewUserManagementHandler(userMgmtService *auth.UserManagementService, authS
 }
 
 // ListUsers lists all users with enriched metadata
-func (h *UserManagementHandler) ListUsers(c *fiber.Ctx) error {
+func (h *UserManagementHandler) ListUsers(c fiber.Ctx) error {
 	// Nil check for service (can happen in tests)
 	if h.userMgmtService == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -33,16 +33,16 @@ func (h *UserManagementHandler) ListUsers(c *fiber.Ctx) error {
 	const defaultLimit = 100
 	const maxLimit = 1000
 
-	excludeAdmins := c.QueryBool("exclude_admins", false)
+	excludeAdmins := fiber.Query[bool](c, "exclude_admins", false)
 	search := c.Query("search", "")
-	limit := c.QueryInt("limit", defaultLimit)
-	offset := c.QueryInt("offset", 0)
+	limit := fiber.Query[int](c, "limit", defaultLimit)
+	offset := fiber.Query[int](c, "offset", 0)
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
 	// Normalize pagination parameters
 	limit, offset = NormalizePaginationParams(limit, offset, defaultLimit, maxLimit)
 
-	users, err := h.userMgmtService.ListEnrichedUsers(c.Context(), userType)
+	users, err := h.userMgmtService.ListEnrichedUsers(c.RequestCtx(), userType)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -105,7 +105,7 @@ func (h *UserManagementHandler) ListUsers(c *fiber.Ctx) error {
 }
 
 // GetUserByID gets a single user by ID with enriched metadata
-func (h *UserManagementHandler) GetUserByID(c *fiber.Ctx) error {
+func (h *UserManagementHandler) GetUserByID(c fiber.Ctx) error {
 	if h.userMgmtService == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "User management service not initialized",
@@ -115,7 +115,7 @@ func (h *UserManagementHandler) GetUserByID(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
-	user, err := h.userMgmtService.GetEnrichedUserByID(c.Context(), userID, userType)
+	user, err := h.userMgmtService.GetEnrichedUserByID(c.RequestCtx(), userID, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -131,9 +131,9 @@ func (h *UserManagementHandler) GetUserByID(c *fiber.Ctx) error {
 }
 
 // InviteUser invites a new user
-func (h *UserManagementHandler) InviteUser(c *fiber.Ctx) error {
+func (h *UserManagementHandler) InviteUser(c fiber.Ctx) error {
 	var req auth.InviteUserRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -147,7 +147,7 @@ func (h *UserManagementHandler) InviteUser(c *fiber.Ctx) error {
 
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
-	resp, err := h.userMgmtService.InviteUser(c.Context(), req, userType)
+	resp, err := h.userMgmtService.InviteUser(c.RequestCtx(), req, userType)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -158,7 +158,7 @@ func (h *UserManagementHandler) InviteUser(c *fiber.Ctx) error {
 }
 
 // DeleteUser deletes a user
-func (h *UserManagementHandler) DeleteUser(c *fiber.Ctx) error {
+func (h *UserManagementHandler) DeleteUser(c fiber.Ctx) error {
 	if h.userMgmtService == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "User management service not initialized",
@@ -168,7 +168,7 @@ func (h *UserManagementHandler) DeleteUser(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
-	err := h.userMgmtService.DeleteUser(c.Context(), userID, userType)
+	err := h.userMgmtService.DeleteUser(c.RequestCtx(), userID, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -186,14 +186,14 @@ func (h *UserManagementHandler) DeleteUser(c *fiber.Ctx) error {
 }
 
 // UpdateUserRole updates a user's role
-func (h *UserManagementHandler) UpdateUserRole(c *fiber.Ctx) error {
+func (h *UserManagementHandler) UpdateUserRole(c fiber.Ctx) error {
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
 	var req struct {
 		Role string `json:"role"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -205,7 +205,7 @@ func (h *UserManagementHandler) UpdateUserRole(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.userMgmtService.UpdateUserRole(c.Context(), userID, req.Role, userType)
+	user, err := h.userMgmtService.UpdateUserRole(c.RequestCtx(), userID, req.Role, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -221,12 +221,12 @@ func (h *UserManagementHandler) UpdateUserRole(c *fiber.Ctx) error {
 }
 
 // UpdateUser updates a user's information (email, role, password, user_metadata)
-func (h *UserManagementHandler) UpdateUser(c *fiber.Ctx) error {
+func (h *UserManagementHandler) UpdateUser(c fiber.Ctx) error {
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
 	var req auth.UpdateAdminUserRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -238,7 +238,7 @@ func (h *UserManagementHandler) UpdateUser(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.userMgmtService.UpdateUser(c.Context(), userID, req, userType)
+	user, err := h.userMgmtService.UpdateUser(c.RequestCtx(), userID, req, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -254,7 +254,7 @@ func (h *UserManagementHandler) UpdateUser(c *fiber.Ctx) error {
 }
 
 // ResetUserPassword resets a user's password
-func (h *UserManagementHandler) ResetUserPassword(c *fiber.Ctx) error {
+func (h *UserManagementHandler) ResetUserPassword(c fiber.Ctx) error {
 	if h.userMgmtService == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "User management service not initialized",
@@ -264,7 +264,7 @@ func (h *UserManagementHandler) ResetUserPassword(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userType := c.Query("type", "app") // "app" for auth.users, "dashboard" for dashboard.users
 
-	result, err := h.userMgmtService.ResetUserPassword(c.Context(), userID, userType)
+	result, err := h.userMgmtService.ResetUserPassword(c.RequestCtx(), userID, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -282,7 +282,7 @@ func (h *UserManagementHandler) ResetUserPassword(c *fiber.Ctx) error {
 }
 
 // LockUser locks a user account
-func (h *UserManagementHandler) LockUser(c *fiber.Ctx) error {
+func (h *UserManagementHandler) LockUser(c fiber.Ctx) error {
 	if h.userMgmtService == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "User management service not initialized",
@@ -292,7 +292,7 @@ func (h *UserManagementHandler) LockUser(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userType := c.Query("type", "app")
 
-	err := h.userMgmtService.LockUser(c.Context(), userID, userType)
+	err := h.userMgmtService.LockUser(c.RequestCtx(), userID, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -310,7 +310,7 @@ func (h *UserManagementHandler) LockUser(c *fiber.Ctx) error {
 }
 
 // UnlockUser unlocks a user account
-func (h *UserManagementHandler) UnlockUser(c *fiber.Ctx) error {
+func (h *UserManagementHandler) UnlockUser(c fiber.Ctx) error {
 	if h.userMgmtService == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "User management service not initialized",
@@ -320,7 +320,7 @@ func (h *UserManagementHandler) UnlockUser(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userType := c.Query("type", "app")
 
-	err := h.userMgmtService.UnlockUser(c.Context(), userID, userType)
+	err := h.userMgmtService.UnlockUser(c.RequestCtx(), userID, userType)
 	if err != nil {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -355,3 +355,5 @@ func (h *UserManagementHandler) RegisterRoutes(app *fiber.App) {
 	admin.Post("/users/:id/lock", h.LockUser)
 	admin.Post("/users/:id/unlock", h.UnlockUser)
 }
+
+// fiber:context-methods migrated

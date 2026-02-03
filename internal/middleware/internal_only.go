@@ -4,13 +4,13 @@ import (
 	"net"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
 // IPExtractor is a function that extracts the client IP from a Fiber context.
 // This allows for custom IP extraction strategies and easier testing.
-type IPExtractor func(c *fiber.Ctx) net.IP
+type IPExtractor func(c fiber.Ctx) net.IP
 
 // RequireInternal restricts access to requests originating from localhost only.
 // This is used for internal service endpoints that should not be exposed externally,
@@ -25,7 +25,7 @@ func RequireInternal() fiber.Handler {
 // RequireInternalWithExtractor is like RequireInternal but allows specifying
 // a custom IP extractor function. This is primarily useful for testing.
 func RequireInternalWithExtractor(extractor IPExtractor) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Get the actual connection IP (ignore proxy headers for security)
 		clientIP := extractor(c)
 
@@ -51,10 +51,10 @@ func RequireInternalWithExtractor(extractor IPExtractor) fiber.Handler {
 // getDirectIP returns the direct connection IP, ignoring proxy headers.
 // This is more secure for internal endpoints where we want to verify
 // the request truly comes from localhost.
-func getDirectIP(c *fiber.Ctx) net.IP {
+func getDirectIP(c fiber.Ctx) net.IP {
 	// Get the raw IP from the connection, ignoring proxy headers
 	// Fiber's c.Context().RemoteIP() gives us the actual connection IP
-	ipStr := c.Context().RemoteIP().String()
+	ipStr := c.RequestCtx().RemoteIP().String()
 
 	// Handle IPv6 zone suffix (e.g., "::1%lo0")
 	if idx := strings.Index(ipStr, "%"); idx != -1 {
@@ -89,3 +89,5 @@ func isLoopback(ip net.IP) bool {
 
 	return false
 }
+
+// fiber:context-methods migrated

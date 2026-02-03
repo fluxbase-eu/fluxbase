@@ -4,7 +4,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/fluxbase-eu/fluxbase/internal/webhook"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -41,9 +41,9 @@ func (h *WebhookHandler) RegisterRoutes(app *fiber.App, authService *auth.Servic
 }
 
 // CreateWebhook creates a new webhook
-func (h *WebhookHandler) CreateWebhook(c *fiber.Ctx) error {
+func (h *WebhookHandler) CreateWebhook(c fiber.Ctx) error {
 	var req webhook.Webhook
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -87,7 +87,7 @@ func (h *WebhookHandler) CreateWebhook(c *fiber.Ctx) error {
 		}
 	}
 
-	err := h.webhookService.Create(c.Context(), &req)
+	err := h.webhookService.Create(c.RequestCtx(), &req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -98,8 +98,8 @@ func (h *WebhookHandler) CreateWebhook(c *fiber.Ctx) error {
 }
 
 // ListWebhooks lists all webhooks
-func (h *WebhookHandler) ListWebhooks(c *fiber.Ctx) error {
-	webhooks, err := h.webhookService.List(c.Context())
+func (h *WebhookHandler) ListWebhooks(c fiber.Ctx) error {
+	webhooks, err := h.webhookService.List(c.RequestCtx())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -110,7 +110,7 @@ func (h *WebhookHandler) ListWebhooks(c *fiber.Ctx) error {
 }
 
 // GetWebhook retrieves a webhook by ID
-func (h *WebhookHandler) GetWebhook(c *fiber.Ctx) error {
+func (h *WebhookHandler) GetWebhook(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -118,7 +118,7 @@ func (h *WebhookHandler) GetWebhook(c *fiber.Ctx) error {
 		})
 	}
 
-	wh, err := h.webhookService.Get(c.Context(), id)
+	wh, err := h.webhookService.Get(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "Webhook not found",
@@ -129,7 +129,7 @@ func (h *WebhookHandler) GetWebhook(c *fiber.Ctx) error {
 }
 
 // UpdateWebhook updates a webhook
-func (h *WebhookHandler) UpdateWebhook(c *fiber.Ctx) error {
+func (h *WebhookHandler) UpdateWebhook(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -138,13 +138,13 @@ func (h *WebhookHandler) UpdateWebhook(c *fiber.Ctx) error {
 	}
 
 	var req webhook.Webhook
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
 	}
 
-	err = h.webhookService.Update(c.Context(), id, &req)
+	err = h.webhookService.Update(c.RequestCtx(), id, &req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -157,7 +157,7 @@ func (h *WebhookHandler) UpdateWebhook(c *fiber.Ctx) error {
 }
 
 // DeleteWebhook deletes a webhook
-func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
+func (h *WebhookHandler) DeleteWebhook(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -165,7 +165,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.webhookService.Delete(c.Context(), id)
+	err = h.webhookService.Delete(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -178,7 +178,7 @@ func (h *WebhookHandler) DeleteWebhook(c *fiber.Ctx) error {
 }
 
 // TestWebhook sends a test webhook
-func (h *WebhookHandler) TestWebhook(c *fiber.Ctx) error {
+func (h *WebhookHandler) TestWebhook(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -186,7 +186,7 @@ func (h *WebhookHandler) TestWebhook(c *fiber.Ctx) error {
 		})
 	}
 
-	wh, err := h.webhookService.Get(c.Context(), id)
+	wh, err := h.webhookService.Get(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "Webhook not found",
@@ -199,10 +199,10 @@ func (h *WebhookHandler) TestWebhook(c *fiber.Ctx) error {
 		Table:     "test",
 		Schema:    "public",
 		Record:    []byte(`{"test": true}`),
-		Timestamp: c.Context().Time(),
+		Timestamp: c.RequestCtx().Time(),
 	}
 
-	err = h.webhookService.Deliver(c.Context(), wh, testPayload)
+	err = h.webhookService.Deliver(c.RequestCtx(), wh, testPayload)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -215,7 +215,7 @@ func (h *WebhookHandler) TestWebhook(c *fiber.Ctx) error {
 }
 
 // ListDeliveries lists webhook deliveries
-func (h *WebhookHandler) ListDeliveries(c *fiber.Ctx) error {
+func (h *WebhookHandler) ListDeliveries(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -226,11 +226,11 @@ func (h *WebhookHandler) ListDeliveries(c *fiber.Ctx) error {
 	// Default limit is 50
 	limit := 50
 	if limitParam := c.Query("limit"); limitParam != "" {
-		parsedLimit := c.QueryInt("limit", 50)
+		parsedLimit := fiber.Query[int](c, "limit", 50)
 		limit = parsedLimit
 	}
 
-	deliveries, err := h.webhookService.ListDeliveries(c.Context(), id, limit)
+	deliveries, err := h.webhookService.ListDeliveries(c.RequestCtx(), id, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -239,3 +239,5 @@ func (h *WebhookHandler) ListDeliveries(c *fiber.Ctx) error {
 
 	return c.JSON(deliveries)
 }
+
+// fiber:context-methods migrated

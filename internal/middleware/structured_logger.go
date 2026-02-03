@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -86,7 +87,7 @@ func StructuredLogger(config ...StructuredLoggerConfig) fiber.Handler {
 		logger = *cfg.Logger
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Check if path should be skipped
 		path := c.Path()
 		for _, skipPath := range cfg.SkipPaths {
@@ -99,8 +100,8 @@ func StructuredLogger(config ...StructuredLoggerConfig) fiber.Handler {
 		start := time.Now()
 
 		// Get request ID (should be set by requestid middleware)
-		requestID := c.Locals("requestid")
-		if requestID == nil {
+		requestID := requestid.FromContext(c)
+		if requestID == "" {
 			requestID = c.Get("X-Request-ID", "")
 		}
 
@@ -241,7 +242,7 @@ func NewAuditLogger(logger zerolog.Logger) *AuditLogger {
 }
 
 // LogAuth logs authentication events
-func (al *AuditLogger) LogAuth(c *fiber.Ctx, event, userID, email string, success bool) {
+func (al *AuditLogger) LogAuth(c fiber.Ctx, event, userID, email string, success bool) {
 	logEvent := al.logger.Info()
 	if !success {
 		logEvent = al.logger.Warn()
@@ -259,7 +260,7 @@ func (al *AuditLogger) LogAuth(c *fiber.Ctx, event, userID, email string, succes
 }
 
 // LogUserManagement logs user management events
-func (al *AuditLogger) LogUserManagement(c *fiber.Ctx, action, targetUserID, performedBy string) {
+func (al *AuditLogger) LogUserManagement(c fiber.Ctx, action, targetUserID, performedBy string) {
 	al.logger.Info().
 		Str("action", action).
 		Str("target_user_id", targetUserID).
@@ -270,7 +271,7 @@ func (al *AuditLogger) LogUserManagement(c *fiber.Ctx, action, targetUserID, per
 }
 
 // LogClientKeyOperation logs client key operations
-func (al *AuditLogger) LogClientKeyOperation(c *fiber.Ctx, action, keyID, keyName, performedBy string) {
+func (al *AuditLogger) LogClientKeyOperation(c fiber.Ctx, action, keyID, keyName, performedBy string) {
 	al.logger.Info().
 		Str("action", action).
 		Str("key_id", keyID).
@@ -282,7 +283,7 @@ func (al *AuditLogger) LogClientKeyOperation(c *fiber.Ctx, action, keyID, keyNam
 }
 
 // LogConfigChange logs configuration changes
-func (al *AuditLogger) LogConfigChange(c *fiber.Ctx, setting, oldValue, newValue, performedBy string) {
+func (al *AuditLogger) LogConfigChange(c fiber.Ctx, setting, oldValue, newValue, performedBy string) {
 	al.logger.Warn().
 		Str("setting", setting).
 		Str("old_value", oldValue).
@@ -294,7 +295,7 @@ func (al *AuditLogger) LogConfigChange(c *fiber.Ctx, setting, oldValue, newValue
 }
 
 // LogSecurityEvent logs security-related events
-func (al *AuditLogger) LogSecurityEvent(c *fiber.Ctx, event, description, severity string) {
+func (al *AuditLogger) LogSecurityEvent(c fiber.Ctx, event, description, severity string) {
 	var logEvent *zerolog.Event
 	switch severity {
 	case "critical":

@@ -2,7 +2,7 @@ package mcp
 
 import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // AuthContext contains authentication information for MCP requests
@@ -184,7 +184,7 @@ func (ctx *AuthContext) FilterNamespaces(namespaces []string) []string {
 
 // ExtractAuthContext extracts authentication context from Fiber locals
 // This should be called after auth middleware has run
-func ExtractAuthContext(c *fiber.Ctx) *AuthContext {
+func ExtractAuthContext(c fiber.Ctx) *AuthContext {
 	ctx := &AuthContext{
 		Scopes: make([]string, 0),
 	}

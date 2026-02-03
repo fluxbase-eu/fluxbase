@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestRouteGroupIsolation(t *testing.T) {
 
 	// Create main /api/v1 group without rate limiting
 	v1 := app.Group("/api/v1")
-	v1.Get("/admin/test", func(c *fiber.Ctx) error {
+	v1.Get("/admin/test", func(c fiber.Ctx) error {
 		return c.SendString("admin ok")
 	})
 
@@ -26,7 +26,7 @@ func TestRouteGroupIsolation(t *testing.T) {
 	// This is the correct way to avoid middleware leakage
 	app.Post("/api/v1/webhooks/github",
 		middleware.GitHubWebhookLimiter(),
-		func(c *fiber.Ctx) error {
+		func(c fiber.Ctx) error {
 			return c.SendString("webhook ok")
 		},
 	)
@@ -35,7 +35,7 @@ func TestRouteGroupIsolation(t *testing.T) {
 		// Make 50 requests to admin endpoint (exceeds webhook limit of 30/min)
 		for i := 0; i < 50; i++ {
 			req := httptest.NewRequest("GET", "/api/v1/admin/test", nil)
-			resp, err := app.Test(req, -1)
+			resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 			require.NoError(t, err)
 
 			// All requests should succeed (200) because webhook rate limiter
@@ -52,7 +52,7 @@ func TestRouteGroupIsolation(t *testing.T) {
 		// Register webhook with rate limiter
 		app2.Post("/api/v1/webhooks/github",
 			middleware.GitHubWebhookLimiter(),
-			func(c *fiber.Ctx) error {
+			func(c fiber.Ctx) error {
 				return c.SendString("webhook ok")
 			},
 		)
@@ -61,7 +61,7 @@ func TestRouteGroupIsolation(t *testing.T) {
 		rateLimitHit := false
 		for i := 0; i < 35; i++ {
 			req := httptest.NewRequest("POST", "/api/v1/webhooks/github", nil)
-			resp, err := app2.Test(req, -1)
+			resp, err := app2.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 			require.NoError(t, err)
 
 			if resp.StatusCode == 429 {
@@ -84,14 +84,14 @@ func TestRouteGroupMiddlewareLeakage(t *testing.T) {
 
 		// Main group without middleware
 		v1 := app.Group("/api/v1")
-		v1.Get("/admin/test", func(c *fiber.Ctx) error {
+		v1.Get("/admin/test", func(c fiber.Ctx) error {
 			return c.SendString("admin ok")
 		})
 
 		// Second group with same prefix but WITH middleware
 		// This is the ANTI-PATTERN that caused the bug
 		webhookGroup := app.Group("/api/v1", middleware.GitHubWebhookLimiter())
-		webhookGroup.Post("/webhooks/github", func(c *fiber.Ctx) error {
+		webhookGroup.Post("/webhooks/github", func(c fiber.Ctx) error {
 			return c.SendString("webhook ok")
 		})
 
@@ -100,7 +100,7 @@ func TestRouteGroupMiddlewareLeakage(t *testing.T) {
 		successCount := 0
 		for i := 0; i < 35; i++ {
 			req := httptest.NewRequest("GET", "/api/v1/admin/test", nil)
-			resp, err := app.Test(req, -1)
+			resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 			require.NoError(t, err)
 
 			if resp.StatusCode == 200 {

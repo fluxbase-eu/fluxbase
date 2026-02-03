@@ -8,7 +8,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -37,7 +37,7 @@ func RLSMiddleware(config RLSConfig) fiber.Handler {
 		config.SessionVarPrefix = "app"
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Get user ID from context (set by auth middleware)
 		userID := c.Locals("user_id")
 
@@ -241,7 +241,7 @@ func WrapWithServiceRole(ctx context.Context, conn *database.Connection, fn func
 // WrapWithRLS wraps a database operation with RLS context
 // This is a helper function for setting RLS context in queries
 // If a branch pool is set in context (by BranchContext middleware), it uses that pool instead
-func WrapWithRLS(ctx context.Context, conn *database.Connection, c *fiber.Ctx, fn func(tx pgx.Tx) error) error {
+func WrapWithRLS(ctx context.Context, conn *database.Connection, c fiber.Ctx, fn func(tx pgx.Tx) error) error {
 	// Check for branch pool in context (set by BranchContext middleware)
 	pool := GetBranchPool(c)
 	if pool == nil {
@@ -318,7 +318,7 @@ type RLSContext struct {
 	Role   string
 }
 
-func GetRLSContext(c *fiber.Ctx) RLSContext {
+func GetRLSContext(c fiber.Ctx) RLSContext {
 	role := c.Locals("rls_role")
 	if role == nil {
 		role = "anon"
@@ -332,7 +332,7 @@ func GetRLSContext(c *fiber.Ctx) RLSContext {
 
 // LogRLSViolation logs an RLS policy violation to the audit log table
 // This should be called when an operation is blocked by RLS policies
-func LogRLSViolation(ctx context.Context, db *database.Connection, c *fiber.Ctx, operation string, tableName string) {
+func LogRLSViolation(ctx context.Context, db *database.Connection, c fiber.Ctx, operation string, tableName string) {
 	// Extract schema and table name if combined
 	schema := "public"
 	table := tableName

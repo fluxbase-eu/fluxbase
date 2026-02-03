@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -134,7 +134,7 @@ func TestStreamUpload_ParameterExtraction(t *testing.T) {
 			app := fiber.New()
 
 			// Custom handler to verify parameter extraction
-			app.Post("/storage/:bucket/stream/*", func(c *fiber.Ctx) error {
+			app.Post("/storage/:bucket/stream/*", func(c fiber.Ctx) error {
 				bucket := c.Params("bucket")
 				key := c.Params("*")
 

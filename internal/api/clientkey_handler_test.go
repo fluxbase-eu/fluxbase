@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -299,7 +299,7 @@ func TestCreateClientKey_Validation(t *testing.T) {
 		handler := NewClientKeyHandler(nil)
 
 		// Middleware to set user_id
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", uuid.New())
 			return c.Next()
 		})
@@ -346,7 +346,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 		handler := NewClientKeyHandler(nil)
 
 		// Set admin role to allow filtering
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_role", "admin")
 			return c.Next()
 		})
@@ -396,7 +396,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 		otherUserID := uuid.New().String()
 
 		// Set non-admin role
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", currentUserID)
 			c.Locals("user_role", "user")
 			return c.Next()
@@ -429,7 +429,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 		otherUserID := uuid.New().String()
 
 		// Set admin role
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", uuid.New().String())
 			c.Locals("user_role", "admin")
 			return c.Next()
@@ -452,7 +452,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 		handler := NewClientKeyHandler(nil)
 
 		// Set dashboard_admin role
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", uuid.New().String())
 			c.Locals("user_role", "dashboard_admin")
 			return c.Next()
@@ -475,7 +475,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 		handler := NewClientKeyHandler(nil)
 
 		// Set service_role
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", uuid.New().String())
 			c.Locals("user_role", "service_role")
 			return c.Next()
@@ -805,7 +805,7 @@ func TestAdminRoleVerification(t *testing.T) {
 				app := fiber.New()
 				handler := NewClientKeyHandler(nil)
 
-				app.Use(func(c *fiber.Ctx) error {
+				app.Use(func(c fiber.Ctx) error {
 					c.Locals("user_id", uuid.New().String())
 					c.Locals("user_role", role)
 					return c.Next()
@@ -833,7 +833,7 @@ func TestAdminRoleVerification(t *testing.T) {
 				app := fiber.New()
 				handler := NewClientKeyHandler(nil)
 
-				app.Use(func(c *fiber.Ctx) error {
+				app.Use(func(c fiber.Ctx) error {
 					c.Locals("user_id", uuid.New().String())
 					c.Locals("user_role", role)
 					return c.Next()

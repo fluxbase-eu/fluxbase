@@ -8,21 +8,21 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
 // isAdminUser checks if the request is from an admin or dashboard_admin user
-func isAdminUser(c *fiber.Ctx) bool {
+func isAdminUser(c fiber.Ctx) bool {
 	role, ok := c.Locals("user_role").(string)
 	return ok && (role == "admin" || role == "dashboard_admin")
 }
 
 // makeGetHandler creates a GET handler for listing records
 func (h *RESTHandler) makeGetHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 
 		// Parse raw query string to preserve multiple values for the same key
 		// (e.g., recorded_at=gte.2025-01-01&recorded_at=lte.2025-12-31)
@@ -87,8 +87,8 @@ func (h *RESTHandler) makeGetHandler(table database.TableInfo) fiber.Handler {
 
 // makeGetByIdHandler creates a GET handler for fetching a single record
 func (h *RESTHandler) makeGetByIdHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 		id := c.Params("id")
 
 		// Determine primary key column
@@ -134,8 +134,8 @@ func (h *RESTHandler) makeGetByIdHandler(table database.TableInfo) fiber.Handler
 
 // makePostHandler creates a POST handler for creating records (single or batch)
 func (h *RESTHandler) makePostHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 
 		// Check for upsert preferences
 		preferHeader := c.Get("Prefer", "")
@@ -148,14 +148,14 @@ func (h *RESTHandler) makePostHandler(table database.TableInfo) fiber.Handler {
 
 		// Try to parse as array first (batch insert)
 		var dataArray []map[string]interface{}
-		if err := c.BodyParser(&dataArray); err == nil && len(dataArray) > 0 {
+		if err := c.Bind().Body(&dataArray); err == nil && len(dataArray) > 0 {
 			// Batch insert
 			return h.batchInsert(ctx, c, table, dataArray, isUpsert, ignoreDuplicates, defaultToNull, onConflict)
 		}
 
 		// Otherwise parse as single object
 		var data map[string]interface{}
-		if err := c.BodyParser(&data); err != nil {
+		if err := c.Bind().Body(&data); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"error": "Invalid request body",
 			})
@@ -303,13 +303,13 @@ func (h *RESTHandler) makePostHandler(table database.TableInfo) fiber.Handler {
 
 // makePutHandler creates a PUT handler for replacing records
 func (h *RESTHandler) makePutHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 		id := c.Params("id")
 
 		// Parse request body
 		var data map[string]interface{}
-		if err := c.BodyParser(&data); err != nil {
+		if err := c.Bind().Body(&data); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"error": "Invalid request body",
 			})
@@ -403,8 +403,8 @@ func (h *RESTHandler) makePatchHandler(table database.TableInfo) fiber.Handler {
 
 // makeDeleteHandler creates a DELETE handler for removing records
 func (h *RESTHandler) makeDeleteHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 		id := c.Params("id")
 
 		// Determine primary key column
@@ -445,3 +445,5 @@ func (h *RESTHandler) makeDeleteHandler(table database.TableInfo) fiber.Handler 
 		return c.Status(204).Send(nil)
 	}
 }
+
+// fiber:context-methods migrated

@@ -386,14 +386,14 @@ func TestSharedModule_Struct(t *testing.T) {
 func TestCORSConfig(t *testing.T) {
 	t.Run("default CORS config", func(t *testing.T) {
 		corsConfig := config.CORSConfig{
-			AllowedOrigins:   "*",
-			AllowedMethods:   "GET,POST,PUT,DELETE,OPTIONS",
-			AllowedHeaders:   "Content-Type,Authorization",
+			AllowedOrigins:   []string{"*"},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Content-Type", "Authorization"},
 			AllowCredentials: false,
 			MaxAge:           3600,
 		}
 
-		assert.Equal(t, "*", corsConfig.AllowedOrigins)
+		assert.Contains(t, corsConfig.AllowedOrigins, "*")
 		assert.Contains(t, corsConfig.AllowedMethods, "POST")
 		assert.False(t, corsConfig.AllowCredentials)
 		assert.Equal(t, 3600, corsConfig.MaxAge)
@@ -401,17 +401,17 @@ func TestCORSConfig(t *testing.T) {
 
 	t.Run("restrictive CORS config", func(t *testing.T) {
 		corsConfig := config.CORSConfig{
-			AllowedOrigins:   "https://app.example.com,https://admin.example.com",
-			AllowedMethods:   "GET,POST",
-			AllowedHeaders:   "Content-Type,Authorization,X-Custom-Header",
+			AllowedOrigins:   []string{"https://app.example.com", "https://admin.example.com"},
+			AllowedMethods:   []string{"GET", "POST"},
+			AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Custom-Header"},
 			AllowCredentials: true,
 			MaxAge:           7200,
-			ExposedHeaders:   "X-Request-Id",
+			ExposedHeaders:   []string{"X-Request-Id"},
 		}
 
 		assert.Contains(t, corsConfig.AllowedOrigins, "https://app.example.com")
 		assert.True(t, corsConfig.AllowCredentials)
-		assert.Equal(t, "X-Request-Id", corsConfig.ExposedHeaders)
+		assert.Contains(t, corsConfig.ExposedHeaders, "X-Request-Id")
 	})
 }
 

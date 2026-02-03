@@ -4,14 +4,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
 // ShareObject handles sharing a file with another user
 // POST /api/v1/storage/:bucket/:path/share
-func (h *StorageHandler) ShareObject(c *fiber.Ctx) error {
+func (h *StorageHandler) ShareObject(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*")
 
@@ -25,7 +25,7 @@ func (h *StorageHandler) ShareObject(c *fiber.Ctx) error {
 		UserID     string `json:"user_id"`
 		Permission string `json:"permission"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid request body",
 		})
@@ -43,7 +43,7 @@ func (h *StorageHandler) ShareObject(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	tx, err := h.db.Pool().Begin(ctx)
 	if err != nil {
@@ -122,7 +122,7 @@ func (h *StorageHandler) ShareObject(c *fiber.Ctx) error {
 
 // RevokeShare handles revoking file access from a user
 // DELETE /api/v1/storage/:bucket/:path/share/:user_id
-func (h *StorageHandler) RevokeShare(c *fiber.Ctx) error {
+func (h *StorageHandler) RevokeShare(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*1")
 	sharedUserID := c.Params("user_id")
@@ -133,7 +133,7 @@ func (h *StorageHandler) RevokeShare(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	tx, err := h.db.Pool().Begin(ctx)
 	if err != nil {
@@ -211,7 +211,7 @@ func (h *StorageHandler) RevokeShare(c *fiber.Ctx) error {
 
 // ListShares handles listing users a file is shared with
 // GET /api/v1/storage/:bucket/:path/shares
-func (h *StorageHandler) ListShares(c *fiber.Ctx) error {
+func (h *StorageHandler) ListShares(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*")
 
@@ -221,7 +221,7 @@ func (h *StorageHandler) ListShares(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	tx, err := h.db.Pool().Begin(ctx)
 	if err != nil {
@@ -306,3 +306,5 @@ func (h *StorageHandler) ListShares(c *fiber.Ctx) error {
 		"count":  len(shares),
 	})
 }
+
+// fiber:context-methods migrated

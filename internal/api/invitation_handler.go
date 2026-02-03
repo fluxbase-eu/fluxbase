@@ -8,7 +8,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/email"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -74,7 +74,7 @@ type AcceptInvitationResponse struct {
 
 // CreateInvitation generates a new invitation token
 // POST /api/v1/admin/invitations
-func (h *InvitationHandler) CreateInvitation(c *fiber.Ctx) error {
+func (h *InvitationHandler) CreateInvitation(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Get inviter info from context (set by auth middleware)
@@ -94,7 +94,7 @@ func (h *InvitationHandler) CreateInvitation(c *fiber.Ctx) error {
 
 	// Parse request
 	var req CreateInvitationRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -151,7 +151,7 @@ func (h *InvitationHandler) CreateInvitation(c *fiber.Ctx) error {
 
 // ValidateInvitation validates an invitation token
 // GET /api/v1/invitations/:token/validate
-func (h *InvitationHandler) ValidateInvitation(c *fiber.Ctx) error {
+func (h *InvitationHandler) ValidateInvitation(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	token := c.Params("token")
@@ -191,7 +191,7 @@ func (h *InvitationHandler) ValidateInvitation(c *fiber.Ctx) error {
 
 // AcceptInvitation accepts an invitation and creates a new user
 // POST /api/v1/invitations/:token/accept
-func (h *InvitationHandler) AcceptInvitation(c *fiber.Ctx) error {
+func (h *InvitationHandler) AcceptInvitation(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	token := c.Params("token")
@@ -203,7 +203,7 @@ func (h *InvitationHandler) AcceptInvitation(c *fiber.Ctx) error {
 
 	// Parse request
 	var req AcceptInvitationRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -295,7 +295,7 @@ func (h *InvitationHandler) AcceptInvitation(c *fiber.Ctx) error {
 
 // ListInvitations retrieves all invitations (admin only)
 // GET /api/v1/admin/invitations
-func (h *InvitationHandler) ListInvitations(c *fiber.Ctx) error {
+func (h *InvitationHandler) ListInvitations(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Parse query parameters
@@ -321,7 +321,7 @@ func (h *InvitationHandler) ListInvitations(c *fiber.Ctx) error {
 
 // RevokeInvitation revokes an invitation token (admin only)
 // DELETE /api/v1/admin/invitations/:token
-func (h *InvitationHandler) RevokeInvitation(c *fiber.Ctx) error {
+func (h *InvitationHandler) RevokeInvitation(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	token := c.Params("token")

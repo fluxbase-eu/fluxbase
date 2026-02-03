@@ -7,7 +7,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/logging"
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // LoggingHandler handles logging-related API endpoints
@@ -48,7 +48,7 @@ func NewLoggingHandler(loggingService *logging.Service) *LoggingHandler {
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /admin/logs [get]
-func (h *LoggingHandler) QueryLogs(c *fiber.Ctx) error {
+func (h *LoggingHandler) QueryLogs(c fiber.Ctx) error {
 	if h.loggingService == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Logging service not available",
@@ -116,7 +116,7 @@ func (h *LoggingHandler) QueryLogs(c *fiber.Ctx) error {
 	opts.HideStaticAssets = c.Query("hide_static_assets") == "true"
 
 	// Query logs
-	result, err := h.loggingService.Query(c.Context(), opts)
+	result, err := h.loggingService.Query(c.RequestCtx(), opts)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -143,7 +143,7 @@ func (h *LoggingHandler) QueryLogs(c *fiber.Ctx) error {
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /admin/logs/executions/{execution_id} [get]
-func (h *LoggingHandler) GetExecutionLogs(c *fiber.Ctx) error {
+func (h *LoggingHandler) GetExecutionLogs(c fiber.Ctx) error {
 	if h.loggingService == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Logging service not available",
@@ -164,7 +164,7 @@ func (h *LoggingHandler) GetExecutionLogs(c *fiber.Ctx) error {
 		}
 	}
 
-	entries, err := h.loggingService.GetExecutionLogs(c.Context(), executionID, afterLine)
+	entries, err := h.loggingService.GetExecutionLogs(c.RequestCtx(), executionID, afterLine)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -187,14 +187,14 @@ func (h *LoggingHandler) GetExecutionLogs(c *fiber.Ctx) error {
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /admin/logs/stats [get]
-func (h *LoggingHandler) GetLogStats(c *fiber.Ctx) error {
+func (h *LoggingHandler) GetLogStats(c fiber.Ctx) error {
 	if h.loggingService == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Logging service not available",
 		})
 	}
 
-	stats, err := h.loggingService.Stats(c.Context())
+	stats, err := h.loggingService.Stats(c.RequestCtx())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -214,14 +214,14 @@ func (h *LoggingHandler) GetLogStats(c *fiber.Ctx) error {
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /admin/logs/flush [post]
-func (h *LoggingHandler) FlushLogs(c *fiber.Ctx) error {
+func (h *LoggingHandler) FlushLogs(c fiber.Ctx) error {
 	if h.loggingService == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Logging service not available",
 		})
 	}
 
-	if err := h.loggingService.Flush(c.Context()); err != nil {
+	if err := h.loggingService.Flush(c.RequestCtx()); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
@@ -253,3 +253,5 @@ type LogStatsResponse struct {
 	OldestEntry       *time.Time       `json:"oldest_entry,omitempty"`
 	NewestEntry       *time.Time       `json:"newest_entry,omitempty"`
 }
+
+// fiber:context-methods migrated

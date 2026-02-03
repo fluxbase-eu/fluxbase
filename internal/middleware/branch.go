@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/fluxbase-eu/fluxbase/internal/branching"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -43,7 +43,7 @@ type BranchContextConfig struct {
 // and sets up the appropriate connection pool
 // Precedence: Header > Query param > API-set default > Config default > "main"
 func BranchContext(config BranchContextConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Extract branch slug from header or query param
 		branchSlug := c.Get(BranchHeader)
 		if branchSlug == "" {
@@ -88,7 +88,7 @@ func BranchContext(config BranchContextConfig) fiber.Handler {
 
 			// Check access if required and user is authenticated
 			if config.RequireAccess && userID != nil {
-				hasAccess, err := config.Router.GetStorage().UserHasAccess(c.Context(), branchSlug, *userID)
+				hasAccess, err := config.Router.GetStorage().UserHasAccess(c.RequestCtx(), branchSlug, *userID)
 				if err != nil {
 					log.Error().Err(err).
 						Str("branch", branchSlug).
@@ -114,7 +114,7 @@ func BranchContext(config BranchContextConfig) fiber.Handler {
 		var err error
 
 		if config.Router != nil {
-			pool, err = config.Router.GetPool(c.Context(), branchSlug)
+			pool, err = config.Router.GetPool(c.RequestCtx(), branchSlug)
 			if err != nil {
 				if err == branching.ErrBranchNotFound {
 					return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -169,7 +169,7 @@ func BranchContext(config BranchContextConfig) fiber.Handler {
 }
 
 // GetBranchSlug extracts the branch slug from Fiber context
-func GetBranchSlug(c *fiber.Ctx) string {
+func GetBranchSlug(c fiber.Ctx) string {
 	if slug, ok := c.Locals(LocalsBranchSlug).(string); ok {
 		return slug
 	}
@@ -177,7 +177,7 @@ func GetBranchSlug(c *fiber.Ctx) string {
 }
 
 // GetBranchPool extracts the branch connection pool from Fiber context
-func GetBranchPool(c *fiber.Ctx) *pgxpool.Pool {
+func GetBranchPool(c fiber.Ctx) *pgxpool.Pool {
 	if pool, ok := c.Locals(LocalsBranchPool).(*pgxpool.Pool); ok {
 		return pool
 	}
@@ -185,7 +185,7 @@ func GetBranchPool(c *fiber.Ctx) *pgxpool.Pool {
 }
 
 // IsUsingBranch checks if the request is using a non-main branch
-func IsUsingBranch(c *fiber.Ctx) bool {
+func IsUsingBranch(c fiber.Ctx) bool {
 	slug := GetBranchSlug(c)
 	return !branching.IsMainBranch(slug)
 }
@@ -209,3 +209,5 @@ func RequireBranchAccess(router *branching.Router) fiber.Handler {
 		AllowAnonymous: false,
 	})
 }
+
+// fiber:context-methods migrated

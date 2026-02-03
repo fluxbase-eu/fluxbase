@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
 // UploadFile handles file upload
 // POST /api/v1/storage/:bucket/:key
-func (h *StorageHandler) UploadFile(c *fiber.Ctx) error {
+func (h *StorageHandler) UploadFile(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*") // Capture the rest of the path
 
@@ -45,7 +45,7 @@ func (h *StorageHandler) UploadFile(c *fiber.Ctx) error {
 	// Get bucket settings for additional validation
 	var bucketMaxFileSize *int64
 	var bucketAllowedMimeTypes []string
-	err = h.db.Pool().QueryRow(c.Context(),
+	err = h.db.Pool().QueryRow(c.RequestCtx(),
 		`SELECT max_file_size, allowed_mime_types FROM storage.buckets WHERE name = $1`,
 		bucket,
 	).Scan(&bucketMaxFileSize, &bucketAllowedMimeTypes)
@@ -118,7 +118,7 @@ func (h *StorageHandler) UploadFile(c *fiber.Ctx) error {
 		ownerUUID = &ownerID
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Upload the file to storage provider first
 	object, err := h.storage.Provider.Upload(ctx, bucket, key, src, file.Size, opts)
@@ -226,7 +226,7 @@ func (h *StorageHandler) UploadFile(c *fiber.Ctx) error {
 // DownloadFile handles file download and HEAD requests for file info
 // GET /api/v1/storage/:bucket/:key
 // HEAD /api/v1/storage/:bucket/:key (for downloadResumable to get Content-Length)
-func (h *StorageHandler) DownloadFile(c *fiber.Ctx) error {
+func (h *StorageHandler) DownloadFile(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*")
 
@@ -247,7 +247,7 @@ func (h *StorageHandler) DownloadFile(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Start database transaction to check permissions
 	tx, err := h.db.Pool().Begin(ctx)
@@ -321,10 +321,10 @@ func (h *StorageHandler) DownloadFile(c *fiber.Ctx) error {
 
 	// Parse transform options from query parameters
 	transformOpts := storage.ParseTransformOptions(
-		c.QueryInt("w", c.QueryInt("width", 0)),
-		c.QueryInt("h", c.QueryInt("height", 0)),
+		fiber.Query[int](c, "w", fiber.Query[int](c, "width", 0)),
+		fiber.Query[int](c, "h", fiber.Query[int](c, "height", 0)),
 		c.Query("fmt", c.Query("format", "")),
-		c.QueryInt("q", c.QueryInt("quality", 0)),
+		fiber.Query[int](c, "q", fiber.Query[int](c, "quality", 0)),
 		c.Query("fit", ""),
 	)
 
@@ -474,7 +474,7 @@ var _ = bytes.NewReader
 
 // DeleteFile handles file deletion
 // DELETE /api/v1/storage/:bucket/:key
-func (h *StorageHandler) DeleteFile(c *fiber.Ctx) error {
+func (h *StorageHandler) DeleteFile(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*")
 
@@ -490,7 +490,7 @@ func (h *StorageHandler) DeleteFile(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Start database transaction
 	tx, err := h.db.Pool().Begin(ctx)
@@ -590,7 +590,7 @@ func (h *StorageHandler) DeleteFile(c *fiber.Ctx) error {
 
 // GetFileInfo handles getting file metadata
 // HEAD /api/v1/storage/:bucket/:key
-func (h *StorageHandler) GetFileInfo(c *fiber.Ctx) error {
+func (h *StorageHandler) GetFileInfo(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*")
 
@@ -604,7 +604,7 @@ func (h *StorageHandler) GetFileInfo(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	tx, err := h.db.Pool().Begin(ctx)
 	if err != nil {
@@ -693,7 +693,7 @@ func (h *StorageHandler) GetFileInfo(c *fiber.Ctx) error {
 
 // ListFiles handles listing files in a bucket
 // GET /api/v1/storage/:bucket
-func (h *StorageHandler) ListFiles(c *fiber.Ctx) error {
+func (h *StorageHandler) ListFiles(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 
 	if bucket == "" {
@@ -704,10 +704,10 @@ func (h *StorageHandler) ListFiles(c *fiber.Ctx) error {
 
 	prefix := c.Query("prefix", "")
 	delimiter := c.Query("delimiter", "")
-	limit := c.QueryInt("limit", 1000)
-	offset := c.QueryInt("offset", 0)
+	limit := fiber.Query[int](c, "limit", 1000)
+	offset := fiber.Query[int](c, "offset", 0)
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	tx, err := h.db.Pool().Begin(ctx)
 	if err != nil {
@@ -835,3 +835,5 @@ func (h *StorageHandler) ListFiles(c *fiber.Ctx) error {
 
 	return c.JSON(response)
 }
+
+// fiber:context-methods migrated

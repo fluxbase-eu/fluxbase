@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // ETagConfig defines the configuration for ETag middleware
@@ -56,7 +56,7 @@ func ETagWithConfig(config ETagConfig) fiber.Handler {
 		methodSet[strings.ToUpper(m)] = true
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Check if method should have ETag
 		if !methodSet[c.Method()] {
 			return c.Next()
@@ -162,7 +162,7 @@ func normalizeETag(etag string) string {
 // LastModifiedMiddleware adds Last-Modified header based on response data
 // This is a helper that can be used alongside ETag middleware
 func LastModifiedMiddleware(timestampField string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Process the request
 		if err := c.Next(); err != nil {
 			return err
@@ -255,7 +255,7 @@ func CacheControl(config CacheControlConfig) fiber.Handler {
 
 	cacheControl := strings.Join(directives, ", ")
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Only set for GET and HEAD requests
 		if c.Method() != "GET" && c.Method() != "HEAD" {
 			return c.Next()

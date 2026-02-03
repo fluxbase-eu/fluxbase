@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +20,7 @@ func TestRateLimiterConfig_Fields(t *testing.T) {
 		Name:       "test_limiter",
 		Max:        100,
 		Expiration: time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			return "test:" + c.IP()
 		},
 		Message: "Custom rate limit message",
@@ -65,7 +65,7 @@ func TestNewRateLimiter_DefaultKeyFunc(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(limiter)
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -87,7 +87,7 @@ func TestNewRateLimiter_CustomMessage(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(limiter)
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -116,7 +116,7 @@ func TestNewRateLimiter_RetryAfterHeader(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(limiter)
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -294,7 +294,7 @@ func TestRateLimitResponse_Format(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(limiter)
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -327,14 +327,14 @@ func TestKeyFunc_IPBased(t *testing.T) {
 	limiter := NewRateLimiter(RateLimiterConfig{
 		Max:        100,
 		Expiration: time.Minute,
-		KeyFunc: func(c *fiber.Ctx) string {
+		KeyFunc: func(c fiber.Ctx) string {
 			capturedKey = "custom:" + c.IP()
 			return capturedKey
 		},
 	})
 
 	app.Use(limiter)
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -353,7 +353,7 @@ func TestKeyFunc_IPBased(t *testing.T) {
 func TestAuthLoginLimiter_Integration(t *testing.T) {
 	app := fiber.New()
 	app.Use(AuthLoginLimiter())
-	app.Post("/auth/login", func(c *fiber.Ctx) error {
+	app.Post("/auth/login", func(c fiber.Ctx) error {
 		return c.SendString("Login successful")
 	})
 
@@ -367,7 +367,7 @@ func TestAuthLoginLimiter_Integration(t *testing.T) {
 func TestGlobalAPILimiter_Integration(t *testing.T) {
 	app := fiber.New()
 	app.Use(GlobalAPILimiter())
-	app.Get("/api/data", func(c *fiber.Ctx) error {
+	app.Get("/api/data", func(c fiber.Ctx) error {
 		return c.SendString("Data")
 	})
 
@@ -382,13 +382,13 @@ func TestAuthenticatedUserLimiter_WithUserID(t *testing.T) {
 	app := fiber.New()
 
 	// Middleware to simulate authenticated user
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "user-123")
 		return c.Next()
 	})
 
 	app.Use(AuthenticatedUserLimiter())
-	app.Get("/api/user", func(c *fiber.Ctx) error {
+	app.Get("/api/user", func(c fiber.Ctx) error {
 		return c.SendString("User data")
 	})
 
@@ -402,13 +402,13 @@ func TestClientKeyLimiter_WithClientKeyID(t *testing.T) {
 	app := fiber.New()
 
 	// Middleware to simulate client key authentication
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("client_key_id", "key-abc123")
 		return c.Next()
 	})
 
 	app.Use(DefaultClientKeyLimiter())
-	app.Get("/api/data", func(c *fiber.Ctx) error {
+	app.Get("/api/data", func(c fiber.Ctx) error {
 		return c.SendString("Data")
 	})
 
@@ -426,13 +426,13 @@ func TestMigrationAPILimiter_ServiceRoleBypass(t *testing.T) {
 	app := fiber.New()
 
 	// Simulate service_role JWT authentication
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_role", "service_role")
 		return c.Next()
 	})
 
 	app.Use(MigrationAPILimiter())
-	app.Post("/migrations/up", func(c *fiber.Ctx) error {
+	app.Post("/migrations/up", func(c fiber.Ctx) error {
 		return c.SendString("Migration successful")
 	})
 
@@ -449,13 +449,13 @@ func TestMigrationAPILimiter_NonServiceRole(t *testing.T) {
 	app := fiber.New()
 
 	// Simulate non-service_role authentication
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_role", "authenticated")
 		return c.Next()
 	})
 
 	app.Use(MigrationAPILimiter())
-	app.Post("/migrations/up", func(c *fiber.Ctx) error {
+	app.Post("/migrations/up", func(c fiber.Ctx) error {
 		return c.SendString("Migration successful")
 	})
 
@@ -497,7 +497,7 @@ func BenchmarkRateLimiter_Request(b *testing.B) {
 		Max:        1000000, // High limit to avoid rate limiting during benchmark
 		Expiration: time.Minute,
 	}))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -518,7 +518,7 @@ func TestRateLimiter_ConcurrentRequests(t *testing.T) {
 		Max:        1000,
 		Expiration: time.Minute,
 	}))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

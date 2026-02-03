@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/storage/memory/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,13 +30,13 @@ func TestCSRF_SkipsSafeMethods(t *testing.T) {
 	app := fiber.New()
 	app.Use(CSRF())
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
-	app.Head("/test", func(c *fiber.Ctx) error {
+	app.Head("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
-	app.Options("/test", func(c *fiber.Ctx) error {
+	app.Options("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -67,7 +67,7 @@ func TestCSRF_SkipsSpecialPaths(t *testing.T) {
 	specialPaths := []string{"/realtime", "/health", "/ready", "/metrics"}
 	for _, path := range specialPaths {
 		p := path
-		app.Post(p, func(c *fiber.Ctx) error {
+		app.Post(p, func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 	}
@@ -98,7 +98,7 @@ func TestCSRF_SkipsPublicAuthEndpoints(t *testing.T) {
 
 	for _, path := range publicPaths {
 		p := path
-		app.Post(p, func(c *fiber.Ctx) error {
+		app.Post(p, func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 	}
@@ -116,7 +116,7 @@ func TestCSRF_SkipsPublicAuthEndpoints(t *testing.T) {
 func TestCSRF_SkipsBearerAuth(t *testing.T) {
 	app := fiber.New()
 	app.Use(CSRF())
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -130,7 +130,7 @@ func TestCSRF_SkipsBearerAuth(t *testing.T) {
 func TestCSRF_SkipsClientKeyAuth(t *testing.T) {
 	app := fiber.New()
 	app.Use(CSRF())
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -144,7 +144,7 @@ func TestCSRF_SkipsClientKeyAuth(t *testing.T) {
 func TestCSRF_RejectsMissingToken(t *testing.T) {
 	app := fiber.New()
 	app.Use(CSRF())
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -177,7 +177,7 @@ func TestCSRF_RejectsInvalidToken(t *testing.T) {
 		Storage:     storage,
 		Expiration:  time.Hour,
 	}))
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -204,7 +204,7 @@ func TestCSRF_AcceptsValidToken(t *testing.T) {
 		Storage:     storage,
 		Expiration:  time.Hour,
 	}))
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -242,7 +242,7 @@ func TestGetCSRFToken(t *testing.T) {
 	app := fiber.New()
 
 	var tokenFromHelper string
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		tokenFromHelper = GetCSRFToken(c)
 		return c.SendString("OK")
 	})
@@ -326,7 +326,7 @@ func TestCSRF_RejectsMismatchedToken(t *testing.T) {
 		Storage:     storage,
 		Expiration:  time.Hour,
 	}))
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -353,7 +353,7 @@ func TestCSRF_RejectsEmptyHeaderToken(t *testing.T) {
 		Storage:     storage,
 		Expiration:  time.Hour,
 	}))
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -379,7 +379,7 @@ func TestCSRF_FormTokenLookup(t *testing.T) {
 		Storage:     storage,
 		Expiration:  time.Hour,
 	}))
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -400,7 +400,7 @@ func TestCSRF_PreventsAttackWithoutToken(t *testing.T) {
 	app.Use(CSRF())
 
 	handlerCalled := false
-	app.Post("/api/transfer", func(c *fiber.Ctx) error {
+	app.Post("/api/transfer", func(c fiber.Ctx) error {
 		handlerCalled = true
 		return c.SendString("Transfer completed")
 	})
@@ -418,7 +418,7 @@ func TestCSRF_PreventsAttackWithoutToken(t *testing.T) {
 func TestCSRF_ShortAuthorizationHeader(t *testing.T) {
 	app := fiber.New()
 	app.Use(CSRF())
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -436,7 +436,7 @@ func TestCSRF_DefaultStorageInitialized(t *testing.T) {
 	app := fiber.New()
 	app.Use(CSRF())
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -455,7 +455,7 @@ func TestCSRF_NilStorageInitialized(t *testing.T) {
 		Storage:     nil, // Explicitly nil
 	}))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -587,7 +587,7 @@ func BenchmarkIsPublicAuthEndpoint_Private(b *testing.B) {
 func BenchmarkCSRF_SafeMethod(b *testing.B) {
 	app := fiber.New()
 	app.Use(CSRF())
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -601,7 +601,7 @@ func BenchmarkCSRF_SafeMethod(b *testing.B) {
 func BenchmarkCSRF_BearerSkip(b *testing.B) {
 	app := fiber.New()
 	app.Use(CSRF())
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -626,7 +626,7 @@ func BenchmarkCSRF_ValidToken(b *testing.B) {
 		Storage:     storage,
 		Expiration:  time.Hour,
 	}))
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

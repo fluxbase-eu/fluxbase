@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -25,7 +25,7 @@ type BodyLimitConfig struct {
 
 	// ErrorHandler is called when the request body exceeds the limit
 	// If nil, a default 413 response is sent
-	ErrorHandler func(c *fiber.Ctx, limit int64) error
+	ErrorHandler func(c fiber.Ctx, limit int64) error
 }
 
 // BodyLimitPattern defines a limit for matching routes
@@ -340,7 +340,7 @@ func (l *PatternBodyLimiter) GetLimit(path string) (limit int64, description str
 
 // Middleware returns a Fiber middleware that enforces body limits
 func (l *PatternBodyLimiter) Middleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Skip body limit check for GET, HEAD, OPTIONS requests
 		method := c.Method()
 		if method == fiber.MethodGet || method == fiber.MethodHead || method == fiber.MethodOptions {
@@ -368,7 +368,7 @@ func (l *PatternBodyLimiter) Middleware() fiber.Handler {
 }
 
 // sendLimitExceeded sends a 413 Payload Too Large response
-func (l *PatternBodyLimiter) sendLimitExceeded(c *fiber.Ctx, limit int64, description string) error {
+func (l *PatternBodyLimiter) sendLimitExceeded(c fiber.Ctx, limit int64, description string) error {
 	if l.config.ErrorHandler != nil {
 		return l.config.ErrorHandler(c, limit)
 	}
@@ -413,7 +413,7 @@ func NewJSONDepthLimiter(maxDepth int) *JSONDepthLimiter {
 }
 
 // CheckDepth validates JSON depth for the request body and returns an error response if exceeded
-func (l *JSONDepthLimiter) CheckDepth(c *fiber.Ctx) error {
+func (l *JSONDepthLimiter) CheckDepth(c fiber.Ctx) error {
 	// Only check JSON content
 	contentType := string(c.Request().Header.ContentType())
 	if !strings.Contains(contentType, "application/json") {
@@ -448,7 +448,7 @@ func (l *JSONDepthLimiter) CheckDepth(c *fiber.Ctx) error {
 
 // Middleware returns a Fiber middleware that validates JSON depth
 func (l *JSONDepthLimiter) Middleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Skip for GET, HEAD, OPTIONS
 		method := c.Method()
 		if method == fiber.MethodGet || method == fiber.MethodHead || method == fiber.MethodOptions {
@@ -502,7 +502,7 @@ func BodyLimitMiddleware(config BodyLimitConfig) fiber.Handler {
 	bodyLimiter := NewPatternBodyLimiter(config)
 	jsonLimiter := NewJSONDepthLimiter(config.MaxJSONDepth)
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Skip body limit check for GET, HEAD, OPTIONS requests
 		method := c.Method()
 		if method == fiber.MethodGet || method == fiber.MethodHead || method == fiber.MethodOptions {

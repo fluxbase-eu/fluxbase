@@ -10,7 +10,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/branching"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -107,7 +107,7 @@ type GitHubInstallation struct {
 }
 
 // HandleWebhook handles incoming GitHub webhook requests
-func (h *GitHubWebhookHandler) HandleWebhook(c *fiber.Ctx) error {
+func (h *GitHubWebhookHandler) HandleWebhook(c fiber.Ctx) error {
 	if !h.config.Enabled {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error":   "branching_disabled",
@@ -186,11 +186,11 @@ func (h *GitHubWebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 }
 
 // verifySignature verifies the webhook signature using the configured secret
-func (h *GitHubWebhookHandler) verifySignature(c *fiber.Ctx, repository string) error {
+func (h *GitHubWebhookHandler) verifySignature(c fiber.Ctx, repository string) error {
 	signature := c.Get("X-Hub-Signature-256")
 
 	// Get the webhook configuration for this repository
-	ghConfig, err := h.manager.GetStorage().GetGitHubConfig(c.Context(), repository)
+	ghConfig, err := h.manager.GetStorage().GetGitHubConfig(c.RequestCtx(), repository)
 	if err != nil && err != branching.ErrGitHubConfigNotFound {
 		return fmt.Errorf("failed to get GitHub config: %w", err)
 	}
@@ -250,7 +250,7 @@ func computeHMACSHA256(data []byte, key string) string {
 }
 
 // handlePullRequestEvent handles pull request events
-func (h *GitHubWebhookHandler) handlePullRequestEvent(c *fiber.Ctx, payload *GitHubWebhookPayload) error {
+func (h *GitHubWebhookHandler) handlePullRequestEvent(c fiber.Ctx, payload *GitHubWebhookPayload) error {
 	if payload.PullRequest == nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "missing_pull_request",
@@ -268,7 +268,7 @@ func (h *GitHubWebhookHandler) handlePullRequestEvent(c *fiber.Ctx, payload *Git
 		Msg("Processing pull request event")
 
 	// Get GitHub config for this repository
-	ghConfig, err := h.manager.GetStorage().GetGitHubConfig(c.Context(), repo)
+	ghConfig, err := h.manager.GetStorage().GetGitHubConfig(c.RequestCtx(), repo)
 	if err != nil && err != branching.ErrGitHubConfigNotFound {
 		log.Error().Err(err).Str("repository", repo).Msg("Failed to get GitHub config")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -321,8 +321,8 @@ func (h *GitHubWebhookHandler) handlePullRequestEvent(c *fiber.Ctx, payload *Git
 }
 
 // createBranchForPR creates a database branch for a pull request
-func (h *GitHubWebhookHandler) createBranchForPR(c *fiber.Ctx, repo string, pr *GitHubPullRequest) error {
-	branch, err := h.manager.CreateBranchFromGitHubPR(c.Context(), repo, pr.Number, pr.HTMLURL)
+func (h *GitHubWebhookHandler) createBranchForPR(c fiber.Ctx, repo string, pr *GitHubPullRequest) error {
+	branch, err := h.manager.CreateBranchFromGitHubPR(c.RequestCtx(), repo, pr.Number, pr.HTMLURL)
 	if err != nil {
 		log.Error().Err(err).
 			Str("repository", repo).
@@ -358,7 +358,7 @@ func (h *GitHubWebhookHandler) createBranchForPR(c *fiber.Ctx, repo string, pr *
 
 	// Warmup the connection pool
 	go func() {
-		if err := h.router.WarmupPool(c.Context(), branch.Slug); err != nil {
+		if err := h.router.WarmupPool(c.RequestCtx(), branch.Slug); err != nil {
 			log.Warn().Err(err).Str("slug", branch.Slug).Msg("Failed to warmup branch pool")
 		}
 	}()
@@ -373,9 +373,9 @@ func (h *GitHubWebhookHandler) createBranchForPR(c *fiber.Ctx, repo string, pr *
 }
 
 // deleteBranchForPR deletes the database branch for a pull request
-func (h *GitHubWebhookHandler) deleteBranchForPR(c *fiber.Ctx, repo string, pr *GitHubPullRequest) error {
+func (h *GitHubWebhookHandler) deleteBranchForPR(c fiber.Ctx, repo string, pr *GitHubPullRequest) error {
 	// Find branch by PR
-	branch, err := h.manager.GetStorage().GetBranchByGitHubPR(c.Context(), repo, pr.Number)
+	branch, err := h.manager.GetStorage().GetBranchByGitHubPR(c.RequestCtx(), repo, pr.Number)
 	if err != nil {
 		if err == branching.ErrBranchNotFound {
 			// Branch doesn't exist, return success
@@ -398,7 +398,7 @@ func (h *GitHubWebhookHandler) deleteBranchForPR(c *fiber.Ctx, repo string, pr *
 	h.router.ClosePool(branch.Slug)
 
 	// Delete the branch
-	if err := h.manager.DeleteBranch(c.Context(), branch.ID, nil); err != nil {
+	if err := h.manager.DeleteBranch(c.RequestCtx(), branch.ID, nil); err != nil {
 		log.Error().Err(err).
 			Str("repository", repo).
 			Int("pr_number", pr.Number).
@@ -426,7 +426,7 @@ func (h *GitHubWebhookHandler) deleteBranchForPR(c *fiber.Ctx, repo string, pr *
 }
 
 // handlePingEvent handles GitHub ping events (sent when webhook is first configured)
-func (h *GitHubWebhookHandler) handlePingEvent(c *fiber.Ctx, payload *GitHubWebhookPayload) error {
+func (h *GitHubWebhookHandler) handlePingEvent(c fiber.Ctx, payload *GitHubWebhookPayload) error {
 	repo := ""
 	if payload.Repository != nil {
 		repo = payload.Repository.FullName
@@ -443,7 +443,7 @@ func (h *GitHubWebhookHandler) handlePingEvent(c *fiber.Ctx, payload *GitHubWebh
 }
 
 // handleIssueEvent handles issue events (opened, labeled, closed, etc.)
-func (h *GitHubWebhookHandler) handleIssueEvent(c *fiber.Ctx, payload *GitHubWebhookPayload) error {
+func (h *GitHubWebhookHandler) handleIssueEvent(c fiber.Ctx, payload *GitHubWebhookPayload) error {
 	if payload.Issue == nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "missing_issue",
@@ -493,7 +493,7 @@ func (h *GitHubWebhookHandler) handleIssueEvent(c *fiber.Ctx, payload *GitHubWeb
 }
 
 // handleIssueOpened handles when a new issue is opened
-func (h *GitHubWebhookHandler) handleIssueOpened(c *fiber.Ctx, repo string, issue *GitHubIssue, sender *GitHubUser) error {
+func (h *GitHubWebhookHandler) handleIssueOpened(c fiber.Ctx, repo string, issue *GitHubIssue, sender *GitHubUser) error {
 	senderLogin := ""
 	if sender != nil {
 		senderLogin = sender.Login
@@ -524,7 +524,7 @@ func (h *GitHubWebhookHandler) handleIssueOpened(c *fiber.Ctx, repo string, issu
 }
 
 // handleIssueLabeled handles when a label is added to an issue
-func (h *GitHubWebhookHandler) handleIssueLabeled(c *fiber.Ctx, repo string, issue *GitHubIssue, label *GitHubLabel, sender *GitHubUser) error {
+func (h *GitHubWebhookHandler) handleIssueLabeled(c fiber.Ctx, repo string, issue *GitHubIssue, label *GitHubLabel, sender *GitHubUser) error {
 	senderLogin := ""
 	if sender != nil {
 		senderLogin = sender.Login
@@ -577,7 +577,7 @@ func (h *GitHubWebhookHandler) handleIssueLabeled(c *fiber.Ctx, repo string, iss
 }
 
 // handleIssueClosed handles when an issue is closed
-func (h *GitHubWebhookHandler) handleIssueClosed(c *fiber.Ctx, repo string, issue *GitHubIssue, sender *GitHubUser) error {
+func (h *GitHubWebhookHandler) handleIssueClosed(c fiber.Ctx, repo string, issue *GitHubIssue, sender *GitHubUser) error {
 	senderLogin := ""
 	if sender != nil {
 		senderLogin = sender.Login
@@ -601,3 +601,5 @@ func (h *GitHubWebhookHandler) handleIssueClosed(c *fiber.Ctx, repo string, issu
 func (h *GitHubWebhookHandler) GetWebhookURL(baseURL string) string {
 	return strings.TrimSuffix(baseURL, "/") + "/api/v1/webhooks/github"
 }
+
+// fiber:context-methods migrated

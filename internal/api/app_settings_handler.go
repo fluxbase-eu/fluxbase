@@ -6,7 +6,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -120,7 +120,7 @@ type UpdateAppSettingsRequest struct {
 
 // GetAppSettings returns all application settings in a structured format
 // GET /api/v1/admin/app/settings
-func (h *AppSettingsHandler) GetAppSettings(c *fiber.Ctx) error {
+func (h *AppSettingsHandler) GetAppSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Get all system settings
@@ -140,11 +140,11 @@ func (h *AppSettingsHandler) GetAppSettings(c *fiber.Ctx) error {
 
 // UpdateAppSettings updates application settings
 // PUT /api/v1/admin/app/settings
-func (h *AppSettingsHandler) UpdateAppSettings(c *fiber.Ctx) error {
+func (h *AppSettingsHandler) UpdateAppSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	var req UpdateAppSettingsRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -24,7 +24,7 @@ func NewSystemSettingsHandler(settingsService *auth.SystemSettingsService, setti
 
 // ListSettings returns all system settings
 // GET /api/v1/admin/system/settings
-func (h *SystemSettingsHandler) ListSettings(c *fiber.Ctx) error {
+func (h *SystemSettingsHandler) ListSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Check if settings service is available
@@ -57,7 +57,7 @@ func (h *SystemSettingsHandler) ListSettings(c *fiber.Ctx) error {
 
 // GetSetting returns a specific setting by key
 // GET /api/v1/admin/system/settings/*
-func (h *SystemSettingsHandler) GetSetting(c *fiber.Ctx) error {
+func (h *SystemSettingsHandler) GetSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -111,7 +111,7 @@ func (h *SystemSettingsHandler) GetSetting(c *fiber.Ctx) error {
 
 // UpdateSetting updates a specific setting
 // PUT /api/v1/admin/system/settings/*
-func (h *SystemSettingsHandler) UpdateSetting(c *fiber.Ctx) error {
+func (h *SystemSettingsHandler) UpdateSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -126,7 +126,7 @@ func (h *SystemSettingsHandler) UpdateSetting(c *fiber.Ctx) error {
 		Description string                 `json:"description"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -182,7 +182,7 @@ func (h *SystemSettingsHandler) UpdateSetting(c *fiber.Ctx) error {
 
 // DeleteSetting deletes a specific setting
 // DELETE /api/v1/admin/system/settings/*
-func (h *SystemSettingsHandler) DeleteSetting(c *fiber.Ctx) error {
+func (h *SystemSettingsHandler) DeleteSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 

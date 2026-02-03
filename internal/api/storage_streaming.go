@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -24,7 +24,7 @@ import (
 //   - X-Storage-Cache-Control: Optional. Cache-Control header value.
 //   - X-Storage-Metadata: Optional. JSON object with custom metadata.
 //   - X-Storage-Upsert: Optional. "true" to overwrite existing files.
-func (h *StorageHandler) StreamUpload(c *fiber.Ctx) error {
+func (h *StorageHandler) StreamUpload(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*") // Capture the rest of the path
 
@@ -86,7 +86,7 @@ func (h *StorageHandler) StreamUpload(c *fiber.Ctx) error {
 		ownerUUID = &ownerID
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Get the request body as a stream reader
 	// Try streaming first, fall back to buffered body
@@ -206,3 +206,5 @@ func (h *StorageHandler) StreamUpload(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response)
 }
+
+// fiber:context-methods migrated

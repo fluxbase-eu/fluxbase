@@ -33,11 +33,11 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
 	"github.com/fluxbase-eu/fluxbase/internal/webhook"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/compress"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/compress"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -136,22 +136,19 @@ type Server struct {
 func NewServer(cfg *config.Config, db *database.Connection, version string) *Server {
 	// Create Fiber app with config
 	app := fiber.New(fiber.Config{
-		ServerHeader:          "Fluxbase",
-		AppName:               fmt.Sprintf("Fluxbase v%s", version),
-		BodyLimit:             cfg.Server.BodyLimit,
-		StreamRequestBody:     true, // Required for chunked upload streaming
-		ReadTimeout:           cfg.Server.ReadTimeout,
-		WriteTimeout:          cfg.Server.WriteTimeout,
-		IdleTimeout:           cfg.Server.IdleTimeout,
-		DisableStartupMessage: !cfg.Debug,
-		ErrorHandler:          customErrorHandler,
-		Prefork:               false,
+		ServerHeader:      "Fluxbase",
+		AppName:           fmt.Sprintf("Fluxbase v%s", version),
+		BodyLimit:         cfg.Server.BodyLimit,
+		StreamRequestBody: true, // Required for chunked upload streaming
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		IdleTimeout:       cfg.Server.IdleTimeout, ErrorHandler: customErrorHandler,
 	})
 
 	// In debug mode, add no-cache headers to prevent browser from caching
 	// connection failures during server restarts
 	if cfg.Debug {
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 			c.Set("Pragma", "no-cache")
 			c.Set("Expires", "0")
@@ -979,7 +976,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 // createMCPAuthMiddleware creates authentication middleware for MCP that supports
 // JWT, client key, service key, AND MCP OAuth tokens
 func (s *Server) createMCPAuthMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Check for MCP OAuth token first (Bearer token starting with "mcp_at_")
 		authHeader := c.Get("Authorization")
 		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer mcp_at_") {
@@ -1205,7 +1202,7 @@ func (s *Server) setupMiddlewares() {
 	// Security headers middleware - protect against common attacks
 	// Apply different CSP for admin UI (needs Google Fonts) vs API routes
 	log.Debug().Msg("Adding security headers middleware")
-	s.app.Use(func(c *fiber.Ctx) error {
+	s.app.Use(func(c fiber.Ctx) error {
 		// Apply relaxed CSP for admin UI
 		if strings.HasPrefix(c.Path(), "/admin") {
 			return middleware.AdminUISecurityHeaders()(c)
@@ -1231,23 +1228,40 @@ func (s *Server) setupMiddlewares() {
 
 	// CORS middleware
 	// Note: AllowCredentials cannot be used with AllowOrigins="*" per CORS spec
-	// If AllowOrigins is "*", we must disable credentials
+	// If AllowOrigins contains "*", we must disable credentials
 	corsCredentials := s.config.CORS.AllowCredentials
 	corsOrigins := s.config.CORS.AllowedOrigins
-	if corsOrigins == "*" && corsCredentials {
-		log.Warn().Msg("CORS: AllowCredentials disabled because AllowOrigins is '*' (not allowed per CORS spec)")
+
+	// Check if origins contains wildcard
+	hasWildcard := false
+	for _, origin := range corsOrigins {
+		if origin == "*" {
+			hasWildcard = true
+			break
+		}
+	}
+
+	if hasWildcard && corsCredentials {
+		log.Warn().Msg("CORS: AllowCredentials disabled because AllowOrigins contains '*' (not allowed per CORS spec)")
 		corsCredentials = false
 	}
 	// Automatically add the public base URL to CORS origins if it's not already included
 	// This ensures the dashboard can make API calls when deployed on a public URL
-	if corsOrigins != "*" && s.config.PublicBaseURL != "" {
-		if !strings.Contains(corsOrigins, s.config.PublicBaseURL) {
-			corsOrigins = corsOrigins + "," + s.config.PublicBaseURL
+	if !hasWildcard && s.config.PublicBaseURL != "" {
+		found := false
+		for _, origin := range corsOrigins {
+			if origin == s.config.PublicBaseURL {
+				found = true
+				break
+			}
+		}
+		if !found {
+			corsOrigins = append(corsOrigins, s.config.PublicBaseURL)
 			log.Debug().Str("public_url", s.config.PublicBaseURL).Msg("Added public base URL to CORS origins")
 		}
 	}
 	log.Debug().
-		Str("origins", corsOrigins).
+		Strs("origins", corsOrigins).
 		Bool("credentials", corsCredentials).
 		Msg("Adding CORS middleware")
 
@@ -1260,10 +1274,10 @@ func (s *Server) setupMiddlewares() {
 		MaxAge:           s.config.CORS.MaxAge,
 	}
 
-	// When AllowOrigins is "*", use AllowOriginsFunc to dynamically allow all origins
+	// When AllowOrigins contains "*", use AllowOriginsFunc to dynamically allow all origins
 	// This is required because Fiber's CORS middleware doesn't properly handle "*"
-	// with the AllowOrigins string field in newer versions
-	if corsOrigins == "*" {
+	// with the AllowOrigins slice field in newer versions
+	if hasWildcard {
 		corsConfig.AllowOriginsFunc = func(origin string) bool {
 			return true // Allow all origins
 		}
@@ -1332,7 +1346,7 @@ func (s *Server) setupMiddlewares() {
 // setupRoutes sets up all routes
 func (s *Server) setupRoutes() {
 	// Root path - simple health response
-	s.app.Get("/", func(c *fiber.Ctx) error {
+	s.app.Get("/", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status": "ok",
 		})
@@ -1354,7 +1368,7 @@ func (s *Server) setupRoutes() {
 	// Metadata listing (GET /) requires admin role; data operations use RLS filtering
 	// Pass jwtManager to support dashboard admin tokens (maps to service_role for full access)
 	// BranchContext middleware enables queries against non-main branches via X-Fluxbase-Branch header
-	restMiddlewares := []fiber.Handler{
+	restMiddlewares := []any{
 		middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
 		middleware.RLSMiddleware(rlsConfig),
 	}
@@ -1470,7 +1484,7 @@ func (s *Server) setupRoutes() {
 	// Storage routes - optional authentication (allows unauthenticated access to public buckets)
 	// Protected by feature flag middleware
 	// BranchContext middleware enables storage operations against non-main branches
-	storageMiddlewares := []fiber.Handler{
+	storageMiddlewares := []any{
 		middleware.RequireStorageEnabled(s.authHandler.authService.GetSettingsCache()),
 		middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool()),
 	}
@@ -1763,7 +1777,7 @@ func (s *Server) setupRoutes() {
 	)
 
 	// 404 handler
-	s.app.Use(func(c *fiber.Ctx) error {
+	s.app.Use(func(c fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "Not Found",
 			"path":  c.Path(),
@@ -2217,7 +2231,7 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 		// Layer 4: Scope validation (migrations:execute)
 		// Layer 5: Rate limiting (10 req/hour)
 		// Layer 6: Audit logging
-		migrationsAuth := []fiber.Handler{
+		migrationsAuth := []any{
 			middleware.RequireMigrationsEnabled(&s.config.Migrations),
 			middleware.RequireMigrationsIPAllowlist(&s.config.Migrations),
 			middleware.RequireServiceKeyOnly(s.db.Pool(), s.authHandler.authService),
@@ -2257,9 +2271,9 @@ func (s *Server) setupPublicInvitationRoutes(router fiber.Router) {
 }
 
 // handleHealth handles health check requests
-func (s *Server) handleHealth(c *fiber.Ctx) error {
+func (s *Server) handleHealth(c fiber.Ctx) error {
 	// Check database health
-	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.RequestCtx(), 5*time.Second)
 	defer cancel()
 
 	dbHealthy := true
@@ -2285,8 +2299,8 @@ func (s *Server) handleHealth(c *fiber.Ctx) error {
 	})
 }
 
-func (s *Server) handleGetTables(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) handleGetTables(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Check if schema query parameter is provided
 	schemaParam := c.Query("schema")
@@ -2344,8 +2358,8 @@ func (s *Server) handleGetTables(c *fiber.Ctx) error {
 	return c.JSON(allItems)
 }
 
-func (s *Server) handleGetTableSchema(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) handleGetTableSchema(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -2366,8 +2380,8 @@ func (s *Server) handleGetTableSchema(c *fiber.Ctx) error {
 	return c.JSON(tableInfo)
 }
 
-func (s *Server) handleGetSchemas(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) handleGetSchemas(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schemas, err := s.db.Inspector().GetSchemas(ctx)
 	if err != nil {
 		return SendOperationFailed(c, "list schemas")
@@ -2384,12 +2398,12 @@ func (s *Server) handleGetSchemas(c *fiber.Ctx) error {
 	return c.JSON(userSchemas)
 }
 
-func (s *Server) handleExecuteQuery(c *fiber.Ctx) error {
+func (s *Server) handleExecuteQuery(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Execute query endpoint - to be implemented"})
 }
 
 // handleRefreshSchema refreshes the REST API schema cache without requiring a server restart
-func (s *Server) handleRefreshSchema(c *fiber.Ctx) error {
+func (s *Server) handleRefreshSchema(c fiber.Ctx) error {
 	log.Info().Msg("Schema refresh requested")
 
 	// Get the schema cache from the REST handler
@@ -2401,7 +2415,7 @@ func (s *Server) handleRefreshSchema(c *fiber.Ctx) error {
 	}
 
 	// Force refresh the schema cache
-	if err := schemaCache.Refresh(c.Context()); err != nil {
+	if err := schemaCache.Refresh(c.RequestCtx()); err != nil {
 		log.Error().Err(err).Msg("Failed to refresh schema cache")
 		return c.Status(500).JSON(fiber.Map{
 			"error":   "Failed to refresh schema cache",
@@ -2423,7 +2437,7 @@ func (s *Server) handleRefreshSchema(c *fiber.Ctx) error {
 
 // Start starts the HTTP server
 func (s *Server) Start() error {
-	return s.app.Listen(s.config.Server.Address)
+	return s.app.Listen(s.config.Server.Address, fiber.ListenConfig{EnablePrefork: false, DisableStartupMessage: !s.config.Debug})
 }
 
 // Shutdown gracefully shuts down the server
@@ -2627,7 +2641,7 @@ func (s *Server) LoadAIChatbotsFromFilesystem(ctx context.Context) error {
 }
 
 // customErrorHandler handles errors globally
-func customErrorHandler(c *fiber.Ctx, err error) error {
+func customErrorHandler(c fiber.Ctx, err error) error {
 	// Default to 500 status code
 	code := fiber.StatusInternalServerError
 	message := "Internal Server Error"
@@ -2652,7 +2666,7 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 
 // handleRealtimeStats returns realtime statistics
 // Admin-only endpoint - non-admin users receive 403 Forbidden
-func (s *Server) handleRealtimeStats(c *fiber.Ctx) error {
+func (s *Server) handleRealtimeStats(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	if role != "admin" && role != "dashboard_admin" && role != "service_role" {
@@ -2664,8 +2678,8 @@ func (s *Server) handleRealtimeStats(c *fiber.Ctx) error {
 	// Parse pagination parameters
 	const defaultLimit = 25
 	const maxLimit = 100
-	limit := c.QueryInt("limit", defaultLimit)
-	offset := c.QueryInt("offset", 0)
+	limit := fiber.Query[int](c, "limit", defaultLimit)
+	offset := fiber.Query[int](c, "offset", 0)
 	search := strings.ToLower(c.Query("search", ""))
 
 	limit, offset = NormalizePaginationParams(limit, offset, defaultLimit, maxLimit)
@@ -2690,7 +2704,7 @@ func (s *Server) handleRealtimeStats(c *fiber.Ctx) error {
 	userInfoMap := make(map[string]userInfo)
 	if len(userIDs) > 0 {
 		query := `SELECT id, email, raw_user_meta_data->>'display_name' as display_name FROM auth.users WHERE id = ANY($1)`
-		rows, err := s.db.Pool().Query(c.Context(), query, userIDs)
+		rows, err := s.db.Pool().Query(c.RequestCtx(), query, userIDs)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
@@ -2763,9 +2777,9 @@ type BroadcastRequest struct {
 }
 
 // handleRealtimeBroadcast broadcasts a message to a channel
-func (s *Server) handleRealtimeBroadcast(c *fiber.Ctx) error {
+func (s *Server) handleRealtimeBroadcast(c fiber.Ctx) error {
 	var req BroadcastRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -2802,3 +2816,5 @@ func (s *Server) handleRealtimeBroadcast(c *fiber.Ctx) error {
 		"recipients": recipientCount,
 	})
 }
+
+// fiber:context-methods migrated

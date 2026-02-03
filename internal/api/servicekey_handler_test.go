@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -727,7 +727,7 @@ func TestRevokeServiceKey_Validation(t *testing.T) {
 		handler := NewServiceKeyHandler(nil)
 
 		// Middleware to set invalid user_id
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", "not-a-valid-uuid")
 			return c.Next()
 		})

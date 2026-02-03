@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -451,7 +451,7 @@ func TestGetCurrentAdmin_Authorization(t *testing.T) {
 		handler := NewAdminAuthHandler(nil, nil, nil, nil, nil)
 
 		// Middleware to set user context
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			c.Locals("user_email", "user@example.com")
 			c.Locals("user_role", "user") // Not admin
@@ -483,7 +483,7 @@ func TestGetCurrentAdmin_Authorization(t *testing.T) {
 		handler := NewAdminAuthHandler(nil, nil, nil, nil, nil)
 
 		// Middleware to set admin user context
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			c.Locals("user_email", "admin@example.com")
 			c.Locals("user_role", "admin")
@@ -520,7 +520,7 @@ func TestGetCurrentAdmin_Authorization(t *testing.T) {
 		handler := NewAdminAuthHandler(nil, nil, nil, nil, nil)
 
 		// Middleware to set admin user context with empty email
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			c.Locals("user_email", "")
 			c.Locals("user_role", "admin")
@@ -617,7 +617,7 @@ func TestRoleValidation(t *testing.T) {
 			app := fiber.New()
 			handler := NewAdminAuthHandler(nil, nil, nil, nil, nil)
 
-			app.Use(func(c *fiber.Ctx) error {
+			app.Use(func(c fiber.Ctx) error {
 				c.Locals("user_id", "user-123")
 				c.Locals("user_email", "user@test.com")
 				c.Locals("user_role", role)
@@ -640,7 +640,7 @@ func TestRoleValidation(t *testing.T) {
 			app := fiber.New()
 			handler := NewAdminAuthHandler(nil, nil, nil, nil, nil)
 
-			app.Use(func(c *fiber.Ctx) error {
+			app.Use(func(c fiber.Ctx) error {
 				c.Locals("user_id", "user-123")
 				c.Locals("user_email", "user@test.com")
 				c.Locals("user_role", role)

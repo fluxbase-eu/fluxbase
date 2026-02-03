@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -351,7 +351,7 @@ func TestAuditLogger_LogAuth(t *testing.T) {
 			logger := zerolog.New(&buf)
 			auditLogger := NewAuditLogger(logger)
 
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				auditLogger.LogAuth(c, tt.event, tt.userID, tt.email, tt.success)
 				return c.SendString("OK")
 			})
@@ -379,7 +379,7 @@ func TestAuditLogger_LogUserManagement(t *testing.T) {
 	logger := zerolog.New(&buf)
 	auditLogger := NewAuditLogger(logger)
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		auditLogger.LogUserManagement(c, "delete", "target-user-123", "admin-user-456")
 		return c.SendString("OK")
 	})
@@ -404,7 +404,7 @@ func TestAuditLogger_LogClientKeyOperation(t *testing.T) {
 	logger := zerolog.New(&buf)
 	auditLogger := NewAuditLogger(logger)
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		auditLogger.LogClientKeyOperation(c, "create", "key-123", "production-key", "admin@example.com")
 		return c.SendString("OK")
 	})
@@ -427,7 +427,7 @@ func TestAuditLogger_LogConfigChange(t *testing.T) {
 	logger := zerolog.New(&buf)
 	auditLogger := NewAuditLogger(logger)
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		auditLogger.LogConfigChange(c, "rate_limit", "100", "200", "admin@example.com")
 		return c.SendString("OK")
 	})
@@ -485,7 +485,7 @@ func TestAuditLogger_LogSecurityEvent(t *testing.T) {
 			auditLogger := NewAuditLogger(logger)
 
 			testApp := fiber.New()
-			testApp.Get("/test", func(c *fiber.Ctx) error {
+			testApp.Get("/test", func(c fiber.Ctx) error {
 				auditLogger.LogSecurityEvent(c, tt.event, tt.description, tt.severity)
 				return c.SendString("OK")
 			})
@@ -517,11 +517,11 @@ func TestStructuredLogger_SkipPaths(t *testing.T) {
 	cfg := DefaultStructuredLoggerConfig()
 	app.Use(StructuredLogger(cfg))
 
-	app.Get("/health", func(c *fiber.Ctx) error {
+	app.Get("/health", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
-	app.Get("/api/users", func(c *fiber.Ctx) error {
+	app.Get("/api/users", func(c fiber.Ctx) error {
 		return c.SendString("Users")
 	})
 
@@ -550,7 +550,7 @@ func TestStructuredLogger_DefaultConfig(t *testing.T) {
 	// Call with no config uses defaults
 	app.Use(StructuredLogger())
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -573,7 +573,7 @@ func TestStructuredLogger_CustomLogger(t *testing.T) {
 	}
 	app.Use(StructuredLogger(cfg))
 
-	app.Get("/logged", func(c *fiber.Ctx) error {
+	app.Get("/logged", func(c fiber.Ctx) error {
 		return c.SendString("Logged")
 	})
 
@@ -599,11 +599,11 @@ func TestStructuredLogger_SkipSuccessfulRequests(t *testing.T) {
 	}
 	app.Use(StructuredLogger(cfg))
 
-	app.Get("/success", func(c *fiber.Ctx) error {
+	app.Get("/success", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
-	app.Get("/error", func(c *fiber.Ctx) error {
+	app.Get("/error", func(c fiber.Ctx) error {
 		return c.Status(500).SendString("Error")
 	})
 
@@ -643,7 +643,7 @@ func TestStructuredLogger_RequestID(t *testing.T) {
 	}
 	app.Use(StructuredLogger(cfg))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -667,7 +667,7 @@ func TestStructuredLogger_UserContext(t *testing.T) {
 	app := fiber.New()
 
 	// Set user context before logger
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "user-123")
 		c.Locals("client_key_id", "key-456")
 		return c.Next()
@@ -678,7 +678,7 @@ func TestStructuredLogger_UserContext(t *testing.T) {
 	}
 	app.Use(StructuredLogger(cfg))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -717,7 +717,7 @@ func TestStructuredLogger_StatusCodes(t *testing.T) {
 			}
 			app.Use(StructuredLogger(cfg))
 
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				return c.Status(tt.statusCode).SendString("Response")
 			})
 
@@ -745,7 +745,7 @@ func TestStructuredLogger_LogRequestBody(t *testing.T) {
 	}
 	app.Use(StructuredLogger(cfg))
 
-	app.Post("/test", func(c *fiber.Ctx) error {
+	app.Post("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -787,7 +787,7 @@ func TestStructuredLogger_QueryStringRedaction(t *testing.T) {
 	}
 	app.Use(StructuredLogger(cfg))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -814,7 +814,7 @@ func TestStructuredLogger_Referer(t *testing.T) {
 	}
 	app.Use(StructuredLogger(cfg))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -840,7 +840,7 @@ func TestStructuredLogger_HandlerError(t *testing.T) {
 	app.Use(StructuredLogger(cfg))
 
 	expectedError := fiber.NewError(500, "Internal error")
-	app.Get("/error", func(c *fiber.Ctx) error {
+	app.Get("/error", func(c fiber.Ctx) error {
 		return expectedError
 	})
 
@@ -907,7 +907,7 @@ func BenchmarkDefaultStructuredLoggerConfig(b *testing.B) {
 func BenchmarkStructuredLogger(b *testing.B) {
 	app := fiber.New()
 	app.Use(StructuredLogger())
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

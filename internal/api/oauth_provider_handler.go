@@ -12,7 +12,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/crypto"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -198,8 +198,8 @@ type SettingOverride struct {
 var providerNamePattern = regexp.MustCompile(`^[a-z][a-z0-9_]{1,49}$`)
 
 // ListOAuthProviders lists all OAuth providers
-func (h *OAuthProviderHandler) ListOAuthProviders(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthProviderHandler) ListOAuthProviders(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Check if database connection is available
 	if h.db == nil {
@@ -310,8 +310,8 @@ func (h *OAuthProviderHandler) ListOAuthProviders(c *fiber.Ctx) error {
 }
 
 // GetOAuthProvider gets a single OAuth provider by ID
-func (h *OAuthProviderHandler) GetOAuthProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthProviderHandler) GetOAuthProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	providerID, err := uuid.Parse(id)
@@ -377,11 +377,11 @@ func (h *OAuthProviderHandler) GetOAuthProvider(c *fiber.Ctx) error {
 }
 
 // CreateOAuthProvider creates a new OAuth provider
-func (h *OAuthProviderHandler) CreateOAuthProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthProviderHandler) CreateOAuthProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	var req CreateOAuthProviderRequest
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -494,8 +494,8 @@ func (h *OAuthProviderHandler) CreateOAuthProvider(c *fiber.Ctx) error {
 }
 
 // UpdateOAuthProvider updates an existing OAuth provider
-func (h *OAuthProviderHandler) UpdateOAuthProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthProviderHandler) UpdateOAuthProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	providerID, err := uuid.Parse(id)
@@ -506,7 +506,7 @@ func (h *OAuthProviderHandler) UpdateOAuthProvider(c *fiber.Ctx) error {
 	}
 
 	var req UpdateOAuthProviderRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -659,8 +659,8 @@ func (h *OAuthProviderHandler) UpdateOAuthProvider(c *fiber.Ctx) error {
 }
 
 // DeleteOAuthProvider deletes an OAuth provider
-func (h *OAuthProviderHandler) DeleteOAuthProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthProviderHandler) DeleteOAuthProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	providerID, err := uuid.Parse(id)
@@ -703,8 +703,8 @@ func (h *OAuthProviderHandler) DeleteOAuthProvider(c *fiber.Ctx) error {
 }
 
 // GetAuthSettings retrieves authentication settings
-func (h *OAuthProviderHandler) GetAuthSettings(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthProviderHandler) GetAuthSettings(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Check if database connection is available
 	if h.db == nil {
@@ -813,11 +813,11 @@ func (h *OAuthProviderHandler) GetAuthSettings(c *fiber.Ctx) error {
 }
 
 // UpdateAuthSettings updates authentication settings
-func (h *OAuthProviderHandler) UpdateAuthSettings(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthProviderHandler) UpdateAuthSettings(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	var req AuthSettings
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -982,7 +982,7 @@ func (h *OAuthProviderHandler) hasAppSSOProviders(ctx context.Context) (bool, er
 }
 
 // Helper function to get user ID from context (set by auth middleware)
-func getUserIDFromContext(c *fiber.Ctx) *uuid.UUID {
+func getUserIDFromContext(c fiber.Ctx) *uuid.UUID {
 	// Try to get from dashboard auth (set by middleware)
 	if userIDStr := c.Locals("user_id"); userIDStr != nil {
 		if uid, err := uuid.Parse(userIDStr.(string)); err == nil {
@@ -991,3 +991,5 @@ func getUserIDFromContext(c *fiber.Ctx) *uuid.UUID {
 	}
 	return nil
 }
+
+// fiber:context-methods migrated

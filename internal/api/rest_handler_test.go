@@ -6,7 +6,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -90,7 +90,7 @@ func TestParseTableFromPath(t *testing.T) {
 			var capturedSchema, capturedTable string
 			if tt.tableParam == "" {
 				// Single segment path
-				app.Get("/tables/:schema", func(c *fiber.Ctx) error {
+				app.Get("/tables/:schema", func(c fiber.Ctx) error {
 					capturedSchema, capturedTable = handler.parseTableFromPath(c)
 					return c.SendStatus(200)
 				})
@@ -98,7 +98,7 @@ func TestParseTableFromPath(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				// Two segment path
-				app.Get("/tables/:schema/:table", func(c *fiber.Ctx) error {
+				app.Get("/tables/:schema/:table", func(c fiber.Ctx) error {
 					capturedSchema, capturedTable = handler.parseTableFromPath(c)
 					return c.SendStatus(200)
 				})

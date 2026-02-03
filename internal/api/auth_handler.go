@@ -8,7 +8,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -88,7 +88,7 @@ type SAMLProviderPublic struct {
 }
 
 // setAuthCookies sets httpOnly cookies for access and refresh tokens
-func (h *AuthHandler) setAuthCookies(c *fiber.Ctx, accessToken, refreshToken string, expiresIn int64) {
+func (h *AuthHandler) setAuthCookies(c fiber.Ctx, accessToken, refreshToken string, expiresIn int64) {
 	// Access token cookie - shorter expiry
 	// SameSite=Lax allows the cookie to be sent during top-level navigation
 	// which is required for OAuth authorization flows from external clients
@@ -115,7 +115,7 @@ func (h *AuthHandler) setAuthCookies(c *fiber.Ctx, accessToken, refreshToken str
 }
 
 // clearAuthCookies removes authentication cookies
-func (h *AuthHandler) clearAuthCookies(c *fiber.Ctx) {
+func (h *AuthHandler) clearAuthCookies(c fiber.Ctx) {
 	c.Cookie(&fiber.Cookie{
 		Name:     AccessTokenCookieName,
 		Value:    "",
@@ -138,7 +138,7 @@ func (h *AuthHandler) clearAuthCookies(c *fiber.Ctx) {
 }
 
 // getAccessToken gets the access token from cookie or Authorization header
-func (h *AuthHandler) getAccessToken(c *fiber.Ctx) string {
+func (h *AuthHandler) getAccessToken(c fiber.Ctx) string {
 	// First try cookie
 	if token := c.Cookies(AccessTokenCookieName); token != "" {
 		return token
@@ -153,7 +153,7 @@ func (h *AuthHandler) getAccessToken(c *fiber.Ctx) string {
 }
 
 // getRefreshToken gets the refresh token from cookie or request body
-func (h *AuthHandler) getRefreshToken(c *fiber.Ctx) string {
+func (h *AuthHandler) getRefreshToken(c fiber.Ctx) string {
 	// First try cookie
 	if token := c.Cookies(RefreshTokenCookieName); token != "" {
 		return token
@@ -163,7 +163,7 @@ func (h *AuthHandler) getRefreshToken(c *fiber.Ctx) string {
 
 // SignUp handles user registration
 // POST /auth/signup
-func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
+func (h *AuthHandler) SignUp(c fiber.Ctx) error {
 	// Check if signup is enabled
 	if !h.authService.IsSignupEnabled() {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -173,7 +173,7 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 	}
 
 	var req auth.SignUpRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse signup request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -187,7 +187,7 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 		if req.ChallengeID != "" && h.captchaTrustService != nil {
 			// Verify CAPTCHA token if one was provided
 			if req.CaptchaToken != "" {
-				if err := h.captchaService.Verify(c.Context(), req.CaptchaToken, c.IP()); err != nil {
+				if err := h.captchaService.Verify(c.RequestCtx(), req.CaptchaToken, c.IP()); err != nil {
 					log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for signup")
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "CAPTCHA verification failed",
@@ -198,7 +198,7 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 			}
 
 			// Validate the challenge (checks if CAPTCHA was required and if it was verified)
-			if err := h.captchaTrustService.ValidateChallenge(c.Context(), req.ChallengeID, "signup", c.IP(), captchaVerified); err != nil {
+			if err := h.captchaTrustService.ValidateChallenge(c.RequestCtx(), req.ChallengeID, "signup", c.IP(), captchaVerified); err != nil {
 				if errors.Is(err, auth.ErrCaptchaRequired) {
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "CAPTCHA verification required",
@@ -225,7 +225,7 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 			}
 		} else {
 			// Fall back to static CAPTCHA verification (no challenge_id provided)
-			if err := h.captchaService.VerifyForEndpoint(c.Context(), "signup", req.CaptchaToken, c.IP()); err != nil {
+			if err := h.captchaService.VerifyForEndpoint(c.RequestCtx(), "signup", req.CaptchaToken, c.IP()); err != nil {
 				if errors.Is(err, auth.ErrCaptchaRequired) {
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "CAPTCHA verification required",
@@ -255,7 +255,7 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 	}
 
 	// Create user
-	resp, err := h.authService.SignUp(c.Context(), req)
+	resp, err := h.authService.SignUp(c.RequestCtx(), req)
 	if err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to sign up user")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -266,7 +266,7 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 	// Issue trust token if CAPTCHA was verified (for use in subsequent requests)
 	var trustToken string
 	if captchaVerified && h.captchaTrustService != nil && h.captchaTrustService.IsEnabled() {
-		trustToken, _ = h.captchaTrustService.IssueTrustToken(c.Context(), c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+		trustToken, _ = h.captchaTrustService.IssueTrustToken(c.RequestCtx(), c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
 	}
 
 	// Check if email verification is required (don't set cookies, no tokens returned)
@@ -301,8 +301,8 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 
 // SignIn handles user login
 // POST /auth/signin
-func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *AuthHandler) SignIn(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Check if password login is disabled for app users
 	if h.isPasswordLoginDisabled(ctx) {
@@ -313,7 +313,7 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 	}
 
 	var req auth.SignInRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse signin request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -327,7 +327,7 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 		if req.ChallengeID != "" && h.captchaTrustService != nil {
 			// Verify CAPTCHA token if one was provided
 			if req.CaptchaToken != "" {
-				if err := h.captchaService.Verify(c.Context(), req.CaptchaToken, c.IP()); err != nil {
+				if err := h.captchaService.Verify(c.RequestCtx(), req.CaptchaToken, c.IP()); err != nil {
 					log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for login")
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "CAPTCHA verification failed",
@@ -338,7 +338,7 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 			}
 
 			// Validate the challenge (checks if CAPTCHA was required and if it was verified)
-			if err := h.captchaTrustService.ValidateChallenge(c.Context(), req.ChallengeID, "login", c.IP(), captchaVerified); err != nil {
+			if err := h.captchaTrustService.ValidateChallenge(c.RequestCtx(), req.ChallengeID, "login", c.IP(), captchaVerified); err != nil {
 				if errors.Is(err, auth.ErrCaptchaRequired) {
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "CAPTCHA verification required",
@@ -365,7 +365,7 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 			}
 		} else {
 			// Fall back to static CAPTCHA verification (no challenge_id provided)
-			if err := h.captchaService.VerifyForEndpoint(c.Context(), "login", req.CaptchaToken, c.IP()); err != nil {
+			if err := h.captchaService.VerifyForEndpoint(c.RequestCtx(), "login", req.CaptchaToken, c.IP()); err != nil {
 				if errors.Is(err, auth.ErrCaptchaRequired) {
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "CAPTCHA verification required",
@@ -390,7 +390,7 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 	}
 
 	// Authenticate user
-	resp, err := h.authService.SignIn(c.Context(), req)
+	resp, err := h.authService.SignIn(c.RequestCtx(), req)
 	if err != nil {
 		// Record failed attempt for trust tracking
 		if h.captchaTrustService != nil {
@@ -437,7 +437,7 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 	}
 
 	// Check if user has 2FA enabled
-	twoFAEnabled, err := h.authService.IsTOTPEnabled(c.Context(), resp.User.ID)
+	twoFAEnabled, err := h.authService.IsTOTPEnabled(c.RequestCtx(), resp.User.ID)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", resp.User.ID).Msg("Failed to check 2FA status")
 		// Continue with login - don't block if 2FA check fails
@@ -487,7 +487,7 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 
 // SignOut handles user logout
 // POST /auth/signout
-func (h *AuthHandler) SignOut(c *fiber.Ctx) error {
+func (h *AuthHandler) SignOut(c fiber.Ctx) error {
 	// Get token from cookie or Authorization header
 	token := h.getAccessToken(c)
 	if token == "" {
@@ -496,7 +496,7 @@ func (h *AuthHandler) SignOut(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Get user ID from token before signing out
 	var userID string
@@ -557,9 +557,9 @@ func (h *AuthHandler) SignOut(c *fiber.Ctx) error {
 
 // RefreshToken handles token refresh
 // POST /auth/refresh
-func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
+func (h *AuthHandler) RefreshToken(c fiber.Ctx) error {
 	var req auth.RefreshTokenRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		// Body parsing failed, try to get refresh token from cookie
 		req.RefreshToken = h.getRefreshToken(c)
 	}
@@ -577,7 +577,7 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	}
 
 	// Refresh token
-	resp, err := h.authService.RefreshToken(c.Context(), req)
+	resp, err := h.authService.RefreshToken(c.RequestCtx(), req)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to refresh token")
 		// Clear cookies on refresh failure
@@ -595,7 +595,7 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 
 // GetUser handles getting current user profile
 // GET /auth/user
-func (h *AuthHandler) GetUser(c *fiber.Ctx) error {
+func (h *AuthHandler) GetUser(c fiber.Ctx) error {
 	// Get token from Authorization header
 	token := c.Get("Authorization")
 	if token == "" {
@@ -610,7 +610,7 @@ func (h *AuthHandler) GetUser(c *fiber.Ctx) error {
 	}
 
 	// Get user
-	user, err := h.authService.GetUser(c.Context(), token)
+	user, err := h.authService.GetUser(c.RequestCtx(), token)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get user")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -623,7 +623,7 @@ func (h *AuthHandler) GetUser(c *fiber.Ctx) error {
 
 // UpdateUser handles updating user profile
 // PATCH /auth/user
-func (h *AuthHandler) UpdateUser(c *fiber.Ctx) error {
+func (h *AuthHandler) UpdateUser(c fiber.Ctx) error {
 	// Get user ID from context (set by auth middleware)
 	userID := c.Locals("user_id")
 	if userID == nil {
@@ -633,7 +633,7 @@ func (h *AuthHandler) UpdateUser(c *fiber.Ctx) error {
 	}
 
 	var req auth.UpdateUserRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse update user request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -641,7 +641,7 @@ func (h *AuthHandler) UpdateUser(c *fiber.Ctx) error {
 	}
 
 	// Update user
-	user, err := h.authService.UpdateUser(c.Context(), userID.(string), req)
+	user, err := h.authService.UpdateUser(c.RequestCtx(), userID.(string), req)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userID.(string)).Msg("Failed to update user")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -654,12 +654,12 @@ func (h *AuthHandler) UpdateUser(c *fiber.Ctx) error {
 
 // SendMagicLink handles sending magic link
 // POST /auth/magiclink
-func (h *AuthHandler) SendMagicLink(c *fiber.Ctx) error {
+func (h *AuthHandler) SendMagicLink(c fiber.Ctx) error {
 	var req struct {
 		Email        string `json:"email"`
 		CaptchaToken string `json:"captcha_token,omitempty"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse magic link request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -668,7 +668,7 @@ func (h *AuthHandler) SendMagicLink(c *fiber.Ctx) error {
 
 	// Verify CAPTCHA if enabled for magic_link
 	if h.captchaService != nil {
-		if err := h.captchaService.VerifyForEndpoint(c.Context(), "magic_link", req.CaptchaToken, c.IP()); err != nil {
+		if err := h.captchaService.VerifyForEndpoint(c.RequestCtx(), "magic_link", req.CaptchaToken, c.IP()); err != nil {
 			if errors.Is(err, auth.ErrCaptchaRequired) {
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "CAPTCHA verification required",
@@ -691,7 +691,7 @@ func (h *AuthHandler) SendMagicLink(c *fiber.Ctx) error {
 	}
 
 	// Send magic link
-	if err := h.authService.SendMagicLink(c.Context(), req.Email); err != nil {
+	if err := h.authService.SendMagicLink(c.RequestCtx(), req.Email); err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to send magic link")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err.Error(),
@@ -707,11 +707,11 @@ func (h *AuthHandler) SendMagicLink(c *fiber.Ctx) error {
 
 // VerifyMagicLink handles magic link verification
 // POST /auth/magiclink/verify
-func (h *AuthHandler) VerifyMagicLink(c *fiber.Ctx) error {
+func (h *AuthHandler) VerifyMagicLink(c fiber.Ctx) error {
 	var req struct {
 		Token string `json:"token"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse verify magic link request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -726,7 +726,7 @@ func (h *AuthHandler) VerifyMagicLink(c *fiber.Ctx) error {
 	}
 
 	// Verify magic link
-	resp, err := h.authService.VerifyMagicLink(c.Context(), req.Token)
+	resp, err := h.authService.VerifyMagicLink(c.RequestCtx(), req.Token)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to verify magic link")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -739,14 +739,14 @@ func (h *AuthHandler) VerifyMagicLink(c *fiber.Ctx) error {
 
 // RequestPasswordReset handles password reset requests
 // POST /auth/password/reset
-func (h *AuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
+func (h *AuthHandler) RequestPasswordReset(c fiber.Ctx) error {
 	var req struct {
 		Email        string `json:"email"`
 		RedirectTo   string `json:"redirect_to,omitempty"`
 		CaptchaToken string `json:"captcha_token,omitempty"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse password reset request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -755,7 +755,7 @@ func (h *AuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
 
 	// Verify CAPTCHA if enabled for password_reset
 	if h.captchaService != nil {
-		if err := h.captchaService.VerifyForEndpoint(c.Context(), "password_reset", req.CaptchaToken, c.IP()); err != nil {
+		if err := h.captchaService.VerifyForEndpoint(c.RequestCtx(), "password_reset", req.CaptchaToken, c.IP()); err != nil {
 			if errors.Is(err, auth.ErrCaptchaRequired) {
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "CAPTCHA verification required",
@@ -778,7 +778,7 @@ func (h *AuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
 	}
 
 	// Request password reset (this won't reveal if user exists)
-	if err := h.authService.RequestPasswordReset(c.Context(), req.Email, req.RedirectTo); err != nil {
+	if err := h.authService.RequestPasswordReset(c.RequestCtx(), req.Email, req.RedirectTo); err != nil {
 		// Check for SMTP not configured error - this should be returned to the user
 		if errors.Is(err, auth.ErrSMTPNotConfigured) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -821,13 +821,13 @@ func (h *AuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
 
 // ResetPassword handles password reset with token
 // POST /auth/password/reset/confirm
-func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
+func (h *AuthHandler) ResetPassword(c fiber.Ctx) error {
 	var req struct {
 		Token       string `json:"token"`
 		NewPassword string `json:"new_password"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse reset password request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -847,7 +847,7 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 	}
 
 	// Reset password and get user ID
-	userID, err := h.authService.ResetPassword(c.Context(), req.Token, req.NewPassword)
+	userID, err := h.authService.ResetPassword(c.RequestCtx(), req.Token, req.NewPassword)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to reset password")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -856,7 +856,7 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 	}
 
 	// Generate new tokens for the user (Supabase-compatible)
-	resp, err := h.authService.GenerateTokensForUser(c.Context(), userID)
+	resp, err := h.authService.GenerateTokensForUser(c.RequestCtx(), userID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate tokens after password reset")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -869,12 +869,12 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 
 // VerifyPasswordResetToken handles password reset token verification
 // POST /auth/password/reset/verify
-func (h *AuthHandler) VerifyPasswordResetToken(c *fiber.Ctx) error {
+func (h *AuthHandler) VerifyPasswordResetToken(c fiber.Ctx) error {
 	var req struct {
 		Token string `json:"token"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse verify token request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -889,7 +889,7 @@ func (h *AuthHandler) VerifyPasswordResetToken(c *fiber.Ctx) error {
 	}
 
 	// Verify token
-	if err := h.authService.VerifyPasswordResetToken(c.Context(), req.Token); err != nil {
+	if err := h.authService.VerifyPasswordResetToken(c.RequestCtx(), req.Token); err != nil {
 		log.Error().Err(err).Msg("Failed to verify password reset token")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err.Error(),
@@ -903,11 +903,11 @@ func (h *AuthHandler) VerifyPasswordResetToken(c *fiber.Ctx) error {
 
 // VerifyEmail verifies a user's email address using a verification token
 // POST /auth/verify-email
-func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
+func (h *AuthHandler) VerifyEmail(c fiber.Ctx) error {
 	var req struct {
 		Token string `json:"token"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -919,7 +919,7 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.authService.VerifyEmailToken(c.Context(), req.Token)
+	user, err := h.authService.VerifyEmailToken(c.RequestCtx(), req.Token)
 	if err != nil {
 		// Check for specific token errors
 		if errors.Is(err, auth.ErrEmailVerificationTokenNotFound) {
@@ -954,11 +954,11 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 
 // ResendVerificationEmail resends the verification email to a user
 // POST /auth/verify-email/resend
-func (h *AuthHandler) ResendVerificationEmail(c *fiber.Ctx) error {
+func (h *AuthHandler) ResendVerificationEmail(c fiber.Ctx) error {
 	var req struct {
 		Email string `json:"email"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -971,7 +971,7 @@ func (h *AuthHandler) ResendVerificationEmail(c *fiber.Ctx) error {
 	}
 
 	// Get user by email
-	user, err := h.authService.GetUserByEmail(c.Context(), req.Email)
+	user, err := h.authService.GetUserByEmail(c.RequestCtx(), req.Email)
 	if err != nil {
 		// Don't reveal if email exists - return generic success message
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -987,7 +987,7 @@ func (h *AuthHandler) ResendVerificationEmail(c *fiber.Ctx) error {
 	}
 
 	// Send verification email
-	if err := h.authService.SendEmailVerification(c.Context(), user.ID, user.Email); err != nil {
+	if err := h.authService.SendEmailVerification(c.RequestCtx(), user.ID, user.Email); err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to resend verification email")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to send verification email. Please try again later.",
@@ -1078,7 +1078,7 @@ func (h *AuthHandler) RegisterRoutes(router fiber.Router, rateLimiters map[strin
 // SignInAnonymous is deprecated and disabled for security reasons
 // Anonymous sign-in reduces security by allowing anyone to get tokens
 // Use regular signup/signin flow instead
-func (h *AuthHandler) SignInAnonymous(c *fiber.Ctx) error {
+func (h *AuthHandler) SignInAnonymous(c fiber.Ctx) error {
 	return c.Status(fiber.StatusGone).JSON(fiber.Map{
 		"error": "Anonymous sign-in has been disabled for security reasons",
 	})
@@ -1087,7 +1087,7 @@ func (h *AuthHandler) SignInAnonymous(c *fiber.Ctx) error {
 // GetCSRFToken returns the current CSRF token for the client
 // Clients should call this endpoint first, then include the token in the X-CSRF-Token header
 // GET /auth/csrf
-func (h *AuthHandler) GetCSRFToken(c *fiber.Ctx) error {
+func (h *AuthHandler) GetCSRFToken(c fiber.Ctx) error {
 	// The CSRF middleware has already set the cookie
 	// Return the token value so clients can use it in the X-CSRF-Token header
 	token := c.Cookies("csrf_token")
@@ -1097,7 +1097,7 @@ func (h *AuthHandler) GetCSRFToken(c *fiber.Ctx) error {
 }
 
 // StartImpersonation starts an admin impersonation session
-func (h *AuthHandler) StartImpersonation(c *fiber.Ctx) error {
+func (h *AuthHandler) StartImpersonation(c fiber.Ctx) error {
 	// Get admin user ID from context (must be authenticated)
 	adminUserID := c.Locals("user_id")
 	if adminUserID == nil {
@@ -1107,7 +1107,7 @@ func (h *AuthHandler) StartImpersonation(c *fiber.Ctx) error {
 	}
 
 	var req auth.StartImpersonationRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1117,7 +1117,7 @@ func (h *AuthHandler) StartImpersonation(c *fiber.Ctx) error {
 	req.IPAddress = c.IP()
 	req.UserAgent = c.Get("User-Agent")
 
-	resp, err := h.authService.StartImpersonation(c.Context(), adminUserID.(string), req)
+	resp, err := h.authService.StartImpersonation(c.RequestCtx(), adminUserID.(string), req)
 	if err != nil {
 		statusCode := fiber.StatusInternalServerError
 		switch err {
@@ -1135,7 +1135,7 @@ func (h *AuthHandler) StartImpersonation(c *fiber.Ctx) error {
 }
 
 // StopImpersonation stops the active impersonation session
-func (h *AuthHandler) StopImpersonation(c *fiber.Ctx) error {
+func (h *AuthHandler) StopImpersonation(c fiber.Ctx) error {
 	// Get admin user ID from context
 	adminUserID := c.Locals("user_id")
 	if adminUserID == nil {
@@ -1144,7 +1144,7 @@ func (h *AuthHandler) StopImpersonation(c *fiber.Ctx) error {
 		})
 	}
 
-	err := h.authService.StopImpersonation(c.Context(), adminUserID.(string))
+	err := h.authService.StopImpersonation(c.RequestCtx(), adminUserID.(string))
 	if err != nil {
 		if err == auth.ErrNoActiveImpersonation {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -1162,7 +1162,7 @@ func (h *AuthHandler) StopImpersonation(c *fiber.Ctx) error {
 }
 
 // GetActiveImpersonation gets the active impersonation session
-func (h *AuthHandler) GetActiveImpersonation(c *fiber.Ctx) error {
+func (h *AuthHandler) GetActiveImpersonation(c fiber.Ctx) error {
 	// Get admin user ID from context
 	adminUserID := c.Locals("user_id")
 	if adminUserID == nil {
@@ -1171,7 +1171,7 @@ func (h *AuthHandler) GetActiveImpersonation(c *fiber.Ctx) error {
 		})
 	}
 
-	session, err := h.authService.GetActiveImpersonation(c.Context(), adminUserID.(string))
+	session, err := h.authService.GetActiveImpersonation(c.RequestCtx(), adminUserID.(string))
 	if err != nil {
 		if err == auth.ErrNoActiveImpersonation {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -1187,7 +1187,7 @@ func (h *AuthHandler) GetActiveImpersonation(c *fiber.Ctx) error {
 }
 
 // ListImpersonationSessions lists impersonation sessions for audit
-func (h *AuthHandler) ListImpersonationSessions(c *fiber.Ctx) error {
+func (h *AuthHandler) ListImpersonationSessions(c fiber.Ctx) error {
 	// Get admin user ID from context
 	adminUserID := c.Locals("user_id")
 	if adminUserID == nil {
@@ -1196,10 +1196,10 @@ func (h *AuthHandler) ListImpersonationSessions(c *fiber.Ctx) error {
 		})
 	}
 
-	limit := c.QueryInt("limit", 50)
-	offset := c.QueryInt("offset", 0)
+	limit := fiber.Query[int](c, "limit", 50)
+	offset := fiber.Query[int](c, "offset", 0)
 
-	sessions, err := h.authService.ListImpersonationSessions(c.Context(), adminUserID.(string), limit, offset)
+	sessions, err := h.authService.ListImpersonationSessions(c.RequestCtx(), adminUserID.(string), limit, offset)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -1210,7 +1210,7 @@ func (h *AuthHandler) ListImpersonationSessions(c *fiber.Ctx) error {
 }
 
 // StartAnonImpersonation starts impersonation as anonymous user
-func (h *AuthHandler) StartAnonImpersonation(c *fiber.Ctx) error {
+func (h *AuthHandler) StartAnonImpersonation(c fiber.Ctx) error {
 	// Get admin user ID from context (must be authenticated)
 	adminUserID := c.Locals("user_id")
 	if adminUserID == nil {
@@ -1222,7 +1222,7 @@ func (h *AuthHandler) StartAnonImpersonation(c *fiber.Ctx) error {
 	var req struct {
 		Reason string `json:"reason"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1238,7 +1238,7 @@ func (h *AuthHandler) StartAnonImpersonation(c *fiber.Ctx) error {
 	ipAddress := c.IP()
 	userAgent := c.Get("User-Agent")
 
-	resp, err := h.authService.StartAnonImpersonation(c.Context(), adminUserID.(string), req.Reason, ipAddress, userAgent)
+	resp, err := h.authService.StartAnonImpersonation(c.RequestCtx(), adminUserID.(string), req.Reason, ipAddress, userAgent)
 	if err != nil {
 		statusCode := fiber.StatusInternalServerError
 		if err == auth.ErrNotAdmin {
@@ -1253,7 +1253,7 @@ func (h *AuthHandler) StartAnonImpersonation(c *fiber.Ctx) error {
 }
 
 // StartServiceImpersonation starts impersonation with service role
-func (h *AuthHandler) StartServiceImpersonation(c *fiber.Ctx) error {
+func (h *AuthHandler) StartServiceImpersonation(c fiber.Ctx) error {
 	// Get admin user ID from context (must be authenticated)
 	adminUserID := c.Locals("user_id")
 	if adminUserID == nil {
@@ -1265,7 +1265,7 @@ func (h *AuthHandler) StartServiceImpersonation(c *fiber.Ctx) error {
 	var req struct {
 		Reason string `json:"reason"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1281,7 +1281,7 @@ func (h *AuthHandler) StartServiceImpersonation(c *fiber.Ctx) error {
 	ipAddress := c.IP()
 	userAgent := c.Get("User-Agent")
 
-	resp, err := h.authService.StartServiceImpersonation(c.Context(), adminUserID.(string), req.Reason, ipAddress, userAgent)
+	resp, err := h.authService.StartServiceImpersonation(c.RequestCtx(), adminUserID.(string), req.Reason, ipAddress, userAgent)
 	if err != nil {
 		statusCode := fiber.StatusInternalServerError
 		if err == auth.ErrNotAdmin {
@@ -1297,7 +1297,7 @@ func (h *AuthHandler) StartServiceImpersonation(c *fiber.Ctx) error {
 
 // SetupTOTP initiates 2FA setup by generating a TOTP secret
 // POST /auth/2fa/setup
-func (h *AuthHandler) SetupTOTP(c *fiber.Ctx) error {
+func (h *AuthHandler) SetupTOTP(c fiber.Ctx) error {
 	// Get user ID from JWT token
 	userID := c.Locals("user_id")
 	if userID == nil {
@@ -1311,9 +1311,9 @@ func (h *AuthHandler) SetupTOTP(c *fiber.Ctx) error {
 		Issuer string `json:"issuer"` // Optional: custom issuer name for the QR code
 	}
 	// Ignore parse errors - issuer is optional and will default to config value
-	_ = c.BodyParser(&req)
+	_ = c.Bind().Body(&req)
 
-	response, err := h.authService.SetupTOTP(c.Context(), userID.(string), req.Issuer)
+	response, err := h.authService.SetupTOTP(c.RequestCtx(), userID.(string), req.Issuer)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userID.(string)).Msg("Failed to setup TOTP")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1326,7 +1326,7 @@ func (h *AuthHandler) SetupTOTP(c *fiber.Ctx) error {
 
 // EnableTOTP enables 2FA after verifying the TOTP code
 // POST /auth/2fa/enable
-func (h *AuthHandler) EnableTOTP(c *fiber.Ctx) error {
+func (h *AuthHandler) EnableTOTP(c fiber.Ctx) error {
 	// Get user ID from JWT token
 	userID := c.Locals("user_id")
 	if userID == nil {
@@ -1338,7 +1338,7 @@ func (h *AuthHandler) EnableTOTP(c *fiber.Ctx) error {
 	var req struct {
 		Code string `json:"code"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1350,7 +1350,7 @@ func (h *AuthHandler) EnableTOTP(c *fiber.Ctx) error {
 		})
 	}
 
-	backupCodes, err := h.authService.EnableTOTP(c.Context(), userID.(string), req.Code)
+	backupCodes, err := h.authService.EnableTOTP(c.RequestCtx(), userID.(string), req.Code)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userID.(string)).Msg("Failed to enable TOTP")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1367,12 +1367,12 @@ func (h *AuthHandler) EnableTOTP(c *fiber.Ctx) error {
 
 // VerifyTOTP verifies a TOTP code during login and issues JWT tokens
 // POST /auth/2fa/verify
-func (h *AuthHandler) VerifyTOTP(c *fiber.Ctx) error {
+func (h *AuthHandler) VerifyTOTP(c fiber.Ctx) error {
 	var req struct {
 		UserID string `json:"user_id"`
 		Code   string `json:"code"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1385,7 +1385,7 @@ func (h *AuthHandler) VerifyTOTP(c *fiber.Ctx) error {
 	}
 
 	// Verify the 2FA code
-	err := h.authService.VerifyTOTP(c.Context(), req.UserID, req.Code)
+	err := h.authService.VerifyTOTP(c.RequestCtx(), req.UserID, req.Code)
 	if err != nil {
 		log.Warn().Err(err).Str("user_id", req.UserID).Msg("Failed to verify TOTP")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1394,7 +1394,7 @@ func (h *AuthHandler) VerifyTOTP(c *fiber.Ctx) error {
 	}
 
 	// Generate a complete sign-in response with tokens
-	resp, err := h.authService.GenerateTokensForUser(c.Context(), req.UserID)
+	resp, err := h.authService.GenerateTokensForUser(c.RequestCtx(), req.UserID)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", req.UserID).Msg("Failed to generate tokens after 2FA verification")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1407,7 +1407,7 @@ func (h *AuthHandler) VerifyTOTP(c *fiber.Ctx) error {
 
 // DisableTOTP disables 2FA for a user
 // POST /auth/2fa/disable
-func (h *AuthHandler) DisableTOTP(c *fiber.Ctx) error {
+func (h *AuthHandler) DisableTOTP(c fiber.Ctx) error {
 	// Get user ID from JWT token
 	userID := c.Locals("user_id")
 	if userID == nil {
@@ -1419,7 +1419,7 @@ func (h *AuthHandler) DisableTOTP(c *fiber.Ctx) error {
 	var req struct {
 		Password string `json:"password"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1431,7 +1431,7 @@ func (h *AuthHandler) DisableTOTP(c *fiber.Ctx) error {
 		})
 	}
 
-	err := h.authService.DisableTOTP(c.Context(), userID.(string), req.Password)
+	err := h.authService.DisableTOTP(c.RequestCtx(), userID.(string), req.Password)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userID.(string)).Msg("Failed to disable TOTP")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1447,7 +1447,7 @@ func (h *AuthHandler) DisableTOTP(c *fiber.Ctx) error {
 
 // GetTOTPStatus checks if 2FA is enabled for a user
 // GET /auth/2fa/status
-func (h *AuthHandler) GetTOTPStatus(c *fiber.Ctx) error {
+func (h *AuthHandler) GetTOTPStatus(c fiber.Ctx) error {
 	// Get user ID from JWT token
 	userID := c.Locals("user_id")
 	if userID == nil {
@@ -1456,7 +1456,7 @@ func (h *AuthHandler) GetTOTPStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	enabled, err := h.authService.IsTOTPEnabled(c.Context(), userID.(string))
+	enabled, err := h.authService.IsTOTPEnabled(c.RequestCtx(), userID.(string))
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userID.(string)).Msg("Failed to check TOTP status")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1471,14 +1471,14 @@ func (h *AuthHandler) GetTOTPStatus(c *fiber.Ctx) error {
 
 // SendOTP sends an OTP code via email or SMS
 // POST /auth/otp/signin
-func (h *AuthHandler) SendOTP(c *fiber.Ctx) error {
+func (h *AuthHandler) SendOTP(c fiber.Ctx) error {
 	var req struct {
 		Email   *string                 `json:"email,omitempty"`
 		Phone   *string                 `json:"phone,omitempty"`
 		Options *map[string]interface{} `json:"options,omitempty"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1501,7 +1501,7 @@ func (h *AuthHandler) SendOTP(c *fiber.Ctx) error {
 	}
 
 	if req.Email != nil {
-		err = h.authService.SendOTP(c.Context(), *req.Email, purpose)
+		err = h.authService.SendOTP(c.RequestCtx(), *req.Email, purpose)
 	} else if req.Phone != nil {
 		// SMS OTP not yet fully implemented
 		err = fmt.Errorf("SMS OTP not yet implemented")
@@ -1522,7 +1522,7 @@ func (h *AuthHandler) SendOTP(c *fiber.Ctx) error {
 
 // VerifyOTP verifies an OTP code and creates a session
 // POST /auth/otp/verify
-func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
+func (h *AuthHandler) VerifyOTP(c fiber.Ctx) error {
 	var req struct {
 		Email *string `json:"email,omitempty"`
 		Phone *string `json:"phone,omitempty"`
@@ -1530,7 +1530,7 @@ func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
 		Type  string  `json:"type"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1554,7 +1554,7 @@ func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
 	}
 
 	if req.Email != nil {
-		otpCode, err = h.authService.VerifyOTP(c.Context(), *req.Email, req.Token)
+		otpCode, err = h.authService.VerifyOTP(c.RequestCtx(), *req.Email, req.Token)
 	} else if req.Phone != nil {
 		// Phone OTP not yet fully implemented
 		return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
@@ -1573,7 +1573,7 @@ func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
 	// Users must register via signup endpoint first
 	var user *auth.User
 	if req.Email != nil && otpCode.Email != nil {
-		user, err = h.authService.GetUserByEmail(c.Context(), *otpCode.Email)
+		user, err = h.authService.GetUserByEmail(c.RequestCtx(), *otpCode.Email)
 		if err != nil {
 			log.Warn().Str("email", *otpCode.Email).Msg("OTP verification for non-existent user")
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -1583,7 +1583,7 @@ func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
 	}
 
 	// Generate tokens
-	resp, err := h.authService.GenerateTokensForUser(c.Context(), user.ID)
+	resp, err := h.authService.GenerateTokensForUser(c.RequestCtx(), user.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate tokens")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1596,7 +1596,7 @@ func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
 
 // ResendOTP resends an OTP code
 // POST /auth/otp/resend
-func (h *AuthHandler) ResendOTP(c *fiber.Ctx) error {
+func (h *AuthHandler) ResendOTP(c fiber.Ctx) error {
 	var req struct {
 		Type    string                  `json:"type"`
 		Email   *string                 `json:"email,omitempty"`
@@ -1604,7 +1604,7 @@ func (h *AuthHandler) ResendOTP(c *fiber.Ctx) error {
 		Options *map[string]interface{} `json:"options,omitempty"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1627,7 +1627,7 @@ func (h *AuthHandler) ResendOTP(c *fiber.Ctx) error {
 	// Resend OTP
 	var err error
 	if req.Email != nil {
-		err = h.authService.ResendOTP(c.Context(), *req.Email, purpose)
+		err = h.authService.ResendOTP(c.RequestCtx(), *req.Email, purpose)
 	} else if req.Phone != nil {
 		// SMS OTP not yet fully implemented
 		err = fmt.Errorf("SMS OTP not yet implemented")
@@ -1648,7 +1648,7 @@ func (h *AuthHandler) ResendOTP(c *fiber.Ctx) error {
 
 // GetUserIdentities gets all OAuth identities linked to a user
 // GET /auth/user/identities
-func (h *AuthHandler) GetUserIdentities(c *fiber.Ctx) error {
+func (h *AuthHandler) GetUserIdentities(c fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	if userID == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -1656,7 +1656,7 @@ func (h *AuthHandler) GetUserIdentities(c *fiber.Ctx) error {
 		})
 	}
 
-	identities, err := h.authService.GetUserIdentities(c.Context(), userID.(string))
+	identities, err := h.authService.GetUserIdentities(c.RequestCtx(), userID.(string))
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userID.(string)).Msg("Failed to get user identities")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1671,7 +1671,7 @@ func (h *AuthHandler) GetUserIdentities(c *fiber.Ctx) error {
 
 // LinkIdentity initiates OAuth flow to link a provider
 // POST /auth/user/identities
-func (h *AuthHandler) LinkIdentity(c *fiber.Ctx) error {
+func (h *AuthHandler) LinkIdentity(c fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	if userID == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -1683,7 +1683,7 @@ func (h *AuthHandler) LinkIdentity(c *fiber.Ctx) error {
 		Provider string `json:"provider"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1695,7 +1695,7 @@ func (h *AuthHandler) LinkIdentity(c *fiber.Ctx) error {
 		})
 	}
 
-	authURL, state, err := h.authService.LinkIdentity(c.Context(), userID.(string), req.Provider)
+	authURL, state, err := h.authService.LinkIdentity(c.RequestCtx(), userID.(string), req.Provider)
 	if err != nil {
 		log.Error().Err(err).Str("provider", req.Provider).Msg("Failed to initiate identity linking")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1712,7 +1712,7 @@ func (h *AuthHandler) LinkIdentity(c *fiber.Ctx) error {
 
 // UnlinkIdentity removes an OAuth identity from a user
 // DELETE /auth/user/identities/:id
-func (h *AuthHandler) UnlinkIdentity(c *fiber.Ctx) error {
+func (h *AuthHandler) UnlinkIdentity(c fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	if userID == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -1727,7 +1727,7 @@ func (h *AuthHandler) UnlinkIdentity(c *fiber.Ctx) error {
 		})
 	}
 
-	err := h.authService.UnlinkIdentity(c.Context(), userID.(string), identityID)
+	err := h.authService.UnlinkIdentity(c.RequestCtx(), userID.(string), identityID)
 	if err != nil {
 		log.Error().Err(err).Str("identity_id", identityID).Msg("Failed to unlink identity")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1742,7 +1742,7 @@ func (h *AuthHandler) UnlinkIdentity(c *fiber.Ctx) error {
 
 // Reauthenticate generates a security nonce
 // POST /auth/reauthenticate
-func (h *AuthHandler) Reauthenticate(c *fiber.Ctx) error {
+func (h *AuthHandler) Reauthenticate(c fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	if userID == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -1750,7 +1750,7 @@ func (h *AuthHandler) Reauthenticate(c *fiber.Ctx) error {
 		})
 	}
 
-	nonce, err := h.authService.Reauthenticate(c.Context(), userID.(string))
+	nonce, err := h.authService.Reauthenticate(c.RequestCtx(), userID.(string))
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userID.(string)).Msg("Failed to reauthenticate")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1765,14 +1765,14 @@ func (h *AuthHandler) Reauthenticate(c *fiber.Ctx) error {
 
 // SignInWithIDToken handles OAuth ID token authentication (Google, Apple)
 // POST /auth/signin/idtoken
-func (h *AuthHandler) SignInWithIDToken(c *fiber.Ctx) error {
+func (h *AuthHandler) SignInWithIDToken(c fiber.Ctx) error {
 	var req struct {
 		Provider string  `json:"provider"`
 		Token    string  `json:"token"`
 		Nonce    *string `json:"nonce,omitempty"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1789,7 +1789,7 @@ func (h *AuthHandler) SignInWithIDToken(c *fiber.Ctx) error {
 		nonce = *req.Nonce
 	}
 
-	resp, err := h.authService.SignInWithIDToken(c.Context(), req.Provider, req.Token, nonce)
+	resp, err := h.authService.SignInWithIDToken(c.RequestCtx(), req.Provider, req.Token, nonce)
 	if err != nil {
 		log.Error().Err(err).Str("provider", req.Provider).Msg("Failed to sign in with ID token")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1802,7 +1802,7 @@ func (h *AuthHandler) SignInWithIDToken(c *fiber.Ctx) error {
 
 // GetCaptchaConfig returns the public CAPTCHA configuration for clients
 // GET /auth/captcha/config
-func (h *AuthHandler) GetCaptchaConfig(c *fiber.Ctx) error {
+func (h *AuthHandler) GetCaptchaConfig(c fiber.Ctx) error {
 	if h.captchaService == nil {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"enabled": false,
@@ -1840,10 +1840,10 @@ func (h *AuthHandler) GetCaptchaConfig(c *fiber.Ctx) error {
 //	  "challenge_id": "ch_abc123...",
 //	  "expires_at": "2024-01-15T10:05:00Z"
 //	}
-func (h *AuthHandler) CheckCaptcha(c *fiber.Ctx) error {
+func (h *AuthHandler) CheckCaptcha(c fiber.Ctx) error {
 	// Parse request
 	var req auth.CaptchaCheckRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 			"code":  "INVALID_REQUEST",
@@ -1875,7 +1875,7 @@ func (h *AuthHandler) CheckCaptcha(c *fiber.Ctx) error {
 
 	// If adaptive trust service is available, use it
 	if h.captchaTrustService != nil {
-		response, err := h.captchaTrustService.CheckCaptchaRequired(c.Context(), req, c.IP(), c.Get("User-Agent"))
+		response, err := h.captchaTrustService.CheckCaptchaRequired(c.RequestCtx(), req, c.IP(), c.Get("User-Agent"))
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to check CAPTCHA requirement")
 			// Fall back to requiring CAPTCHA on error
@@ -1908,8 +1908,8 @@ func (h *AuthHandler) CheckCaptcha(c *fiber.Ctx) error {
 
 // GetAuthConfig returns the public authentication configuration for clients
 // GET /auth/config
-func (h *AuthHandler) GetAuthConfig(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *AuthHandler) GetAuthConfig(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	settingsCache := h.authService.GetSettingsCache()
 
 	// Build response
@@ -1988,3 +1988,5 @@ func (h *AuthHandler) isPasswordLoginDisabled(ctx context.Context) bool {
 	settingsCache := h.authService.GetSettingsCache()
 	return settingsCache.GetBool(ctx, "app.auth.disable_app_password_login", false)
 }
+
+// fiber:context-methods migrated

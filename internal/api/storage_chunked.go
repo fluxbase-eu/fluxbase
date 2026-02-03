@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -56,7 +56,7 @@ type CompleteChunkedUploadResponse struct {
 
 // InitChunkedUpload initializes a new chunked upload session
 // POST /api/v1/storage/:bucket/chunked/init
-func (h *StorageHandler) InitChunkedUpload(c *fiber.Ctx) error {
+func (h *StorageHandler) InitChunkedUpload(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	if bucket == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -66,7 +66,7 @@ func (h *StorageHandler) InitChunkedUpload(c *fiber.Ctx) error {
 
 	// Parse request body
 	var req InitChunkedUploadRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid request body: " + err.Error(),
 		})
@@ -112,7 +112,7 @@ func (h *StorageHandler) InitChunkedUpload(c *fiber.Ctx) error {
 		CacheControl: req.CacheControl,
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Initialize chunked upload with the storage provider
 	var session *storage.ChunkedUploadSession
@@ -168,7 +168,7 @@ func (h *StorageHandler) InitChunkedUpload(c *fiber.Ctx) error {
 
 // UploadChunk uploads a single chunk of a file
 // PUT /api/v1/storage/:bucket/chunked/:uploadId/:chunkIndex
-func (h *StorageHandler) UploadChunk(c *fiber.Ctx) error {
+func (h *StorageHandler) UploadChunk(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	uploadID := c.Params("uploadId")
 	chunkIndexStr := c.Params("chunkIndex")
@@ -194,7 +194,7 @@ func (h *StorageHandler) UploadChunk(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Retrieve session
 	session, err := h.getChunkedUploadSession(ctx, uploadID)
@@ -301,7 +301,7 @@ func (h *StorageHandler) UploadChunk(c *fiber.Ctx) error {
 
 // CompleteChunkedUpload finalizes a chunked upload
 // POST /api/v1/storage/:bucket/chunked/:uploadId/complete
-func (h *StorageHandler) CompleteChunkedUpload(c *fiber.Ctx) error {
+func (h *StorageHandler) CompleteChunkedUpload(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	uploadID := c.Params("uploadId")
 
@@ -311,7 +311,7 @@ func (h *StorageHandler) CompleteChunkedUpload(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Retrieve session
 	session, err := h.getChunkedUploadSession(ctx, uploadID)
@@ -402,7 +402,7 @@ func (h *StorageHandler) CompleteChunkedUpload(c *fiber.Ctx) error {
 
 // GetChunkedUploadStatus retrieves the status of a chunked upload session
 // GET /api/v1/storage/:bucket/chunked/:uploadId/status
-func (h *StorageHandler) GetChunkedUploadStatus(c *fiber.Ctx) error {
+func (h *StorageHandler) GetChunkedUploadStatus(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	uploadID := c.Params("uploadId")
 
@@ -412,7 +412,7 @@ func (h *StorageHandler) GetChunkedUploadStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Retrieve session
 	session, err := h.getChunkedUploadSession(ctx, uploadID)
@@ -460,7 +460,7 @@ func (h *StorageHandler) GetChunkedUploadStatus(c *fiber.Ctx) error {
 
 // AbortChunkedUpload aborts a chunked upload and cleans up
 // DELETE /api/v1/storage/:bucket/chunked/:uploadId
-func (h *StorageHandler) AbortChunkedUpload(c *fiber.Ctx) error {
+func (h *StorageHandler) AbortChunkedUpload(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	uploadID := c.Params("uploadId")
 
@@ -470,7 +470,7 @@ func (h *StorageHandler) AbortChunkedUpload(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Retrieve session
 	session, err := h.getChunkedUploadSession(ctx, uploadID)
@@ -561,7 +561,7 @@ func (h *StorageHandler) storeUploadedObject(fiberCtx interface{}, session *stor
 	// This mirrors the logic in storage_files.go for regular uploads
 
 	// Get fiber context and database pool
-	c, ok := fiberCtx.(*fiber.Ctx)
+	c, ok := fiberCtx.(fiber.Ctx)
 	if !ok {
 		return fmt.Errorf("invalid context type")
 	}
@@ -588,7 +588,7 @@ func (h *StorageHandler) storeUploadedObject(fiberCtx interface{}, session *stor
 		ownerID = session.OwnerID
 	}
 
-	_, err := db.Exec(c.Context(), query,
+	_, err := db.Exec(c.RequestCtx(), query,
 		object.Bucket,
 		object.Key,
 		object.Size,
@@ -599,3 +599,5 @@ func (h *StorageHandler) storeUploadedObject(fiberCtx interface{}, session *stor
 
 	return err
 }
+
+// fiber:context-methods migrated

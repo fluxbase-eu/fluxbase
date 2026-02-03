@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/ai"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -67,7 +67,7 @@ type InternalEmbedResponse struct {
 
 // HandleChat handles POST /api/v1/internal/ai/chat
 // This endpoint allows custom MCP tools, edge functions, and jobs to make AI completions.
-func (h *InternalAIHandler) HandleChat(c *fiber.Ctx) error {
+func (h *InternalAIHandler) HandleChat(c fiber.Ctx) error {
 	if h.aiStorage == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "AI service not configured",
@@ -75,7 +75,7 @@ func (h *InternalAIHandler) HandleChat(c *fiber.Ctx) error {
 	}
 
 	var req InternalChatRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": fmt.Sprintf("Invalid request body: %v", err),
 		})
@@ -99,7 +99,7 @@ func (h *InternalAIHandler) HandleChat(c *fiber.Ctx) error {
 	}
 
 	// Get the provider from storage
-	provider, err := h.aiStorage.GetProviderByName(c.Context(), providerName)
+	provider, err := h.aiStorage.GetProviderByName(c.RequestCtx(), providerName)
 	if err != nil {
 		log.Warn().Err(err).Str("provider", providerName).Msg("Failed to get AI provider")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -162,7 +162,7 @@ func (h *InternalAIHandler) HandleChat(c *fiber.Ctx) error {
 		Temperature: temperature,
 	}
 
-	resp, err := aiProvider.Chat(c.Context(), chatReq)
+	resp, err := aiProvider.Chat(c.RequestCtx(), chatReq)
 	if err != nil {
 		log.Error().Err(err).Msg("AI chat request failed")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -200,7 +200,7 @@ func (h *InternalAIHandler) HandleChat(c *fiber.Ctx) error {
 
 // HandleEmbed handles POST /api/v1/internal/ai/embed
 // This endpoint allows custom MCP tools, edge functions, and jobs to generate embeddings.
-func (h *InternalAIHandler) HandleEmbed(c *fiber.Ctx) error {
+func (h *InternalAIHandler) HandleEmbed(c fiber.Ctx) error {
 	if h.embeddingService == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Embedding service not configured",
@@ -208,7 +208,7 @@ func (h *InternalAIHandler) HandleEmbed(c *fiber.Ctx) error {
 	}
 
 	var req InternalEmbedRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": fmt.Sprintf("Invalid request body: %v", err),
 		})
@@ -221,7 +221,7 @@ func (h *InternalAIHandler) HandleEmbed(c *fiber.Ctx) error {
 	}
 
 	// Generate embedding
-	embedding, err := h.embeddingService.GenerateEmbedding(c.Context(), req.Text)
+	embedding, err := h.embeddingService.GenerateEmbedding(c.RequestCtx(), req.Text)
 	if err != nil {
 		log.Error().Err(err).Msg("Embedding generation failed")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -240,14 +240,14 @@ func (h *InternalAIHandler) HandleEmbed(c *fiber.Ctx) error {
 
 // HandleListProviders handles GET /api/v1/internal/ai/providers
 // This endpoint lists available AI providers.
-func (h *InternalAIHandler) HandleListProviders(c *fiber.Ctx) error {
+func (h *InternalAIHandler) HandleListProviders(c fiber.Ctx) error {
 	if h.aiStorage == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "AI service not configured",
 		})
 	}
 
-	providers, err := h.aiStorage.ListProviders(c.Context(), true) // Only enabled providers
+	providers, err := h.aiStorage.ListProviders(c.RequestCtx(), true) // Only enabled providers
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to list providers: %v", err),
@@ -285,3 +285,5 @@ func marshalEmbedding(embedding []float32) (string, error) {
 	}
 	return string(data), nil
 }
+
+// fiber:context-methods migrated

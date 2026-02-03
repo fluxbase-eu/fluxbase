@@ -13,7 +13,7 @@ import (
 
 	"github.com/crewjam/saml/samlsp"
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -123,8 +123,8 @@ type ValidateMetadataResponse struct {
 var samlProviderNamePattern = regexp.MustCompile(`^[a-z][a-z0-9_-]{1,49}$`)
 
 // ListSAMLProviders lists all SAML providers (database + config)
-func (h *SAMLProviderHandler) ListSAMLProviders(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *SAMLProviderHandler) ListSAMLProviders(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Check if database connection is available
 	if h.db == nil {
@@ -217,8 +217,8 @@ func (h *SAMLProviderHandler) ListSAMLProviders(c *fiber.Ctx) error {
 }
 
 // GetSAMLProvider gets a single SAML provider by ID
-func (h *SAMLProviderHandler) GetSAMLProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *SAMLProviderHandler) GetSAMLProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	providerID, err := uuid.Parse(id)
@@ -277,11 +277,11 @@ func (h *SAMLProviderHandler) GetSAMLProvider(c *fiber.Ctx) error {
 }
 
 // CreateSAMLProvider creates a new SAML provider
-func (h *SAMLProviderHandler) CreateSAMLProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *SAMLProviderHandler) CreateSAMLProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	var req CreateSAMLProviderRequest
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -423,8 +423,8 @@ func (h *SAMLProviderHandler) CreateSAMLProvider(c *fiber.Ctx) error {
 }
 
 // UpdateSAMLProvider updates an existing SAML provider
-func (h *SAMLProviderHandler) UpdateSAMLProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *SAMLProviderHandler) UpdateSAMLProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	providerID, err := uuid.Parse(id)
@@ -463,7 +463,7 @@ func (h *SAMLProviderHandler) UpdateSAMLProvider(c *fiber.Ctx) error {
 	}
 
 	var req UpdateSAMLProviderRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -609,8 +609,8 @@ func (h *SAMLProviderHandler) UpdateSAMLProvider(c *fiber.Ctx) error {
 }
 
 // DeleteSAMLProvider deletes a SAML provider
-func (h *SAMLProviderHandler) DeleteSAMLProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *SAMLProviderHandler) DeleteSAMLProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	providerID, err := uuid.Parse(id)
@@ -673,10 +673,10 @@ func (h *SAMLProviderHandler) DeleteSAMLProvider(c *fiber.Ctx) error {
 }
 
 // ValidateMetadata validates SAML IdP metadata from URL or XML
-func (h *SAMLProviderHandler) ValidateMetadata(c *fiber.Ctx) error {
+func (h *SAMLProviderHandler) ValidateMetadata(c fiber.Ctx) error {
 	var req ValidateMetadataRequest
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -689,7 +689,7 @@ func (h *SAMLProviderHandler) ValidateMetadata(c *fiber.Ctx) error {
 		})
 	}
 
-	result, err := h.validateMetadata(c.Context(), req.MetadataURL, req.MetadataXML)
+	result, err := h.validateMetadata(c.RequestCtx(), req.MetadataURL, req.MetadataXML)
 	if err != nil {
 		errStr := err.Error()
 		return c.JSON(ValidateMetadataResponse{
@@ -708,7 +708,7 @@ func (h *SAMLProviderHandler) ValidateMetadata(c *fiber.Ctx) error {
 }
 
 // UploadMetadata handles file upload for IdP metadata XML
-func (h *SAMLProviderHandler) UploadMetadata(c *fiber.Ctx) error {
+func (h *SAMLProviderHandler) UploadMetadata(c fiber.Ctx) error {
 	file, err := c.FormFile("metadata")
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
@@ -740,7 +740,7 @@ func (h *SAMLProviderHandler) UploadMetadata(c *fiber.Ctx) error {
 	}
 
 	xmlStr := string(content)
-	result, err := h.validateMetadata(c.Context(), nil, &xmlStr)
+	result, err := h.validateMetadata(c.RequestCtx(), nil, &xmlStr)
 	if err != nil {
 		errStr := err.Error()
 		return c.JSON(ValidateMetadataResponse{
@@ -760,7 +760,7 @@ func (h *SAMLProviderHandler) UploadMetadata(c *fiber.Ctx) error {
 }
 
 // GetSPMetadata returns the Service Provider metadata XML for a provider
-func (h *SAMLProviderHandler) GetSPMetadata(c *fiber.Ctx) error {
+func (h *SAMLProviderHandler) GetSPMetadata(c fiber.Ctx) error {
 	providerName := c.Params("provider")
 
 	if h.samlService == nil {
@@ -890,3 +890,5 @@ func (h *SAMLProviderHandler) reloadSAMLProvider(ctx context.Context, name strin
 	log.Info().Str("provider", name).Msg("SAML provider needs reload (not yet implemented)")
 	return nil
 }
+
+// fiber:context-methods migrated

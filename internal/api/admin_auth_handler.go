@@ -10,7 +10,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // AdminAuthHandler handles admin-specific authentication
@@ -77,7 +77,7 @@ type AdminLoginResponse struct {
 
 // GetSetupStatus checks if initial setup is needed
 // GET /api/v1/admin/setup/status
-func (h *AdminAuthHandler) GetSetupStatus(c *fiber.Ctx) error {
+func (h *AdminAuthHandler) GetSetupStatus(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Check if setup has been completed using system settings
@@ -94,7 +94,7 @@ func (h *AdminAuthHandler) GetSetupStatus(c *fiber.Ctx) error {
 
 // InitialSetup creates the first admin user
 // POST /api/v1/admin/setup
-func (h *AdminAuthHandler) InitialSetup(c *fiber.Ctx) error {
+func (h *AdminAuthHandler) InitialSetup(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Check if setup has already been completed using system settings
@@ -109,7 +109,7 @@ func (h *AdminAuthHandler) InitialSetup(c *fiber.Ctx) error {
 
 	// Parse request
 	var req InitialSetupRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -171,11 +171,11 @@ func (h *AdminAuthHandler) InitialSetup(c *fiber.Ctx) error {
 
 // AdminLogin authenticates an admin user
 // POST /api/v1/admin/login
-func (h *AdminAuthHandler) AdminLogin(c *fiber.Ctx) error {
+func (h *AdminAuthHandler) AdminLogin(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	var req AdminLoginRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -216,14 +216,14 @@ func (h *AdminAuthHandler) AdminLogin(c *fiber.Ctx) error {
 
 // AdminRefreshToken refreshes an admin's access token
 // POST /api/v1/admin/refresh
-func (h *AdminAuthHandler) AdminRefreshToken(c *fiber.Ctx) error {
+func (h *AdminAuthHandler) AdminRefreshToken(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	var req struct {
 		RefreshToken string `json:"refresh_token" validate:"required"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -263,7 +263,7 @@ func (h *AdminAuthHandler) AdminRefreshToken(c *fiber.Ctx) error {
 
 // AdminLogout logs out an admin user
 // POST /api/v1/admin/logout
-func (h *AdminAuthHandler) AdminLogout(c *fiber.Ctx) error {
+func (h *AdminAuthHandler) AdminLogout(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Get the access token from the Authorization header
@@ -292,7 +292,7 @@ func (h *AdminAuthHandler) AdminLogout(c *fiber.Ctx) error {
 
 // GetCurrentAdmin returns the currently authenticated admin user
 // GET /api/v1/admin/me
-func (h *AdminAuthHandler) GetCurrentAdmin(c *fiber.Ctx) error {
+func (h *AdminAuthHandler) GetCurrentAdmin(c fiber.Ctx) error {
 	// Get user info from context (set by auth middleware)
 	userID, ok := c.Locals("user_id").(string)
 	if !ok {
