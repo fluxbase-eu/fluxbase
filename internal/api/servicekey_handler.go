@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -70,7 +70,7 @@ type UpdateServiceKeyRequest struct {
 }
 
 // ListServiceKeys lists all service keys
-func (h *ServiceKeyHandler) ListServiceKeys(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) ListServiceKeys(c fiber.Ctx) error {
 	// Check if database connection is available
 	if h.db == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -78,7 +78,7 @@ func (h *ServiceKeyHandler) ListServiceKeys(c *fiber.Ctx) error {
 		})
 	}
 
-	rows, err := h.db.Query(c.Context(), `
+	rows, err := h.db.Query(c.RequestCtx(), `
 		SELECT id, name, description, key_prefix, scopes, enabled,
 		       rate_limit_per_minute, rate_limit_per_hour,
 		       created_by, created_at, last_used_at, expires_at
@@ -116,7 +116,7 @@ func (h *ServiceKeyHandler) ListServiceKeys(c *fiber.Ctx) error {
 }
 
 // GetServiceKey retrieves a single service key
-func (h *ServiceKeyHandler) GetServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) GetServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -133,7 +133,7 @@ func (h *ServiceKeyHandler) GetServiceKey(c *fiber.Ctx) error {
 	}
 
 	var key ServiceKey
-	err = h.db.QueryRow(c.Context(), `
+	err = h.db.QueryRow(c.RequestCtx(), `
 		SELECT id, name, description, key_prefix, scopes, enabled,
 		       rate_limit_per_minute, rate_limit_per_hour,
 		       created_by, created_at, last_used_at, expires_at
@@ -154,9 +154,9 @@ func (h *ServiceKeyHandler) GetServiceKey(c *fiber.Ctx) error {
 }
 
 // CreateServiceKey creates a new service key
-func (h *ServiceKeyHandler) CreateServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) CreateServiceKey(c fiber.Ctx) error {
 	var req CreateServiceKeyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -215,7 +215,7 @@ func (h *ServiceKeyHandler) CreateServiceKey(c *fiber.Ctx) error {
 
 	// Insert the key
 	var key ServiceKey
-	err = h.db.QueryRow(c.Context(), `
+	err = h.db.QueryRow(c.RequestCtx(), `
 		INSERT INTO auth.service_keys (
 			name, description, key_hash, key_prefix, scopes, enabled,
 			rate_limit_per_minute, rate_limit_per_hour, created_by, expires_at
@@ -254,7 +254,7 @@ func (h *ServiceKeyHandler) CreateServiceKey(c *fiber.Ctx) error {
 }
 
 // UpdateServiceKey updates a service key
-func (h *ServiceKeyHandler) UpdateServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) UpdateServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -264,7 +264,7 @@ func (h *ServiceKeyHandler) UpdateServiceKey(c *fiber.Ctx) error {
 	}
 
 	var req UpdateServiceKeyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -333,7 +333,7 @@ func (h *ServiceKeyHandler) UpdateServiceKey(c *fiber.Ctx) error {
 		WHERE id = $%d
 	`, setClause, i)
 
-	result, err := h.db.Exec(c.Context(), query, args...)
+	result, err := h.db.Exec(c.RequestCtx(), query, args...)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to update service key")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -358,7 +358,7 @@ func (h *ServiceKeyHandler) UpdateServiceKey(c *fiber.Ctx) error {
 }
 
 // DeleteServiceKey deletes a service key
-func (h *ServiceKeyHandler) DeleteServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) DeleteServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -374,7 +374,7 @@ func (h *ServiceKeyHandler) DeleteServiceKey(c *fiber.Ctx) error {
 		})
 	}
 
-	result, err := h.db.Exec(c.Context(), `
+	result, err := h.db.Exec(c.RequestCtx(), `
 		DELETE FROM auth.service_keys WHERE id = $1
 	`, id)
 	if err != nil {
@@ -398,7 +398,7 @@ func (h *ServiceKeyHandler) DeleteServiceKey(c *fiber.Ctx) error {
 }
 
 // DisableServiceKey disables a service key without deleting it
-func (h *ServiceKeyHandler) DisableServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) DisableServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -414,7 +414,7 @@ func (h *ServiceKeyHandler) DisableServiceKey(c *fiber.Ctx) error {
 		})
 	}
 
-	result, err := h.db.Exec(c.Context(), `
+	result, err := h.db.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys SET enabled = false WHERE id = $1
 	`, id)
 	if err != nil {
@@ -441,7 +441,7 @@ func (h *ServiceKeyHandler) DisableServiceKey(c *fiber.Ctx) error {
 }
 
 // EnableServiceKey enables a service key
-func (h *ServiceKeyHandler) EnableServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) EnableServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -457,7 +457,7 @@ func (h *ServiceKeyHandler) EnableServiceKey(c *fiber.Ctx) error {
 		})
 	}
 
-	result, err := h.db.Exec(c.Context(), `
+	result, err := h.db.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys SET enabled = true WHERE id = $1
 	`, id)
 	if err != nil {
@@ -490,7 +490,7 @@ type RevokeServiceKeyRequest struct {
 
 // RevokeServiceKey immediately revokes a service key (emergency revocation)
 // POST /api/v1/admin/service-keys/:id/revoke
-func (h *ServiceKeyHandler) RevokeServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) RevokeServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -498,7 +498,7 @@ func (h *ServiceKeyHandler) RevokeServiceKey(c *fiber.Ctx) error {
 	}
 
 	var req RevokeServiceKeyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -525,7 +525,7 @@ func (h *ServiceKeyHandler) RevokeServiceKey(c *fiber.Ctx) error {
 
 	// Get the key prefix for audit log
 	var keyPrefix string
-	err = h.db.QueryRow(c.Context(), `
+	err = h.db.QueryRow(c.RequestCtx(), `
 		SELECT key_prefix FROM auth.service_keys WHERE id = $1
 	`, id).Scan(&keyPrefix)
 	if err != nil {
@@ -533,14 +533,14 @@ func (h *ServiceKeyHandler) RevokeServiceKey(c *fiber.Ctx) error {
 	}
 
 	// Start transaction
-	tx, err := h.db.Begin(c.Context())
+	tx, err := h.db.Begin(c.RequestCtx())
 	if err != nil {
 		return SendOperationFailed(c, "start transaction")
 	}
-	defer func() { _ = tx.Rollback(c.Context()) }()
+	defer func() { _ = tx.Rollback(c.RequestCtx()) }()
 
 	// Revoke the key
-	result, err := tx.Exec(c.Context(), `
+	result, err := tx.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys
 		SET enabled = false, revoked_at = NOW(), revoked_by = $2, revocation_reason = $3
 		WHERE id = $1 AND revoked_at IS NULL
@@ -555,7 +555,7 @@ func (h *ServiceKeyHandler) RevokeServiceKey(c *fiber.Ctx) error {
 	}
 
 	// Log to audit table
-	_, err = tx.Exec(c.Context(), `
+	_, err = tx.Exec(c.RequestCtx(), `
 		INSERT INTO auth.service_key_revocations (key_id, key_prefix, revoked_by, reason, revocation_type)
 		VALUES ($1, $2, $3, $4, 'emergency')
 	`, id, keyPrefix, adminUUID, req.Reason)
@@ -564,7 +564,7 @@ func (h *ServiceKeyHandler) RevokeServiceKey(c *fiber.Ctx) error {
 		// Don't fail the operation for audit log failure
 	}
 
-	if err := tx.Commit(c.Context()); err != nil {
+	if err := tx.Commit(c.RequestCtx()); err != nil {
 		return SendOperationFailed(c, "commit transaction")
 	}
 
@@ -591,7 +591,7 @@ type DeprecateServiceKeyRequest struct {
 // DeprecateServiceKey marks a service key for rotation with a grace period
 // During the grace period, the key still works but is flagged for replacement
 // POST /api/v1/admin/service-keys/:id/deprecate
-func (h *ServiceKeyHandler) DeprecateServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) DeprecateServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -599,7 +599,7 @@ func (h *ServiceKeyHandler) DeprecateServiceKey(c *fiber.Ctx) error {
 	}
 
 	var req DeprecateServiceKeyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -624,7 +624,7 @@ func (h *ServiceKeyHandler) DeprecateServiceKey(c *fiber.Ctx) error {
 
 	graceEndTime := time.Now().Add(time.Duration(gracePeriod) * time.Hour)
 
-	result, err := h.db.Exec(c.Context(), `
+	result, err := h.db.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys
 		SET deprecated_at = NOW(), grace_period_ends_at = $2
 		WHERE id = $1 AND deprecated_at IS NULL AND revoked_at IS NULL
@@ -663,7 +663,7 @@ type RotateServiceKeyRequest struct {
 
 // RotateServiceKey creates a new replacement key and deprecates the old one
 // POST /api/v1/admin/service-keys/:id/rotate
-func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) RotateServiceKey(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -671,7 +671,7 @@ func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
 	}
 
 	var req RotateServiceKeyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -684,7 +684,7 @@ func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
 
 	// Get the old key details
 	var oldKey ServiceKey
-	err = h.db.QueryRow(c.Context(), `
+	err = h.db.QueryRow(c.RequestCtx(), `
 		SELECT id, name, description, key_prefix, scopes, enabled,
 		       rate_limit_per_minute, rate_limit_per_hour,
 		       created_by, created_at, last_used_at, expires_at
@@ -742,15 +742,15 @@ func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
 	graceEndTime := time.Now().Add(time.Duration(gracePeriod) * time.Hour)
 
 	// Start transaction
-	tx, err := h.db.Begin(c.Context())
+	tx, err := h.db.Begin(c.RequestCtx())
 	if err != nil {
 		return SendOperationFailed(c, "start transaction")
 	}
-	defer func() { _ = tx.Rollback(c.Context()) }()
+	defer func() { _ = tx.Rollback(c.RequestCtx()) }()
 
 	// Create new key
 	var newKey ServiceKey
-	err = tx.QueryRow(c.Context(), `
+	err = tx.QueryRow(c.RequestCtx(), `
 		INSERT INTO auth.service_keys (
 			name, description, key_hash, key_prefix, scopes, enabled,
 			rate_limit_per_minute, rate_limit_per_hour, created_by, expires_at
@@ -772,7 +772,7 @@ func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
 	}
 
 	// Deprecate old key and link to new one
-	_, err = tx.Exec(c.Context(), `
+	_, err = tx.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys
 		SET deprecated_at = NOW(), grace_period_ends_at = $2, replaced_by = $3
 		WHERE id = $1
@@ -784,13 +784,13 @@ func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
 
 	// Log rotation to audit table
 	if createdByUUID != nil {
-		_, _ = tx.Exec(c.Context(), `
+		_, _ = tx.Exec(c.RequestCtx(), `
 			INSERT INTO auth.service_key_revocations (key_id, key_prefix, revoked_by, reason, revocation_type)
 			VALUES ($1, $2, $3, $4, 'rotation')
 		`, id, oldKey.KeyPrefix, createdByUUID, "Key rotation")
 	}
 
-	if err := tx.Commit(c.Context()); err != nil {
+	if err := tx.Commit(c.RequestCtx()); err != nil {
 		return SendOperationFailed(c, "commit transaction")
 	}
 
@@ -815,7 +815,7 @@ func (h *ServiceKeyHandler) RotateServiceKey(c *fiber.Ctx) error {
 
 // GetRevocationHistory returns the revocation history for a service key
 // GET /api/v1/admin/service-keys/:id/revocations
-func (h *ServiceKeyHandler) GetRevocationHistory(c *fiber.Ctx) error {
+func (h *ServiceKeyHandler) GetRevocationHistory(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -829,7 +829,7 @@ func (h *ServiceKeyHandler) GetRevocationHistory(c *fiber.Ctx) error {
 		})
 	}
 
-	rows, err := h.db.Query(c.Context(), `
+	rows, err := h.db.Query(c.RequestCtx(), `
 		SELECT id, key_id, key_prefix, revoked_by, reason, revocation_type, created_at
 		FROM auth.service_key_revocations
 		WHERE key_id = $1
@@ -868,3 +868,5 @@ func (h *ServiceKeyHandler) GetRevocationHistory(c *fiber.Ctx) error {
 
 	return c.JSON(entries)
 }
+
+// fiber:context-methods migrated

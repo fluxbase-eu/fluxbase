@@ -309,12 +309,12 @@ type AdaptiveTrustConfig struct {
 
 // CORSConfig contains CORS settings
 type CORSConfig struct {
-	AllowedOrigins   string `mapstructure:"allowed_origins"`   // Comma-separated list of allowed origins (use "*" for all)
-	AllowedMethods   string `mapstructure:"allowed_methods"`   // Comma-separated list of allowed HTTP methods
-	AllowedHeaders   string `mapstructure:"allowed_headers"`   // Comma-separated list of allowed headers
-	ExposedHeaders   string `mapstructure:"exposed_headers"`   // Comma-separated list of exposed headers
-	AllowCredentials bool   `mapstructure:"allow_credentials"` // Allow credentials (cookies, authorization headers)
-	MaxAge           int    `mapstructure:"max_age"`           // Max age for preflight cache in seconds
+	AllowedOrigins   []string `mapstructure:"allowed_origins"`   // List of allowed origins (use ["*"] for all)
+	AllowedMethods   []string `mapstructure:"allowed_methods"`   // List of allowed HTTP methods
+	AllowedHeaders   []string `mapstructure:"allowed_headers"`   // List of allowed headers
+	ExposedHeaders   []string `mapstructure:"exposed_headers"`   // List of exposed headers
+	AllowCredentials bool     `mapstructure:"allow_credentials"` // Allow credentials (cookies, authorization headers)
+	MaxAge           int      `mapstructure:"max_age"`           // Max age for preflight cache in seconds
 }
 
 // StorageConfig contains file storage settings

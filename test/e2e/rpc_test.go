@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/test"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/require"
 )
 

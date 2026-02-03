@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -181,7 +181,7 @@ func TestSplitTableName_EdgeCases(t *testing.T) {
 func TestGetRLSContext_WithUserAndRole(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("rls_user_id", "user-123")
 		c.Locals("rls_role", "authenticated")
 
@@ -202,7 +202,7 @@ func TestGetRLSContext_WithUserAndRole(t *testing.T) {
 func TestGetRLSContext_NilRole_DefaultsToAnon(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("rls_user_id", nil)
 		// rls_role not set
 
@@ -223,7 +223,7 @@ func TestGetRLSContext_NilRole_DefaultsToAnon(t *testing.T) {
 func TestGetRLSContext_ServiceRole(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("rls_role", "service_role")
 
 		rlsCtx := GetRLSContext(c)
@@ -256,7 +256,7 @@ func TestRLSMiddleware_Anonymous(t *testing.T) {
 	config := RLSConfig{SessionVarPrefix: "app"}
 	app.Use(RLSMiddleware(config))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		// user_id is not set, should be anonymous
 		rlsCtx := GetRLSContext(c)
 		assert.Equal(t, "anon", rlsCtx.Role)
@@ -274,7 +274,7 @@ func TestRLSMiddleware_Authenticated(t *testing.T) {
 	app := fiber.New()
 
 	// Set user_id before RLS middleware
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "user-123")
 		return c.Next()
 	})
@@ -282,7 +282,7 @@ func TestRLSMiddleware_Authenticated(t *testing.T) {
 	config := RLSConfig{SessionVarPrefix: "app"}
 	app.Use(RLSMiddleware(config))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		rlsCtx := GetRLSContext(c)
 		assert.Equal(t, "authenticated", rlsCtx.Role)
 		assert.Equal(t, "user-123", rlsCtx.UserID)
@@ -299,7 +299,7 @@ func TestRLSMiddleware_PreservesExistingRole(t *testing.T) {
 	app := fiber.New()
 
 	// Pre-set rls_role (e.g., from service key auth)
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("rls_role", "service_role")
 		return c.Next()
 	})
@@ -307,7 +307,7 @@ func TestRLSMiddleware_PreservesExistingRole(t *testing.T) {
 	config := RLSConfig{SessionVarPrefix: "app"}
 	app.Use(RLSMiddleware(config))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		rlsCtx := GetRLSContext(c)
 		assert.Equal(t, "service_role", rlsCtx.Role)
 		return c.SendString("OK")
@@ -323,7 +323,7 @@ func TestRLSMiddleware_WithUserRole(t *testing.T) {
 	app := fiber.New()
 
 	// Set both user_id and user_role
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "admin-123")
 		c.Locals("user_role", "admin")
 		return c.Next()
@@ -332,7 +332,7 @@ func TestRLSMiddleware_WithUserRole(t *testing.T) {
 	config := RLSConfig{SessionVarPrefix: "app"}
 	app.Use(RLSMiddleware(config))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		rlsCtx := GetRLSContext(c)
 		// user_role should override default "authenticated"
 		assert.Equal(t, "admin", rlsCtx.Role)
@@ -350,7 +350,7 @@ func TestRLSMiddleware_EmptyUserRoleNotOverwrite(t *testing.T) {
 	app := fiber.New()
 
 	// Set user_id but empty user_role
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_id", "user-123")
 		c.Locals("user_role", "") // Empty string should NOT overwrite "authenticated"
 		return c.Next()
@@ -359,7 +359,7 @@ func TestRLSMiddleware_EmptyUserRoleNotOverwrite(t *testing.T) {
 	config := RLSConfig{SessionVarPrefix: "app"}
 	app.Use(RLSMiddleware(config))
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		rlsCtx := GetRLSContext(c)
 		// Empty user_role should keep "authenticated"
 		assert.Equal(t, "authenticated", rlsCtx.Role)
@@ -379,7 +379,7 @@ func TestRLSMiddleware_CallsNext(t *testing.T) {
 	app.Use(RLSMiddleware(config))
 
 	handlerCalled := false
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		handlerCalled = true
 		return c.SendString("OK")
 	})
@@ -484,9 +484,9 @@ func BenchmarkSplitTableName(b *testing.B) {
 
 func BenchmarkGetRLSContext(b *testing.B) {
 	app := fiber.New()
-	var captured *fiber.Ctx
+	var captured fiber.Ctx
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals("rls_user_id", "user-123")
 		c.Locals("rls_role", "authenticated")
 		captured = c
@@ -511,7 +511,7 @@ func BenchmarkRLSMiddleware(b *testing.B) {
 
 	config := RLSConfig{SessionVarPrefix: "app"}
 	app.Use(RLSMiddleware(config))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

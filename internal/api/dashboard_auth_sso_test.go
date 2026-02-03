@@ -13,7 +13,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -75,7 +75,7 @@ func setupDashboardAuthTestServer(t *testing.T) (*fiber.App, *DashboardAuthHandl
 	dashboardAuth := auth.NewDashboardAuthService(db, jwtManager, "FluxbaseTest")
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
+		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
@@ -129,7 +129,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/dashboard/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, 30000)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -153,7 +153,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/dashboard/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, 30000)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -185,7 +185,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/dashboard/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, 30000)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -210,7 +210,7 @@ func TestGetSSOProvidersEndpoint(t *testing.T) {
 		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/dashboard/auth/sso/providers", nil)
-		resp, err := app.Test(req, 30000)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -233,7 +233,7 @@ func TestGetSSOProvidersEndpoint(t *testing.T) {
 		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/dashboard/auth/sso/providers", nil)
-		resp, err := app.Test(req, 30000)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 

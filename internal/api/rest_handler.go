@@ -7,7 +7,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -34,7 +34,7 @@ func (h *RESTHandler) SchemaCache() *database.SchemaCache {
 
 // parseTableFromPath extracts schema and table name from URL path parameters
 // Handles both /tables/:table and /tables/:schema/:table patterns
-func (h *RESTHandler) parseTableFromPath(c *fiber.Ctx) (schema, table string) {
+func (h *RESTHandler) parseTableFromPath(c fiber.Ctx) (schema, table string) {
 	// Get path parameters
 	// For paths like /tables/posts, Fiber sees schema="posts", table=""
 	// For paths like /tables/auth/users, Fiber sees schema="auth", table="users"
@@ -51,8 +51,8 @@ func (h *RESTHandler) parseTableFromPath(c *fiber.Ctx) (schema, table string) {
 
 // HandleDynamicTable handles REST operations for any table via dynamic lookup
 // Supports GET (list), POST (create), PATCH (batch update), DELETE (batch delete)
-func (h *RESTHandler) HandleDynamicTable(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *RESTHandler) HandleDynamicTable(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema, tableName := h.parseTableFromPath(c)
 
 	// Debug logging for service_role troubleshooting
@@ -127,8 +127,8 @@ func (h *RESTHandler) HandleDynamicTable(c *fiber.Ctx) error {
 
 // HandleDynamicTableById handles REST operations for a specific record
 // Supports GET (fetch), PUT (replace), PATCH (update), DELETE (remove)
-func (h *RESTHandler) HandleDynamicTableById(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *RESTHandler) HandleDynamicTableById(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema, tableName := h.parseTableFromPath(c)
 
 	// Look up table in cache
@@ -186,8 +186,8 @@ func (h *RESTHandler) HandleDynamicTableById(c *fiber.Ctx) error {
 }
 
 // HandleDynamicQuery handles POST-based query for complex filters
-func (h *RESTHandler) HandleDynamicQuery(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *RESTHandler) HandleDynamicQuery(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema, tableName := h.parseTableFromPath(c)
 
 	// Look up table in cache
@@ -271,8 +271,8 @@ func (h *RESTHandler) BuildFullTablePath(table database.TableInfo) string {
 }
 
 // HandleGetTables returns metadata about available tables
-func (h *RESTHandler) HandleGetTables(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *RESTHandler) HandleGetTables(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Get all tables from cache
 	tables, err := h.schemaCache.GetAllTables(ctx)
@@ -329,3 +329,5 @@ func (h *RESTHandler) HandleGetTables(c *fiber.Ctx) error {
 
 	return c.JSON(response)
 }
+
+// fiber:context-methods migrated

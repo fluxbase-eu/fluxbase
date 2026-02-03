@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,8 +21,8 @@ func NewAdminSessionHandler(sessionRepo *auth.SessionRepository) *AdminSessionHa
 }
 
 // ListSessions lists all active sessions with pagination
-func (h *AdminSessionHandler) ListSessions(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *AdminSessionHandler) ListSessions(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Check if we should include expired sessions
 	includeExpired := c.Query("include_expired") == "true"
@@ -62,8 +62,8 @@ func (h *AdminSessionHandler) ListSessions(c *fiber.Ctx) error {
 }
 
 // RevokeSession revokes a specific session
-func (h *AdminSessionHandler) RevokeSession(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *AdminSessionHandler) RevokeSession(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	sessionID := c.Params("id")
 
 	if sessionID == "" {
@@ -91,8 +91,8 @@ func (h *AdminSessionHandler) RevokeSession(c *fiber.Ctx) error {
 }
 
 // RevokeUserSessions revokes all sessions for a specific user
-func (h *AdminSessionHandler) RevokeUserSessions(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *AdminSessionHandler) RevokeUserSessions(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	userID := c.Params("user_id")
 
 	if userID == "" {
@@ -113,3 +113,5 @@ func (h *AdminSessionHandler) RevokeUserSessions(c *fiber.Ctx) error {
 		"message": "All user sessions revoked successfully",
 	})
 }
+
+// fiber:context-methods migrated

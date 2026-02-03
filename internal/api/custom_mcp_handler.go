@@ -8,7 +8,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/mcp/custom"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -71,7 +71,7 @@ func (h *CustomMCPHandler) RegisterRoutes(
 // Configuration Handlers
 
 // GetConfig returns the current MCP configuration.
-func (h *CustomMCPHandler) GetConfig(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) GetConfig(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"enabled":            h.mcpConfig.Enabled,
 		"base_path":          h.mcpConfig.BasePath,
@@ -84,16 +84,16 @@ func (h *CustomMCPHandler) GetConfig(c *fiber.Ctx) error {
 // Tool Handlers
 
 // ListTools returns all custom MCP tools.
-func (h *CustomMCPHandler) ListTools(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) ListTools(c fiber.Ctx) error {
 	filter := custom.ListToolsFilter{
 		Namespace:   c.Query("namespace"),
 		EnabledOnly: c.Query("enabled_only") == "true",
 	}
 
-	if limit := c.QueryInt("limit", 0); limit > 0 {
+	if limit := fiber.Query[int](c, "limit", 0); limit > 0 {
 		filter.Limit = limit
 	}
-	if offset := c.QueryInt("offset", 0); offset > 0 {
+	if offset := fiber.Query[int](c, "offset", 0); offset > 0 {
 		filter.Offset = offset
 	}
 
@@ -105,7 +105,7 @@ func (h *CustomMCPHandler) ListTools(c *fiber.Ctx) error {
 		})
 	}
 
-	tools, err := h.storage.ListTools(c.Context(), filter)
+	tools, err := h.storage.ListTools(c.RequestCtx(), filter)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to list custom tools: %v", err),
@@ -119,7 +119,7 @@ func (h *CustomMCPHandler) ListTools(c *fiber.Ctx) error {
 }
 
 // GetTool returns a custom MCP tool by ID.
-func (h *CustomMCPHandler) GetTool(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) GetTool(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -134,7 +134,7 @@ func (h *CustomMCPHandler) GetTool(c *fiber.Ctx) error {
 		})
 	}
 
-	tool, err := h.storage.GetTool(c.Context(), id)
+	tool, err := h.storage.GetTool(c.RequestCtx(), id)
 	if err != nil {
 		if errors.Is(err, custom.ErrToolNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -150,9 +150,9 @@ func (h *CustomMCPHandler) GetTool(c *fiber.Ctx) error {
 }
 
 // CreateTool creates a new custom MCP tool.
-func (h *CustomMCPHandler) CreateTool(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) CreateTool(c fiber.Ctx) error {
 	var req custom.CreateToolRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -183,7 +183,7 @@ func (h *CustomMCPHandler) CreateTool(c *fiber.Ctx) error {
 		createdBy = &userID
 	}
 
-	tool, err := h.storage.CreateTool(c.Context(), &req, createdBy)
+	tool, err := h.storage.CreateTool(c.RequestCtx(), &req, createdBy)
 	if err != nil {
 		if errors.Is(err, custom.ErrToolAlreadyExists) {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
@@ -207,7 +207,7 @@ func (h *CustomMCPHandler) CreateTool(c *fiber.Ctx) error {
 }
 
 // UpdateTool updates an existing custom MCP tool.
-func (h *CustomMCPHandler) UpdateTool(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) UpdateTool(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -216,7 +216,7 @@ func (h *CustomMCPHandler) UpdateTool(c *fiber.Ctx) error {
 	}
 
 	var req custom.UpdateToolRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -231,7 +231,7 @@ func (h *CustomMCPHandler) UpdateTool(c *fiber.Ctx) error {
 		}
 	}
 
-	tool, err := h.storage.UpdateTool(c.Context(), id, &req)
+	tool, err := h.storage.UpdateTool(c.RequestCtx(), id, &req)
 	if err != nil {
 		if errors.Is(err, custom.ErrToolNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -261,7 +261,7 @@ func (h *CustomMCPHandler) UpdateTool(c *fiber.Ctx) error {
 }
 
 // DeleteTool deletes a custom MCP tool.
-func (h *CustomMCPHandler) DeleteTool(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) DeleteTool(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -270,7 +270,7 @@ func (h *CustomMCPHandler) DeleteTool(c *fiber.Ctx) error {
 	}
 
 	// Get tool first to get name for unregistering
-	tool, err := h.storage.GetTool(c.Context(), id)
+	tool, err := h.storage.GetTool(c.RequestCtx(), id)
 	if err != nil {
 		if errors.Is(err, custom.ErrToolNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -282,7 +282,7 @@ func (h *CustomMCPHandler) DeleteTool(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.storage.DeleteTool(c.Context(), id); err != nil {
+	if err := h.storage.DeleteTool(c.RequestCtx(), id); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to delete tool: %v", err),
 		})
@@ -297,9 +297,9 @@ func (h *CustomMCPHandler) DeleteTool(c *fiber.Ctx) error {
 }
 
 // SyncTool creates or updates a tool by name (upsert).
-func (h *CustomMCPHandler) SyncTool(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) SyncTool(c fiber.Ctx) error {
 	var req custom.SyncToolRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -333,7 +333,7 @@ func (h *CustomMCPHandler) SyncTool(c *fiber.Ctx) error {
 		createdBy = &userID
 	}
 
-	tool, err := h.storage.SyncTool(c.Context(), &req, createdBy)
+	tool, err := h.storage.SyncTool(c.RequestCtx(), &req, createdBy)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to sync tool: %v", err),
@@ -349,7 +349,7 @@ func (h *CustomMCPHandler) SyncTool(c *fiber.Ctx) error {
 }
 
 // TestTool tests a custom MCP tool execution.
-func (h *CustomMCPHandler) TestTool(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) TestTool(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -360,13 +360,13 @@ func (h *CustomMCPHandler) TestTool(c *fiber.Ctx) error {
 	var req struct {
 		Args map[string]any `json:"args"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
 	}
 
-	tool, err := h.storage.GetTool(c.Context(), id)
+	tool, err := h.storage.GetTool(c.RequestCtx(), id)
 	if err != nil {
 		if errors.Is(err, custom.ErrToolNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -386,7 +386,7 @@ func (h *CustomMCPHandler) TestTool(c *fiber.Ctx) error {
 
 	// Execute the tool (manager has the executor)
 	// For testing, we'll create a simple auth context
-	result, err := h.manager.ExecuteToolForTest(c.Context(), tool, req.Args)
+	result, err := h.manager.ExecuteToolForTest(c.RequestCtx(), tool, req.Args)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":  fmt.Sprintf("Tool execution failed: %v", err),
@@ -403,20 +403,20 @@ func (h *CustomMCPHandler) TestTool(c *fiber.Ctx) error {
 // Resource Handlers
 
 // ListResources returns all custom MCP resources.
-func (h *CustomMCPHandler) ListResources(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) ListResources(c fiber.Ctx) error {
 	filter := custom.ListResourcesFilter{
 		Namespace:   c.Query("namespace"),
 		EnabledOnly: c.Query("enabled_only") == "true",
 	}
 
-	if limit := c.QueryInt("limit", 0); limit > 0 {
+	if limit := fiber.Query[int](c, "limit", 0); limit > 0 {
 		filter.Limit = limit
 	}
-	if offset := c.QueryInt("offset", 0); offset > 0 {
+	if offset := fiber.Query[int](c, "offset", 0); offset > 0 {
 		filter.Offset = offset
 	}
 
-	resources, err := h.storage.ListResources(c.Context(), filter)
+	resources, err := h.storage.ListResources(c.RequestCtx(), filter)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to list custom resources: %v", err),
@@ -430,7 +430,7 @@ func (h *CustomMCPHandler) ListResources(c *fiber.Ctx) error {
 }
 
 // GetResource returns a custom MCP resource by ID.
-func (h *CustomMCPHandler) GetResource(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) GetResource(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -438,7 +438,7 @@ func (h *CustomMCPHandler) GetResource(c *fiber.Ctx) error {
 		})
 	}
 
-	resource, err := h.storage.GetResource(c.Context(), id)
+	resource, err := h.storage.GetResource(c.RequestCtx(), id)
 	if err != nil {
 		if errors.Is(err, custom.ErrResourceNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -454,9 +454,9 @@ func (h *CustomMCPHandler) GetResource(c *fiber.Ctx) error {
 }
 
 // CreateResource creates a new custom MCP resource.
-func (h *CustomMCPHandler) CreateResource(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) CreateResource(c fiber.Ctx) error {
 	var req custom.CreateResourceRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -492,7 +492,7 @@ func (h *CustomMCPHandler) CreateResource(c *fiber.Ctx) error {
 		createdBy = &userID
 	}
 
-	resource, err := h.storage.CreateResource(c.Context(), &req, createdBy)
+	resource, err := h.storage.CreateResource(c.RequestCtx(), &req, createdBy)
 	if err != nil {
 		if errors.Is(err, custom.ErrResourceExists) {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
@@ -515,7 +515,7 @@ func (h *CustomMCPHandler) CreateResource(c *fiber.Ctx) error {
 }
 
 // UpdateResource updates an existing custom MCP resource.
-func (h *CustomMCPHandler) UpdateResource(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) UpdateResource(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -524,7 +524,7 @@ func (h *CustomMCPHandler) UpdateResource(c *fiber.Ctx) error {
 	}
 
 	var req custom.UpdateResourceRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -539,7 +539,7 @@ func (h *CustomMCPHandler) UpdateResource(c *fiber.Ctx) error {
 		}
 	}
 
-	resource, err := h.storage.UpdateResource(c.Context(), id, &req)
+	resource, err := h.storage.UpdateResource(c.RequestCtx(), id, &req)
 	if err != nil {
 		if errors.Is(err, custom.ErrResourceNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -569,7 +569,7 @@ func (h *CustomMCPHandler) UpdateResource(c *fiber.Ctx) error {
 }
 
 // DeleteResource deletes a custom MCP resource.
-func (h *CustomMCPHandler) DeleteResource(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) DeleteResource(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -578,7 +578,7 @@ func (h *CustomMCPHandler) DeleteResource(c *fiber.Ctx) error {
 	}
 
 	// Get resource first to get URI for unregistering
-	resource, err := h.storage.GetResource(c.Context(), id)
+	resource, err := h.storage.GetResource(c.RequestCtx(), id)
 	if err != nil {
 		if errors.Is(err, custom.ErrResourceNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -590,7 +590,7 @@ func (h *CustomMCPHandler) DeleteResource(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.storage.DeleteResource(c.Context(), id); err != nil {
+	if err := h.storage.DeleteResource(c.RequestCtx(), id); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to delete resource: %v", err),
 		})
@@ -605,9 +605,9 @@ func (h *CustomMCPHandler) DeleteResource(c *fiber.Ctx) error {
 }
 
 // SyncResource creates or updates a resource by URI (upsert).
-func (h *CustomMCPHandler) SyncResource(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) SyncResource(c fiber.Ctx) error {
 	var req custom.SyncResourceRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -646,7 +646,7 @@ func (h *CustomMCPHandler) SyncResource(c *fiber.Ctx) error {
 		createdBy = &userID
 	}
 
-	resource, err := h.storage.SyncResource(c.Context(), &req, createdBy)
+	resource, err := h.storage.SyncResource(c.RequestCtx(), &req, createdBy)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to sync resource: %v", err),
@@ -662,7 +662,7 @@ func (h *CustomMCPHandler) SyncResource(c *fiber.Ctx) error {
 }
 
 // TestResource tests a custom MCP resource read.
-func (h *CustomMCPHandler) TestResource(c *fiber.Ctx) error {
+func (h *CustomMCPHandler) TestResource(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -673,13 +673,13 @@ func (h *CustomMCPHandler) TestResource(c *fiber.Ctx) error {
 	var req struct {
 		Params map[string]string `json:"params"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
 	}
 
-	resource, err := h.storage.GetResource(c.Context(), id)
+	resource, err := h.storage.GetResource(c.RequestCtx(), id)
 	if err != nil {
 		if errors.Is(err, custom.ErrResourceNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -698,7 +698,7 @@ func (h *CustomMCPHandler) TestResource(c *fiber.Ctx) error {
 	}
 
 	// Execute the resource
-	contents, err := h.manager.ExecuteResourceForTest(c.Context(), resource, req.Params)
+	contents, err := h.manager.ExecuteResourceForTest(c.RequestCtx(), resource, req.Params)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Resource read failed: %v", err),
@@ -710,3 +710,5 @@ func (h *CustomMCPHandler) TestResource(c *fiber.Ctx) error {
 		"contents": contents,
 	})
 }
+
+// fiber:context-methods migrated

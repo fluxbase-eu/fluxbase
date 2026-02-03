@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -81,7 +81,7 @@ func TestTracingMiddleware_Disabled(t *testing.T) {
 	}
 
 	app.Use(TracingMiddleware(cfg))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -113,11 +113,11 @@ func TestTracingMiddleware_SkipPaths(t *testing.T) {
 
 	app.Use(TracingMiddleware(cfg))
 
-	app.Get("/health", func(c *fiber.Ctx) error {
+	app.Get("/health", func(c fiber.Ctx) error {
 		return c.SendString("healthy")
 	})
 
-	app.Get("/api/users", func(c *fiber.Ctx) error {
+	app.Get("/api/users", func(c fiber.Ctx) error {
 		return c.SendString("users")
 	})
 
@@ -151,7 +151,7 @@ func TestGetTraceContext(t *testing.T) {
 		app := fiber.New()
 
 		var hasTraceID, hasSpanID bool
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			ctx := GetTraceContext(c)
 			hasTraceID = ctx.HasTraceID()
 			hasSpanID = ctx.HasSpanID()
@@ -171,7 +171,7 @@ func TestGetTraceContext(t *testing.T) {
 		app := fiber.New()
 
 		var hasTraceID bool
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			c.Locals("trace_span", "not-a-span")
 			ctx := GetTraceContext(c)
 			hasTraceID = ctx.HasTraceID()
@@ -196,7 +196,7 @@ func TestGetTraceID(t *testing.T) {
 		app := fiber.New()
 
 		var traceID string
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			traceID = GetTraceID(c)
 			return c.SendString("OK")
 		})
@@ -219,7 +219,7 @@ func TestGetSpanID(t *testing.T) {
 		app := fiber.New()
 
 		var spanID string
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			spanID = GetSpanID(c)
 			return c.SendString("OK")
 		})
@@ -241,7 +241,7 @@ func TestAddSpanEvent(t *testing.T) {
 	t.Run("does not panic when no span", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			// Should not panic
 			AddSpanEvent(c, "test-event")
 			return c.SendString("OK")
@@ -258,7 +258,7 @@ func TestAddSpanEvent(t *testing.T) {
 	t.Run("does not panic when wrong type", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			c.Locals("trace_span", "not-a-span")
 			AddSpanEvent(c, "test-event")
 			return c.SendString("OK")
@@ -281,7 +281,7 @@ func TestSetSpanError(t *testing.T) {
 	t.Run("does not panic when no span", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			SetSpanError(c, fiber.NewError(400, "Bad Request"))
 			return c.SendString("OK")
 		})
@@ -303,7 +303,7 @@ func TestSetSpanAttributes(t *testing.T) {
 	t.Run("does not panic when no span", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			SetSpanAttributes(c) // No attributes
 			return c.SendString("OK")
 		})
@@ -328,7 +328,7 @@ func TestStartChildSpan(t *testing.T) {
 		var spanNotNil bool
 		var cleanupNotNil bool
 
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			span, cleanup := StartChildSpan(c, "child-operation")
 			spanNotNil = span != nil
 			cleanupNotNil = cleanup != nil
@@ -357,7 +357,7 @@ func TestTracingMiddleware_RequestLifecycle(t *testing.T) {
 		cfg := DefaultTracingConfig()
 		app.Use(TracingMiddleware(cfg))
 
-		app.Get("/api/test", func(c *fiber.Ctx) error {
+		app.Get("/api/test", func(c fiber.Ctx) error {
 			return c.SendString("Response")
 		})
 
@@ -378,7 +378,7 @@ func TestTracingMiddleware_RequestLifecycle(t *testing.T) {
 		cfg := DefaultTracingConfig()
 		app.Use(TracingMiddleware(cfg))
 
-		app.Get("/api/error", func(c *fiber.Ctx) error {
+		app.Get("/api/error", func(c fiber.Ctx) error {
 			return c.Status(500).SendString("Internal Error")
 		})
 
@@ -396,7 +396,7 @@ func TestTracingMiddleware_RequestLifecycle(t *testing.T) {
 		cfg := DefaultTracingConfig()
 		app.Use(TracingMiddleware(cfg))
 
-		app.Get("/api/fiber-error", func(c *fiber.Ctx) error {
+		app.Get("/api/fiber-error", func(c fiber.Ctx) error {
 			return fiber.NewError(400, "Bad Request")
 		})
 
@@ -418,7 +418,7 @@ func TestTracingMiddleware_UserContext(t *testing.T) {
 		app := fiber.New()
 
 		// Set user context before tracing middleware
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("user_id", "user-123")
 			c.Locals("user_role", "admin")
 			return c.Next()
@@ -427,7 +427,7 @@ func TestTracingMiddleware_UserContext(t *testing.T) {
 		cfg := DefaultTracingConfig()
 		app.Use(TracingMiddleware(cfg))
 
-		app.Get("/api/test", func(c *fiber.Ctx) error {
+		app.Get("/api/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -454,7 +454,7 @@ func TestTracingMiddleware_BodyRecording(t *testing.T) {
 		}
 		app.Use(TracingMiddleware(cfg))
 
-		app.Post("/api/test", func(c *fiber.Ctx) error {
+		app.Post("/api/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -475,7 +475,7 @@ func TestTracingMiddleware_BodyRecording(t *testing.T) {
 		}
 		app.Use(TracingMiddleware(cfg))
 
-		app.Get("/api/test", func(c *fiber.Ctx) error {
+		app.Get("/api/test", func(c fiber.Ctx) error {
 			return c.SendString("Response body")
 		})
 
@@ -497,7 +497,7 @@ func BenchmarkTracingMiddleware_Disabled(b *testing.B) {
 
 	cfg := TracingConfig{Enabled: false}
 	app.Use(TracingMiddleware(cfg))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -518,7 +518,7 @@ func BenchmarkTracingMiddleware_SkipPath(b *testing.B) {
 		SkipPaths: []string{"/health"},
 	}
 	app.Use(TracingMiddleware(cfg))
-	app.Get("/health", func(c *fiber.Ctx) error {
+	app.Get("/health", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -534,7 +534,7 @@ func BenchmarkTracingMiddleware_SkipPath(b *testing.B) {
 func BenchmarkGetTraceID_NoSpan(b *testing.B) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		for i := 0; i < b.N; i++ {
 			_ = GetTraceID(c)
 		}
@@ -549,7 +549,7 @@ func BenchmarkGetTraceID_NoSpan(b *testing.B) {
 func BenchmarkGetSpanID_NoSpan(b *testing.B) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		for i := 0; i < b.N; i++ {
 			_ = GetSpanID(c)
 		}

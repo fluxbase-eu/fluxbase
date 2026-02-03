@@ -4,7 +4,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +26,7 @@ func TestSecurityHeaders(t *testing.T) {
 	t.Run("applies default headers", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(SecurityHeaders())
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -53,7 +53,7 @@ func TestSecurityHeaders(t *testing.T) {
 			ReferrerPolicy:        "no-referrer",
 			PermissionsPolicy:     "camera=()",
 		}))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -74,7 +74,7 @@ func TestSecurityHeaders(t *testing.T) {
 			ContentSecurityPolicy: "",
 			XFrameOptions:         "",
 		}))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -89,7 +89,7 @@ func TestSecurityHeaders(t *testing.T) {
 	t.Run("removes server header", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(SecurityHeaders())
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -104,7 +104,7 @@ func TestSecurityHeaders(t *testing.T) {
 	t.Run("does not add HSTS on non-HTTPS", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(SecurityHeaders())
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -120,7 +120,7 @@ func TestSecurityHeaders(t *testing.T) {
 func TestAdminUISecurityHeaders(t *testing.T) {
 	app := fiber.New()
 	app.Use(AdminUISecurityHeaders())
-	app.Get("/admin", func(c *fiber.Ctx) error {
+	app.Get("/admin", func(c fiber.Ctx) error {
 		return c.SendString("Admin UI")
 	})
 

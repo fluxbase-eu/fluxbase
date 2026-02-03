@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/storage/memory/v2"
 )
 
@@ -65,7 +65,7 @@ func CSRF(config ...CSRFConfig) fiber.Handler {
 		})
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Skip CSRF for safe methods (GET, HEAD, OPTIONS)
 		method := c.Method()
 		if method == fiber.MethodGet || method == fiber.MethodHead || method == fiber.MethodOptions {
@@ -204,7 +204,7 @@ func generateCSRFToken(length int) (string, error) {
 }
 
 // GetCSRFToken is a helper to retrieve the CSRF token for the current request
-func GetCSRFToken(c *fiber.Ctx) string {
+func GetCSRFToken(c fiber.Ctx) string {
 	return c.Cookies("csrf_token")
 }
 

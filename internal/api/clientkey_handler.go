@@ -6,7 +6,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -63,9 +63,9 @@ func (h *ClientKeyHandler) RegisterRoutes(app *fiber.App, authService *auth.Serv
 }
 
 // CreateClientKey creates a new client key
-func (h *ClientKeyHandler) CreateClientKey(c *fiber.Ctx) error {
+func (h *ClientKeyHandler) CreateClientKey(c fiber.Ctx) error {
 	var req CreateClientKeyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -85,7 +85,7 @@ func (h *ClientKeyHandler) CreateClientKey(c *fiber.Ctx) error {
 	}
 
 	clientKey, err := h.clientKeyService.GenerateClientKey(
-		c.Context(),
+		c.RequestCtx(),
 		req.Name,
 		req.Description,
 		userIDPtr,
@@ -104,7 +104,7 @@ func (h *ClientKeyHandler) CreateClientKey(c *fiber.Ctx) error {
 
 // ListClientKeys lists client keys
 // Non-admin users can only see their own keys
-func (h *ClientKeyHandler) ListClientKeys(c *fiber.Ctx) error {
+func (h *ClientKeyHandler) ListClientKeys(c fiber.Ctx) error {
 	// Get current user info
 	currentUserID, _ := c.Locals("user_id").(string)
 	role, _ := c.Locals("user_role").(string)
@@ -145,7 +145,7 @@ func (h *ClientKeyHandler) ListClientKeys(c *fiber.Ctx) error {
 		})
 	}
 
-	clientKeys, err := h.clientKeyService.ListClientKeys(c.Context(), userID)
+	clientKeys, err := h.clientKeyService.ListClientKeys(c.RequestCtx(), userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to list client keys: %v", err),
@@ -157,7 +157,7 @@ func (h *ClientKeyHandler) ListClientKeys(c *fiber.Ctx) error {
 
 // GetClientKey retrieves a single client key
 // Non-admin users can only view their own keys
-func (h *ClientKeyHandler) GetClientKey(c *fiber.Ctx) error {
+func (h *ClientKeyHandler) GetClientKey(c fiber.Ctx) error {
 	// Validate ID format first (validation should come before nil checks)
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
@@ -180,7 +180,7 @@ func (h *ClientKeyHandler) GetClientKey(c *fiber.Ctx) error {
 	isAdmin := role == "admin" || role == "dashboard_admin" || role == "service_role"
 
 	// For simplicity, we'll just list and filter (in production, add a GetByID method)
-	clientKeys, err := h.clientKeyService.ListClientKeys(c.Context(), nil)
+	clientKeys, err := h.clientKeyService.ListClientKeys(c.RequestCtx(), nil)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to get client key: %v", err),
@@ -205,7 +205,7 @@ func (h *ClientKeyHandler) GetClientKey(c *fiber.Ctx) error {
 }
 
 // UpdateClientKey updates a client key's metadata
-func (h *ClientKeyHandler) UpdateClientKey(c *fiber.Ctx) error {
+func (h *ClientKeyHandler) UpdateClientKey(c fiber.Ctx) error {
 	// Validate ID format first
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
@@ -217,7 +217,7 @@ func (h *ClientKeyHandler) UpdateClientKey(c *fiber.Ctx) error {
 
 	// Parse request body before checking service
 	var req UpdateClientKeyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -230,7 +230,7 @@ func (h *ClientKeyHandler) UpdateClientKey(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.clientKeyService.UpdateClientKey(c.Context(), id, req.Name, req.Description, req.Scopes, req.RateLimitPerMinute)
+	err = h.clientKeyService.UpdateClientKey(c.RequestCtx(), id, req.Name, req.Description, req.Scopes, req.RateLimitPerMinute)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to update client key: %v", err),
@@ -244,7 +244,7 @@ func (h *ClientKeyHandler) UpdateClientKey(c *fiber.Ctx) error {
 }
 
 // RevokeClientKey revokes a client key
-func (h *ClientKeyHandler) RevokeClientKey(c *fiber.Ctx) error {
+func (h *ClientKeyHandler) RevokeClientKey(c fiber.Ctx) error {
 	// Validate ID format first
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
@@ -261,7 +261,7 @@ func (h *ClientKeyHandler) RevokeClientKey(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.clientKeyService.RevokeClientKey(c.Context(), id)
+	err = h.clientKeyService.RevokeClientKey(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to revoke client key: %v", err),
@@ -275,7 +275,7 @@ func (h *ClientKeyHandler) RevokeClientKey(c *fiber.Ctx) error {
 }
 
 // DeleteClientKey permanently deletes a client key
-func (h *ClientKeyHandler) DeleteClientKey(c *fiber.Ctx) error {
+func (h *ClientKeyHandler) DeleteClientKey(c fiber.Ctx) error {
 	// Validate ID format first
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
@@ -292,7 +292,7 @@ func (h *ClientKeyHandler) DeleteClientKey(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.clientKeyService.DeleteClientKey(c.Context(), id)
+	err = h.clientKeyService.DeleteClientKey(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to delete client key: %v", err),
@@ -301,3 +301,5 @@ func (h *ClientKeyHandler) DeleteClientKey(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
+
+// fiber:context-methods migrated

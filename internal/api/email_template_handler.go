@@ -8,7 +8,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/email"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -157,7 +157,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
 
 // ListTemplates returns all email templates
 // GET /api/v1/admin/email/templates
-func (h *EmailTemplateHandler) ListTemplates(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) ListTemplates(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Check if database connection is available
@@ -215,7 +215,7 @@ func (h *EmailTemplateHandler) ListTemplates(c *fiber.Ctx) error {
 
 // GetTemplate returns a specific email template by type
 // GET /api/v1/admin/email/templates/:type
-func (h *EmailTemplateHandler) GetTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) GetTemplate(c fiber.Ctx) error {
 	ctx := context.Background()
 	templateType := c.Params("type")
 
@@ -271,7 +271,7 @@ func (h *EmailTemplateHandler) GetTemplate(c *fiber.Ctx) error {
 
 // UpdateTemplate updates or creates an email template
 // PUT /api/v1/admin/email/templates/:type
-func (h *EmailTemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) UpdateTemplate(c fiber.Ctx) error {
 	ctx := context.Background()
 	templateType := c.Params("type")
 
@@ -283,7 +283,7 @@ func (h *EmailTemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 	}
 
 	var req UpdateTemplateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse update template request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -333,7 +333,7 @@ func (h *EmailTemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 
 // ResetTemplate resets an email template to its default
 // POST /api/v1/admin/email/templates/:type/reset
-func (h *EmailTemplateHandler) ResetTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) ResetTemplate(c fiber.Ctx) error {
 	ctx := context.Background()
 	templateType := c.Params("type")
 
@@ -372,7 +372,7 @@ func (h *EmailTemplateHandler) ResetTemplate(c *fiber.Ctx) error {
 
 // TestTemplate sends a test email using the specified template
 // POST /api/v1/admin/email/templates/:type/test
-func (h *EmailTemplateHandler) TestTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) TestTemplate(c fiber.Ctx) error {
 	templateType := c.Params("type")
 
 	// Validate template type
@@ -383,7 +383,7 @@ func (h *EmailTemplateHandler) TestTemplate(c *fiber.Ctx) error {
 	}
 
 	var req TestEmailRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse test email request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",

@@ -10,7 +10,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -239,9 +239,9 @@ type VectorSearchResponse struct {
 }
 
 // HandleEmbed handles POST /api/v1/vector/embed
-func (h *VectorHandler) HandleEmbed(c *fiber.Ctx) error {
+func (h *VectorHandler) HandleEmbed(c fiber.Ctx) error {
 	var req EmbedRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -263,7 +263,7 @@ func (h *VectorHandler) HandleEmbed(c *fiber.Ctx) error {
 		}
 
 		// Get embedding service for specified provider
-		embeddingService, err = h.vectorManager.GetEmbeddingServiceForProvider(c.Context(), req.Provider)
+		embeddingService, err = h.vectorManager.GetEmbeddingServiceForProvider(c.RequestCtx(), req.Provider)
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": err.Error(),
@@ -294,7 +294,7 @@ func (h *VectorHandler) HandleEmbed(c *fiber.Ctx) error {
 	}
 
 	// Generate embeddings
-	resp, err := embeddingService.Embed(c.Context(), texts, req.Model)
+	resp, err := embeddingService.Embed(c.RequestCtx(), texts, req.Model)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate embeddings")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -320,7 +320,7 @@ func (h *VectorHandler) HandleEmbed(c *fiber.Ctx) error {
 
 // HandleSearch handles POST /api/v1/vector/search
 // This is a convenience endpoint that auto-embeds query text and performs vector similarity search
-func (h *VectorHandler) HandleSearch(c *fiber.Ctx) error {
+func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
 	if h.db == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Database not configured",
@@ -328,7 +328,7 @@ func (h *VectorHandler) HandleSearch(c *fiber.Ctx) error {
 	}
 
 	var req VectorSearchRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -360,7 +360,7 @@ func (h *VectorHandler) HandleSearch(c *fiber.Ctx) error {
 			})
 		}
 
-		embedding, err := embeddingService.EmbedSingle(c.Context(), req.Query, "")
+		embedding, err := embeddingService.EmbedSingle(c.RequestCtx(), req.Query, "")
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to embed query")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -454,7 +454,7 @@ func (h *VectorHandler) HandleSearch(c *fiber.Ctx) error {
 	}
 
 	// Execute vector search with RLS context
-	data, distances, err := h.executeVectorSearch(c.Context(), vectorSearchParams{
+	data, distances, err := h.executeVectorSearch(c.RequestCtx(), vectorSearchParams{
 		table:          req.Table,
 		column:         req.Column,
 		selectCols:     selectCols,
@@ -668,7 +668,7 @@ type VectorCapabilities struct {
 // HandleGetCapabilities handles GET /api/v1/capabilities/vector
 // Returns information about vector search capabilities
 // Non-admin users only receive minimal info (enabled status)
-func (h *VectorHandler) HandleGetCapabilities(c *fiber.Ctx) error {
+func (h *VectorHandler) HandleGetCapabilities(c fiber.Ctx) error {
 	// EmbeddingEnabled reflects actual service availability (including fallback)
 	embeddingAvailable := h.vectorManager.GetEmbeddingService() != nil
 
@@ -676,7 +676,7 @@ func (h *VectorHandler) HandleGetCapabilities(c *fiber.Ctx) error {
 	pgVectorInstalled := false
 	var pgVectorVersion string
 	if h.schemaInspector != nil {
-		installed, version, err := h.schemaInspector.IsPgVectorInstalled(c.Context())
+		installed, version, err := h.schemaInspector.IsPgVectorInstalled(c.RequestCtx())
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to check pgvector status")
 		} else {
@@ -726,14 +726,16 @@ func (h *VectorHandler) HandleGetCapabilities(c *fiber.Ctx) error {
 }
 
 // IsPgVectorInstalled checks whether pgvector is installed on the database
-func (h *VectorHandler) IsPgVectorInstalled(c *fiber.Ctx) bool {
+func (h *VectorHandler) IsPgVectorInstalled(c fiber.Ctx) bool {
 	if h.schemaInspector == nil {
 		return false
 	}
-	installed, _, err := h.schemaInspector.IsPgVectorInstalled(c.Context())
+	installed, _, err := h.schemaInspector.IsPgVectorInstalled(c.RequestCtx())
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to check pgvector status")
 		return false
 	}
 	return installed
 }
+
+// fiber:context-methods migrated

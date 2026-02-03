@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -86,8 +86,8 @@ func (h *Handler) ValidateConfig() {
 
 // ListChatbots returns all chatbots (admin view)
 // GET /api/v1/admin/ai/chatbots
-func (h *Handler) ListChatbots(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ListChatbots(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	chatbots, err := h.storage.ListChatbots(ctx, false)
 	if err != nil {
@@ -111,8 +111,8 @@ func (h *Handler) ListChatbots(c *fiber.Ctx) error {
 
 // GetChatbot returns a single chatbot by ID (admin view)
 // GET /api/v1/admin/ai/chatbots/:id
-func (h *Handler) GetChatbot(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetChatbot(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	chatbot, err := h.storage.GetChatbot(ctx, id)
@@ -148,9 +148,9 @@ type SyncChatbotsRequest struct {
 // SyncChatbots syncs chatbots from filesystem or SDK payload
 // POST /api/v1/admin/ai/chatbots/sync
 // If chatbots array is empty, syncs from filesystem. Otherwise syncs provided chatbots.
-func (h *Handler) SyncChatbots(c *fiber.Ctx) error {
+func (h *Handler) SyncChatbots(c fiber.Ctx) error {
 	var req SyncChatbotsRequest
-	_ = c.BodyParser(&req) // Body is optional, continue with defaults
+	_ = c.Bind().Body(&req) // Body is optional, continue with defaults
 
 	// Default namespace to "default" if not specified
 	namespace := req.Namespace
@@ -170,8 +170,8 @@ func (h *Handler) SyncChatbots(c *fiber.Ctx) error {
 // syncFromFilesystem syncs chatbots from the filesystem
 // All chatbots are synced to the specified namespace (default: "default")
 // Any existing chatbot in that namespace not found in the filesystem will be deleted
-func (h *Handler) syncFromFilesystem(c *fiber.Ctx, namespace string) error {
-	ctx := c.Context()
+func (h *Handler) syncFromFilesystem(c fiber.Ctx, namespace string) error {
+	ctx := c.RequestCtx()
 
 	// Load chatbots from filesystem
 	fsChatbots, err := h.loader.LoadAll()
@@ -301,11 +301,11 @@ func (h *Handler) syncFromFilesystem(c *fiber.Ctx, namespace string) error {
 }
 
 // syncFromPayload syncs chatbots from SDK payload
-func (h *Handler) syncFromPayload(c *fiber.Ctx, namespace string, chatbots []struct {
+func (h *Handler) syncFromPayload(c fiber.Ctx, namespace string, chatbots []struct {
 	Name string `json:"name"`
 	Code string `json:"code"`
 }, deleteMissing bool, dryRun bool) error {
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Get existing chatbots in this namespace
 	dbChatbots, err := h.storage.ListChatbotsByNamespace(ctx, namespace)
@@ -466,12 +466,12 @@ type ToggleChatbotRequest struct {
 
 // ToggleChatbot enables or disables a chatbot
 // PUT /api/v1/admin/ai/chatbots/:id/toggle
-func (h *Handler) ToggleChatbot(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ToggleChatbot(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	var req ToggleChatbotRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -507,8 +507,8 @@ func (h *Handler) ToggleChatbot(c *fiber.Ctx) error {
 
 // DeleteChatbot deletes a chatbot
 // DELETE /api/v1/admin/ai/chatbots/:id
-func (h *Handler) DeleteChatbot(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) DeleteChatbot(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	if err := h.storage.DeleteChatbot(ctx, id); err != nil {
@@ -543,12 +543,12 @@ type UpdateChatbotRequest struct {
 
 // UpdateChatbot updates a chatbot's configuration
 // PUT /api/v1/admin/ai/chatbots/:id
-func (h *Handler) UpdateChatbot(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) UpdateChatbot(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	var req UpdateChatbotRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -668,8 +668,8 @@ func (h *Handler) UpdateChatbot(c *fiber.Ctx) error {
 
 // ListProviders returns all AI providers
 // GET /api/v1/admin/ai/providers
-func (h *Handler) ListProviders(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ListProviders(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	providers, err := h.storage.ListProviders(ctx, false)
 	if err != nil {
@@ -697,8 +697,8 @@ func (h *Handler) ListProviders(c *fiber.Ctx) error {
 
 // GetProvider returns a single provider by ID
 // GET /api/v1/admin/ai/providers/:id
-func (h *Handler) GetProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	provider, err := h.storage.GetProvider(ctx, id)
@@ -759,11 +759,11 @@ func normalizeConfig(config map[string]any) map[string]string {
 
 // CreateProvider creates a new AI provider
 // POST /api/v1/admin/ai/providers
-func (h *Handler) CreateProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) CreateProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	var req CreateProviderRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -828,8 +828,8 @@ func (h *Handler) CreateProvider(c *fiber.Ctx) error {
 
 // SetDefaultProvider sets a provider as the default
 // PUT /api/v1/admin/ai/providers/:id/default
-func (h *Handler) SetDefaultProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) SetDefaultProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	// Prevent modifying config-based provider
@@ -861,8 +861,8 @@ func (h *Handler) SetDefaultProvider(c *fiber.Ctx) error {
 
 // DeleteProvider deletes a provider
 // DELETE /api/v1/admin/ai/providers/:id
-func (h *Handler) DeleteProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) DeleteProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	// Prevent deleting config-based provider
@@ -894,8 +894,8 @@ func (h *Handler) DeleteProvider(c *fiber.Ctx) error {
 
 // SetEmbeddingProvider sets a provider as the embedding provider
 // PUT /api/v1/admin/ai/providers/:id/embedding
-func (h *Handler) SetEmbeddingProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) SetEmbeddingProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	// Prevent modifying config-based provider
@@ -928,8 +928,8 @@ func (h *Handler) SetEmbeddingProvider(c *fiber.Ctx) error {
 
 // ClearEmbeddingProvider clears the explicit embedding provider preference
 // DELETE /api/v1/admin/ai/providers/:id/embedding
-func (h *Handler) ClearEmbeddingProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ClearEmbeddingProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Clear embedding preference (revert to auto/default)
 	if err := h.storage.SetEmbeddingProviderPreference(ctx, ""); err != nil {
@@ -961,8 +961,8 @@ type UpdateProviderRequest struct {
 
 // UpdateProvider updates an AI provider
 // PUT /api/v1/admin/ai/providers/:id
-func (h *Handler) UpdateProvider(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) UpdateProvider(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	// Prevent modifying config-based provider
@@ -973,7 +973,7 @@ func (h *Handler) UpdateProvider(c *fiber.Ctx) error {
 	}
 
 	var req UpdateProviderRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1054,8 +1054,8 @@ func (h *Handler) UpdateProvider(c *fiber.Ctx) error {
 
 // ListPublicChatbots returns all public, enabled chatbots for users
 // GET /api/v1/ai/chatbots
-func (h *Handler) ListPublicChatbots(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ListPublicChatbots(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	chatbots, err := h.storage.ListChatbots(ctx, true)
 	if err != nil {
@@ -1081,8 +1081,8 @@ func (h *Handler) ListPublicChatbots(c *fiber.Ctx) error {
 
 // GetPublicChatbot returns a single public chatbot by name
 // GET /api/v1/ai/chatbots/:namespace/:name
-func (h *Handler) GetPublicChatbot(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetPublicChatbot(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	namespace := c.Params("namespace")
 	name := c.Params("name")
 
@@ -1120,8 +1120,8 @@ type LookupChatbotByNameResponse struct {
 // 2. If exactly one match -> return it
 // 3. If multiple matches -> try "default" namespace first
 // 4. If multiple matches and none in "default" -> return 409 Conflict with namespace list
-func (h *Handler) LookupChatbotByName(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) LookupChatbotByName(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	name := c.Params("name")
 
 	if name == "" {
@@ -1227,8 +1227,8 @@ type AIMetrics struct {
 
 // GetAIMetrics returns aggregated AI metrics
 // GET /api/v1/admin/ai/metrics
-func (h *Handler) GetAIMetrics(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetAIMetrics(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	metrics := AIMetrics{
 		ChatbotStats:  make([]ChatbotMetric, 0),
@@ -1340,15 +1340,15 @@ type ConversationSummary struct {
 
 // GetConversations returns a list of AI conversations with optional filters
 // GET /api/v1/admin/ai/conversations?chatbot_id=X&user_id=Y&status=active&limit=50
-func (h *Handler) GetConversations(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetConversations(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Parse query parameters
 	chatbotID := c.Query("chatbot_id")
 	userID := c.Query("user_id")
 	status := c.Query("status")
-	limit := c.QueryInt("limit", 50)
-	offset := c.QueryInt("offset", 0)
+	limit := fiber.Query[int](c, "limit", 50)
+	offset := fiber.Query[int](c, "offset", 0)
 
 	// Build query
 	query := `
@@ -1490,8 +1490,8 @@ type MessageDetail struct {
 
 // GetConversationMessages returns all messages for a specific conversation
 // GET /api/v1/admin/ai/conversations/:id/messages
-func (h *Handler) GetConversationMessages(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetConversationMessages(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	conversationID := c.Params("id")
 
 	query := `
@@ -1585,15 +1585,15 @@ type AuditLogEntry struct {
 
 // GetAuditLog returns audit log entries with optional filters
 // GET /api/v1/admin/ai/audit?chatbot_id=X&user_id=Y&success=true&limit=100
-func (h *Handler) GetAuditLog(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetAuditLog(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Parse query parameters
 	chatbotID := c.Query("chatbot_id")
 	userID := c.Query("user_id")
 	successStr := c.Query("success")
-	limit := c.QueryInt("limit", 100)
-	offset := c.QueryInt("offset", 0)
+	limit := fiber.Query[int](c, "limit", 100)
+	offset := fiber.Query[int](c, "offset", 0)
 
 	// Build query
 	query := `
@@ -1801,8 +1801,8 @@ type UpdateConversationTitleRequest struct {
 
 // ListUserConversations lists the authenticated user's conversations
 // GET /api/v1/ai/conversations
-func (h *Handler) ListUserConversations(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ListUserConversations(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Get authenticated user ID from context
 	userID := c.Locals("user_id")
@@ -1820,14 +1820,14 @@ func (h *Handler) ListUserConversations(c *fiber.Ctx) error {
 	}
 
 	// Parse query params
-	limit := c.QueryInt("limit", 50)
+	limit := fiber.Query[int](c, "limit", 50)
 	if limit > 100 {
 		limit = 100 // Cap at 100
 	}
 	if limit < 1 {
 		limit = 50
 	}
-	offset := c.QueryInt("offset", 0)
+	offset := fiber.Query[int](c, "offset", 0)
 	if offset < 0 {
 		offset = 0
 	}
@@ -1860,8 +1860,8 @@ func (h *Handler) ListUserConversations(c *fiber.Ctx) error {
 
 // GetUserConversation retrieves a single conversation with messages
 // GET /api/v1/ai/conversations/:id
-func (h *Handler) GetUserConversation(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetUserConversation(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	conversationID := c.Params("id")
 
 	// Get authenticated user ID from context
@@ -1898,8 +1898,8 @@ func (h *Handler) GetUserConversation(c *fiber.Ctx) error {
 
 // DeleteUserConversation deletes a user's conversation
 // DELETE /api/v1/ai/conversations/:id
-func (h *Handler) DeleteUserConversation(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) DeleteUserConversation(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	conversationID := c.Params("id")
 
 	// Get authenticated user ID from context
@@ -1938,8 +1938,8 @@ func (h *Handler) DeleteUserConversation(c *fiber.Ctx) error {
 
 // UpdateUserConversation updates a conversation (title only for now)
 // PATCH /api/v1/ai/conversations/:id
-func (h *Handler) UpdateUserConversation(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) UpdateUserConversation(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	conversationID := c.Params("id")
 
 	// Get authenticated user ID from context
@@ -1958,7 +1958,7 @@ func (h *Handler) UpdateUserConversation(c *fiber.Ctx) error {
 	}
 
 	var req UpdateConversationTitleRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -2000,3 +2000,5 @@ func (h *Handler) UpdateUserConversation(c *fiber.Ctx) error {
 
 	return c.JSON(conversation)
 }
+
+// fiber:context-methods migrated

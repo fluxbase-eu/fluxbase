@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // OpenAPISpec represents the OpenAPI 3.0 specification
@@ -81,7 +81,7 @@ func NewOpenAPIHandler(db *database.Connection) *OpenAPIHandler {
 
 // GetOpenAPISpec generates and returns the OpenAPI specification
 // Admin users get full spec with database schema; non-admin users get minimal spec
-func (h *OpenAPIHandler) GetOpenAPISpec(c *fiber.Ctx) error {
+func (h *OpenAPIHandler) GetOpenAPISpec(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	isAdmin := role == "admin" || role == "dashboard_admin" || role == "service_role"
@@ -95,7 +95,7 @@ func (h *OpenAPIHandler) GetOpenAPISpec(c *fiber.Ctx) error {
 	inspector := database.NewSchemaInspector(h.db)
 
 	// Get all tables (admin only)
-	tables, err := inspector.GetAllTables(c.Context(), "public", "auth")
+	tables, err := inspector.GetAllTables(c.RequestCtx(), "public", "auth")
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to fetch database schema",
@@ -4321,3 +4321,5 @@ func (h *OpenAPIHandler) getQueryParameters() []OpenAPIParameter {
 		},
 	}
 }
+
+// fiber:context-methods migrated

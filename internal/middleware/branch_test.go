@@ -4,7 +4,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,7 +60,7 @@ func TestGetBranchSlug(t *testing.T) {
 		app := fiber.New()
 
 		var result string
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			c.Locals(LocalsBranchSlug, "feature-123")
 			result = GetBranchSlug(c)
 			return c.SendString("OK")
@@ -78,7 +78,7 @@ func TestGetBranchSlug(t *testing.T) {
 		app := fiber.New()
 
 		var result string
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			result = GetBranchSlug(c)
 			return c.SendString("OK")
 		})
@@ -95,7 +95,7 @@ func TestGetBranchSlug(t *testing.T) {
 		app := fiber.New()
 
 		var result string
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			c.Locals(LocalsBranchSlug, 12345) // Wrong type
 			result = GetBranchSlug(c)
 			return c.SendString("OK")
@@ -119,7 +119,7 @@ func TestGetBranchPool(t *testing.T) {
 		app := fiber.New()
 
 		var result interface{}
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			result = GetBranchPool(c)
 			return c.SendString("OK")
 		})
@@ -136,7 +136,7 @@ func TestGetBranchPool(t *testing.T) {
 		app := fiber.New()
 
 		var result interface{}
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			c.Locals(LocalsBranchPool, "not-a-pool")
 			result = GetBranchPool(c)
 			return c.SendString("OK")
@@ -172,7 +172,7 @@ func TestIsUsingBranch(t *testing.T) {
 			app := fiber.New()
 
 			var result bool
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				if tt.slug != "" {
 					c.Locals(LocalsBranchSlug, tt.slug)
 				}
@@ -204,7 +204,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 
 		var branchSlug string
 		app.Use(BranchContext(config))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			branchSlug = GetBranchSlug(c)
 			return c.SendString("OK")
 		})
@@ -226,7 +226,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 		}
 
 		app.Use(BranchContext(config))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			_ = GetBranchSlug(c)
 			return c.SendString("OK")
 		})
@@ -250,7 +250,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 		}
 
 		app.Use(BranchContext(config))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -270,12 +270,12 @@ func TestBranchContext_NoRouter(t *testing.T) {
 			Router: nil,
 		}
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			// Capture before middleware
 			return c.Next()
 		})
 		app.Use(BranchContext(config))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			_ = GetBranchSlug(c)
 			return c.SendString("OK")
 		})
@@ -299,7 +299,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 		}
 
 		app.Use(BranchContext(config))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -329,7 +329,7 @@ func TestBranchContext_AccessControl(t *testing.T) {
 		}
 
 		app.Use(BranchContext(config))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -355,7 +355,7 @@ func TestBranchContext_AccessControl(t *testing.T) {
 
 		var branchSlug string
 		app.Use(BranchContext(config))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			branchSlug = GetBranchSlug(c)
 			return c.SendString("OK")
 		})
@@ -389,7 +389,7 @@ func TestBranchContextSimple(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(BranchContextSimple(nil))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -416,7 +416,7 @@ func TestRequireBranchAccess(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(RequireBranchAccess(nil))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -474,7 +474,7 @@ func TestBranchExtraction(t *testing.T) {
 
 			var capturedSlug string
 			app.Use(BranchContext(config))
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				capturedSlug = GetBranchSlug(c)
 				return c.SendString("OK")
 			})
@@ -508,7 +508,7 @@ func TestBranchExtraction(t *testing.T) {
 func BenchmarkGetBranchSlug_Set(b *testing.B) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals(LocalsBranchSlug, "feature-123")
 		for i := 0; i < b.N; i++ {
 			_ = GetBranchSlug(c)
@@ -524,7 +524,7 @@ func BenchmarkGetBranchSlug_Set(b *testing.B) {
 func BenchmarkGetBranchSlug_NotSet(b *testing.B) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		for i := 0; i < b.N; i++ {
 			_ = GetBranchSlug(c)
 		}
@@ -539,7 +539,7 @@ func BenchmarkGetBranchSlug_NotSet(b *testing.B) {
 func BenchmarkIsUsingBranch_Main(b *testing.B) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals(LocalsBranchSlug, "main")
 		for i := 0; i < b.N; i++ {
 			_ = IsUsingBranch(c)
@@ -555,7 +555,7 @@ func BenchmarkIsUsingBranch_Main(b *testing.B) {
 func BenchmarkIsUsingBranch_Feature(b *testing.B) {
 	app := fiber.New()
 
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		c.Locals(LocalsBranchSlug, "feature-123")
 		for i := 0; i < b.N; i++ {
 			_ = IsUsingBranch(c)
@@ -573,7 +573,7 @@ func BenchmarkBranchContext_MainBranch(b *testing.B) {
 
 	config := BranchContextConfig{Router: nil}
 	app.Use(BranchContext(config))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

@@ -3,7 +3,7 @@ package middleware
 import (
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Note: Feature flag middleware tests are primarily covered by integration tests in test/e2e/

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
@@ -350,7 +350,7 @@ func TestOAuthHandler_Logout_Validation(t *testing.T) {
 
 	t.Run("empty user_id", func(t *testing.T) {
 		app := fiber.New()
-		app.Post("/api/v1/auth/oauth/:provider/logout", func(c *fiber.Ctx) error {
+		app.Post("/api/v1/auth/oauth/:provider/logout", func(c fiber.Ctx) error {
 			c.Locals("user_id", "")
 			return handler.Logout(c)
 		})

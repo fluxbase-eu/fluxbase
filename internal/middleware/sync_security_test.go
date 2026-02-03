@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +19,7 @@ func TestRequireSyncIPAllowlist_EmptyConfig(t *testing.T) {
 
 	// Empty ranges = allow all
 	app.Use(RequireSyncIPAllowlist([]string{}, "functions"))
-	app.Get("/sync", func(c *fiber.Ctx) error {
+	app.Get("/sync", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -36,7 +36,7 @@ func TestRequireSyncIPAllowlist_NilConfig(t *testing.T) {
 
 	// Nil slice = allow all
 	app.Use(RequireSyncIPAllowlist(nil, "jobs"))
-	app.Get("/sync", func(c *fiber.Ctx) error {
+	app.Get("/sync", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -109,7 +109,7 @@ func TestRequireSyncIPAllowlist_IPMatching(t *testing.T) {
 			app := fiber.New()
 
 			app.Use(RequireSyncIPAllowlist(tt.ipRanges, tt.featureName))
-			app.Get("/sync", func(c *fiber.Ctx) error {
+			app.Get("/sync", func(c fiber.Ctx) error {
 				return c.SendString("OK")
 			})
 
@@ -143,7 +143,7 @@ func TestRequireSyncIPAllowlist_MultipleRanges(t *testing.T) {
 	}
 
 	app.Use(RequireSyncIPAllowlist(ranges, "functions"))
-	app.Get("/sync", func(c *fiber.Ctx) error {
+	app.Get("/sync", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -211,7 +211,7 @@ func TestRequireSyncIPAllowlist_ErrorMessage(t *testing.T) {
 			app := fiber.New()
 
 			app.Use(RequireSyncIPAllowlist([]string{"10.0.0.0/8"}, tt.featureName))
-			app.Get("/sync", func(c *fiber.Ctx) error {
+			app.Get("/sync", func(c fiber.Ctx) error {
 				return c.SendString("OK")
 			})
 
@@ -244,7 +244,7 @@ func TestRequireSyncIPAllowlist_InvalidCIDR(t *testing.T) {
 		}
 
 		app.Use(RequireSyncIPAllowlist(ranges, "functions"))
-		app.Get("/sync", func(c *fiber.Ctx) error {
+		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -268,7 +268,7 @@ func TestRequireSyncIPAllowlist_InvalidCIDR(t *testing.T) {
 		}
 
 		app.Use(RequireSyncIPAllowlist(ranges, "functions"))
-		app.Get("/sync", func(c *fiber.Ctx) error {
+		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -291,7 +291,7 @@ func TestRequireSyncIPAllowlist_IPv6(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(RequireSyncIPAllowlist([]string{"2001:db8::/32"}, "functions"))
-		app.Get("/sync", func(c *fiber.Ctx) error {
+		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -309,7 +309,7 @@ func TestRequireSyncIPAllowlist_IPv6(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(RequireSyncIPAllowlist([]string{"2001:db8::/32"}, "functions"))
-		app.Get("/sync", func(c *fiber.Ctx) error {
+		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -333,7 +333,7 @@ func TestRequireSyncIPAllowlist_ProxyChain(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(RequireSyncIPAllowlist([]string{"203.0.113.0/24"}, "functions"))
-		app.Get("/sync", func(c *fiber.Ctx) error {
+		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -352,7 +352,7 @@ func TestRequireSyncIPAllowlist_ProxyChain(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(RequireSyncIPAllowlist([]string{"10.0.0.0/8"}, "functions"))
-		app.Get("/sync", func(c *fiber.Ctx) error {
+		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -377,7 +377,7 @@ func TestRequireSyncIPAllowlist_XRealIP(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(RequireSyncIPAllowlist([]string{"10.0.0.0/8"}, "jobs"))
-		app.Get("/sync", func(c *fiber.Ctx) error {
+		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -404,7 +404,7 @@ func TestRequireSyncIPAllowlist_FeatureNames(t *testing.T) {
 			app := fiber.New()
 
 			app.Use(RequireSyncIPAllowlist([]string{"10.0.0.0/8"}, feature))
-			app.Get("/sync", func(c *fiber.Ctx) error {
+			app.Get("/sync", func(c fiber.Ctx) error {
 				return c.SendString("OK")
 			})
 
@@ -428,7 +428,7 @@ func BenchmarkRequireSyncIPAllowlist_EmptyConfig(b *testing.B) {
 	app := fiber.New()
 
 	app.Use(RequireSyncIPAllowlist([]string{}, "functions"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -445,7 +445,7 @@ func BenchmarkRequireSyncIPAllowlist_SingleRange(b *testing.B) {
 	app := fiber.New()
 
 	app.Use(RequireSyncIPAllowlist([]string{"10.0.0.0/8"}, "functions"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -471,7 +471,7 @@ func BenchmarkRequireSyncIPAllowlist_MultipleRanges(b *testing.B) {
 	}
 
 	app.Use(RequireSyncIPAllowlist(ranges, "functions"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -489,7 +489,7 @@ func BenchmarkRequireSyncIPAllowlist_Denied(b *testing.B) {
 	app := fiber.New()
 
 	app.Use(RequireSyncIPAllowlist([]string{"10.0.0.0/8"}, "functions"))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

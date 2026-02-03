@@ -7,7 +7,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/email"
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -107,7 +107,7 @@ type TestEmailSettingsRequest struct {
 
 // GetSettings returns the current email settings
 // GET /api/v1/admin/email/settings
-func (h *EmailSettingsHandler) GetSettings(c *fiber.Ctx) error {
+func (h *EmailSettingsHandler) GetSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	response := EmailSettingsResponse{
@@ -209,11 +209,11 @@ func (h *EmailSettingsHandler) GetSettings(c *fiber.Ctx) error {
 
 // UpdateSettings updates email settings
 // PUT /api/v1/admin/email/settings
-func (h *EmailSettingsHandler) UpdateSettings(c *fiber.Ctx) error {
+func (h *EmailSettingsHandler) UpdateSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	var req UpdateEmailSettingsRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse update email settings request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -382,9 +382,9 @@ func (h *EmailSettingsHandler) UpdateSettings(c *fiber.Ctx) error {
 
 // TestSettings sends a test email with current settings
 // POST /api/v1/admin/email/settings/test
-func (h *EmailSettingsHandler) TestSettings(c *fiber.Ctx) error {
+func (h *EmailSettingsHandler) TestSettings(c fiber.Ctx) error {
 	var req TestEmailSettingsRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse test email request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",

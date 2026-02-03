@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/test"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -74,7 +74,7 @@ func TestStorageRLS_StorageProviders(t *testing.T) {
 			uploadReq.Header.Set("Content-Type", writer.FormDataContentType())
 			uploadReq.Header.Set("Authorization", "Bearer "+user1Token)
 
-			uploadResp, err := tc.App.Test(uploadReq, 15000) // 15 second timeout for S3
+			uploadResp, err := tc.App.Test(uploadReq, fiber.TestConfig{Timeout: 15000}) // 15 second timeout for S3
 			require.NoError(t, err)
 			require.Equal(t, fiber.StatusCreated, uploadResp.StatusCode,
 				"Upload should succeed with %s provider", provider)

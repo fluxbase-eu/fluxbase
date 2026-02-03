@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -50,8 +50,8 @@ func (h *KnowledgeBaseHandler) SetStorageService(svc *storage.Service) {
 
 // ListKnowledgeBases returns all knowledge bases
 // GET /api/v1/admin/ai/knowledge-bases
-func (h *KnowledgeBaseHandler) ListKnowledgeBases(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) ListKnowledgeBases(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	kbs, err := h.storage.ListAllKnowledgeBases(ctx)
 	if err != nil {
@@ -75,8 +75,8 @@ func (h *KnowledgeBaseHandler) ListKnowledgeBases(c *fiber.Ctx) error {
 
 // GetKnowledgeBase returns a specific knowledge base
 // GET /api/v1/admin/ai/knowledge-bases/:id
-func (h *KnowledgeBaseHandler) GetKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) GetKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	if id == "" {
@@ -103,11 +103,11 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBase(c *fiber.Ctx) error {
 
 // CreateKnowledgeBase creates a new knowledge base
 // POST /api/v1/admin/ai/knowledge-bases
-func (h *KnowledgeBaseHandler) CreateKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) CreateKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	var req CreateKnowledgeBaseRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -133,8 +133,8 @@ func (h *KnowledgeBaseHandler) CreateKnowledgeBase(c *fiber.Ctx) error {
 
 // UpdateKnowledgeBase updates an existing knowledge base
 // PUT /api/v1/admin/ai/knowledge-bases/:id
-func (h *KnowledgeBaseHandler) UpdateKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) UpdateKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	if id == "" {
@@ -144,7 +144,7 @@ func (h *KnowledgeBaseHandler) UpdateKnowledgeBase(c *fiber.Ctx) error {
 	}
 
 	var req UpdateKnowledgeBaseRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -168,8 +168,8 @@ func (h *KnowledgeBaseHandler) UpdateKnowledgeBase(c *fiber.Ctx) error {
 
 // DeleteKnowledgeBase deletes a knowledge base
 // DELETE /api/v1/admin/ai/knowledge-bases/:id
-func (h *KnowledgeBaseHandler) DeleteKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) DeleteKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	id := c.Params("id")
 
 	if id == "" {
@@ -195,8 +195,8 @@ func (h *KnowledgeBaseHandler) DeleteKnowledgeBase(c *fiber.Ctx) error {
 
 // ListDocuments returns all documents in a knowledge base
 // GET /api/v1/admin/ai/knowledge-bases/:id/documents
-func (h *KnowledgeBaseHandler) ListDocuments(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) ListDocuments(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	kbID := c.Params("id")
 
 	if kbID == "" {
@@ -221,8 +221,8 @@ func (h *KnowledgeBaseHandler) ListDocuments(c *fiber.Ctx) error {
 
 // GetDocument returns a specific document
 // GET /api/v1/admin/ai/knowledge-bases/:id/documents/:doc_id
-func (h *KnowledgeBaseHandler) GetDocument(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) GetDocument(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	docID := c.Params("doc_id")
 
 	if docID == "" {
@@ -258,8 +258,8 @@ type AddDocumentRequest struct {
 
 // AddDocument adds a document to a knowledge base
 // POST /api/v1/admin/ai/knowledge-bases/:id/documents
-func (h *KnowledgeBaseHandler) AddDocument(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) AddDocument(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	kbID := c.Params("id")
 
 	if kbID == "" {
@@ -269,7 +269,7 @@ func (h *KnowledgeBaseHandler) AddDocument(c *fiber.Ctx) error {
 	}
 
 	var req AddDocumentRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -337,8 +337,8 @@ func (h *KnowledgeBaseHandler) AddDocument(c *fiber.Ctx) error {
 
 // UploadDocument uploads a file and extracts text for a knowledge base document
 // POST /api/v1/admin/ai/knowledge-bases/:id/documents/upload
-func (h *KnowledgeBaseHandler) UploadDocument(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) UploadDocument(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	kbID := c.Params("id")
 
 	if kbID == "" {
@@ -520,8 +520,8 @@ func (h *KnowledgeBaseHandler) UploadDocument(c *fiber.Ctx) error {
 
 // DeleteDocument deletes a document
 // DELETE /api/v1/admin/ai/knowledge-bases/:id/documents/:doc_id
-func (h *KnowledgeBaseHandler) DeleteDocument(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) DeleteDocument(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	docID := c.Params("doc_id")
 
 	if docID == "" {
@@ -543,8 +543,8 @@ func (h *KnowledgeBaseHandler) DeleteDocument(c *fiber.Ctx) error {
 
 // UpdateDocument updates a document's metadata and tags
 // PATCH /api/v1/admin/ai/knowledge-bases/:id/documents/:doc_id
-func (h *KnowledgeBaseHandler) UpdateDocument(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) UpdateDocument(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	docID := c.Params("doc_id")
 
 	if docID == "" {
@@ -559,7 +559,7 @@ func (h *KnowledgeBaseHandler) UpdateDocument(c *fiber.Ctx) error {
 		Tags     []string          `json:"tags"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -597,8 +597,8 @@ func (h *KnowledgeBaseHandler) UpdateDocument(c *fiber.Ctx) error {
 
 // ListChatbotKnowledgeBases returns knowledge bases linked to a chatbot
 // GET /api/v1/admin/ai/chatbots/:id/knowledge-bases
-func (h *KnowledgeBaseHandler) ListChatbotKnowledgeBases(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) ListChatbotKnowledgeBases(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	chatbotID := c.Params("id")
 
 	if chatbotID == "" {
@@ -623,8 +623,8 @@ func (h *KnowledgeBaseHandler) ListChatbotKnowledgeBases(c *fiber.Ctx) error {
 
 // LinkKnowledgeBase links a knowledge base to a chatbot
 // POST /api/v1/admin/ai/chatbots/:id/knowledge-bases
-func (h *KnowledgeBaseHandler) LinkKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) LinkKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	chatbotID := c.Params("id")
 
 	if chatbotID == "" {
@@ -634,7 +634,7 @@ func (h *KnowledgeBaseHandler) LinkKnowledgeBase(c *fiber.Ctx) error {
 	}
 
 	var req LinkKnowledgeBaseRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -685,8 +685,8 @@ type UpdateChatbotKnowledgeBaseRequest struct {
 
 // UpdateChatbotKnowledgeBase updates a chatbot-knowledge base link
 // PUT /api/v1/admin/ai/chatbots/:id/knowledge-bases/:kb_id
-func (h *KnowledgeBaseHandler) UpdateChatbotKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) UpdateChatbotKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	chatbotID := c.Params("id")
 	kbID := c.Params("kb_id")
 
@@ -697,7 +697,7 @@ func (h *KnowledgeBaseHandler) UpdateChatbotKnowledgeBase(c *fiber.Ctx) error {
 	}
 
 	var req UpdateChatbotKnowledgeBaseRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -724,8 +724,8 @@ func (h *KnowledgeBaseHandler) UpdateChatbotKnowledgeBase(c *fiber.Ctx) error {
 
 // UnlinkKnowledgeBase removes a knowledge base from a chatbot
 // DELETE /api/v1/admin/ai/chatbots/:id/knowledge-bases/:kb_id
-func (h *KnowledgeBaseHandler) UnlinkKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) UnlinkKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	chatbotID := c.Params("id")
 	kbID := c.Params("kb_id")
 
@@ -764,8 +764,8 @@ type SearchKnowledgeBaseRequest struct {
 
 // SearchKnowledgeBase searches a specific knowledge base
 // POST /api/v1/admin/ai/knowledge-bases/:id/search
-func (h *KnowledgeBaseHandler) SearchKnowledgeBase(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) SearchKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	kbID := c.Params("id")
 
 	if kbID == "" {
@@ -775,7 +775,7 @@ func (h *KnowledgeBaseHandler) SearchKnowledgeBase(c *fiber.Ctx) error {
 	}
 
 	var req SearchKnowledgeBaseRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -887,7 +887,7 @@ type KnowledgeBaseCapabilities struct {
 
 // GetCapabilities returns the capabilities of the knowledge base system
 // GET /api/v1/admin/ai/knowledge-bases/capabilities
-func (h *KnowledgeBaseHandler) GetCapabilities(c *fiber.Ctx) error {
+func (h *KnowledgeBaseHandler) GetCapabilities(c fiber.Ctx) error {
 	// Check if OCR is enabled and available
 	ocrEnabled := h.ocrService != nil
 	ocrAvailable := ocrEnabled && h.ocrService.IsEnabled()
@@ -942,8 +942,8 @@ type DebugSearchResponse struct {
 
 // DebugSearch provides detailed debugging information for similarity search
 // POST /api/v1/admin/ai/knowledge-bases/:id/debug-search
-func (h *KnowledgeBaseHandler) DebugSearch(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KnowledgeBaseHandler) DebugSearch(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	kbID := c.Params("id")
 
 	if kbID == "" {
@@ -953,7 +953,7 @@ func (h *KnowledgeBaseHandler) DebugSearch(c *fiber.Ctx) error {
 	}
 
 	var req DebugSearchRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -1084,3 +1084,5 @@ func (h *KnowledgeBaseHandler) DebugSearch(c *fiber.Ctx) error {
 
 	return c.JSON(response)
 }
+
+// fiber:context-methods migrated

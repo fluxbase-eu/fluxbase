@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -101,7 +101,7 @@ func TestPatternBodyLimiter_Middleware_AcceptsUnderLimit(t *testing.T) {
 	app := fiber.New()
 	limiter := NewPatternBodyLimiter(config)
 	app.Use(limiter.Middleware())
-	app.Post("/api/test", func(c *fiber.Ctx) error {
+	app.Post("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -111,7 +111,7 @@ func TestPatternBodyLimiter_Middleware_AcceptsUnderLimit(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.ContentLength = int64(len(body))
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -127,7 +127,7 @@ func TestPatternBodyLimiter_Middleware_RejectsOverLimit(t *testing.T) {
 	app := fiber.New()
 	limiter := NewPatternBodyLimiter(config)
 	app.Use(limiter.Middleware())
-	app.Post("/api/test", func(c *fiber.Ctx) error {
+	app.Post("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -137,7 +137,7 @@ func TestPatternBodyLimiter_Middleware_RejectsOverLimit(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.ContentLength = int64(len(body))
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
 }
@@ -151,12 +151,12 @@ func TestPatternBodyLimiter_Middleware_SkipsGET(t *testing.T) {
 	app := fiber.New()
 	limiter := NewPatternBodyLimiter(config)
 	app.Use(limiter.Middleware())
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -173,10 +173,10 @@ func TestPatternBodyLimiter_DifferentEndpointsDifferentLimits(t *testing.T) {
 	app := fiber.New()
 	limiter := NewPatternBodyLimiter(config)
 	app.Use(limiter.Middleware())
-	app.Post("/api/v1/storage/upload", func(c *fiber.Ctx) error {
+	app.Post("/api/v1/storage/upload", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
-	app.Post("/api/v1/auth/login", func(c *fiber.Ctx) error {
+	app.Post("/api/v1/auth/login", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -184,7 +184,7 @@ func TestPatternBodyLimiter_DifferentEndpointsDifferentLimits(t *testing.T) {
 	storageBody := bytes.Repeat([]byte("a"), 5*1024)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/storage/upload", bytes.NewReader(storageBody))
 	req.ContentLength = int64(len(storageBody))
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "storage should accept 5KB")
 
@@ -192,7 +192,7 @@ func TestPatternBodyLimiter_DifferentEndpointsDifferentLimits(t *testing.T) {
 	authBody := bytes.Repeat([]byte("a"), 1024)
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(authBody))
 	req.ContentLength = int64(len(authBody))
-	resp, err = app.Test(req, -1)
+	resp, err = app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode, "auth should reject 1KB")
 }
@@ -201,7 +201,7 @@ func TestJSONDepthLimiter_AcceptsShallowJSON(t *testing.T) {
 	app := fiber.New()
 	limiter := NewJSONDepthLimiter(5)
 	app.Use(limiter.Middleware())
-	app.Post("/api/test", func(c *fiber.Ctx) error {
+	app.Post("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -210,7 +210,7 @@ func TestJSONDepthLimiter_AcceptsShallowJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/test", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -219,7 +219,7 @@ func TestJSONDepthLimiter_RejectsDeepJSON(t *testing.T) {
 	app := fiber.New()
 	limiter := NewJSONDepthLimiter(3)
 	app.Use(limiter.Middleware())
-	app.Post("/api/test", func(c *fiber.Ctx) error {
+	app.Post("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -228,7 +228,7 @@ func TestJSONDepthLimiter_RejectsDeepJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/test", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -237,7 +237,7 @@ func TestJSONDepthLimiter_SkipsNonJSON(t *testing.T) {
 	app := fiber.New()
 	limiter := NewJSONDepthLimiter(1) // Very strict
 	app.Use(limiter.Middleware())
-	app.Post("/api/test", func(c *fiber.Ctx) error {
+	app.Post("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -246,7 +246,7 @@ func TestJSONDepthLimiter_SkipsNonJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/test", strings.NewReader(body))
 	req.Header.Set("Content-Type", "text/plain")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -255,14 +255,14 @@ func TestJSONDepthLimiter_SkipsGETRequests(t *testing.T) {
 	app := fiber.New()
 	limiter := NewJSONDepthLimiter(1)
 	app.Use(limiter.Middleware())
-	app.Get("/api/test", func(c *fiber.Ctx) error {
+	app.Get("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -271,7 +271,7 @@ func TestJSONDepthLimiter_HandlesArrays(t *testing.T) {
 	app := fiber.New()
 	limiter := NewJSONDepthLimiter(3)
 	app.Use(limiter.Middleware())
-	app.Post("/api/test", func(c *fiber.Ctx) error {
+	app.Post("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -280,7 +280,7 @@ func TestJSONDepthLimiter_HandlesArrays(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/test", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -409,7 +409,7 @@ func TestBodyLimitMiddleware_Combined(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(BodyLimitMiddleware(config))
-	app.Post("/api/test", func(c *fiber.Ctx) error {
+	app.Post("/api/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -419,7 +419,7 @@ func TestBodyLimitMiddleware_Combined(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.ContentLength = int64(len(body))
 
-		resp, err := app.Test(req, -1)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -430,7 +430,7 @@ func TestBodyLimitMiddleware_Combined(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.ContentLength = int64(len(body))
 
-		resp, err := app.Test(req, -1)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
 	})
@@ -440,7 +440,7 @@ func TestBodyLimitMiddleware_Combined(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/test", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err := app.Test(req, -1)
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})

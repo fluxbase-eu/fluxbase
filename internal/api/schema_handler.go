@@ -3,7 +3,7 @@ package api
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // SchemaRelationship represents a foreign key relationship for ERD visualization
@@ -59,7 +59,7 @@ type SchemaGraphResponse struct {
 
 // GetSchemaGraph returns all tables and relationships for ERD visualization
 // GET /api/v1/admin/schema/graph
-func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
+func (s *Server) GetSchemaGraph(c fiber.Ctx) error {
 	// Check if database connection is available
 	if s.db == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -67,7 +67,7 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 	schemasParam := c.Query("schemas", "public")
 	schemaList := strings.Split(schemasParam, ",")
 
@@ -422,8 +422,8 @@ func (s *Server) GetSchemaGraph(c *fiber.Ctx) error {
 
 // GetTableRelationships returns relationships for a specific table
 // GET /api/v1/admin/tables/:schema/:table/relationships
-func (s *Server) GetTableRelationships(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (s *Server) GetTableRelationships(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -532,3 +532,5 @@ func (s *Server) GetTableRelationships(c *fiber.Ctx) error {
 		"incoming": incoming,
 	})
 }
+
+// fiber:context-methods migrated

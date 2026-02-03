@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -68,10 +68,10 @@ const (
 // @Failure 401 {object} fiber.Map
 // @Failure 500 {object} fiber.Map
 // @Router /api/v1/sql/execute [post]
-func (h *SQLHandler) ExecuteSQL(c *fiber.Ctx) error {
+func (h *SQLHandler) ExecuteSQL(c fiber.Ctx) error {
 	// Parse request
 	var req ExecuteSQLRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -171,7 +171,7 @@ func (h *SQLHandler) ExecuteSQL(c *fiber.Ctx) error {
 
 // executeWithRLSContext executes SQL statements with Row Level Security context
 // This is used when impersonating a user to test RLS policies
-func (h *SQLHandler) executeWithRLSContext(c *fiber.Ctx, fullQuery string, statements []string, claims *auth.TokenClaims, auditUserID string) error {
+func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statements []string, claims *auth.TokenClaims, auditUserID string) error {
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
@@ -320,7 +320,7 @@ func isKnownDatabaseRole(role string) bool {
 
 // executeAsServiceRole executes SQL with service_role (full admin access)
 // This is used for dashboard admins who are not impersonating anyone
-func (h *SQLHandler) executeAsServiceRole(c *fiber.Ctx, fullQuery string, statements []string, auditUserID string) error {
+func (h *SQLHandler) executeAsServiceRole(c fiber.Ctx, fullQuery string, statements []string, auditUserID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 

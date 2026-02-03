@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -14,7 +14,7 @@ import (
 // =============================================================================
 
 // createTestFiberCtx creates a Fiber context for testing
-func createTestFiberCtx() *fiber.Ctx {
+func createTestFiberCtx() fiber.Ctx {
 	app := fiber.New()
 	ctx := app.AcquireCtx(&fasthttp.RequestCtx{})
 	return ctx
