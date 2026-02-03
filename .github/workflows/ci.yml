@@ -221,7 +221,7 @@ jobs:
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: 2.6.8
 
       - name: Setup database users
         env:
