@@ -48,6 +48,8 @@ import type {
   SignInWithIdTokenCredentials,
   AuthConfig,
   CaptchaConfig,
+  CaptchaCheckRequest,
+  CaptchaCheckResponse,
   SAMLProvidersResponse,
   SAMLLoginOptions,
   SAMLLoginResponse,
@@ -256,6 +258,16 @@ export class FluxbaseAuth {
         requestBody.captcha_token = credentials.captchaToken;
       }
 
+      // Include challenge ID for adaptive trust validation
+      if (credentials.challengeId) {
+        requestBody.challenge_id = credentials.challengeId;
+      }
+
+      // Include device fingerprint for trust tracking
+      if (credentials.deviceFingerprint) {
+        requestBody.device_fingerprint = credentials.deviceFingerprint;
+      }
+
       const response = await this.fetch.post<
         AuthResponse | SignInWith2FAResponse
       >("/api/v1/auth/signin", requestBody);
@@ -311,6 +323,16 @@ export class FluxbaseAuth {
         requestBody.captcha_token = credentials.captchaToken;
       }
 
+      // Include challenge ID for adaptive trust validation
+      if (credentials.challengeId) {
+        requestBody.challenge_id = credentials.challengeId;
+      }
+
+      // Include device fingerprint for trust tracking
+      if (credentials.deviceFingerprint) {
+        requestBody.device_fingerprint = credentials.deviceFingerprint;
+      }
+
       const response = await this.fetch.post<AuthResponse>(
         "/api/v1/auth/signup",
         requestBody,
@@ -340,6 +362,73 @@ export class FluxbaseAuth {
   async getCaptchaConfig(): Promise<DataResponse<CaptchaConfig>> {
     return wrapAsync(async () => {
       return await this.fetch.get<CaptchaConfig>("/api/v1/auth/captcha/config");
+    });
+  }
+
+  /**
+   * Check if CAPTCHA is required for an authentication action (adaptive trust)
+   *
+   * This pre-flight check evaluates trust signals (known IP, device, previous CAPTCHA)
+   * to determine if CAPTCHA verification is needed. Use this before showing auth forms
+   * to provide a better user experience for trusted users.
+   *
+   * @param request - Check request with endpoint and optional trust signals
+   * @returns Promise with whether CAPTCHA is required and challenge tracking info
+   *
+   * @example
+   * ```typescript
+   * // Check if CAPTCHA is needed for login
+   * const { data, error } = await client.auth.checkCaptcha({
+   *   endpoint: 'login',
+   *   email: 'user@example.com'
+   * });
+   *
+   * if (data?.captcha_required) {
+   *   // Show CAPTCHA widget using data.provider and data.site_key
+   *   const captchaToken = await showCaptchaWidget(data.provider, data.site_key);
+   *
+   *   // Include challenge_id and captcha token in sign in
+   *   await client.auth.signIn({
+   *     email: 'user@example.com',
+   *     password: 'password',
+   *     captchaToken,
+   *     challengeId: data.challenge_id
+   *   });
+   * } else {
+   *   // No CAPTCHA needed - trusted user
+   *   await client.auth.signIn({
+   *     email: 'user@example.com',
+   *     password: 'password',
+   *     challengeId: data?.challenge_id // Still include challenge_id
+   *   });
+   * }
+   * ```
+   */
+  async checkCaptcha(
+    request: CaptchaCheckRequest,
+  ): Promise<DataResponse<CaptchaCheckResponse>> {
+    return wrapAsync(async () => {
+      // Transform camelCase to snake_case for backend
+      const requestBody: any = {
+        endpoint: request.endpoint,
+      };
+
+      if (request.email) {
+        requestBody.email = request.email;
+      }
+
+      if (request.deviceFingerprint) {
+        requestBody.device_fingerprint = request.deviceFingerprint;
+      }
+
+      if (request.trustToken) {
+        requestBody.trust_token = request.trustToken;
+      }
+
+      return await this.fetch.post<CaptchaCheckResponse>(
+        "/api/v1/auth/captcha/check",
+        requestBody,
+      );
     });
   }
 

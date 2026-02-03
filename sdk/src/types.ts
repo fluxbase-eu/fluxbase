@@ -70,6 +70,10 @@ export interface SignInCredentials {
   password: string;
   /** CAPTCHA token for bot protection (optional, required if CAPTCHA is enabled) */
   captchaToken?: string;
+  /** Challenge ID from pre-flight CAPTCHA check (for adaptive trust) */
+  challengeId?: string;
+  /** Device fingerprint for trust tracking (optional) */
+  deviceFingerprint?: string;
 }
 
 export interface SignUpCredentials {
@@ -77,6 +81,10 @@ export interface SignUpCredentials {
   password: string;
   /** CAPTCHA token for bot protection (optional, required if CAPTCHA is enabled) */
   captchaToken?: string;
+  /** Challenge ID from pre-flight CAPTCHA check (for adaptive trust) */
+  challengeId?: string;
+  /** Device fingerprint for trust tracking (optional) */
+  deviceFingerprint?: string;
   options?: {
     /** User metadata to store in raw_user_meta_data (Supabase-compatible) */
     data?: Record<string, unknown>;
@@ -2135,6 +2143,42 @@ export interface CaptchaConfig {
   endpoints?: string[];
   /** Cap server URL - only present when provider is 'cap' */
   cap_server_url?: string;
+}
+
+/**
+ * Request for pre-flight CAPTCHA check (adaptive trust)
+ * Use this to determine if CAPTCHA is required before attempting auth
+ */
+export interface CaptchaCheckRequest {
+  /** Endpoint to check: signup, login, password_reset, magic_link */
+  endpoint: "signup" | "login" | "password_reset" | "magic_link";
+  /** Email address for trust lookup (optional) */
+  email?: string;
+  /** Device fingerprint for trust tracking (optional) */
+  deviceFingerprint?: string;
+  /** Trust token from a previous CAPTCHA verification (optional) */
+  trustToken?: string;
+}
+
+/**
+ * Response from pre-flight CAPTCHA check
+ * Contains whether CAPTCHA is required and challenge tracking info
+ */
+export interface CaptchaCheckResponse {
+  /** Whether CAPTCHA verification is required */
+  captcha_required: boolean;
+  /** Reason for the decision (e.g., "trusted", "new_ip_address", "sensitive_action") */
+  reason?: string;
+  /** Trust score (0-100, higher means more trusted) */
+  trust_score?: number;
+  /** CAPTCHA provider (only if captcha_required=true) */
+  provider?: CaptchaProvider;
+  /** Public site key for CAPTCHA widget (only if captcha_required=true) */
+  site_key?: string;
+  /** Challenge ID to include in auth request */
+  challenge_id: string;
+  /** When the challenge expires (ISO 8601 format) */
+  expires_at: string;
 }
 
 /**

@@ -121,6 +121,7 @@ jobs:
           name: sdk-coverage
           fail_ci_if_error: true
           verbose: true
+          slug: fluxbase-eu/fluxbase
 
       - name: Type check SDK
         working-directory: ./sdk
@@ -399,9 +400,10 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.out
           flags: unittests
-          name: codecov-umbrella
+          name: go-codecov
           fail_ci_if_error: true
           verbose: true
+          slug: fluxbase-eu/fluxbase
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v6
