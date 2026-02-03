@@ -79,7 +79,7 @@ func TestMCP_DefaultOAuthRedirectURIs(t *testing.T) {
 // MCPConfig.Validate Tests
 // =============================================================================
 
-func TestMCPConfig_Validate(t *testing.T) {
+func TestMCP_ConfigValidate(t *testing.T) {
 	t.Run("returns nil when disabled", func(t *testing.T) {
 		config := &MCPConfig{
 			Enabled: false,
@@ -299,7 +299,7 @@ func TestMCPConfig_Validate_OAuth(t *testing.T) {
 // MCPConfig.SetOAuthDefaults Tests
 // =============================================================================
 
-func TestMCPConfig_SetOAuthDefaults(t *testing.T) {
+func TestMCP_ConfigSetOAuthDefaults(t *testing.T) {
 	t.Run("sets default token_expiry", func(t *testing.T) {
 		config := &MCPConfig{}
 
