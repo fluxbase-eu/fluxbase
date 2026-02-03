@@ -12,7 +12,7 @@ import (
 // DefaultMCPOAuthRedirectURIs Tests
 // =============================================================================
 
-func TestDefaultMCPOAuthRedirectURIs(t *testing.T) {
+func TestMCP_DefaultOAuthRedirectURIs(t *testing.T) {
 	t.Run("returns non-empty list", func(t *testing.T) {
 		uris := DefaultMCPOAuthRedirectURIs()
 

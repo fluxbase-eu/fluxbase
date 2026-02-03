@@ -12,7 +12,7 @@ import (
 // DataCloneMode Constants Tests
 // =============================================================================
 
-func TestDataCloneModeConstants(t *testing.T) {
+func TestBranching_DataCloneModeConstants(t *testing.T) {
 	t.Run("schema_only constant value", func(t *testing.T) {
 		assert.Equal(t, "schema_only", DataCloneModeSchemaOnly)
 	})
@@ -30,7 +30,7 @@ func TestDataCloneModeConstants(t *testing.T) {
 // BranchingConfig.Validate Tests
 // =============================================================================
 
-func TestBranchingConfig_Validate(t *testing.T) {
+func TestBranching_ConfigValidate(t *testing.T) {
 	t.Run("returns nil when disabled", func(t *testing.T) {
 		config := &BranchingConfig{
 			Enabled: false,

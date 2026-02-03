@@ -12,7 +12,7 @@ import (
 // MessageType Constants Tests
 // =============================================================================
 
-func TestMessageType_Constants(t *testing.T) {
+func TestRealtimeHandler_MessageTypeConstants(t *testing.T) {
 	t.Run("message types have correct values", func(t *testing.T) {
 		assert.Equal(t, MessageType("subscribe"), MessageTypeSubscribe)
 		assert.Equal(t, MessageType("unsubscribe"), MessageTypeUnsubscribe)
@@ -37,7 +37,7 @@ func TestMessageType_Constants(t *testing.T) {
 // ClientMessage Tests
 // =============================================================================
 
-func TestClientMessage_Struct(t *testing.T) {
+func TestRealtimeClientMessage_Struct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		msg := ClientMessage{
 			Type:           MessageTypeSubscribe,
@@ -75,7 +75,7 @@ func TestClientMessage_Struct(t *testing.T) {
 	})
 }
 
-func TestClientMessage_JSONSerialization(t *testing.T) {
+func TestRealtimeClientMessage_JSONSerialization(t *testing.T) {
 	t.Run("serializes to JSON", func(t *testing.T) {
 		msg := ClientMessage{
 			Type:    MessageTypeSubscribe,
@@ -138,7 +138,7 @@ func TestClientMessage_JSONSerialization(t *testing.T) {
 // ServerMessage Tests
 // =============================================================================
 
-func TestServerMessage_Struct(t *testing.T) {
+func TestRealtimeHandler_ServerMessageStruct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		msg := ServerMessage{
 			Type:    MessageTypeChange,
@@ -219,7 +219,7 @@ func TestServerMessage_JSONSerialization(t *testing.T) {
 // PostgresChangesConfig Tests
 // =============================================================================
 
-func TestPostgresChangesConfig_Struct(t *testing.T) {
+func TestRealtimeHandler_PostgresChangesConfigStruct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		config := PostgresChangesConfig{
 			Event:  "INSERT",
@@ -280,7 +280,7 @@ func TestPostgresChangesConfig_JSONSerialization(t *testing.T) {
 // LogSubscriptionConfig Tests
 // =============================================================================
 
-func TestLogSubscriptionConfig_Struct(t *testing.T) {
+func TestRealtimeHandler_LogSubscriptionConfigStruct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		config := LogSubscriptionConfig{
 			ExecutionID: "exec-123",
@@ -330,7 +330,7 @@ func TestLogSubscriptionConfig_JSONSerialization(t *testing.T) {
 // TokenClaims Tests
 // =============================================================================
 
-func TestTokenClaims_Struct(t *testing.T) {
+func TestRealtimeHandler_TokenClaimsStruct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		claims := TokenClaims{
 			UserID:    "user-123",

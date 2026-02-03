@@ -256,7 +256,7 @@ func TestToString(t *testing.T) {
 // JobStatus Tests
 // =============================================================================
 
-func TestJobStatus_Constants(t *testing.T) {
+func TestJobsHandler_JobStatusConstants(t *testing.T) {
 	t.Run("status values are correct", func(t *testing.T) {
 		assert.Equal(t, JobStatus("pending"), JobStatusPending)
 		assert.Equal(t, JobStatus("running"), JobStatusRunning)
@@ -267,7 +267,7 @@ func TestJobStatus_Constants(t *testing.T) {
 	})
 }
 
-func TestWorkerStatus_Constants(t *testing.T) {
+func TestJobsHandler_WorkerStatusConstants(t *testing.T) {
 	t.Run("worker status values are correct", func(t *testing.T) {
 		assert.Equal(t, WorkerStatus("active"), WorkerStatusActive)
 		assert.Equal(t, WorkerStatus("draining"), WorkerStatusDraining)
@@ -279,7 +279,7 @@ func TestWorkerStatus_Constants(t *testing.T) {
 // Job Struct Tests
 // =============================================================================
 
-func TestJob_Struct(t *testing.T) {
+func TestJobsHandler_JobStruct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		id := uuid.New()
 		funcID := uuid.New()
@@ -332,7 +332,7 @@ func TestJob_Struct(t *testing.T) {
 	})
 }
 
-func TestJobFunction_Struct(t *testing.T) {
+func TestJobsHandler_JobFunctionStruct(t *testing.T) {
 	t.Run("stores all fields", func(t *testing.T) {
 		id := uuid.New()
 		desc := "Test job function"
@@ -379,7 +379,7 @@ func TestJobFunction_Struct(t *testing.T) {
 // Job JSON Serialization Tests
 // =============================================================================
 
-func TestJob_JSONSerialization(t *testing.T) {
+func TestJobsHandler_JobJSONSerialization(t *testing.T) {
 	t.Run("serializes job to JSON", func(t *testing.T) {
 		id := uuid.MustParse("12345678-1234-1234-1234-123456789abc")
 		job := Job{
@@ -445,7 +445,7 @@ func TestJobFunction_JSONSerialization(t *testing.T) {
 // Handler Struct Tests
 // =============================================================================
 
-func TestHandler_Struct(t *testing.T) {
+func TestJobsHandler_Struct(t *testing.T) {
 	t.Run("fields are accessible", func(t *testing.T) {
 		h := &Handler{}
 
@@ -459,7 +459,7 @@ func TestHandler_Struct(t *testing.T) {
 	})
 }
 
-func TestHandler_SetScheduler(t *testing.T) {
+func TestJobsHandler_SetScheduler(t *testing.T) {
 	t.Run("sets scheduler", func(t *testing.T) {
 		h := &Handler{}
 		scheduler := &Scheduler{}
