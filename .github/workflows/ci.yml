@@ -115,9 +115,12 @@ jobs:
       - name: Upload SDK coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./sdk/coverage/coverage-final.json
           flags: sdk
           name: sdk-coverage
+          fail_ci_if_error: true
+          verbose: true
 
       - name: Type check SDK
         working-directory: ./sdk
@@ -393,9 +396,12 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.out
           flags: unittests
           name: codecov-umbrella
+          fail_ci_if_error: true
+          verbose: true
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v6
