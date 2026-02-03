@@ -1725,6 +1725,238 @@ func TestMCPConfig_ValidateOAuth(t *testing.T) {
 	}
 }
 
+func TestOAuthProviderConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  OAuthProviderConfig
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid Google provider",
+			config: OAuthProviderConfig{
+				Name:     "Google",
+				ClientID: "client-id-123",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid Apple provider",
+			config: OAuthProviderConfig{
+				Name:     "APPLE",
+				ClientID: "com.example.app",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid Microsoft provider",
+			config: OAuthProviderConfig{
+				Name:     "Microsoft",
+				ClientID: "client-id-456",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid custom provider with issuer URL",
+			config: OAuthProviderConfig{
+				Name:      "MyIDP",
+				ClientID:  "custom-client-id",
+				IssuerURL: "https://idp.example.com",
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty name",
+			config: OAuthProviderConfig{
+				Name:     "",
+				ClientID: "client-id",
+			},
+			wantErr: true,
+			errMsg:  "oauth provider name is required",
+		},
+		{
+			name: "empty client ID",
+			config: OAuthProviderConfig{
+				Name:     "google",
+				ClientID: "",
+			},
+			wantErr: true,
+			errMsg:  "client_id is required",
+		},
+		{
+			name: "custom provider without issuer URL",
+			config: OAuthProviderConfig{
+				Name:     "custom-idp",
+				ClientID: "client-id",
+				// Missing IssuerURL for custom provider
+			},
+			wantErr: true,
+			errMsg:  "issuer_url is required for custom providers",
+		},
+		{
+			name: "name gets normalized to lowercase",
+			config: OAuthProviderConfig{
+				Name:     "GOOGLE",
+				ClientID: "client-id",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestOAuthProviderConfig_NameNormalization(t *testing.T) {
+	t.Run("normalizes name to lowercase", func(t *testing.T) {
+		config := OAuthProviderConfig{
+			Name:     "GOOGLE",
+			ClientID: "client-id",
+		}
+
+		err := config.Validate()
+		require.NoError(t, err)
+		assert.Equal(t, "google", config.Name)
+	})
+
+	t.Run("normalizes mixed case to lowercase", func(t *testing.T) {
+		config := OAuthProviderConfig{
+			Name:     "Microsoft",
+			ClientID: "client-id",
+		}
+
+		err := config.Validate()
+		require.NoError(t, err)
+		assert.Equal(t, "microsoft", config.Name)
+	})
+}
+
+func TestMetricsConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  MetricsConfig
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid config",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    9090,
+				Path:    "/metrics",
+			},
+			wantErr: false,
+		},
+		{
+			name: "disabled metrics skips validation",
+			config: MetricsConfig{
+				Enabled: false,
+				Port:    0,
+				Path:    "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "port too low",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    0,
+				Path:    "/metrics",
+			},
+			wantErr: true,
+			errMsg:  "metrics port must be between 1 and 65535",
+		},
+		{
+			name: "port too high",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    70000,
+				Path:    "/metrics",
+			},
+			wantErr: true,
+			errMsg:  "metrics port must be between 1 and 65535",
+		},
+		{
+			name: "negative port",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    -1,
+				Path:    "/metrics",
+			},
+			wantErr: true,
+			errMsg:  "metrics port must be between 1 and 65535",
+		},
+		{
+			name: "empty path",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    9090,
+				Path:    "",
+			},
+			wantErr: true,
+			errMsg:  "metrics path cannot be empty",
+		},
+		{
+			name: "path without leading slash",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    9090,
+				Path:    "metrics",
+			},
+			wantErr: true,
+			errMsg:  "metrics path must start with '/'",
+		},
+		{
+			name: "valid min port",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    1,
+				Path:    "/metrics",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid max port",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    65535,
+				Path:    "/metrics",
+			},
+			wantErr: false,
+		},
+		{
+			name: "custom path with leading slash",
+			config: MetricsConfig{
+				Enabled: true,
+				Port:    9090,
+				Path:    "/custom/metrics/path",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestBranchingConfig_MaxBranchesPerUser(t *testing.T) {
 	validConfig := func() BranchingConfig {
 		return BranchingConfig{
