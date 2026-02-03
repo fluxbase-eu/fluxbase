@@ -473,20 +473,22 @@ jobs:
 
           # Create prompt
           cat > /tmp/prompt.txt << PROMPT_EOF
-          You are writing release notes for Fluxbase version $VERSION.
+          Summarize these commits for a release changelog.
 
-          Here are the commits since the last release:
+          Rules:
+          - Focus ONLY on user-facing features and bug fixes
+          - Ignore: CI changes, dependency updates, refactoring, test changes, workflow changes
+          - Do NOT mention: GitHub Actions, CI/CD, pipelines, internal tooling, AI, Groq, Claude
+          - Do NOT use marketing language like "excited to announce" or "we are pleased"
+          - Be factual and concise
+          - If there are no significant user-facing changes, just say "Bug fixes and maintenance improvements."
+
+          Commits:
           $COMMITS
 
-          File changes summary: $CHANGED_FILES
+          Changed files: $CHANGED_FILES
 
-          Write a professional release summary that:
-          1. Highlights the most important changes
-          2. Is written for end users (not developers)
-          3. Uses clear, non-technical language where possible
-          4. Mentions any breaking changes if present
-
-          Format: Just the summary text, no headers or bullet points.
+          Write the summary now (1-2 sentences only):
           PROMPT_EOF
 
           # Call Groq API (OpenAI-compatible) and capture both response and HTTP status
