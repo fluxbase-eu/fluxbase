@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestCalculateQueryDepth(t *testing.T) {
+func TestCalculateQueryDepth_Security(t *testing.T) {
 	tests := []struct {
 		name      string
 		query     string
@@ -124,7 +124,7 @@ func TestCalculateQueryDepth(t *testing.T) {
 	}
 }
 
-func TestCalculateQueryComplexity(t *testing.T) {
+func TestCalculateQueryComplexity_Security(t *testing.T) {
 	tests := []struct {
 		name           string
 		query          string
@@ -303,7 +303,7 @@ func TestComplexityLimitEnforcement(t *testing.T) {
 	}
 }
 
-func TestMapAppRoleToDatabaseRole(t *testing.T) {
+func TestMapAppRoleToDatabaseRole_Security(t *testing.T) {
 	tests := []struct {
 		name     string
 		appRole  string

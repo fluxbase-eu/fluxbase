@@ -179,3 +179,301 @@ func TestEmbeddingModel_Struct(t *testing.T) {
 	assert.Equal(t, 512, model.Dimensions)
 	assert.Equal(t, 4096, model.MaxTokens)
 }
+
+// =============================================================================
+// Ollama Embedding Provider Tests
+// =============================================================================
+
+func TestNewOllamaEmbeddingProvider(t *testing.T) {
+	t.Run("creates provider with valid config", func(t *testing.T) {
+		config := ProviderConfig{
+			Type:  ProviderTypeOllama,
+			Model: "nomic-embed-text",
+			Config: map[string]string{
+				"endpoint": "http://localhost:11434",
+			},
+		}
+
+		provider, err := NewOllamaEmbeddingProvider(config)
+		require.NoError(t, err)
+		assert.NotNil(t, provider)
+	})
+
+	t.Run("defaults endpoint to localhost:11434", func(t *testing.T) {
+		config := ProviderConfig{
+			Type:   ProviderTypeOllama,
+			Model:  "nomic-embed-text",
+			Config: map[string]string{},
+		}
+
+		provider, err := NewOllamaEmbeddingProvider(config)
+		require.NoError(t, err)
+		assert.NotNil(t, provider)
+	})
+
+	t.Run("defaults model to nomic-embed-text", func(t *testing.T) {
+		config := ProviderConfig{
+			Type:   ProviderTypeOllama,
+			Config: map[string]string{},
+		}
+
+		provider, err := NewOllamaEmbeddingProvider(config)
+		require.NoError(t, err)
+		assert.NotNil(t, provider)
+		assert.Equal(t, "nomic-embed-text", provider.DefaultModel())
+	})
+
+	t.Run("uses custom model when specified", func(t *testing.T) {
+		config := ProviderConfig{
+			Type:  ProviderTypeOllama,
+			Model: "mxbai-embed-large",
+			Config: map[string]string{
+				"endpoint": "http://localhost:11434",
+			},
+		}
+
+		provider, err := NewOllamaEmbeddingProvider(config)
+		require.NoError(t, err)
+		assert.NotNil(t, provider)
+		assert.Equal(t, "mxbai-embed-large", provider.DefaultModel())
+	})
+
+	t.Run("handles nil Config map", func(t *testing.T) {
+		config := ProviderConfig{
+			Type:   ProviderTypeOllama,
+			Model:  "nomic-embed-text",
+			Config: nil,
+		}
+
+		provider, err := NewOllamaEmbeddingProvider(config)
+		require.NoError(t, err) // Should default endpoint
+		assert.NotNil(t, provider)
+	})
+}
+
+func TestOllamaEmbeddingProvider_ValidateConfig(t *testing.T) {
+	t.Run("valid config passes validation", func(t *testing.T) {
+		provider, err := newOllamaEmbeddingProviderInternal(OllamaConfig{
+			Endpoint: "http://localhost:11434",
+			Model:    "nomic-embed-text",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.NoError(t, err)
+	})
+
+	t.Run("returns error for missing model", func(t *testing.T) {
+		provider, err := newOllamaEmbeddingProviderInternal(OllamaConfig{
+			Endpoint: "http://localhost:11434",
+			Model:    "",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "model is required")
+	})
+}
+
+func TestOllamaEmbeddingProvider_SupportedModels(t *testing.T) {
+	provider, err := newOllamaEmbeddingProviderInternal(OllamaConfig{
+		Endpoint: "http://localhost:11434",
+		Model:    "nomic-embed-text",
+	})
+	require.NoError(t, err)
+
+	models := provider.SupportedModels()
+	assert.Equal(t, OllamaEmbeddingModels, models)
+	assert.Len(t, models, 3)
+}
+
+func TestOllamaEmbeddingProvider_DefaultModel(t *testing.T) {
+	t.Run("returns configured model", func(t *testing.T) {
+		provider, err := newOllamaEmbeddingProviderInternal(OllamaConfig{
+			Endpoint: "http://localhost:11434",
+			Model:    "mxbai-embed-large",
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, "mxbai-embed-large", provider.DefaultModel())
+	})
+
+	t.Run("returns nomic-embed-text when model not configured", func(t *testing.T) {
+		provider, err := newOllamaEmbeddingProviderInternal(OllamaConfig{
+			Endpoint: "http://localhost:11434",
+			Model:    "",
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, "nomic-embed-text", provider.DefaultModel())
+	})
+}
+
+// =============================================================================
+// OpenAI Embedding Provider ValidateConfig Tests
+// =============================================================================
+
+func TestOpenAIEmbeddingProvider_ValidateConfig(t *testing.T) {
+	t.Run("valid config passes validation", func(t *testing.T) {
+		provider, err := newOpenAIEmbeddingProviderInternal(OpenAIConfig{
+			APIKey: "sk-test-key",
+			Model:  "text-embedding-3-small",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.NoError(t, err)
+	})
+
+	t.Run("returns error for missing api_key", func(t *testing.T) {
+		provider, err := newOpenAIEmbeddingProviderInternal(OpenAIConfig{
+			APIKey: "",
+			Model:  "text-embedding-3-small",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "api_key is required")
+	})
+}
+
+func TestOpenAIEmbeddingProvider_SupportedModels(t *testing.T) {
+	provider, err := newOpenAIEmbeddingProviderInternal(OpenAIConfig{
+		APIKey: "sk-test-key",
+		Model:  "text-embedding-3-small",
+	})
+	require.NoError(t, err)
+
+	models := provider.SupportedModels()
+	assert.Equal(t, OpenAIEmbeddingModels, models)
+	assert.Len(t, models, 3)
+}
+
+func TestOpenAIEmbeddingProvider_DefaultModel(t *testing.T) {
+	t.Run("returns configured model", func(t *testing.T) {
+		provider, err := newOpenAIEmbeddingProviderInternal(OpenAIConfig{
+			APIKey: "sk-test-key",
+			Model:  "text-embedding-3-large",
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, "text-embedding-3-large", provider.DefaultModel())
+	})
+
+	t.Run("returns text-embedding-3-small when model not configured", func(t *testing.T) {
+		provider, err := newOpenAIEmbeddingProviderInternal(OpenAIConfig{
+			APIKey: "sk-test-key",
+			Model:  "",
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, "text-embedding-3-small", provider.DefaultModel())
+	})
+}
+
+// =============================================================================
+// Azure Embedding Provider ValidateConfig Tests
+// =============================================================================
+
+func TestAzureEmbeddingProvider_ValidateConfig(t *testing.T) {
+	t.Run("valid config passes validation", func(t *testing.T) {
+		provider, err := newAzureEmbeddingProviderInternal(AzureConfig{
+			APIKey:         "test-key",
+			Endpoint:       "https://example.openai.azure.com",
+			DeploymentName: "my-deployment",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.NoError(t, err)
+	})
+
+	t.Run("returns error for missing api_key", func(t *testing.T) {
+		provider, err := newAzureEmbeddingProviderInternal(AzureConfig{
+			APIKey:         "",
+			Endpoint:       "https://example.openai.azure.com",
+			DeploymentName: "my-deployment",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "api_key is required")
+	})
+
+	t.Run("returns error for missing endpoint", func(t *testing.T) {
+		provider, err := newAzureEmbeddingProviderInternal(AzureConfig{
+			APIKey:         "test-key",
+			Endpoint:       "",
+			DeploymentName: "my-deployment",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "endpoint is required")
+	})
+
+	t.Run("returns error for missing deployment_name", func(t *testing.T) {
+		provider, err := newAzureEmbeddingProviderInternal(AzureConfig{
+			APIKey:         "test-key",
+			Endpoint:       "https://example.openai.azure.com",
+			DeploymentName: "",
+		})
+		require.NoError(t, err)
+
+		err = provider.ValidateConfig()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "deployment_name is required")
+	})
+}
+
+func TestAzureEmbeddingProvider_SupportedModels(t *testing.T) {
+	provider, err := newAzureEmbeddingProviderInternal(AzureConfig{
+		APIKey:         "test-key",
+		Endpoint:       "https://example.openai.azure.com",
+		DeploymentName: "my-deployment",
+	})
+	require.NoError(t, err)
+
+	models := provider.SupportedModels()
+	assert.Equal(t, AzureEmbeddingModels, models)
+	assert.Len(t, models, 3)
+}
+
+func TestAzureEmbeddingProvider_DefaultModel(t *testing.T) {
+	provider, err := newAzureEmbeddingProviderInternal(AzureConfig{
+		APIKey:         "test-key",
+		Endpoint:       "https://example.openai.azure.com",
+		DeploymentName: "my-deployment",
+	})
+	require.NoError(t, err)
+
+	// Azure always returns text-embedding-3-small as default
+	assert.Equal(t, "text-embedding-3-small", provider.DefaultModel())
+}
+
+// =============================================================================
+// EmbeddingUsage Struct Tests
+// =============================================================================
+
+func TestEmbeddingUsage_Struct(t *testing.T) {
+	t.Run("zero value has expected defaults", func(t *testing.T) {
+		var usage EmbeddingUsage
+
+		assert.Zero(t, usage.PromptTokens)
+		assert.Zero(t, usage.TotalTokens)
+	})
+
+	t.Run("all fields can be set", func(t *testing.T) {
+		usage := EmbeddingUsage{
+			PromptTokens: 100,
+			TotalTokens:  100,
+		}
+
+		assert.Equal(t, 100, usage.PromptTokens)
+		assert.Equal(t, 100, usage.TotalTokens)
+	})
+}

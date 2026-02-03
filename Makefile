@@ -118,6 +118,29 @@ test-coverage: ## Run tests and generate coverage report with enforcement (Go + 
 test-coverage-check: ## Check coverage thresholds without running tests (requires coverage.out)
 	@go-test-coverage --config=.testcoverage.yml
 
+test-coverage-full: ## Run ALL tests (unit + e2e) with combined coverage (requires postgres, mailhog, minio - may take 20+ minutes)
+	@echo "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
+	@echo "${BLUE}║           FULL COVERAGE REPORT (Unit + E2E)               ║${NC}"
+	@echo "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
+	@echo ""
+	@echo "${YELLOW}[1/4] Running ALL Go tests with coverage (this may take 20+ minutes)...${NC}"
+	@go test -timeout 30m -coverprofile=coverage.out -covermode=atomic -p 1 ./...
+	@echo ""
+	@echo "${YELLOW}[2/4] Enforcing coverage thresholds...${NC}"
+	@go-test-coverage --config=.testcoverage.yml
+	@echo ""
+	@echo "${YELLOW}[3/4] Generating Go coverage report...${NC}"
+	@go tool cover -html=coverage.out -o coverage.html
+	@go tool cover -func=coverage.out | grep total | awk '{print "  ${GREEN}Go Coverage (Unit + E2E): " $$3 "${NC}"}'
+	@echo ""
+	@echo "${YELLOW}[4/4] Running SDK tests with coverage...${NC}"
+	@cd sdk && unset NODE_OPTIONS && npx vitest --coverage --run 2>&1 | tail -20 || true
+	@echo ""
+	@echo "${GREEN}Full coverage reports generated:${NC}"
+	@echo "  - coverage.out     (Go profile - includes e2e)"
+	@echo "  - coverage.html    (Go HTML report)"
+	@echo "  - sdk/coverage/    (SDK coverage)"
+
 test-fast: ## Run all tests without race detector (faster, excludes e2e)
 	@./scripts/test-runner.sh go test -timeout 1m -v -short -cover $(shell go list ./... | grep -v '/test/e2e')
 

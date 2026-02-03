@@ -103,6 +103,12 @@ func setupStorageTestServer(t *testing.T) (*fiber.App, string, *database.Connect
 		},
 	})
 
+	// Add middleware to set admin role for all storage tests
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("user_role", "admin")
+		return c.Next()
+	})
+
 	// Setup storage routes
 	storageHandler := NewStorageHandler(storageService, db, nil)
 	api := app.Group("/api/v1")

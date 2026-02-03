@@ -146,6 +146,11 @@ func (m *VectorManager) RefreshFromDatabase(ctx context.Context) error {
 		return nil
 	}
 
+	// If aiStorage is nil, we can't refresh from database
+	if m.aiStorage == nil {
+		return fmt.Errorf("ai storage not initialized")
+	}
+
 	// Priority 2: Explicit embedding provider preference (database override)
 	embeddingPref, err := m.aiStorage.GetEmbeddingProviderPreference(ctx)
 	if err != nil {

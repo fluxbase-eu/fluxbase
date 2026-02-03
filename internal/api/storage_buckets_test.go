@@ -75,8 +75,13 @@ func TestStorageAPI_ListBuckets(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	require.NoError(t, err)
 
-	bucketsResult := result["buckets"].([]interface{})
-	assert.GreaterOrEqual(t, len(bucketsResult), 3)
+	// Check if buckets field exists and is not nil before type assertion
+	if result["buckets"] != nil {
+		bucketsResult := result["buckets"].([]interface{})
+		assert.GreaterOrEqual(t, len(bucketsResult), 3)
+	} else {
+		t.Fatal("buckets field is nil in response")
+	}
 }
 
 func TestStorageAPI_DeleteBucket(t *testing.T) {

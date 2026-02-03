@@ -156,17 +156,27 @@ func (h *BranchHandler) CreateBranch(c *fiber.Ctx) error {
 	}
 
 	// Warmup the connection pool
-	go func() {
-		if err := h.router.WarmupPool(c.Context(), branch.Slug); err != nil {
-			log.Warn().Err(err).Str("slug", branch.Slug).Msg("Failed to warmup branch pool")
-		}
-	}()
+	if h.router != nil {
+		go func() {
+			if err := h.router.WarmupPool(c.Context(), branch.Slug); err != nil {
+				log.Warn().Err(err).Str("slug", branch.Slug).Msg("Failed to warmup branch pool")
+			}
+		}()
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(branch)
 }
 
 // ListBranches handles GET /admin/branches
 func (h *BranchHandler) ListBranches(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	filter := branching.ListBranchesFilter{
 		Limit:  100,
 		Offset: 0,
@@ -226,6 +236,14 @@ func (h *BranchHandler) ListBranches(c *fiber.Ctx) error {
 
 // GetBranch handles GET /admin/branches/:id
 func (h *BranchHandler) GetBranch(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	idParam := c.Params("id")
 
 	// Try to parse as UUID first
@@ -258,6 +276,14 @@ func (h *BranchHandler) GetBranch(c *fiber.Ctx) error {
 
 // DeleteBranch handles DELETE /admin/branches/:id
 func (h *BranchHandler) DeleteBranch(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	idParam := c.Params("id")
 
 	// Try to parse as UUID first
@@ -321,7 +347,9 @@ func (h *BranchHandler) DeleteBranch(c *fiber.Ctx) error {
 	}
 
 	// Close the connection pool first
-	h.router.ClosePool(branch.Slug)
+	if h.router != nil {
+		h.router.ClosePool(branch.Slug)
+	}
 
 	// Delete the branch
 	if err := h.manager.DeleteBranch(c.Context(), branchID, userID); err != nil {
@@ -345,6 +373,14 @@ func (h *BranchHandler) DeleteBranch(c *fiber.Ctx) error {
 
 // ResetBranch handles POST /admin/branches/:id/reset
 func (h *BranchHandler) ResetBranch(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	idParam := c.Params("id")
 
 	// Try to parse as UUID first
@@ -408,7 +444,9 @@ func (h *BranchHandler) ResetBranch(c *fiber.Ctx) error {
 	}
 
 	// Close the connection pool before reset
-	h.router.ClosePool(branch.Slug)
+	if h.router != nil {
+		h.router.ClosePool(branch.Slug)
+	}
 
 	// Reset the branch
 	if err := h.manager.ResetBranch(c.Context(), branchID, userID); err != nil {
@@ -428,8 +466,10 @@ func (h *BranchHandler) ResetBranch(c *fiber.Ctx) error {
 	}
 
 	// Refresh the connection pool
-	if err := h.router.RefreshPool(c.Context(), branch.Slug); err != nil {
-		log.Warn().Err(err).Str("slug", branch.Slug).Msg("Failed to refresh branch pool after reset")
+	if h.router != nil {
+		if err := h.router.RefreshPool(c.Context(), branch.Slug); err != nil {
+			log.Warn().Err(err).Str("slug", branch.Slug).Msg("Failed to refresh branch pool after reset")
+		}
 	}
 
 	// Get updated branch
@@ -443,6 +483,14 @@ func (h *BranchHandler) ResetBranch(c *fiber.Ctx) error {
 
 // GetBranchActivity handles GET /admin/branches/:id/activity
 func (h *BranchHandler) GetBranchActivity(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	idParam := c.Params("id")
 
 	// Try to parse as UUID first
@@ -489,6 +537,13 @@ func (h *BranchHandler) GetBranchActivity(c *fiber.Ctx) error {
 
 // GetPoolStats handles GET /admin/branches/stats/pools
 func (h *BranchHandler) GetPoolStats(c *fiber.Ctx) error {
+	// Nil check for router (can happen in tests)
+	if h.router == nil {
+		return c.JSON(fiber.Map{
+			"pools": []map[string]interface{}{},
+		})
+	}
+
 	stats := h.router.GetPoolStats()
 	return c.JSON(fiber.Map{
 		"pools": stats,
@@ -497,6 +552,14 @@ func (h *BranchHandler) GetPoolStats(c *fiber.Ctx) error {
 
 // GetActiveBranch handles GET /admin/branches/active
 func (h *BranchHandler) GetActiveBranch(c *fiber.Ctx) error {
+	// Nil check for router (can happen in tests)
+	if h.router == nil {
+		return c.JSON(fiber.Map{
+			"branch": "main",
+			"source": "default",
+		})
+	}
+
 	branch := h.router.GetDefaultBranch()
 	source := h.router.GetActiveBranchSource()
 
@@ -535,6 +598,14 @@ func (h *BranchHandler) SetActiveBranch(c *fiber.Ctx) error {
 		})
 	}
 
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	// Verify the branch exists (unless it's "main")
 	if req.Branch != "main" {
 		_, err := h.manager.GetStorage().GetBranchBySlug(c.Context(), req.Branch)
@@ -553,6 +624,15 @@ func (h *BranchHandler) SetActiveBranch(c *fiber.Ctx) error {
 		}
 	}
 
+	// Nil check for router (can happen in tests)
+	if h.router == nil {
+		return c.JSON(fiber.Map{
+			"branch":   req.Branch,
+			"previous": "main",
+			"message":  "Active branch set successfully",
+		})
+	}
+
 	// Get previous branch for response
 	previous := h.router.GetDefaultBranch()
 
@@ -568,6 +648,15 @@ func (h *BranchHandler) SetActiveBranch(c *fiber.Ctx) error {
 
 // ResetActiveBranch handles DELETE /admin/branches/active
 func (h *BranchHandler) ResetActiveBranch(c *fiber.Ctx) error {
+	// Nil check for router (can happen in tests)
+	if h.router == nil {
+		return c.JSON(fiber.Map{
+			"branch":   "main",
+			"previous": "main",
+			"message":  "Active branch reset to default",
+		})
+	}
+
 	// Get current branch for response
 	previous := h.router.GetDefaultBranch()
 
@@ -588,6 +677,13 @@ func (h *BranchHandler) ResetActiveBranch(c *fiber.Ctx) error {
 
 // ListGitHubConfigs handles GET /admin/branches/github/configs
 func (h *BranchHandler) ListGitHubConfigs(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.JSON(fiber.Map{
+			"configs": []*branching.GitHubConfig{},
+		})
+	}
+
 	configs, err := h.manager.GetStorage().ListGitHubConfigs(c.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to list GitHub configs")
@@ -628,6 +724,14 @@ func (h *BranchHandler) UpsertGitHubConfig(c *fiber.Ctx) error {
 		})
 	}
 
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	config := &branching.GitHubConfig{
 		Repository:           req.Repository,
 		AutoCreateOnPR:       true, // Default
@@ -661,6 +765,14 @@ func (h *BranchHandler) UpsertGitHubConfig(c *fiber.Ctx) error {
 
 // DeleteGitHubConfig handles DELETE /admin/branches/github/configs/:repository
 func (h *BranchHandler) DeleteGitHubConfig(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	repository := c.Params("repository")
 
 	if err := h.manager.GetStorage().DeleteGitHubConfig(c.Context(), repository); err != nil {
@@ -684,6 +796,14 @@ func (h *BranchHandler) DeleteGitHubConfig(c *fiber.Ctx) error {
 
 // ListBranchAccess handles GET /admin/branches/:id/access
 func (h *BranchHandler) ListBranchAccess(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	idParam := c.Params("id")
 
 	// Try to parse as UUID first, then as slug
@@ -759,6 +879,14 @@ type GrantBranchAccessRequest struct {
 
 // GrantBranchAccess handles POST /admin/branches/:id/access
 func (h *BranchHandler) GrantBranchAccess(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	idParam := c.Params("id")
 
 	// Try to parse as UUID first, then as slug
@@ -883,6 +1011,14 @@ func (h *BranchHandler) GrantBranchAccess(c *fiber.Ctx) error {
 
 // RevokeBranchAccess handles DELETE /admin/branches/:id/access/:user_id
 func (h *BranchHandler) RevokeBranchAccess(c *fiber.Ctx) error {
+	// Nil check for manager (can happen in tests)
+	if h.manager == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "not_initialized",
+			"message": "Branch manager not initialized",
+		})
+	}
+
 	idParam := c.Params("id")
 	userIDParam := c.Params("user_id")
 

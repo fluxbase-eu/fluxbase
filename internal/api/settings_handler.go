@@ -52,6 +52,13 @@ func (h *SettingsHandler) GetSetting(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	var value interface{}
 	var queryErr error
 
@@ -123,6 +130,13 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	if len(req.Keys) > 100 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Maximum 100 keys allowed per request",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
