@@ -21,12 +21,13 @@ const (
 
 // AuthHandler handles authentication HTTP requests
 type AuthHandler struct {
-	db             *pgxpool.Pool
-	authService    *auth.Service
-	captchaService *auth.CaptchaService
-	samlService    *auth.SAMLService
-	baseURL        string
-	secureCookie   bool // Whether to set Secure flag on cookies (true in production)
+	db                  *pgxpool.Pool
+	authService         *auth.Service
+	captchaService      *auth.CaptchaService
+	captchaTrustService *auth.CaptchaTrustService
+	samlService         *auth.SAMLService
+	baseURL             string
+	secureCookie        bool // Whether to set Secure flag on cookies (true in production)
 }
 
 // NewAuthHandler creates a new authentication handler
@@ -48,6 +49,11 @@ func (h *AuthHandler) SetSAMLService(samlService *auth.SAMLService) {
 // SetSecureCookie sets whether cookies should have the Secure flag
 func (h *AuthHandler) SetSecureCookie(secure bool) {
 	h.secureCookie = secure
+}
+
+// SetCaptchaTrustService sets the CAPTCHA trust service for adaptive verification
+func (h *AuthHandler) SetCaptchaTrustService(trustService *auth.CaptchaTrustService) {
+	h.captchaTrustService = trustService
 }
 
 // AuthConfigResponse represents the public authentication configuration
@@ -173,20 +179,65 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 		})
 	}
 
-	// Verify CAPTCHA if enabled for signup
-	if h.captchaService != nil {
-		if err := h.captchaService.VerifyForEndpoint(c.Context(), "signup", req.CaptchaToken, c.IP()); err != nil {
-			if errors.Is(err, auth.ErrCaptchaRequired) {
+	// CAPTCHA verification with adaptive trust support
+	captchaVerified := false
+	if h.captchaService != nil && h.captchaService.IsEnabled() {
+		// If challenge_id is provided, validate the challenge first
+		if req.ChallengeID != "" && h.captchaTrustService != nil {
+			// Verify CAPTCHA token if one was provided
+			if req.CaptchaToken != "" {
+				if err := h.captchaService.Verify(c.Context(), req.CaptchaToken, c.IP()); err != nil {
+					log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for signup")
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "CAPTCHA verification failed",
+						"code":  "CAPTCHA_INVALID",
+					})
+				}
+				captchaVerified = true
+			}
+
+			// Validate the challenge (checks if CAPTCHA was required and if it was verified)
+			if err := h.captchaTrustService.ValidateChallenge(c.Context(), req.ChallengeID, "signup", c.IP(), captchaVerified); err != nil {
+				if errors.Is(err, auth.ErrCaptchaRequired) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "CAPTCHA verification required",
+						"code":  "CAPTCHA_REQUIRED",
+					})
+				}
+				if errors.Is(err, auth.ErrChallengeExpired) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Challenge expired, please request a new one",
+						"code":  "CHALLENGE_EXPIRED",
+					})
+				}
+				if errors.Is(err, auth.ErrChallengeConsumed) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Challenge already used, please request a new one",
+						"code":  "CHALLENGE_CONSUMED",
+					})
+				}
+				log.Warn().Err(err).Str("email", req.Email).Msg("Challenge validation failed for signup")
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"error": "CAPTCHA verification required",
-					"code":  "CAPTCHA_REQUIRED",
+					"error": "Invalid challenge",
+					"code":  "CHALLENGE_INVALID",
 				})
 			}
-			log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for signup")
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "CAPTCHA verification failed",
-				"code":  "CAPTCHA_INVALID",
-			})
+		} else {
+			// Fall back to static CAPTCHA verification (no challenge_id provided)
+			if err := h.captchaService.VerifyForEndpoint(c.Context(), "signup", req.CaptchaToken, c.IP()); err != nil {
+				if errors.Is(err, auth.ErrCaptchaRequired) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "CAPTCHA verification required",
+						"code":  "CAPTCHA_REQUIRED",
+					})
+				}
+				log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for signup")
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "CAPTCHA verification failed",
+					"code":  "CAPTCHA_INVALID",
+				})
+			}
+			captchaVerified = req.CaptchaToken != ""
 		}
 	}
 
@@ -211,17 +262,38 @@ func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
 		})
 	}
 
+	// Issue trust token if CAPTCHA was verified (for use in subsequent requests)
+	var trustToken string
+	if captchaVerified && h.captchaTrustService != nil && h.captchaTrustService.IsEnabled() {
+		trustToken, _ = h.captchaTrustService.IssueTrustToken(c.Context(), c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+	}
+
 	// Check if email verification is required (don't set cookies, no tokens returned)
 	if resp.RequiresEmailVerification {
-		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		response := fiber.Map{
 			"user":                        resp.User,
 			"requires_email_verification": true,
 			"message":                     "Please check your email to verify your account before signing in.",
-		})
+		}
+		if trustToken != "" {
+			response["trust_token"] = trustToken
+		}
+		return c.Status(fiber.StatusCreated).JSON(response)
 	}
 
 	// Set httpOnly cookies for tokens
 	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, resp.ExpiresIn)
+
+	// Add trust token to response if available
+	if trustToken != "" {
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"user":          resp.User,
+			"access_token":  resp.AccessToken,
+			"refresh_token": resp.RefreshToken,
+			"expires_in":    resp.ExpiresIn,
+			"trust_token":   trustToken,
+		})
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(resp)
 }
@@ -247,20 +319,65 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 		})
 	}
 
-	// Verify CAPTCHA if enabled for login
-	if h.captchaService != nil {
-		if err := h.captchaService.VerifyForEndpoint(c.Context(), "login", req.CaptchaToken, c.IP()); err != nil {
-			if errors.Is(err, auth.ErrCaptchaRequired) {
+	// CAPTCHA verification with adaptive trust support
+	captchaVerified := false
+	if h.captchaService != nil && h.captchaService.IsEnabled() {
+		// If challenge_id is provided, validate the challenge first
+		if req.ChallengeID != "" && h.captchaTrustService != nil {
+			// Verify CAPTCHA token if one was provided
+			if req.CaptchaToken != "" {
+				if err := h.captchaService.Verify(c.Context(), req.CaptchaToken, c.IP()); err != nil {
+					log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for login")
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "CAPTCHA verification failed",
+						"code":  "CAPTCHA_INVALID",
+					})
+				}
+				captchaVerified = true
+			}
+
+			// Validate the challenge (checks if CAPTCHA was required and if it was verified)
+			if err := h.captchaTrustService.ValidateChallenge(c.Context(), req.ChallengeID, "login", c.IP(), captchaVerified); err != nil {
+				if errors.Is(err, auth.ErrCaptchaRequired) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "CAPTCHA verification required",
+						"code":  "CAPTCHA_REQUIRED",
+					})
+				}
+				if errors.Is(err, auth.ErrChallengeExpired) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Challenge expired, please request a new one",
+						"code":  "CHALLENGE_EXPIRED",
+					})
+				}
+				if errors.Is(err, auth.ErrChallengeConsumed) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Challenge already used, please request a new one",
+						"code":  "CHALLENGE_CONSUMED",
+					})
+				}
+				log.Warn().Err(err).Str("email", req.Email).Msg("Challenge validation failed for login")
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"error": "CAPTCHA verification required",
-					"code":  "CAPTCHA_REQUIRED",
+					"error": "Invalid challenge",
+					"code":  "CHALLENGE_INVALID",
 				})
 			}
-			log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for login")
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "CAPTCHA verification failed",
-				"code":  "CAPTCHA_INVALID",
-			})
+		} else {
+			// Fall back to static CAPTCHA verification (no challenge_id provided)
+			if err := h.captchaService.VerifyForEndpoint(c.Context(), "login", req.CaptchaToken, c.IP()); err != nil {
+				if errors.Is(err, auth.ErrCaptchaRequired) {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "CAPTCHA verification required",
+						"code":  "CAPTCHA_REQUIRED",
+					})
+				}
+				log.Warn().Err(err).Str("email", req.Email).Msg("CAPTCHA verification failed for login")
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "CAPTCHA verification failed",
+					"code":  "CAPTCHA_INVALID",
+				})
+			}
+			captchaVerified = req.CaptchaToken != ""
 		}
 	}
 
@@ -274,6 +391,11 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 	// Authenticate user
 	resp, err := h.authService.SignIn(c.Context(), req)
 	if err != nil {
+		// Record failed attempt for trust tracking
+		if h.captchaTrustService != nil {
+			_ = h.captchaTrustService.RecordFailedAttempt(ctx, nil, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+		}
+
 		// Check for locked account
 		if errors.Is(err, auth.ErrAccountLocked) {
 			log.Warn().Str("email", req.Email).Msg("Login attempt on locked account")
@@ -297,6 +419,20 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 		})
 	}
 
+	// Record successful login for trust tracking
+	if h.captchaTrustService != nil {
+		_ = h.captchaTrustService.RecordSuccessfulLogin(ctx, resp.User.ID, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+		if captchaVerified {
+			_ = h.captchaTrustService.RecordCaptchaSolved(ctx, &resp.User.ID, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+		}
+	}
+
+	// Issue trust token if CAPTCHA was verified (for use in subsequent requests)
+	var trustToken string
+	if captchaVerified && h.captchaTrustService != nil && h.captchaTrustService.IsEnabled() {
+		trustToken, _ = h.captchaTrustService.IssueTrustToken(ctx, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+	}
+
 	// Check if user has 2FA enabled
 	twoFAEnabled, err := h.authService.IsTOTPEnabled(c.Context(), resp.User.ID)
 	if err != nil {
@@ -304,20 +440,44 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 		// Continue with login - don't block if 2FA check fails
 		// Set httpOnly cookies for tokens
 		h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, resp.ExpiresIn)
+		if trustToken != "" {
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"user":          resp.User,
+				"access_token":  resp.AccessToken,
+				"refresh_token": resp.RefreshToken,
+				"expires_in":    resp.ExpiresIn,
+				"trust_token":   trustToken,
+			})
+		}
 		return c.Status(fiber.StatusOK).JSON(resp)
 	}
 
 	// If 2FA is enabled, return special response requiring 2FA verification
 	if twoFAEnabled {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		response := fiber.Map{
 			"requires_2fa": true,
 			"user_id":      resp.User.ID,
 			"message":      "2FA verification required. Please provide your 2FA code.",
-		})
+		}
+		if trustToken != "" {
+			response["trust_token"] = trustToken
+		}
+		return c.Status(fiber.StatusOK).JSON(response)
 	}
 
 	// Set httpOnly cookies for tokens
 	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, resp.ExpiresIn)
+
+	// Add trust token to response if available
+	if trustToken != "" {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"user":          resp.User,
+			"access_token":  resp.AccessToken,
+			"refresh_token": resp.RefreshToken,
+			"expires_in":    resp.ExpiresIn,
+			"trust_token":   trustToken,
+		})
+	}
 
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
@@ -846,6 +1006,9 @@ func (h *AuthHandler) RegisterRoutes(router fiber.Router, rateLimiters map[strin
 
 	// CAPTCHA configuration endpoint - returns public config (provider, site key)
 	router.Get("/captcha/config", h.GetCaptchaConfig)
+
+	// CAPTCHA pre-flight check endpoint - determines if CAPTCHA is required based on trust signals
+	router.Post("/captcha/check", h.CheckCaptcha)
 
 	// Auth configuration endpoint - returns all public auth config (signup, OAuth, SAML, CAPTCHA, password requirements)
 	router.Get("/config", h.GetAuthConfig)
@@ -1645,6 +1808,99 @@ func (h *AuthHandler) GetCaptchaConfig(c *fiber.Ctx) error {
 
 	config := h.captchaService.GetConfig()
 	return c.Status(fiber.StatusOK).JSON(config)
+}
+
+// CheckCaptcha performs a pre-flight check to determine if CAPTCHA is required
+// POST /auth/captcha/check
+//
+// This endpoint evaluates trust signals and returns whether CAPTCHA verification
+// is needed for the subsequent auth action. It issues a challenge_id that must
+// be included in the actual auth request.
+//
+// Request body:
+//
+//	{
+//	  "endpoint": "login",                    // Required: signup, login, password_reset, magic_link
+//	  "email": "user@example.com",            // Optional: for trust lookup
+//	  "device_fingerprint": "abc123",         // Optional: browser fingerprint
+//	  "trust_token": "tt_..."                 // Optional: token from previous CAPTCHA
+//	}
+//
+// Response:
+//
+//	{
+//	  "captcha_required": true,
+//	  "reason": "new_ip_address",
+//	  "trust_score": 35,
+//	  "provider": "hcaptcha",
+//	  "site_key": "...",
+//	  "challenge_id": "ch_abc123...",
+//	  "expires_at": "2024-01-15T10:05:00Z"
+//	}
+func (h *AuthHandler) CheckCaptcha(c *fiber.Ctx) error {
+	// Parse request
+	var req auth.CaptchaCheckRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+			"code":  "INVALID_REQUEST",
+		})
+	}
+
+	// Validate endpoint
+	validEndpoints := map[string]bool{
+		"signup":         true,
+		"login":          true,
+		"password_reset": true,
+		"magic_link":     true,
+	}
+	if !validEndpoints[req.Endpoint] {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid endpoint. Must be one of: signup, login, password_reset, magic_link",
+			"code":  "INVALID_ENDPOINT",
+		})
+	}
+
+	// If CAPTCHA is not enabled at all, return early
+	if h.captchaService == nil || !h.captchaService.IsEnabled() {
+		return c.Status(fiber.StatusOK).JSON(auth.CaptchaCheckResponse{
+			CaptchaRequired: false,
+			Reason:          "captcha_disabled",
+			ChallengeID:     "", // No challenge needed
+		})
+	}
+
+	// If adaptive trust service is available, use it
+	if h.captchaTrustService != nil {
+		response, err := h.captchaTrustService.CheckCaptchaRequired(c.Context(), req, c.IP(), c.Get("User-Agent"))
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to check CAPTCHA requirement")
+			// Fall back to requiring CAPTCHA on error
+			return c.Status(fiber.StatusOK).JSON(auth.CaptchaCheckResponse{
+				CaptchaRequired: true,
+				Reason:          "trust_check_error",
+				Provider:        h.captchaService.GetProvider(),
+				SiteKey:         h.captchaService.GetSiteKey(),
+			})
+		}
+		return c.Status(fiber.StatusOK).JSON(response)
+	}
+
+	// Fall back to static check (adaptive trust not configured)
+	required := h.captchaService.IsEnabledForEndpoint(req.Endpoint)
+	response := auth.CaptchaCheckResponse{
+		CaptchaRequired: required,
+		ChallengeID:     "", // No challenge tracking without trust service
+	}
+	if required {
+		response.Reason = "captcha_enabled_for_endpoint"
+		response.Provider = h.captchaService.GetProvider()
+		response.SiteKey = h.captchaService.GetSiteKey()
+	} else {
+		response.Reason = "captcha_not_required_for_endpoint"
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
 // GetAuthConfig returns the public authentication configuration for clients

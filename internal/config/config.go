@@ -271,6 +271,40 @@ type CaptchaConfig struct {
 	CapAPIKey    string `mapstructure:"cap_api_key"`    // API key for Cap server authentication
 	// Test mode settings (for development/testing only - DO NOT use in production)
 	TestBypassToken string `mapstructure:"test_bypass_token"` // Token that bypasses verification (leave empty in production)
+	// Adaptive trust settings for intelligent CAPTCHA decisions
+	AdaptiveTrust AdaptiveTrustConfig `mapstructure:"adaptive_trust"`
+}
+
+// AdaptiveTrustConfig contains settings for the adaptive CAPTCHA trust system
+type AdaptiveTrustConfig struct {
+	Enabled bool `mapstructure:"enabled"` // Enable adaptive trust (skip CAPTCHA for trusted users)
+
+	// Trust token settings
+	TrustTokenTTL     time.Duration `mapstructure:"trust_token_ttl"`      // How long a CAPTCHA solution is trusted (default: 15m)
+	TrustTokenBoundIP bool          `mapstructure:"trust_token_bound_ip"` // Token only valid from same IP (default: true)
+
+	// Challenge settings
+	ChallengeExpiry time.Duration `mapstructure:"challenge_expiry"` // How long a challenge_id is valid (default: 5m)
+
+	// Trust score threshold - score below this requires CAPTCHA
+	CaptchaThreshold int `mapstructure:"captcha_threshold"` // Default: 50
+
+	// Trust signal weights (positive signals)
+	WeightKnownIP            int `mapstructure:"weight_known_ip"`             // User logged in from this IP before (default: 30)
+	WeightKnownDevice        int `mapstructure:"weight_known_device"`         // Device fingerprint seen before (default: 25)
+	WeightRecentCaptcha      int `mapstructure:"weight_recent_captcha"`       // Solved CAPTCHA recently (default: 40)
+	WeightVerifiedEmail      int `mapstructure:"weight_verified_email"`       // Email address is confirmed (default: 15)
+	WeightAccountAge         int `mapstructure:"weight_account_age"`          // Account older than 7 days (default: 10)
+	WeightSuccessfulLogins   int `mapstructure:"weight_successful_logins"`    // 3+ successful logins (default: 10)
+	WeightMFAEnabled         int `mapstructure:"weight_mfa_enabled"`          // User has MFA configured (default: 20)
+
+	// Trust signal weights (negative signals)
+	WeightNewIP            int `mapstructure:"weight_new_ip"`             // Never seen this IP (default: -30)
+	WeightNewDevice        int `mapstructure:"weight_new_device"`         // Unknown device fingerprint (default: -25)
+	WeightFailedAttempts   int `mapstructure:"weight_failed_attempts"`    // Recent failed login attempts (default: -20)
+
+	// Per-endpoint overrides (some actions always need CAPTCHA regardless of trust)
+	AlwaysRequireEndpoints []string `mapstructure:"always_require_endpoints"` // Endpoints that always require CAPTCHA (default: ["password_reset"])
 }
 
 // CORSConfig contains CORS settings
@@ -676,6 +710,27 @@ func setDefaults() {
 	viper.SetDefault("security.captcha.secret_key", "")       // Must be configured
 	viper.SetDefault("security.captcha.score_threshold", 0.5) // For reCAPTCHA v3
 	viper.SetDefault("security.captcha.endpoints", []string{"signup", "login", "password_reset", "magic_link"})
+
+	// Adaptive CAPTCHA trust defaults
+	viper.SetDefault("security.captcha.adaptive_trust.enabled", false)           // Disabled by default
+	viper.SetDefault("security.captcha.adaptive_trust.trust_token_ttl", "15m")   // 15 minutes trust after CAPTCHA
+	viper.SetDefault("security.captcha.adaptive_trust.trust_token_bound_ip", true)
+	viper.SetDefault("security.captcha.adaptive_trust.challenge_expiry", "5m")   // 5 minute challenge validity
+	viper.SetDefault("security.captcha.adaptive_trust.captcha_threshold", 50)    // Score below 50 requires CAPTCHA
+	// Positive trust weights
+	viper.SetDefault("security.captcha.adaptive_trust.weight_known_ip", 30)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_known_device", 25)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_recent_captcha", 40)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_verified_email", 15)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_account_age", 10)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_successful_logins", 10)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_mfa_enabled", 20)
+	// Negative trust weights
+	viper.SetDefault("security.captcha.adaptive_trust.weight_new_ip", -30)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_new_device", -25)
+	viper.SetDefault("security.captcha.adaptive_trust.weight_failed_attempts", -20)
+	// Endpoints that always require CAPTCHA regardless of trust
+	viper.SetDefault("security.captcha.adaptive_trust.always_require_endpoints", []string{"password_reset"})
 
 	// Admin defaults
 	viper.SetDefault("admin.enabled", false) // Admin dashboard disabled by default
