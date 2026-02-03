@@ -30,7 +30,7 @@ type Service interface {
 
 // NewService creates an email service based on configuration
 func NewService(cfg *config.EmailConfig) (Service, error) {
-	if !cfg.Enabled {
+	if cfg == nil || !cfg.Enabled {
 		return &NoOpService{reason: "email is disabled"}, nil
 	}
 

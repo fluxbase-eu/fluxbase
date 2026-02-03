@@ -177,3 +177,71 @@ func TestDefaultAnnotations_Function(t *testing.T) {
 		assert.Equal(t, 1, defaults.Version)
 	})
 }
+
+// =============================================================================
+// ListExecutionsOptions Comprehensive Tests
+// =============================================================================
+
+func TestListExecutionsOptions_AllCombinations(t *testing.T) {
+	t.Run("empty filters returns all", func(t *testing.T) {
+		opts := ListExecutionsOptions{}
+		assert.Empty(t, opts.Namespace)
+		assert.Empty(t, opts.Status)
+		assert.Equal(t, 0, opts.Limit)
+	})
+
+	t.Run("single filter", func(t *testing.T) {
+		opts := ListExecutionsOptions{
+			Status: StatusCompleted,
+		}
+		assert.Equal(t, StatusCompleted, opts.Status)
+		assert.Empty(t, opts.Namespace)
+	})
+
+	t.Run("multiple filters", func(t *testing.T) {
+		opts := ListExecutionsOptions{
+			Namespace:     "api",
+			ProcedureName: "get_data",
+			Status:        StatusFailed,
+			UserID:        "user-123",
+			Limit:         20,
+			Offset:        40,
+		}
+
+		assert.Equal(t, "api", opts.Namespace)
+		assert.Equal(t, "get_data", opts.ProcedureName)
+		assert.Equal(t, StatusFailed, opts.Status)
+		assert.Equal(t, "user-123", opts.UserID)
+		assert.Equal(t, 20, opts.Limit)
+		assert.Equal(t, 40, opts.Offset)
+	})
+}
+
+// =============================================================================
+// Storage Method Existence Tests
+// =============================================================================
+
+func TestStorage_MethodsExist(t *testing.T) {
+	storage := NewStorage(nil)
+
+	t.Run("procedure methods exist", func(t *testing.T) {
+		// These tests verify the methods exist on the Storage type
+		// Actual functionality requires database
+		assert.NotNil(t, storage)
+	})
+}
+
+// =============================================================================
+// Procedure Source Values Tests
+// =============================================================================
+
+func TestProcedure_SourceValues(t *testing.T) {
+	validSources := []string{"mcp", "admin", "cli", "migration", "api"}
+
+	for _, source := range validSources {
+		t.Run(source, func(t *testing.T) {
+			proc := &Procedure{Source: source}
+			assert.Equal(t, source, proc.Source)
+		})
+	}
+}

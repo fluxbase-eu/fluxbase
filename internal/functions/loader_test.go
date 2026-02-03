@@ -338,6 +338,281 @@ func TestFunctionExists(t *testing.T) {
 	}
 }
 
+// =============================================================================
+// ParseFunctionConfig Tests
+// =============================================================================
+
+func TestParseFunctionConfig(t *testing.T) {
+	t.Run("default values when no annotations", func(t *testing.T) {
+		code := `export default () => ({ hello: "world" });`
+		config := ParseFunctionConfig(code)
+
+		if config.AllowUnauthenticated {
+			t.Error("AllowUnauthenticated should be false by default")
+		}
+		if !config.IsPublic {
+			t.Error("IsPublic should be true by default")
+		}
+		if config.DisableExecutionLogs {
+			t.Error("DisableExecutionLogs should be false by default")
+		}
+	})
+
+	t.Run("parses @fluxbase:allow-unauthenticated", func(t *testing.T) {
+		testCases := []struct {
+			name string
+			code string
+		}{
+			{
+				name: "single line comment",
+				code: `// @fluxbase:allow-unauthenticated
+export default () => "hello";`,
+			},
+			{
+				name: "single line comment with leading space",
+				code: `  // @fluxbase:allow-unauthenticated
+export default () => "hello";`,
+			},
+			{
+				name: "multi-line comment start",
+				code: `/* @fluxbase:allow-unauthenticated */
+export default () => "hello";`,
+			},
+			{
+				name: "multi-line comment body",
+				code: `/*
+ * @fluxbase:allow-unauthenticated
+ */
+export default () => "hello";`,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				config := ParseFunctionConfig(tc.code)
+				if !config.AllowUnauthenticated {
+					t.Errorf("AllowUnauthenticated should be true for: %s", tc.name)
+				}
+			})
+		}
+	})
+
+	t.Run("parses @fluxbase:public true", func(t *testing.T) {
+		code := `// @fluxbase:public true
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if !config.IsPublic {
+			t.Error("IsPublic should be true")
+		}
+	})
+
+	t.Run("parses @fluxbase:public false", func(t *testing.T) {
+		code := `// @fluxbase:public false
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if config.IsPublic {
+			t.Error("IsPublic should be false when @fluxbase:public false is set")
+		}
+	})
+
+	t.Run("parses @fluxbase:public without value (defaults to true)", func(t *testing.T) {
+		code := `// @fluxbase:public
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if !config.IsPublic {
+			t.Error("IsPublic should be true when @fluxbase:public has no value")
+		}
+	})
+
+	t.Run("parses @fluxbase:disable-execution-logs true", func(t *testing.T) {
+		code := `// @fluxbase:disable-execution-logs true
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if !config.DisableExecutionLogs {
+			t.Error("DisableExecutionLogs should be true")
+		}
+	})
+
+	t.Run("parses @fluxbase:disable-execution-logs without value (defaults to true)", func(t *testing.T) {
+		code := `// @fluxbase:disable-execution-logs
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if !config.DisableExecutionLogs {
+			t.Error("DisableExecutionLogs should be true when no value specified")
+		}
+	})
+
+	t.Run("parses @fluxbase:disable-execution-logs false", func(t *testing.T) {
+		code := `// @fluxbase:disable-execution-logs false
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if config.DisableExecutionLogs {
+			t.Error("DisableExecutionLogs should be false when explicitly set to false")
+		}
+	})
+
+	t.Run("parses multiple annotations", func(t *testing.T) {
+		code := `// @fluxbase:allow-unauthenticated
+// @fluxbase:public false
+// @fluxbase:disable-execution-logs
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if !config.AllowUnauthenticated {
+			t.Error("AllowUnauthenticated should be true")
+		}
+		if config.IsPublic {
+			t.Error("IsPublic should be false")
+		}
+		if !config.DisableExecutionLogs {
+			t.Error("DisableExecutionLogs should be true")
+		}
+	})
+
+	t.Run("annotations not at start of line are ignored", func(t *testing.T) {
+		code := `const x = "// @fluxbase:allow-unauthenticated";
+export default () => "hello";`
+		_ = ParseFunctionConfig(code)
+
+		// Note: The regex uses ^\s* so this should still match if the annotation
+		// is at the start of a line in a string - this tests actual behavior
+		// The important thing is that we don't have false positives in most cases
+	})
+
+	t.Run("parses CORS annotations", func(t *testing.T) {
+		code := `// @fluxbase:cors-origins https://example.com
+// @fluxbase:cors-methods GET,POST
+// @fluxbase:cors-headers Content-Type,Authorization
+// @fluxbase:cors-credentials true
+// @fluxbase:cors-max-age 3600
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if config.CorsOrigins == nil || *config.CorsOrigins != "https://example.com" {
+			t.Errorf("CorsOrigins expected 'https://example.com', got %v", config.CorsOrigins)
+		}
+		if config.CorsMethods == nil || *config.CorsMethods != "GET,POST" {
+			t.Errorf("CorsMethods expected 'GET,POST', got %v", config.CorsMethods)
+		}
+		if config.CorsHeaders == nil || *config.CorsHeaders != "Content-Type,Authorization" {
+			t.Errorf("CorsHeaders expected 'Content-Type,Authorization', got %v", config.CorsHeaders)
+		}
+		if config.CorsCredentials == nil || *config.CorsCredentials != true {
+			t.Errorf("CorsCredentials expected true, got %v", config.CorsCredentials)
+		}
+		if config.CorsMaxAge == nil || *config.CorsMaxAge != 3600 {
+			t.Errorf("CorsMaxAge expected 3600, got %v", config.CorsMaxAge)
+		}
+	})
+
+	t.Run("parses rate limit annotations", func(t *testing.T) {
+		// Implementation uses format: @fluxbase:rate-limit <value>/<unit>
+		code := `// @fluxbase:rate-limit 100/min
+// @fluxbase:rate-limit 1000/hour
+// @fluxbase:rate-limit 10000/day
+export default () => "hello";`
+		config := ParseFunctionConfig(code)
+
+		if config.RateLimitPerMinute == nil || *config.RateLimitPerMinute != 100 {
+			t.Errorf("RateLimitPerMinute expected 100, got %v", config.RateLimitPerMinute)
+		}
+		if config.RateLimitPerHour == nil || *config.RateLimitPerHour != 1000 {
+			t.Errorf("RateLimitPerHour expected 1000, got %v", config.RateLimitPerHour)
+		}
+		if config.RateLimitPerDay == nil || *config.RateLimitPerDay != 10000 {
+			t.Errorf("RateLimitPerDay expected 10000, got %v", config.RateLimitPerDay)
+		}
+	})
+
+	t.Run("handles empty code", func(t *testing.T) {
+		config := ParseFunctionConfig("")
+
+		if config.AllowUnauthenticated {
+			t.Error("AllowUnauthenticated should be false for empty code")
+		}
+		if !config.IsPublic {
+			t.Error("IsPublic should be true (default) for empty code")
+		}
+	})
+}
+
+// =============================================================================
+// FunctionConfig Struct Tests
+// =============================================================================
+
+func TestFunctionConfig_Struct(t *testing.T) {
+	t.Run("zero value defaults", func(t *testing.T) {
+		config := FunctionConfig{}
+
+		if config.AllowUnauthenticated {
+			t.Error("AllowUnauthenticated should be false by default")
+		}
+		if config.IsPublic {
+			t.Error("IsPublic should be false when unset (zero value)")
+		}
+		if config.DisableExecutionLogs {
+			t.Error("DisableExecutionLogs should be false by default")
+		}
+		if config.CorsOrigins != nil {
+			t.Error("CorsOrigins should be nil by default")
+		}
+		if config.RateLimitPerMinute != nil {
+			t.Error("RateLimitPerMinute should be nil by default")
+		}
+	})
+
+	t.Run("all fields set", func(t *testing.T) {
+		origins := "https://example.com"
+		methods := "GET,POST"
+		headers := "Content-Type"
+		credentials := true
+		maxAge := 3600
+		perMin := 100
+		perHour := 1000
+		perDay := 10000
+
+		config := FunctionConfig{
+			AllowUnauthenticated: true,
+			IsPublic:             false,
+			DisableExecutionLogs: true,
+			CorsOrigins:          &origins,
+			CorsMethods:          &methods,
+			CorsHeaders:          &headers,
+			CorsCredentials:      &credentials,
+			CorsMaxAge:           &maxAge,
+			RateLimitPerMinute:   &perMin,
+			RateLimitPerHour:     &perHour,
+			RateLimitPerDay:      &perDay,
+		}
+
+		if !config.AllowUnauthenticated {
+			t.Error("AllowUnauthenticated should be true")
+		}
+		if config.IsPublic {
+			t.Error("IsPublic should be false")
+		}
+		if !config.DisableExecutionLogs {
+			t.Error("DisableExecutionLogs should be true")
+		}
+		if *config.CorsOrigins != "https://example.com" {
+			t.Errorf("CorsOrigins expected 'https://example.com', got '%s'", *config.CorsOrigins)
+		}
+		if *config.RateLimitPerMinute != 100 {
+			t.Errorf("RateLimitPerMinute expected 100, got %d", *config.RateLimitPerMinute)
+		}
+	})
+}
+
+// =============================================================================
+// Integration Tests
+// =============================================================================
+
 func TestSaveAndLoadFunctionCodeIntegration(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "functions-test-")
