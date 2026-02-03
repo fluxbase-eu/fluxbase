@@ -86,6 +86,310 @@ flowchart TD
 4. **Server-side verification** - Fluxbase verifies the token with the provider's API using the secret key
 5. **Endpoint-specific** - CAPTCHA is only required for endpoints listed in the `endpoints` configuration
 
+## Adaptive Trust System
+
+The Adaptive Trust system intelligently determines whether CAPTCHA is needed based on user trust signals. This provides a better user experience for returning users while maintaining security.
+
+### How Adaptive Trust Works
+
+```mermaid
+flowchart TD
+    A[User visits login page] --> B[Client: POST /captcha/check]
+    B --> C{Server evaluates<br/>trust signals}
+
+    C --> D{Known IP?}
+    D -->|Yes +30| E{Known device?}
+    D -->|No -30| E
+
+    E -->|Yes +25| F{Verified email?}
+    E -->|No -25| F
+
+    F -->|Yes +15| G{Account age > 7d?}
+    F -->|No| G
+
+    G -->|Yes +10| H{MFA enabled?}
+    G -->|No| H
+
+    H -->|Yes +20| I{Recent CAPTCHA?}
+    H -->|No| I
+
+    I -->|Yes +40| J[Calculate total score]
+    I -->|No| J
+
+    J --> K{Score >= 50?}
+
+    K -->|Yes| L[Return: captcha_required=false<br/>User is trusted]
+    K -->|No| M[Return: captcha_required=true<br/>Show CAPTCHA widget]
+
+    L --> N[Client submits auth<br/>without CAPTCHA]
+    M --> O[User solves CAPTCHA]
+    O --> P[Client submits auth<br/>with captcha_token]
+
+    N --> Q[Server validates challenge_id]
+    P --> Q
+
+    Q --> R{Valid?}
+    R -->|Yes| S[Process authentication]
+    R -->|No| T[Return error]
+```
+
+### Trust Signal Weights
+
+| Signal | Weight | Description |
+|--------|--------|-------------|
+| Known IP address | +30 | User has logged in from this IP before |
+| Known device | +25 | Device fingerprint recognized |
+| Recent CAPTCHA | +40 | Solved CAPTCHA in last 15 minutes |
+| Verified email | +15 | Email address is confirmed |
+| Account age > 7 days | +10 | Account is not brand new |
+| 3+ successful logins | +10 | History of successful logins |
+| MFA enabled | +20 | User has 2FA configured |
+| New IP address | -30 | Never seen this IP for this user |
+| New device | -25 | Unknown device fingerprint |
+| Failed attempts | -20 | Recent failed login attempts |
+
+**Threshold**: A score below **50** requires CAPTCHA verification.
+
+### Pre-flight Check Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as Client (Browser)
+    participant Fluxbase as Fluxbase Server
+    participant DB as Database
+    participant Provider as CAPTCHA Provider
+
+    Note over Client,Provider: 1. Pre-flight Check Phase
+    Client->>Fluxbase: POST /api/v1/auth/captcha/check<br/>{ endpoint: "login", email: "user@example.com" }
+    Fluxbase->>DB: Look up user trust signals
+    DB-->>Fluxbase: Trust history (IPs, devices, logins)
+    Fluxbase->>Fluxbase: Calculate trust score
+
+    alt Trust score >= 50 (trusted user)
+        Fluxbase-->>Client: { captcha_required: false,<br/>challenge_id: "ch_xxx",<br/>reason: "trusted" }
+        Note over Client: No CAPTCHA widget shown
+    else Trust score < 50 (untrusted)
+        Fluxbase-->>Client: { captcha_required: true,<br/>challenge_id: "ch_xxx",<br/>provider: "hcaptcha",<br/>site_key: "..." }
+        Client->>Provider: Load CAPTCHA widget
+        Provider-->>Client: Display challenge
+        Client->>Provider: User solves challenge
+        Provider-->>Client: Return captcha_token
+    end
+
+    Note over Client,Provider: 2. Authentication Phase
+    Client->>Fluxbase: POST /api/v1/auth/signin<br/>{ email, password,<br/>challenge_id: "ch_xxx",<br/>captcha_token: "..." (if required) }
+
+    Fluxbase->>DB: Validate challenge_id
+
+    alt Challenge valid & CAPTCHA verified (if required)
+        Fluxbase->>Fluxbase: Process authentication
+        Fluxbase->>DB: Record successful login
+        Fluxbase-->>Client: 200 OK { user, tokens, trust_token }
+    else Invalid challenge or missing CAPTCHA
+        Fluxbase-->>Client: 400 Bad Request
+    end
+```
+
+### Example: Trust Score Calculation
+
+**Scenario 1: Returning user, same device**
+```
+Known IP:           +30
+Known device:       +25
+Verified email:     +15
+Account age > 7d:   +10
+MFA enabled:        +20
+────────────────────────
+Total:              100  ✓ No CAPTCHA needed
+```
+
+**Scenario 2: New user signup**
+```
+No account:         -30
+New device:         -25
+────────────────────────
+Total:              -55  ✗ CAPTCHA required
+```
+
+**Scenario 3: Returning user, new IP (traveling)**
+```
+NEW IP:             -30
+Known device:       +25
+Verified email:     +15
+Account age > 7d:   +10
+MFA enabled:        +20
+────────────────────────
+Total:               40  ✗ CAPTCHA required
+```
+
+### Adaptive Trust Configuration
+
+```yaml
+security:
+  captcha:
+    enabled: true
+    provider: hcaptcha
+    site_key: "your-site-key"
+    secret_key: "your-secret-key"
+    endpoints:
+      - signup
+      - login
+      - password_reset
+      - magic_link
+
+    # Enable adaptive trust for intelligent CAPTCHA decisions
+    adaptive_trust:
+      enabled: true
+
+      # Trust token settings
+      trust_token_ttl: "15m"      # CAPTCHA solution trusted for 15 minutes
+      trust_token_bound_ip: true  # Token only valid from same IP
+
+      # Challenge settings
+      challenge_expiry: "5m"      # Challenge valid for 5 minutes
+
+      # Trust threshold (score below this requires CAPTCHA)
+      captcha_threshold: 50
+
+      # Custom trust signal weights (optional)
+      weight_known_ip: 30
+      weight_known_device: 25
+      weight_recent_captcha: 40
+      weight_verified_email: 15
+      weight_account_age: 10
+      weight_successful_logins: 10
+      weight_mfa_enabled: 20
+      weight_new_ip: -30
+      weight_new_device: -25
+      weight_failed_attempts: -20
+
+      # Endpoints that always require CAPTCHA (regardless of trust)
+      always_require_endpoints:
+        - password_reset
+```
+
+### SDK Usage with Adaptive Trust
+
+```typescript
+import { FluxbaseClient } from "@fluxbase/sdk";
+
+const client = new FluxbaseClient({ url: "http://localhost:8080" });
+
+// Step 1: Check if CAPTCHA is required
+const { data: check } = await client.auth.checkCaptcha({
+  endpoint: "login",
+  email: "user@example.com",
+  deviceFingerprint: getDeviceFingerprint(), // Optional
+});
+
+// Step 2: Show CAPTCHA only if required
+let captchaToken: string | undefined;
+
+if (check?.captcha_required) {
+  // Show CAPTCHA widget and get token
+  captchaToken = await showCaptchaWidget(check.provider, check.site_key);
+}
+
+// Step 3: Sign in with challenge_id (always) and captcha_token (if required)
+const { data, error } = await client.auth.signIn({
+  email: "user@example.com",
+  password: "SecurePassword123",
+  challengeId: check?.challenge_id,
+  captchaToken, // Only if CAPTCHA was required
+  deviceFingerprint: getDeviceFingerprint(), // Optional, for trust tracking
+});
+
+// The response includes a trust_token if CAPTCHA was verified
+// Store it for future requests to skip CAPTCHA
+if (data?.trust_token) {
+  localStorage.setItem("fluxbase_trust_token", data.trust_token);
+}
+```
+
+### Using Trust Tokens
+
+After solving a CAPTCHA, the server issues a trust token that can be used to skip CAPTCHA for subsequent requests within the TTL window:
+
+```typescript
+// On next login attempt, include the trust token
+const trustToken = localStorage.getItem("fluxbase_trust_token");
+
+const { data: check } = await client.auth.checkCaptcha({
+  endpoint: "login",
+  email: "user@example.com",
+  trustToken, // Include previous trust token
+});
+
+// If trust token is valid, captcha_required will be false
+console.log(check?.captcha_required); // false
+console.log(check?.reason); // "valid_trust_token"
+```
+
+### REST API for Adaptive Trust
+
+**Check CAPTCHA requirement:**
+
+```bash
+POST /api/v1/auth/captcha/check
+Content-Type: application/json
+
+{
+  "endpoint": "login",
+  "email": "user@example.com",
+  "device_fingerprint": "abc123",
+  "trust_token": "tt_previous_token"
+}
+```
+
+**Response (trusted user):**
+```json
+{
+  "captcha_required": false,
+  "reason": "trusted",
+  "trust_score": 85,
+  "challenge_id": "ch_abc123def456",
+  "expires_at": "2024-01-15T10:05:00Z"
+}
+```
+
+**Response (untrusted user):**
+```json
+{
+  "captcha_required": true,
+  "reason": "new_ip_address",
+  "trust_score": 35,
+  "provider": "hcaptcha",
+  "site_key": "10000000-ffff-ffff-ffff-000000000001",
+  "challenge_id": "ch_abc123def456",
+  "expires_at": "2024-01-15T10:05:00Z"
+}
+```
+
+**Sign in with challenge:**
+```bash
+POST /api/v1/auth/signin
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123",
+  "challenge_id": "ch_abc123def456",
+  "captcha_token": "token-from-widget",
+  "device_fingerprint": "abc123"
+}
+```
+
+### Error Codes
+
+| Code | Description |
+|------|-------------|
+| `CAPTCHA_REQUIRED` | CAPTCHA token missing but required |
+| `CAPTCHA_INVALID` | CAPTCHA verification failed |
+| `CHALLENGE_EXPIRED` | Challenge ID has expired (>5 min) |
+| `CHALLENGE_CONSUMED` | Challenge ID already used |
+| `CHALLENGE_INVALID` | Challenge ID not found or context mismatch |
+
 ## Supported Providers
 
 | Provider                                                               | Type                    | Self-Hosted | Best For                     |

@@ -207,11 +207,13 @@ func NewService(
 
 // SignUpRequest represents a user registration request
 type SignUpRequest struct {
-	Email        string                 `json:"email"`
-	Password     string                 `json:"password"`
-	UserMetadata map[string]interface{} `json:"user_metadata,omitempty"` // User-editable metadata
-	AppMetadata  map[string]interface{} `json:"app_metadata,omitempty"`  // Application/admin-only metadata
-	CaptchaToken string                 `json:"captcha_token,omitempty"` // CAPTCHA verification token
+	Email             string                 `json:"email"`
+	Password          string                 `json:"password"`
+	UserMetadata      map[string]interface{} `json:"user_metadata,omitempty"`      // User-editable metadata
+	AppMetadata       map[string]interface{} `json:"app_metadata,omitempty"`       // Application/admin-only metadata
+	CaptchaToken      string                 `json:"captcha_token,omitempty"`      // CAPTCHA verification token
+	ChallengeID       string                 `json:"challenge_id,omitempty"`       // Challenge ID from pre-flight check
+	DeviceFingerprint string                 `json:"device_fingerprint,omitempty"` // Optional device fingerprint for trust tracking
 }
 
 // SignUpResponse represents a successful registration response
@@ -311,9 +313,11 @@ func (s *Service) SignUp(ctx context.Context, req SignUpRequest) (*SignUpRespons
 
 // SignInRequest represents a login request
 type SignInRequest struct {
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	CaptchaToken string `json:"captcha_token,omitempty"` // CAPTCHA verification token
+	Email             string `json:"email"`
+	Password          string `json:"password"`
+	CaptchaToken      string `json:"captcha_token,omitempty"`      // CAPTCHA verification token
+	ChallengeID       string `json:"challenge_id,omitempty"`       // Challenge ID from pre-flight check
+	DeviceFingerprint string `json:"device_fingerprint,omitempty"` // Optional device fingerprint for trust tracking
 }
 
 // SignInResponse represents a successful login response
