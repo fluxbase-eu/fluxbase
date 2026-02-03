@@ -129,7 +129,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/dashboard/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -153,7 +153,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/dashboard/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -185,7 +185,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/dashboard/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -210,7 +210,7 @@ func TestGetSSOProvidersEndpoint(t *testing.T) {
 		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/dashboard/auth/sso/providers", nil)
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -233,7 +233,7 @@ func TestGetSSOProvidersEndpoint(t *testing.T) {
 		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/dashboard/auth/sso/providers", nil)
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 

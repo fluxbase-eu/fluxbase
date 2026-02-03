@@ -119,6 +119,7 @@ func setupAuthTestServer(t *testing.T) (*fiber.App, *auth.Service, *database.Con
 		"magiclink":      func(c fiber.Ctx) error { return c.Next() },
 		"password_reset": func(c fiber.Ctx) error { return c.Next() },
 		"otp":            func(c fiber.Ctx) error { return c.Next() },
+		"2fa":            func(c fiber.Ctx) error { return c.Next() },
 	}
 	authHandler.RegisterRoutes(auth, rateLimiters)
 
@@ -142,7 +143,7 @@ func TestOTPFlow(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signup", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -157,7 +158,7 @@ func TestOTPFlow(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/otp/signin", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -180,7 +181,7 @@ func TestOTPFlow(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/otp/verify", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -203,7 +204,7 @@ func TestOTPFlow(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/otp/resend", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -235,7 +236,7 @@ func TestReauthenticate(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signup", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -248,7 +249,7 @@ func TestReauthenticate(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/signin", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err = app.Test(req, fiber.TestConfig{Timeout: 30000})
+	resp, err = app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
 
 	var signinResult map[string]interface{}
@@ -261,7 +262,7 @@ func TestReauthenticate(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/reauthenticate", nil)
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -275,7 +276,7 @@ func TestReauthenticate(t *testing.T) {
 	t.Run("Reauthenticate without token", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/reauthenticate", nil)
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -307,7 +308,7 @@ func TestIdentityRoutes(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signup", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
 	resp.Body.Close()
 
@@ -320,7 +321,7 @@ func TestIdentityRoutes(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/signin", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err = app.Test(req, fiber.TestConfig{Timeout: 30000})
+	resp, err = app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
 
 	var signinResult map[string]interface{}
@@ -332,7 +333,7 @@ func TestIdentityRoutes(t *testing.T) {
 	t.Run("GetUserIdentities", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/user/identities", nil)
 		req.Header.Set("Authorization", "Bearer "+accessToken)
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -352,7 +353,7 @@ func TestIdentityRoutes(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/user/identities", bytes.NewBuffer(body))
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -366,7 +367,7 @@ func TestIdentityRoutes(t *testing.T) {
 
 	t.Run("GetUserIdentities without auth", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/user/identities", nil)
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30000})
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
