@@ -128,7 +128,7 @@ func TestListGitHubIssuesTool_Execute(t *testing.T) {
 		result, err := tool.Execute(context.Background(), map[string]any{}, nil)
 		require.NoError(t, err)
 		assert.True(t, result.IsError)
-		assert.Contains(t, result.Content[0].(mcp.TextContent).Text, "repository is required")
+		assert.Contains(t, result.Content[0].Text, "repository is required")
 	})
 
 	t.Run("successful list issues", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestListGitHubIssuesTool_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
 
-		content := result.Content[0].(mcp.TextContent).Text
+		content := result.Content[0].Text
 		assert.Contains(t, content, "Test Issue")
 		assert.Contains(t, content, "bug")
 	})
@@ -194,7 +194,7 @@ func TestListGitHubIssuesTool_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
 
-		content := result.Content[0].(mcp.TextContent).Text
+		content := result.Content[0].Text
 		assert.Contains(t, content, "Issue")
 		assert.NotContains(t, content, "PR")
 	})
@@ -340,7 +340,7 @@ func TestGetGitHubIssueTool_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
 
-		content := result.Content[0].(mcp.TextContent).Text
+		content := result.Content[0].Text
 		assert.Contains(t, content, "Test Issue")
 		assert.Contains(t, content, "Issue description")
 		assert.Contains(t, content, "author")
@@ -435,7 +435,7 @@ func TestCreateGitHubIssueCommentTool_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
 
-		content := result.Content[0].(mcp.TextContent).Text
+		content := result.Content[0].Text
 		assert.Contains(t, content, "12345")
 	})
 }
@@ -632,7 +632,7 @@ func TestCreateGitHubIssueTool_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
 
-		content := result.Content[0].(mcp.TextContent).Text
+		content := result.Content[0].Text
 		assert.Contains(t, content, "99")
 		assert.Contains(t, content, "New Issue")
 	})
@@ -755,7 +755,7 @@ func TestTriggerClaudeFixTool_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
 
-		content := result.Content[0].(mcp.TextContent).Text
+		content := result.Content[0].Text
 		assert.Contains(t, content, "triggered")
 	})
 }

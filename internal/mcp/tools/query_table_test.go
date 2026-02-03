@@ -319,7 +319,7 @@ func TestParseFilterValue(t *testing.T) {
 	})
 
 	t.Run("is not null", func(t *testing.T) {
-		filter, err := parseFilterValue("email", "not.null")
+		filter, err := parseFilterValue("email", "isnot.null")
 		assert.NoError(t, err)
 		assert.Equal(t, query.OpIsNot, filter.Operator)
 		assert.Nil(t, filter.Value)

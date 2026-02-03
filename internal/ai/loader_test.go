@@ -268,7 +268,7 @@ func TestLoader_ParseChatbotFromCode(t *testing.T) {
 	t.Run("parses chatbot from code string", func(t *testing.T) {
 		code := `
 /**
- * @description Test chatbot for parsing
+ * Test chatbot for parsing
  * @fluxbase:allowed-tables users, orders
  * @fluxbase:allowed-operations SELECT
  */

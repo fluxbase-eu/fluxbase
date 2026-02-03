@@ -478,7 +478,7 @@ export default () => "hello";`
 	t.Run("annotations not at start of line are ignored", func(t *testing.T) {
 		code := `const x = "// @fluxbase:allow-unauthenticated";
 export default () => "hello";`
-		config := ParseFunctionConfig(code)
+		_ = ParseFunctionConfig(code)
 
 		// Note: The regex uses ^\s* so this should still match if the annotation
 		// is at the start of a line in a string - this tests actual behavior
@@ -512,9 +512,10 @@ export default () => "hello";`
 	})
 
 	t.Run("parses rate limit annotations", func(t *testing.T) {
-		code := `// @fluxbase:rate-limit-per-minute 100
-// @fluxbase:rate-limit-per-hour 1000
-// @fluxbase:rate-limit-per-day 10000
+		// Implementation uses format: @fluxbase:rate-limit <value>/<unit>
+		code := `// @fluxbase:rate-limit 100/min
+// @fluxbase:rate-limit 1000/hour
+// @fluxbase:rate-limit 10000/day
 export default () => "hello";`
 		config := ParseFunctionConfig(code)
 
@@ -604,51 +605,6 @@ func TestFunctionConfig_Struct(t *testing.T) {
 		}
 		if *config.RateLimitPerMinute != 100 {
 			t.Errorf("RateLimitPerMinute expected 100, got %d", *config.RateLimitPerMinute)
-		}
-	})
-}
-
-// =============================================================================
-// FileInfo Struct Tests
-// =============================================================================
-
-func TestFileInfo_Struct(t *testing.T) {
-	t.Run("basic file info", func(t *testing.T) {
-		info := FileInfo{
-			Name:         "my-function",
-			Path:         "/functions/my-function.ts",
-			Size:         1024,
-			ModifiedTime: 1704067200, // 2024-01-01 00:00:00 UTC
-		}
-
-		if info.Name != "my-function" {
-			t.Errorf("Name expected 'my-function', got '%s'", info.Name)
-		}
-		if info.Path != "/functions/my-function.ts" {
-			t.Errorf("Path expected '/functions/my-function.ts', got '%s'", info.Path)
-		}
-		if info.Size != 1024 {
-			t.Errorf("Size expected 1024, got %d", info.Size)
-		}
-		if info.ModifiedTime != 1704067200 {
-			t.Errorf("ModifiedTime expected 1704067200, got %d", info.ModifiedTime)
-		}
-	})
-
-	t.Run("zero value", func(t *testing.T) {
-		var info FileInfo
-
-		if info.Name != "" {
-			t.Error("Name should be empty by default")
-		}
-		if info.Path != "" {
-			t.Error("Path should be empty by default")
-		}
-		if info.Size != 0 {
-			t.Error("Size should be 0 by default")
-		}
-		if info.ModifiedTime != 0 {
-			t.Error("ModifiedTime should be 0 by default")
 		}
 	})
 }

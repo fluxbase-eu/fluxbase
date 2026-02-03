@@ -989,15 +989,17 @@ func TestAdminExecution_Struct(t *testing.T) {
 		result := `{"status": "ok"}`
 
 		exec := AdminExecution{
-			ID:           uuid.New(),
-			FunctionID:   uuid.New(),
-			TriggerType:  "http",
-			Status:       "success",
-			StatusCode:   &statusCode,
-			DurationMs:   &duration,
-			Result:       &result,
-			ExecutedAt:   now,
-			CompletedAt:  &completedAt,
+			EdgeFunctionExecution: EdgeFunctionExecution{
+				ID:          uuid.New(),
+				FunctionID:  uuid.New(),
+				TriggerType: "http",
+				Status:      "success",
+				StatusCode:  &statusCode,
+				DurationMs:  &duration,
+				Result:      &result,
+				ExecutedAt:  now,
+				CompletedAt: &completedAt,
+			},
 			FunctionName: "test-function",
 			Namespace:    "default",
 		}
@@ -1014,12 +1016,14 @@ func TestAdminExecution_Struct(t *testing.T) {
 		logs := "Error: something went wrong"
 
 		exec := AdminExecution{
-			ID:           uuid.New(),
-			FunctionID:   uuid.New(),
-			TriggerType:  "cron",
-			Status:       "error",
-			ErrorMessage: &errorMsg,
-			Logs:         &logs,
+			EdgeFunctionExecution: EdgeFunctionExecution{
+				ID:           uuid.New(),
+				FunctionID:   uuid.New(),
+				TriggerType:  "cron",
+				Status:       "error",
+				ErrorMessage: &errorMsg,
+				Logs:         &logs,
+			},
 			FunctionName: "scheduled-task",
 			Namespace:    "workers",
 		}
@@ -1033,13 +1037,15 @@ func TestAdminExecution_Struct(t *testing.T) {
 
 	t.Run("pending execution", func(t *testing.T) {
 		exec := AdminExecution{
-			ID:           uuid.New(),
-			FunctionID:   uuid.New(),
-			TriggerType:  "http",
-			Status:       "pending",
+			EdgeFunctionExecution: EdgeFunctionExecution{
+				ID:          uuid.New(),
+				FunctionID:  uuid.New(),
+				TriggerType: "http",
+				Status:      "pending",
+				ExecutedAt:  time.Now(),
+			},
 			FunctionName: "new-function",
 			Namespace:    "test",
-			ExecutedAt:   time.Now(),
 		}
 
 		assert.Equal(t, "pending", exec.Status)

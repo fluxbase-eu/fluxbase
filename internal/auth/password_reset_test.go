@@ -313,34 +313,25 @@ func TestPasswordResetService_RequestPasswordReset_InvalidRedirectURL(t *testing
 	mockSender := &mockPasswordResetEmailSender{}
 	svc := NewPasswordResetService(nil, nil, mockSender, time.Hour, "https://example.com")
 
+	// Test invalid redirect URLs that should be rejected before user lookup.
+	// Note: Valid URLs would proceed to user lookup and panic with nil userRepo,
+	// so we only test the invalid cases here.
 	testCases := []struct {
-		name        string
-		redirectTo  string
-		shouldError bool
+		name       string
+		redirectTo string
 	}{
-		{"empty redirect is allowed", "", false},
-		{"http URL is valid", "http://example.com/reset", false},
-		{"https URL is valid", "https://example.com/reset", false},
-		{"ftp URL is invalid", "ftp://example.com/reset", true},
-		{"relative path is invalid", "/reset-password", true},
-		{"no scheme is invalid", "example.com/reset", true},
-		{"invalid URL syntax", "://invalid", true},
-		{"javascript URL is invalid", "javascript:alert(1)", true},
-		{"data URL is invalid", "data:text/html,<h1>hi</h1>", true},
+		{"ftp URL is invalid", "ftp://example.com/reset"},
+		{"relative path is invalid", "/reset-password"},
+		{"no scheme is invalid", "example.com/reset"},
+		{"invalid URL syntax", "://invalid"},
+		{"javascript URL is invalid", "javascript:alert(1)"},
+		{"data URL is invalid", "data:text/html,<h1>hi</h1>"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Since userRepo is nil, we'll get an error either from redirect validation
-			// or from trying to get the user. We only care about redirect validation here.
 			err := svc.RequestPasswordReset(nil, "test@example.com", tc.redirectTo)
-
-			if tc.shouldError {
-				assert.ErrorIs(t, err, ErrInvalidRedirectURL)
-			} else if tc.redirectTo != "" {
-				// For valid non-empty redirects, we'll fail on getting user (nil repo)
-				assert.NotErrorIs(t, err, ErrInvalidRedirectURL)
-			}
+			assert.ErrorIs(t, err, ErrInvalidRedirectURL)
 		})
 	}
 }

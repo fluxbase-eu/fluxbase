@@ -10,6 +10,14 @@ import (
 // Feature flags can be controlled via database settings or environment variables
 func RequireFeatureEnabled(settingsCache *auth.SettingsCache, featureKey string) fiber.Handler {
 	return func(c fiber.Ctx) error {
+		// If settings cache is nil, treat the feature as disabled
+		if settingsCache == nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Feature not available",
+				"code":  "FEATURE_DISABLED",
+			})
+		}
+
 		// Check if feature is enabled (checks env vars first, then cache, then database)
 		ctx := c.RequestCtx()
 		isEnabled := settingsCache.GetBool(ctx, featureKey, false)

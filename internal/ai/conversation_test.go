@@ -227,8 +227,8 @@ func TestConversationState_MessageManagement(t *testing.T) {
 		state.Messages = append(state.Messages, Message{Role: "assistant", Content: "Hi there!"})
 
 		assert.Len(t, state.Messages, 2)
-		assert.Equal(t, "user", state.Messages[0].Role)
-		assert.Equal(t, "assistant", state.Messages[1].Role)
+		assert.Equal(t, Role("user"), state.Messages[0].Role)
+		assert.Equal(t, Role("assistant"), state.Messages[1].Role)
 	})
 
 	t.Run("update turn count", func(t *testing.T) {

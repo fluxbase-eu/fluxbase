@@ -162,9 +162,9 @@ func TestWrapFunctionCode_RequestJSONEmbedded(t *testing.T) {
 		ID:        uuid.New(),
 		Name:      "test-function",
 		Namespace: "default",
-		UserID:    stringPtr("user-123"),
-		UserEmail: stringPtr("user@example.com"),
-		UserRole:  stringPtr("authenticated"),
+		UserID:    "user-123",
+		UserEmail: "user@example.com",
+		UserRole:  "authenticated",
 	}
 	userCode := `export function handler(req) { return new Response("Hello"); }`
 

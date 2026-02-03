@@ -28,6 +28,10 @@ func (m *mockOCRProvider) Name() string {
 	return m.name
 }
 
+func (m *mockOCRProvider) Type() OCRProviderType {
+	return OCRProviderTypeTesseract
+}
+
 func (m *mockOCRProvider) IsAvailable() bool {
 	return m.available
 }

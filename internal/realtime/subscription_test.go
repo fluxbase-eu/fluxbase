@@ -904,7 +904,7 @@ func TestSubscription_Struct(t *testing.T) {
 			Table:  "users",
 			Schema: "public",
 			Event:  "INSERT",
-			Filter: &Filter{Column: "id", Operator: "eq", Value: 1},
+			Filter: &Filter{Column: "id", Operator: "eq", Value: "1"},
 			ConnID: "conn-789",
 		}
 

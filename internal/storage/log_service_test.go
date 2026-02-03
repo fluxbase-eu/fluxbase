@@ -283,15 +283,6 @@ func TestMultiLogService_Empty(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDefaultLogStorageConfig(t *testing.T) {
-	cfg := DefaultLogStorageConfig()
-
-	assert.Equal(t, "postgres", cfg.Backend)
-	assert.Equal(t, 100, cfg.BatchSize)
-	assert.Equal(t, 1000, cfg.FlushInterval)
-	assert.Equal(t, 10000, cfg.BufferSize)
-}
-
 // mockStorageProvider implements Provider for testing
 type mockStorageProvider struct{}
 

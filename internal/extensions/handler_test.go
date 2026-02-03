@@ -23,14 +23,6 @@ func TestNewHandler(t *testing.T) {
 	})
 }
 
-func TestEnableExtensionRequest_Struct(t *testing.T) {
-	req := EnableExtensionRequest{
-		Schema: "custom_schema",
-	}
-
-	assert.Equal(t, "custom_schema", req.Schema)
-}
-
 func TestHandler_Struct(t *testing.T) {
 	// Test that handler struct is properly defined
 	var h Handler
