@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,7 +63,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Post("/settings/secret", func(c *fiber.Ctx) error {
+		app.Post("/settings/secret", func(c fiber.Ctx) error {
 			c.Locals("user_id", "not-a-uuid")
 			return handler.CreateSecret(c)
 		})
@@ -88,7 +88,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Post("/settings/secret", func(c *fiber.Ctx) error {
+		app.Post("/settings/secret", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.CreateSecret(c)
 		})
@@ -112,7 +112,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Post("/settings/secret", func(c *fiber.Ctx) error {
+		app.Post("/settings/secret", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.CreateSecret(c)
 		})
@@ -137,7 +137,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Post("/settings/secret", func(c *fiber.Ctx) error {
+		app.Post("/settings/secret", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.CreateSecret(c)
 		})
@@ -203,7 +203,7 @@ func TestGetSecret_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Get("/settings/secret/*", func(c *fiber.Ctx) error {
+		app.Get("/settings/secret/*", func(c fiber.Ctx) error {
 			c.Locals("user_id", "bad-uuid")
 			return handler.GetSecret(c)
 		})
@@ -266,7 +266,7 @@ func TestUpdateSecret_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Put("/settings/secret/*", func(c *fiber.Ctx) error {
+		app.Put("/settings/secret/*", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.UpdateSecret(c)
 		})
@@ -347,7 +347,7 @@ func TestListSecrets_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Get("/settings/secrets", func(c *fiber.Ctx) error {
+		app.Get("/settings/secrets", func(c fiber.Ctx) error {
 			c.Locals("user_id", "invalid")
 			return handler.ListSecrets(c)
 		})
@@ -371,7 +371,7 @@ func TestGetUserSecretValue_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Get("/admin/settings/user/:user_id/secret/:key/decrypt", func(c *fiber.Ctx) error {
+		app.Get("/admin/settings/user/:user_id/secret/:key/decrypt", func(c fiber.Ctx) error {
 			c.Locals("user_role", "admin")
 			return handler.GetUserSecretValue(c)
 		})
@@ -409,7 +409,7 @@ func TestGetUserSecretValue_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Get("/admin/settings/user/:user_id/secret/:key/decrypt", func(c *fiber.Ctx) error {
+		app.Get("/admin/settings/user/:user_id/secret/:key/decrypt", func(c fiber.Ctx) error {
 			c.Locals("user_role", "service_role")
 			return handler.GetUserSecretValue(c)
 		})
@@ -433,7 +433,7 @@ func TestGetUserSecretValue_Validation(t *testing.T) {
 		handler := NewUserSettingsHandler(nil, nil)
 		handler.secretsService = nil // Will be caught by role check first anyway
 
-		app.Get("/admin/settings/user/:user_id/secret/:key/decrypt", func(c *fiber.Ctx) error {
+		app.Get("/admin/settings/user/:user_id/secret/:key/decrypt", func(c fiber.Ctx) error {
 			c.Locals("user_role", "service_role")
 			return handler.GetUserSecretValue(c)
 		})
@@ -459,7 +459,7 @@ func TestGetSetting_UserSettings_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Get("/settings/user/:key", func(c *fiber.Ctx) error {
+		app.Get("/settings/user/:key", func(c fiber.Ctx) error {
 			// Force empty key for test
 			return handler.GetSetting(c)
 		})
@@ -520,7 +520,7 @@ func TestGetSystemSettingPublic_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Get("/settings/user/system/:key", func(c *fiber.Ctx) error {
+		app.Get("/settings/user/system/:key", func(c fiber.Ctx) error {
 			// Explicit empty key test by overriding params
 			return handler.GetSystemSettingPublic(c)
 		})
@@ -562,7 +562,7 @@ func TestSetSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Put("/settings/user/:key", func(c *fiber.Ctx) error {
+		app.Put("/settings/user/:key", func(c fiber.Ctx) error {
 			c.Locals("user_id", "not-valid-uuid")
 			return handler.SetSetting(c)
 		})
@@ -582,7 +582,7 @@ func TestSetSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Put("/settings/user/:key", func(c *fiber.Ctx) error {
+		app.Put("/settings/user/:key", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.SetSetting(c)
 		})
@@ -601,7 +601,7 @@ func TestSetSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Put("/settings/user/:key", func(c *fiber.Ctx) error {
+		app.Put("/settings/user/:key", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.SetSetting(c)
 		})
@@ -668,7 +668,7 @@ func TestListSettings_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewUserSettingsHandler(nil, nil)
 
-		app.Get("/settings/user/list", func(c *fiber.Ctx) error {
+		app.Get("/settings/user/list", func(c fiber.Ctx) error {
 			c.Locals("user_id", "bad-uuid")
 			return handler.ListSettings(c)
 		})

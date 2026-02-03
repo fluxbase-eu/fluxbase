@@ -6,7 +6,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -61,9 +61,9 @@ func (h *Handler) RegisterRoutes(app *fiber.App, authService *auth.Service, clie
 }
 
 // CreateSecret creates a new secret
-func (h *Handler) CreateSecret(c *fiber.Ctx) error {
+func (h *Handler) CreateSecret(c fiber.Ctx) error {
 	var req CreateSecretRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -121,7 +121,7 @@ func (h *Handler) CreateSecret(c *fiber.Ctx) error {
 		ExpiresAt:   req.ExpiresAt,
 	}
 
-	if err := h.storage.CreateSecret(c.Context(), secret, req.Value, userID); err != nil {
+	if err := h.storage.CreateSecret(c.RequestCtx(), secret, req.Value, userID); err != nil {
 		// Check for duplicate key error
 		if isDuplicateKeyError(err) {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
@@ -137,7 +137,7 @@ func (h *Handler) CreateSecret(c *fiber.Ctx) error {
 }
 
 // ListSecrets lists all secrets (metadata only, never values)
-func (h *Handler) ListSecrets(c *fiber.Ctx) error {
+func (h *Handler) ListSecrets(c fiber.Ctx) error {
 	// Parse query parameters
 	var scope *string
 	if s := c.Query("scope"); s != "" {
@@ -149,7 +149,7 @@ func (h *Handler) ListSecrets(c *fiber.Ctx) error {
 		namespace = &ns
 	}
 
-	secrets, err := h.storage.ListSecrets(c.Context(), scope, namespace)
+	secrets, err := h.storage.ListSecrets(c.RequestCtx(), scope, namespace)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to list secrets: %v", err),
@@ -164,7 +164,7 @@ func (h *Handler) ListSecrets(c *fiber.Ctx) error {
 }
 
 // GetSecret retrieves a single secret (metadata only)
-func (h *Handler) GetSecret(c *fiber.Ctx) error {
+func (h *Handler) GetSecret(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -173,7 +173,7 @@ func (h *Handler) GetSecret(c *fiber.Ctx) error {
 		})
 	}
 
-	secret, err := h.storage.GetSecret(c.Context(), id)
+	secret, err := h.storage.GetSecret(c.RequestCtx(), id)
 	if err != nil {
 		if isNotFoundError(err) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -189,7 +189,7 @@ func (h *Handler) GetSecret(c *fiber.Ctx) error {
 }
 
 // UpdateSecret updates a secret's value or metadata
-func (h *Handler) UpdateSecret(c *fiber.Ctx) error {
+func (h *Handler) UpdateSecret(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -199,7 +199,7 @@ func (h *Handler) UpdateSecret(c *fiber.Ctx) error {
 	}
 
 	var req UpdateSecretRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -222,7 +222,7 @@ func (h *Handler) UpdateSecret(c *fiber.Ctx) error {
 		}
 	}
 
-	if err := h.storage.UpdateSecret(c.Context(), id, req.Value, req.Description, req.ExpiresAt, userID); err != nil {
+	if err := h.storage.UpdateSecret(c.RequestCtx(), id, req.Value, req.Description, req.ExpiresAt, userID); err != nil {
 		if isNotFoundError(err) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Secret not found",
@@ -234,7 +234,7 @@ func (h *Handler) UpdateSecret(c *fiber.Ctx) error {
 	}
 
 	// Return updated secret
-	secret, err := h.storage.GetSecret(c.Context(), id)
+	secret, err := h.storage.GetSecret(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Secret updated but failed to retrieve updated data",
@@ -245,7 +245,7 @@ func (h *Handler) UpdateSecret(c *fiber.Ctx) error {
 }
 
 // DeleteSecret deletes a secret
-func (h *Handler) DeleteSecret(c *fiber.Ctx) error {
+func (h *Handler) DeleteSecret(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -254,7 +254,7 @@ func (h *Handler) DeleteSecret(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.storage.DeleteSecret(c.Context(), id); err != nil {
+	if err := h.storage.DeleteSecret(c.RequestCtx(), id); err != nil {
 		if isNotFoundError(err) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Secret not found",
@@ -271,7 +271,7 @@ func (h *Handler) DeleteSecret(c *fiber.Ctx) error {
 }
 
 // GetVersions retrieves the version history for a secret
-func (h *Handler) GetVersions(c *fiber.Ctx) error {
+func (h *Handler) GetVersions(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -280,7 +280,7 @@ func (h *Handler) GetVersions(c *fiber.Ctx) error {
 		})
 	}
 
-	versions, err := h.storage.GetVersions(c.Context(), id)
+	versions, err := h.storage.GetVersions(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to get versions: %v", err),
@@ -295,7 +295,7 @@ func (h *Handler) GetVersions(c *fiber.Ctx) error {
 }
 
 // RollbackToVersion restores a secret to a previous version
-func (h *Handler) RollbackToVersion(c *fiber.Ctx) error {
+func (h *Handler) RollbackToVersion(c fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -322,7 +322,7 @@ func (h *Handler) RollbackToVersion(c *fiber.Ctx) error {
 		}
 	}
 
-	if err := h.storage.RollbackToVersion(c.Context(), id, version, userID); err != nil {
+	if err := h.storage.RollbackToVersion(c.RequestCtx(), id, version, userID); err != nil {
 		if isNotFoundError(err) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": fmt.Sprintf("Version %d not found", version),
@@ -334,7 +334,7 @@ func (h *Handler) RollbackToVersion(c *fiber.Ctx) error {
 	}
 
 	// Return updated secret
-	secret, err := h.storage.GetSecret(c.Context(), id)
+	secret, err := h.storage.GetSecret(c.RequestCtx(), id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Rollback successful but failed to retrieve updated data",
@@ -345,8 +345,8 @@ func (h *Handler) RollbackToVersion(c *fiber.Ctx) error {
 }
 
 // GetStats returns statistics about secrets
-func (h *Handler) GetStats(c *fiber.Ctx) error {
-	total, expiringSoon, expired, err := h.storage.GetStats(c.Context())
+func (h *Handler) GetStats(c fiber.Ctx) error {
+	total, expiringSoon, expired, err := h.storage.GetStats(c.RequestCtx())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to get stats: %v", err),
@@ -389,3 +389,5 @@ func containsImpl(s, substr string) bool {
 	}
 	return false
 }
+
+// fiber:context-methods migrated

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // SchemaExportHandler handles schema export operations for type generation
@@ -34,12 +34,12 @@ type TypeScriptExportRequest struct {
 }
 
 // HandleExportTypeScript generates TypeScript type definitions from the database schema
-func (h *SchemaExportHandler) HandleExportTypeScript(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *SchemaExportHandler) HandleExportTypeScript(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Parse request
 	var req TypeScriptExportRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		// Use defaults for GET requests or invalid body
 		req = TypeScriptExportRequest{
 			Schemas:          []string{"public"},
@@ -516,3 +516,5 @@ func sanitizeIdentifier(name string) string {
 	// Quote the identifier if it contains special characters
 	return fmt.Sprintf("'%s'", strings.ReplaceAll(name, "'", "\\'"))
 }
+
+// fiber:context-methods migrated

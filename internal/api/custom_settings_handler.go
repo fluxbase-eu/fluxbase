@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -24,7 +24,7 @@ func NewCustomSettingsHandler(settingsService *settings.CustomSettingsService) *
 
 // CreateSetting creates a new custom setting
 // POST /api/v1/admin/settings/custom
-func (h *CustomSettingsHandler) CreateSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) CreateSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Get user ID and role from context (set by auth middleware)
@@ -46,7 +46,7 @@ func (h *CustomSettingsHandler) CreateSetting(c *fiber.Ctx) error {
 	}
 
 	var req settings.CreateCustomSettingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -144,7 +144,7 @@ func (h *CustomSettingsHandler) CreateSetting(c *fiber.Ctx) error {
 
 // ListSettings returns all custom settings
 // GET /api/v1/admin/settings/custom
-func (h *CustomSettingsHandler) ListSettings(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) ListSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Get user role from context
@@ -168,7 +168,7 @@ func (h *CustomSettingsHandler) ListSettings(c *fiber.Ctx) error {
 
 // GetSetting returns a specific custom setting by key
 // GET /api/v1/admin/settings/custom/*
-func (h *CustomSettingsHandler) GetSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) GetSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -196,7 +196,7 @@ func (h *CustomSettingsHandler) GetSetting(c *fiber.Ctx) error {
 
 // UpdateSetting updates an existing custom setting
 // PUT /api/v1/admin/settings/custom/*
-func (h *CustomSettingsHandler) UpdateSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) UpdateSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -225,7 +225,7 @@ func (h *CustomSettingsHandler) UpdateSetting(c *fiber.Ctx) error {
 	}
 
 	var req settings.UpdateCustomSettingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -269,7 +269,7 @@ func (h *CustomSettingsHandler) UpdateSetting(c *fiber.Ctx) error {
 
 // DeleteSetting deletes a custom setting
 // DELETE /api/v1/admin/settings/custom/*
-func (h *CustomSettingsHandler) DeleteSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) DeleteSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -316,7 +316,7 @@ func (h *CustomSettingsHandler) DeleteSetting(c *fiber.Ctx) error {
 
 // CreateSecretSetting creates a new encrypted system-level secret setting
 // POST /api/v1/admin/settings/custom/secret
-func (h *CustomSettingsHandler) CreateSecretSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) CreateSecretSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// Get user ID from context
@@ -336,7 +336,7 @@ func (h *CustomSettingsHandler) CreateSecretSetting(c *fiber.Ctx) error {
 	}
 
 	var req settings.CreateSecretSettingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -387,7 +387,7 @@ func (h *CustomSettingsHandler) CreateSecretSetting(c *fiber.Ctx) error {
 
 // GetSecretSetting returns metadata for a system-level secret setting (never returns the value)
 // GET /api/v1/admin/settings/custom/secret/*
-func (h *CustomSettingsHandler) GetSecretSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) GetSecretSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -416,7 +416,7 @@ func (h *CustomSettingsHandler) GetSecretSetting(c *fiber.Ctx) error {
 
 // UpdateSecretSetting updates a system-level secret setting
 // PUT /api/v1/admin/settings/custom/secret/*
-func (h *CustomSettingsHandler) UpdateSecretSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) UpdateSecretSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -443,7 +443,7 @@ func (h *CustomSettingsHandler) UpdateSecretSetting(c *fiber.Ctx) error {
 	}
 
 	var req settings.UpdateSecretSettingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -474,7 +474,7 @@ func (h *CustomSettingsHandler) UpdateSecretSetting(c *fiber.Ctx) error {
 
 // DeleteSecretSetting deletes a system-level secret setting
 // DELETE /api/v1/admin/settings/custom/secret/*
-func (h *CustomSettingsHandler) DeleteSecretSetting(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) DeleteSecretSetting(c fiber.Ctx) error {
 	ctx := context.Background()
 	key := c.Params("*")
 
@@ -507,7 +507,7 @@ func (h *CustomSettingsHandler) DeleteSecretSetting(c *fiber.Ctx) error {
 
 // ListSecretSettings returns metadata for all system-level secret settings
 // GET /api/v1/admin/settings/custom/secrets
-func (h *CustomSettingsHandler) ListSecretSettings(c *fiber.Ctx) error {
+func (h *CustomSettingsHandler) ListSecretSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	// List system secrets (userID = nil)

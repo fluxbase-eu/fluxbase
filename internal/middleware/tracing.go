@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -45,7 +45,7 @@ func DefaultTracingConfig() TracingConfig {
 // TracingMiddleware returns a Fiber middleware that creates spans for HTTP requests
 func TracingMiddleware(cfg TracingConfig) fiber.Handler {
 	if !cfg.Enabled {
-		return func(c *fiber.Ctx) error {
+		return func(c fiber.Ctx) error {
 			return c.Next()
 		}
 	}
@@ -58,7 +58,7 @@ func TracingMiddleware(cfg TracingConfig) fiber.Handler {
 		skipPaths[path] = true
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		path := c.Path()
 
 		// Skip tracing for certain paths
@@ -68,7 +68,7 @@ func TracingMiddleware(cfg TracingConfig) fiber.Handler {
 
 		// Extract parent context from incoming request headers
 		ctx := otel.GetTextMapPropagator().Extract(
-			c.Context(),
+			c.RequestCtx(),
 			propagation.HeaderCarrier(c.GetReqHeaders()),
 		)
 
@@ -150,7 +150,7 @@ func TracingMiddleware(cfg TracingConfig) fiber.Handler {
 }
 
 // GetTraceContext returns the trace context from Fiber context
-func GetTraceContext(c *fiber.Ctx) trace.SpanContext {
+func GetTraceContext(c fiber.Ctx) trace.SpanContext {
 	if span, ok := c.Locals("trace_span").(trace.Span); ok {
 		return span.SpanContext()
 	}
@@ -158,7 +158,7 @@ func GetTraceContext(c *fiber.Ctx) trace.SpanContext {
 }
 
 // GetTraceID returns the trace ID from the Fiber context
-func GetTraceID(c *fiber.Ctx) string {
+func GetTraceID(c fiber.Ctx) string {
 	ctx := GetTraceContext(c)
 	if ctx.HasTraceID() {
 		return ctx.TraceID().String()
@@ -167,7 +167,7 @@ func GetTraceID(c *fiber.Ctx) string {
 }
 
 // GetSpanID returns the span ID from the Fiber context
-func GetSpanID(c *fiber.Ctx) string {
+func GetSpanID(c fiber.Ctx) string {
 	ctx := GetTraceContext(c)
 	if ctx.HasSpanID() {
 		return ctx.SpanID().String()
@@ -176,7 +176,7 @@ func GetSpanID(c *fiber.Ctx) string {
 }
 
 // StartChildSpan starts a child span from the Fiber context
-func StartChildSpan(c *fiber.Ctx, name string, opts ...trace.SpanStartOption) (trace.Span, func()) {
+func StartChildSpan(c fiber.Ctx, name string, opts ...trace.SpanStartOption) (trace.Span, func()) {
 	tracer := otel.Tracer("fluxbase-http")
 
 	// Get parent context from Fiber locals
@@ -186,19 +186,19 @@ func StartChildSpan(c *fiber.Ctx, name string, opts ...trace.SpanStartOption) (t
 	}
 
 	// Otherwise create a new span
-	_, span := tracer.Start(c.Context(), name, opts...)
+	_, span := tracer.Start(c.RequestCtx(), name, opts...)
 	return span, func() { span.End() }
 }
 
 // AddSpanEvent adds an event to the current span
-func AddSpanEvent(c *fiber.Ctx, name string, attrs ...attribute.KeyValue) {
+func AddSpanEvent(c fiber.Ctx, name string, attrs ...attribute.KeyValue) {
 	if span, ok := c.Locals("trace_span").(trace.Span); ok && span.IsRecording() {
 		span.AddEvent(name, trace.WithAttributes(attrs...))
 	}
 }
 
 // SetSpanError records an error on the current span
-func SetSpanError(c *fiber.Ctx, err error) {
+func SetSpanError(c fiber.Ctx, err error) {
 	if span, ok := c.Locals("trace_span").(trace.Span); ok && span.IsRecording() {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -206,8 +206,10 @@ func SetSpanError(c *fiber.Ctx, err error) {
 }
 
 // SetSpanAttributes sets attributes on the current span
-func SetSpanAttributes(c *fiber.Ctx, attrs ...attribute.KeyValue) {
+func SetSpanAttributes(c fiber.Ctx, attrs ...attribute.KeyValue) {
 	if span, ok := c.Locals("trace_span").(trace.Span); ok && span.IsRecording() {
 		span.SetAttributes(attrs...)
 	}
 }
+
+// fiber:context-methods migrated

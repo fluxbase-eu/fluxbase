@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/contrib/v3/websocket"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -101,7 +101,7 @@ func NewRealtimeHandler(manager *Manager, authService AuthService, subManager *S
 }
 
 // HandleWebSocket handles WebSocket upgrade and communication
-func (h *RealtimeHandler) HandleWebSocket(c *fiber.Ctx) error {
+func (h *RealtimeHandler) HandleWebSocket(c fiber.Ctx) error {
 	// Check if WebSocket upgrade
 	if !websocket.IsWebSocketUpgrade(c) {
 		return fiber.ErrUpgradeRequired

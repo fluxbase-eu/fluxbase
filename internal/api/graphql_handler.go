@@ -9,7 +9,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/graphql/gqlerrors"
 	"github.com/graphql-go/graphql/language/ast"
@@ -71,9 +71,9 @@ func NewGraphQLHandler(db *database.Connection, schemaCache *database.SchemaCach
 }
 
 // HandleGraphQL handles POST /api/v1/graphql requests
-func (h *GraphQLHandler) HandleGraphQL(c *fiber.Ctx) error {
+func (h *GraphQLHandler) HandleGraphQL(c fiber.Ctx) error {
 	startTime := time.Now()
-	ctx := c.UserContext()
+	ctx := c.Context()
 
 	// Parse request body
 	var req GraphQLRequest
@@ -185,7 +185,7 @@ func (h *GraphQLHandler) HandleGraphQL(c *fiber.Ctx) error {
 }
 
 // setupRLSContext sets up Row Level Security context for the query
-func (h *GraphQLHandler) setupRLSContext(c *fiber.Ctx, ctx context.Context) context.Context {
+func (h *GraphQLHandler) setupRLSContext(c fiber.Ctx, ctx context.Context) context.Context {
 	// Get user from fiber context (set by auth middleware)
 	// The middleware can set either:
 	// 1. A full *auth.User struct in "user" local
@@ -249,7 +249,7 @@ func (h *GraphQLHandler) setupRLSContext(c *fiber.Ctx, ctx context.Context) cont
 }
 
 // HandleIntrospection handles GET /api/v1/graphql (returns introspection data)
-func (h *GraphQLHandler) HandleIntrospection(c *fiber.Ctx) error {
+func (h *GraphQLHandler) HandleIntrospection(c fiber.Ctx) error {
 	if !h.config.Introspection {
 		return c.Status(fiber.StatusForbidden).JSON(GraphQLResponse{
 			Errors: []GraphQLError{{
@@ -258,7 +258,7 @@ func (h *GraphQLHandler) HandleIntrospection(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.UserContext()
+	ctx := c.Context()
 
 	// Get GraphQL schema
 	schema, err := h.schemaGenerator.GetSchema(ctx)
@@ -549,3 +549,5 @@ fragment TypeRef on __Type {
   }
 }
 `
+
+// fiber:context-methods migrated

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,7 +56,7 @@ func TestCreateCustomSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewCustomSettingsHandler(nil)
 
-		app.Post("/settings/custom", func(c *fiber.Ctx) error {
+		app.Post("/settings/custom", func(c fiber.Ctx) error {
 			c.Locals("user_id", "invalid-uuid")
 			c.Locals("user_role", "admin")
 			return handler.CreateSetting(c)
@@ -82,7 +82,7 @@ func TestCreateCustomSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewCustomSettingsHandler(nil)
 
-		app.Post("/settings/custom", func(c *fiber.Ctx) error {
+		app.Post("/settings/custom", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			c.Locals("user_role", "admin")
 			return handler.CreateSetting(c)
@@ -107,7 +107,7 @@ func TestCreateCustomSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewCustomSettingsHandler(nil)
 
-		app.Post("/settings/custom", func(c *fiber.Ctx) error {
+		app.Post("/settings/custom", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			c.Locals("user_role", "admin")
 			return handler.CreateSetting(c)
@@ -133,7 +133,7 @@ func TestCreateCustomSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewCustomSettingsHandler(nil)
 
-		app.Post("/settings/custom", func(c *fiber.Ctx) error {
+		app.Post("/settings/custom", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			c.Locals("user_role", "admin")
 			return handler.CreateSetting(c)
@@ -229,7 +229,7 @@ func TestUpdateCustomSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewCustomSettingsHandler(nil)
 
-		app.Put("/settings/custom/*", func(c *fiber.Ctx) error {
+		app.Put("/settings/custom/*", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			c.Locals("user_role", "admin")
 			return handler.UpdateSetting(c)
@@ -314,7 +314,7 @@ func TestCreateSecretSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewCustomSettingsHandler(nil)
 
-		app.Post("/settings/custom/secret", func(c *fiber.Ctx) error {
+		app.Post("/settings/custom/secret", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.CreateSecretSetting(c)
 		})
@@ -339,7 +339,7 @@ func TestCreateSecretSetting_Validation(t *testing.T) {
 		app := fiber.New()
 		handler := NewCustomSettingsHandler(nil)
 
-		app.Post("/settings/custom/secret", func(c *fiber.Ctx) error {
+		app.Post("/settings/custom/secret", func(c fiber.Ctx) error {
 			c.Locals("user_id", "550e8400-e29b-41d4-a716-446655440000")
 			return handler.CreateSecretSetting(c)
 		})

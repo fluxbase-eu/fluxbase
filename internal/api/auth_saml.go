@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -52,7 +52,7 @@ type SAMLCallbackResponse struct {
 
 // ListSAMLProviders returns all enabled SAML providers for app login
 // GET /auth/saml/providers
-func (h *SAMLHandler) ListSAMLProviders(c *fiber.Ctx) error {
+func (h *SAMLHandler) ListSAMLProviders(c fiber.Ctx) error {
 	if h.samlService == nil {
 		return c.JSON([]SAMLProviderResponse{})
 	}
@@ -79,7 +79,7 @@ func (h *SAMLHandler) ListSAMLProviders(c *fiber.Ctx) error {
 
 // GetSPMetadata returns the SP metadata XML for a provider
 // GET /auth/saml/metadata/:provider
-func (h *SAMLHandler) GetSPMetadata(c *fiber.Ctx) error {
+func (h *SAMLHandler) GetSPMetadata(c fiber.Ctx) error {
 	if h.samlService == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "SAML is not configured",
@@ -112,7 +112,7 @@ func (h *SAMLHandler) GetSPMetadata(c *fiber.Ctx) error {
 
 // InitiateSAMLLogin initiates SAML login by redirecting to the IdP
 // GET /auth/saml/login/:provider
-func (h *SAMLHandler) InitiateSAMLLogin(c *fiber.Ctx) error {
+func (h *SAMLHandler) InitiateSAMLLogin(c fiber.Ctx) error {
 	if h.samlService == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "SAML is not configured",
@@ -179,12 +179,12 @@ func (h *SAMLHandler) InitiateSAMLLogin(c *fiber.Ctx) error {
 	}
 
 	// Redirect to IdP
-	return c.Redirect(authURL, fiber.StatusFound)
+	return c.Redirect().Status(fiber.StatusFound).To(authURL)
 }
 
 // HandleSAMLAssertion handles the SAML assertion callback from the IdP
 // POST /auth/saml/acs
-func (h *SAMLHandler) HandleSAMLAssertion(c *fiber.Ctx) error {
+func (h *SAMLHandler) HandleSAMLAssertion(c fiber.Ctx) error {
 	if h.samlService == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "SAML is not configured",
@@ -227,7 +227,7 @@ func (h *SAMLHandler) HandleSAMLAssertion(c *fiber.Ctx) error {
 	}
 
 	// Check for replay attack
-	isReplay, err := h.samlService.CheckAssertionReplay(c.Context(), assertion.ID, assertion.NotOnOrAfter)
+	isReplay, err := h.samlService.CheckAssertionReplay(c.RequestCtx(), assertion.ID, assertion.NotOnOrAfter)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check assertion replay")
 	}
@@ -267,7 +267,7 @@ func (h *SAMLHandler) HandleSAMLAssertion(c *fiber.Ctx) error {
 	// Provider was already validated above, use it directly
 
 	// Find or create user
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 	user, err := h.authService.GetUserByEmail(ctx, email)
 	if err != nil {
 		// User doesn't exist - check if auto-create is enabled
@@ -343,7 +343,7 @@ func (h *SAMLHandler) HandleSAMLAssertion(c *fiber.Ctx) error {
 					url.QueryEscape(accessToken),
 					url.QueryEscape(refreshToken),
 				)
-				return c.Redirect(validatedURL, fiber.StatusFound)
+				return c.Redirect().Status(fiber.StatusFound).To(validatedURL)
 			}
 		}
 	}
@@ -362,7 +362,7 @@ func (h *SAMLHandler) HandleSAMLAssertion(c *fiber.Ctx) error {
 // This endpoint handles both IdP-initiated logout (SAMLRequest) and SP-initiated logout callback (SAMLResponse)
 // POST /auth/saml/slo
 // GET /auth/saml/slo
-func (h *SAMLHandler) HandleSAMLLogout(c *fiber.Ctx) error {
+func (h *SAMLHandler) HandleSAMLLogout(c fiber.Ctx) error {
 	if h.samlService == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "SAML is not configured",
@@ -398,8 +398,8 @@ func (h *SAMLHandler) HandleSAMLLogout(c *fiber.Ctx) error {
 }
 
 // handleIdPInitiatedLogout processes a LogoutRequest from the IdP
-func (h *SAMLHandler) handleIdPInitiatedLogout(c *fiber.Ctx, samlRequest, relayState string, isDeflated bool) error {
-	ctx := c.Context()
+func (h *SAMLHandler) handleIdPInitiatedLogout(c fiber.Ctx, samlRequest, relayState string, isDeflated bool) error {
+	ctx := c.RequestCtx()
 
 	// Parse the LogoutRequest
 	parsedRequest, providerName, err := h.samlService.ParseLogoutRequest(samlRequest, relayState, isDeflated)
@@ -461,11 +461,11 @@ func (h *SAMLHandler) handleIdPInitiatedLogout(c *fiber.Ctx, samlRequest, relayS
 	}
 
 	// Redirect to IdP with the LogoutResponse
-	return c.Redirect(responseURL.String(), fiber.StatusFound)
+	return c.Redirect().Status(fiber.StatusFound).To(responseURL.String())
 }
 
 // handleSPLogoutCallback processes the LogoutResponse from IdP after SP-initiated logout
-func (h *SAMLHandler) handleSPLogoutCallback(c *fiber.Ctx, samlResponse, relayState string, isDeflated bool) error {
+func (h *SAMLHandler) handleSPLogoutCallback(c fiber.Ctx, samlResponse, relayState string, isDeflated bool) error {
 	// Parse the LogoutResponse
 	parsedResponse, providerName, err := h.samlService.ParseLogoutResponse(samlResponse, isDeflated)
 	if err != nil {
@@ -502,7 +502,7 @@ func (h *SAMLHandler) handleSPLogoutCallback(c *fiber.Ctx, samlResponse, relaySt
 
 			validatedURL, err := auth.ValidateRelayState(redirectURL, allowedHosts)
 			if err == nil && validatedURL != "" {
-				return c.Redirect(validatedURL, fiber.StatusFound)
+				return c.Redirect().Status(fiber.StatusFound).To(validatedURL)
 			}
 		}
 	}
@@ -516,7 +516,7 @@ func (h *SAMLHandler) handleSPLogoutCallback(c *fiber.Ctx, samlResponse, relaySt
 
 // InitiateSAMLLogout initiates SP-initiated SAML logout
 // GET /auth/saml/logout/:provider
-func (h *SAMLHandler) InitiateSAMLLogout(c *fiber.Ctx) error {
+func (h *SAMLHandler) InitiateSAMLLogout(c fiber.Ctx) error {
 	if h.samlService == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "SAML is not configured",
@@ -538,7 +538,7 @@ func (h *SAMLHandler) InitiateSAMLLogout(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Get the user's SAML session
 	samlSession, err := h.samlService.GetSAMLSessionByUserID(ctx, userID)
@@ -637,7 +637,7 @@ func (h *SAMLHandler) InitiateSAMLLogout(c *fiber.Ctx) error {
 	}
 
 	// Redirect to IdP for logout
-	return c.Redirect(result.RedirectURL, fiber.StatusFound)
+	return c.Redirect().Status(fiber.StatusFound).To(result.RedirectURL)
 }
 
 // Helper function to convert map[string][]string to map[string]interface{}
@@ -684,3 +684,4 @@ type CreateSAMLUserRequest struct {
 // func (s *Service) CreateSAMLUser(ctx context.Context, email, name, provider, nameID string, attrs map[string][]string) (*User, error)
 // func (s *Service) LinkSAMLIdentity(ctx context.Context, userID, provider, nameID string, attrs map[string][]string) error
 // func (s *Service) GenerateTokensForUser(ctx context.Context, user *User) (accessToken, refreshToken string, err error)
+// fiber:context-methods migrated

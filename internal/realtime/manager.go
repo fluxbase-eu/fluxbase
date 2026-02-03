@@ -11,7 +11,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/observability"
 	"github.com/fluxbase-eu/fluxbase/internal/pubsub"
-	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/rs/zerolog/log"
 )
 

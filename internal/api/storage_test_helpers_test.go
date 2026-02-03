@@ -13,7 +13,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -92,7 +92,7 @@ func setupStorageTestServer(t *testing.T) (*fiber.App, string, *database.Connect
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
+		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
@@ -104,7 +104,7 @@ func setupStorageTestServer(t *testing.T) (*fiber.App, string, *database.Connect
 	})
 
 	// Add middleware to set admin role for all storage tests
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("user_role", "admin")
 		return c.Next()
 	})

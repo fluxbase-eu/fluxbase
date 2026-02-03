@@ -1,7 +1,7 @@
 package extensions
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -17,8 +17,8 @@ func NewHandler(service *Service) *Handler {
 
 // ListExtensions returns all available extensions with their status
 // GET /api/v1/admin/extensions
-func (h *Handler) ListExtensions(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ListExtensions(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	response, err := h.service.ListExtensions(ctx)
 	if err != nil {
@@ -33,8 +33,8 @@ func (h *Handler) ListExtensions(c *fiber.Ctx) error {
 
 // GetExtensionStatus returns the status of a specific extension
 // GET /api/v1/admin/extensions/:name/status
-func (h *Handler) GetExtensionStatus(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) GetExtensionStatus(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	name := c.Params("name")
 
 	if name == "" {
@@ -56,8 +56,8 @@ func (h *Handler) GetExtensionStatus(c *fiber.Ctx) error {
 
 // EnableExtension enables a PostgreSQL extension
 // POST /api/v1/admin/extensions/:name/enable
-func (h *Handler) EnableExtension(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) EnableExtension(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	name := c.Params("name")
 
 	if name == "" {
@@ -68,7 +68,7 @@ func (h *Handler) EnableExtension(c *fiber.Ctx) error {
 
 	// Parse optional request body
 	var req EnableExtensionRequest
-	_ = c.BodyParser(&req) // Ignore error - body is optional
+	_ = c.Bind().Body(&req) // Ignore error - body is optional
 
 	// Get user ID from context if available
 	var userID *string
@@ -95,8 +95,8 @@ func (h *Handler) EnableExtension(c *fiber.Ctx) error {
 
 // DisableExtension disables a PostgreSQL extension
 // POST /api/v1/admin/extensions/:name/disable
-func (h *Handler) DisableExtension(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) DisableExtension(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	name := c.Params("name")
 
 	if name == "" {
@@ -130,8 +130,8 @@ func (h *Handler) DisableExtension(c *fiber.Ctx) error {
 
 // SyncExtensions syncs the extension catalog with PostgreSQL
 // POST /api/v1/admin/extensions/sync
-func (h *Handler) SyncExtensions(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) SyncExtensions(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	err := h.service.SyncFromPostgres(ctx)
 	if err != nil {
@@ -146,3 +146,5 @@ func (h *Handler) SyncExtensions(c *fiber.Ctx) error {
 		"message": "Extensions synced successfully",
 	})
 }
+
+// fiber:context-methods migrated

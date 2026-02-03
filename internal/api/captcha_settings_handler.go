@@ -7,7 +7,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -80,7 +80,7 @@ var validEndpoints = map[string]bool{
 
 // GetSettings returns the current captcha settings
 // GET /api/v1/admin/settings/captcha
-func (h *CaptchaSettingsHandler) GetSettings(c *fiber.Ctx) error {
+func (h *CaptchaSettingsHandler) GetSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	response := CaptchaSettingsResponse{
@@ -171,11 +171,11 @@ func (h *CaptchaSettingsHandler) GetSettings(c *fiber.Ctx) error {
 
 // UpdateSettings updates captcha settings
 // PUT /api/v1/admin/settings/captcha
-func (h *CaptchaSettingsHandler) UpdateSettings(c *fiber.Ctx) error {
+func (h *CaptchaSettingsHandler) UpdateSettings(c fiber.Ctx) error {
 	ctx := context.Background()
 
 	var req UpdateCaptchaSettingsRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse update captcha settings request")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",

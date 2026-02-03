@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -51,9 +51,9 @@ type RealtimeTableStatus struct {
 }
 
 // HandleEnableRealtime enables realtime on a table
-func (h *RealtimeAdminHandler) HandleEnableRealtime(c *fiber.Ctx) error {
+func (h *RealtimeAdminHandler) HandleEnableRealtime(c fiber.Ctx) error {
 	var req EnableRealtimeRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -126,7 +126,7 @@ func (h *RealtimeAdminHandler) HandleEnableRealtime(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if table exists
 	exists, err := h.tableExists(ctx, req.Schema, req.Table)
@@ -220,7 +220,7 @@ SET realtime_enabled = true,
 }
 
 // HandleDisableRealtime disables realtime on a table
-func (h *RealtimeAdminHandler) HandleDisableRealtime(c *fiber.Ctx) error {
+func (h *RealtimeAdminHandler) HandleDisableRealtime(c fiber.Ctx) error {
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -239,7 +239,7 @@ func (h *RealtimeAdminHandler) HandleDisableRealtime(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Check if table exists
 	exists, err := h.tableExists(ctx, schema, table)
@@ -302,7 +302,7 @@ WHERE schema_name = $1 AND table_name = $2`
 }
 
 // HandleListRealtimeTables lists all realtime-enabled tables
-func (h *RealtimeAdminHandler) HandleListRealtimeTables(c *fiber.Ctx) error {
+func (h *RealtimeAdminHandler) HandleListRealtimeTables(c fiber.Ctx) error {
 	// Check if database connection is available
 	if h.db == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -310,7 +310,7 @@ func (h *RealtimeAdminHandler) HandleListRealtimeTables(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Get optional filter for enabled-only
 	enabledOnly := c.Query("enabled", "true") == "true"
@@ -360,7 +360,7 @@ FROM realtime.schema_registry`
 }
 
 // HandleGetRealtimeStatus gets the realtime status for a specific table
-func (h *RealtimeAdminHandler) HandleGetRealtimeStatus(c *fiber.Ctx) error {
+func (h *RealtimeAdminHandler) HandleGetRealtimeStatus(c fiber.Ctx) error {
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -379,7 +379,7 @@ func (h *RealtimeAdminHandler) HandleGetRealtimeStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	query := `
 SELECT id, schema_name, table_name, realtime_enabled, events,
@@ -434,7 +434,7 @@ WHERE schema_name = $1 AND table_name = $2`
 }
 
 // HandleUpdateRealtimeConfig updates the realtime configuration for a table
-func (h *RealtimeAdminHandler) HandleUpdateRealtimeConfig(c *fiber.Ctx) error {
+func (h *RealtimeAdminHandler) HandleUpdateRealtimeConfig(c fiber.Ctx) error {
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -450,7 +450,7 @@ func (h *RealtimeAdminHandler) HandleUpdateRealtimeConfig(c *fiber.Ctx) error {
 		Events  []string `json:"events,omitempty"`
 		Exclude []string `json:"exclude,omitempty"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return SendInvalidBody(c)
 	}
 
@@ -490,7 +490,7 @@ func (h *RealtimeAdminHandler) HandleUpdateRealtimeConfig(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Build update query dynamically
 	updates := []string{}
@@ -547,3 +547,5 @@ func (h *RealtimeAdminHandler) tableExists(ctx context.Context, schema, table st
 	`, schema, table).Scan(&exists)
 	return exists, err
 }
+
+// fiber:context-methods migrated

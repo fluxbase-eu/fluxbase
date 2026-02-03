@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -224,7 +224,7 @@ func TestStorageHandler_ListBuckets_RoleChecking(t *testing.T) {
 			handler := &StorageHandler{} // No db, but will fail role check before db access
 
 			app := setupTestFiberApp()
-			app.Get("/storage/buckets", func(c *fiber.Ctx) error {
+			app.Get("/storage/buckets", func(c fiber.Ctx) error {
 				if tt.role != nil {
 					c.Locals("user_role", tt.role)
 				}
@@ -329,7 +329,7 @@ func TestBucketConfiguration(t *testing.T) {
 
 func setupTestFiberApp() *fiber.App {
 	return fiber.New(fiber.Config{
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
+		ErrorHandler: func(c fiber.Ctx, err error) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
 			})

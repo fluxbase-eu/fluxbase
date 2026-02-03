@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -177,7 +177,7 @@ func (m *IdempotencyMiddleware) cleanupExpiredKeys() {
 
 // Middleware returns a Fiber middleware handler
 func (m *IdempotencyMiddleware) Middleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Get idempotency key from header first to validate even without DB
 		key := c.Get(m.config.HeaderName)
 
@@ -210,7 +210,7 @@ func (m *IdempotencyMiddleware) Middleware() fiber.Handler {
 		requestHash := m.calculateRequestHash(c)
 
 		// Check if key exists
-		record, err := m.getRecord(c.Context(), key)
+		record, err := m.getRecord(c.RequestCtx(), key)
 		if err != nil && err != pgx.ErrNoRows {
 			log.Error().Err(err).Str("key", key).Msg("Failed to check idempotency key")
 			// Continue without idempotency on DB error to avoid blocking
@@ -223,7 +223,7 @@ func (m *IdempotencyMiddleware) Middleware() fiber.Handler {
 		}
 
 		// Key doesn't exist - create new record and process
-		if err := m.createRecord(c.Context(), key, c.Method(), c.Path(), userID, requestHash); err != nil {
+		if err := m.createRecord(c.RequestCtx(), key, c.Method(), c.Path(), userID, requestHash); err != nil {
 			log.Error().Err(err).Str("key", key).Msg("Failed to create idempotency record")
 			// Continue without idempotency on DB error
 			return c.Next()
@@ -249,7 +249,7 @@ func (m *IdempotencyMiddleware) Middleware() fiber.Handler {
 			status = StatusFailed
 		}
 
-		if updateErr := m.updateRecord(c.Context(), key, status, responseStatus, responseHeaders, responseBody); updateErr != nil {
+		if updateErr := m.updateRecord(c.RequestCtx(), key, status, responseStatus, responseHeaders, responseBody); updateErr != nil {
 			log.Error().Err(updateErr).Str("key", key).Msg("Failed to update idempotency record")
 		}
 
@@ -263,7 +263,7 @@ func (m *IdempotencyMiddleware) Middleware() fiber.Handler {
 }
 
 // shouldApply checks if idempotency should be applied to this request
-func (m *IdempotencyMiddleware) shouldApply(c *fiber.Ctx) bool {
+func (m *IdempotencyMiddleware) shouldApply(c fiber.Ctx) bool {
 	// Check method
 	if !m.methodSet[c.Method()] {
 		return false
@@ -289,7 +289,7 @@ func (m *IdempotencyMiddleware) shouldApply(c *fiber.Ctx) bool {
 }
 
 // calculateRequestHash creates a hash of the request body for validation
-func (m *IdempotencyMiddleware) calculateRequestHash(c *fiber.Ctx) string {
+func (m *IdempotencyMiddleware) calculateRequestHash(c fiber.Ctx) string {
 	body := c.Body()
 	if len(body) == 0 {
 		return ""
@@ -371,7 +371,7 @@ func (m *IdempotencyMiddleware) updateRecord(ctx context.Context, key string, st
 }
 
 // handleExistingKey handles a request with an existing idempotency key
-func (m *IdempotencyMiddleware) handleExistingKey(c *fiber.Ctx, record *IdempotencyRecord, requestHash string) error {
+func (m *IdempotencyMiddleware) handleExistingKey(c fiber.Ctx, record *IdempotencyRecord, requestHash string) error {
 	// Verify request matches original (same method, path, body hash)
 	if record.Method != c.Method() || record.Path != c.Path() {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
@@ -432,7 +432,7 @@ func (m *IdempotencyMiddleware) handleExistingKey(c *fiber.Ctx, record *Idempote
 	case StatusFailed:
 		// Previous request failed - allow retry
 		// Delete the old record and process as new
-		if _, err := m.config.DB.Exec(c.Context(),
+		if _, err := m.config.DB.Exec(c.RequestCtx(),
 			"DELETE FROM api.idempotency_keys WHERE key = $1", record.Key); err != nil {
 			log.Warn().Err(err).Str("key", record.Key).Msg("Failed to delete failed idempotency record")
 		}
@@ -456,17 +456,17 @@ func IdempotencyMiddlewareFunc(db *pgxpool.Pool) fiber.Handler {
 const IdempotencyKeyReplayedHeader = "Idempotency-Replayed"
 
 // GetIdempotencyKey extracts the idempotency key from a request
-func GetIdempotencyKey(c *fiber.Ctx) string {
+func GetIdempotencyKey(c fiber.Ctx) string {
 	return c.Get("Idempotency-Key")
 }
 
 // HasIdempotencyKey checks if the request has an idempotency key
-func HasIdempotencyKey(c *fiber.Ctx) bool {
+func HasIdempotencyKey(c fiber.Ctx) bool {
 	return c.Get("Idempotency-Key") != ""
 }
 
 // IsReplayedResponse checks if the response was replayed from cache
-func IsReplayedResponse(c *fiber.Ctx) bool {
+func IsReplayedResponse(c fiber.Ctx) bool {
 	return c.Get(IdempotencyKeyReplayedHeader) == "true"
 }
 
@@ -484,3 +484,5 @@ func DecodeResponseBody(encoded string) ([]byte, error) {
 func CompareBytes(a, b []byte) bool {
 	return bytes.Equal(a, b)
 }
+
+// fiber:context-methods migrated

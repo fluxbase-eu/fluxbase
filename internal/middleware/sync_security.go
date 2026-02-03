@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,7 +23,7 @@ func RequireSyncIPAllowlist(allowedRanges []string, featureName string) fiber.Ha
 		allowedNets = append(allowedNets, network)
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Skip if no IP ranges configured (allows all)
 		if len(allowedNets) == 0 {
 			return c.Next()

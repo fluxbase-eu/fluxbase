@@ -17,7 +17,8 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/runtime"
 	"github.com/fluxbase-eu/fluxbase/internal/secrets"
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -133,21 +134,31 @@ func (h *Handler) handleLogMessage(executionID uuid.UUID, level string, message 
 }
 
 // applyCorsHeaders applies CORS headers to the response with fallback to global config
-func (h *Handler) applyCorsHeaders(c *fiber.Ctx, fn *EdgeFunction) {
+func (h *Handler) applyCorsHeaders(c fiber.Ctx, fn *EdgeFunction) {
 	// Determine CORS values with fallback: function settings > global config
+	// Function settings are stored as comma-separated strings, global config uses slices
 	origins := h.corsConfig.AllowedOrigins
 	if fn.CorsOrigins != nil {
-		origins = *fn.CorsOrigins
+		origins = strings.Split(*fn.CorsOrigins, ",")
+		for i := range origins {
+			origins[i] = strings.TrimSpace(origins[i])
+		}
 	}
 
 	methods := h.corsConfig.AllowedMethods
 	if fn.CorsMethods != nil {
-		methods = *fn.CorsMethods
+		methods = strings.Split(*fn.CorsMethods, ",")
+		for i := range methods {
+			methods[i] = strings.TrimSpace(methods[i])
+		}
 	}
 
 	headers := h.corsConfig.AllowedHeaders
 	if fn.CorsHeaders != nil {
-		headers = *fn.CorsHeaders
+		headers = strings.Split(*fn.CorsHeaders, ",")
+		for i := range headers {
+			headers[i] = strings.TrimSpace(headers[i])
+		}
 	}
 
 	credentials := h.corsConfig.AllowCredentials
@@ -162,25 +173,42 @@ func (h *Handler) applyCorsHeaders(c *fiber.Ctx, fn *EdgeFunction) {
 
 	// Apply CORS headers
 	// Handle Access-Control-Allow-Origin properly:
-	// - If origins is "*", use "*"
-	// - If origins contains multiple comma-separated values, check if request origin matches
-	// - Browsers only accept a single origin or "*", not comma-separated lists
-	allowedOrigin := origins
-	if origins != "*" && strings.Contains(origins, ",") {
+	// - If origins contains "*", use "*"
+	// - If origins contains multiple values, check if request origin matches
+	// - Browsers only accept a single origin or "*", not lists
+	hasWildcard := false
+	for _, o := range origins {
+		if o == "*" {
+			hasWildcard = true
+			break
+		}
+	}
+
+	var allowedOrigin string
+	if hasWildcard {
+		allowedOrigin = "*"
+	} else if len(origins) == 1 {
+		allowedOrigin = origins[0]
+	} else {
 		requestOrigin := c.Get("Origin")
 		if requestOrigin != "" {
 			// Check if request origin is in the allowed list
-			for _, allowed := range strings.Split(origins, ",") {
-				if strings.TrimSpace(allowed) == requestOrigin {
+			for _, allowed := range origins {
+				if allowed == requestOrigin {
 					allowedOrigin = requestOrigin
 					break
 				}
 			}
 		}
+		// If no match, use first allowed origin (will cause CORS failure, but that's expected)
+		if allowedOrigin == "" && len(origins) > 0 {
+			allowedOrigin = origins[0]
+		}
 	}
+
 	c.Set("Access-Control-Allow-Origin", allowedOrigin)
-	c.Set("Access-Control-Allow-Methods", methods)
-	c.Set("Access-Control-Allow-Headers", headers)
+	c.Set("Access-Control-Allow-Methods", strings.Join(methods, ", "))
+	c.Set("Access-Control-Allow-Headers", strings.Join(headers, ", "))
 
 	if credentials && allowedOrigin != "*" {
 		c.Set("Access-Control-Allow-Credentials", "true")
@@ -191,15 +219,15 @@ func (h *Handler) applyCorsHeaders(c *fiber.Ctx, fn *EdgeFunction) {
 	}
 
 	// Expose headers if configured
-	if h.corsConfig.ExposedHeaders != "" {
-		c.Set("Access-Control-Expose-Headers", h.corsConfig.ExposedHeaders)
+	if len(h.corsConfig.ExposedHeaders) > 0 {
+		c.Set("Access-Control-Expose-Headers", strings.Join(h.corsConfig.ExposedHeaders, ", "))
 	}
 }
 
 // checkRateLimit checks function-specific rate limits and returns an error response if exceeded.
 // Rate limits are checked per user ID (authenticated) or per IP (anonymous).
 // Uses the global rate limit store which supports memory, PostgreSQL, or Redis backends.
-func (h *Handler) checkRateLimit(c *fiber.Ctx, fn *EdgeFunction) error {
+func (h *Handler) checkRateLimit(c fiber.Ctx, fn *EdgeFunction) error {
 	// Skip if no rate limits configured
 	if fn.RateLimitPerMinute == nil && fn.RateLimitPerHour == nil && fn.RateLimitPerDay == nil {
 		return nil
@@ -245,7 +273,7 @@ func (h *Handler) checkRateLimit(c *fiber.Ctx, fn *EdgeFunction) error {
 		}
 
 		key := baseKey + check.suffix
-		result, err := ratelimit.Check(c.Context(), store, key, int64(*check.limit), check.window)
+		result, err := ratelimit.Check(c.RequestCtx(), store, key, int64(*check.limit), check.window)
 		if err != nil {
 			// Fail open on rate limit errors
 			log.Error().Err(err).Str("key", key).Msg("Rate limit check failed")
@@ -316,7 +344,7 @@ func (h *Handler) RegisterRoutes(app *fiber.App, authService *auth.Service, clie
 }
 
 // CreateFunction creates a new edge function
-func (h *Handler) CreateFunction(c *fiber.Ctx) error {
+func (h *Handler) CreateFunction(c fiber.Ctx) error {
 	var req struct {
 		Name                 string  `json:"name"`
 		Description          *string `json:"description"`
@@ -343,7 +371,7 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 		CronSchedule         *string `json:"cron_schedule"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
@@ -472,10 +500,10 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 
 			if hasSharedImports {
 				// Load all shared modules from database
-				sharedModules, err := h.storage.ListSharedModules(c.Context())
+				sharedModules, err := h.storage.ListSharedModules(c.RequestCtx())
 				if err != nil {
 					log.Warn().Err(err).Msg("Failed to load shared modules, proceeding with regular bundle")
-					result, bundleErr = bundler.Bundle(c.Context(), req.Code)
+					result, bundleErr = bundler.Bundle(c.RequestCtx(), req.Code)
 				} else {
 					// Build map of shared module paths to content
 					sharedModulesMap := make(map[string]string)
@@ -485,11 +513,11 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 
 					// Bundle with shared modules (no supporting files for now)
 					supportingFiles := make(map[string]string)
-					result, bundleErr = bundler.BundleWithFiles(c.Context(), req.Code, supportingFiles, sharedModulesMap)
+					result, bundleErr = bundler.BundleWithFiles(c.RequestCtx(), req.Code, supportingFiles, sharedModulesMap)
 				}
 			} else {
 				// No shared imports - use regular bundling
-				result, bundleErr = bundler.Bundle(c.Context(), req.Code)
+				result, bundleErr = bundler.Bundle(c.RequestCtx(), req.Code)
 			}
 
 			if bundleErr != nil {
@@ -541,7 +569,7 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 		Source:               "api",
 	}
 
-	if err := h.storage.CreateFunction(c.Context(), fn); err != nil {
+	if err := h.storage.CreateFunction(c.RequestCtx(), fn); err != nil {
 		reqID := getRequestID(c)
 		log.Error().
 			Err(err).
@@ -562,7 +590,7 @@ func (h *Handler) CreateFunction(c *fiber.Ctx) error {
 
 // ListFunctions lists all edge functions
 // Admin-only endpoint - non-admin users receive 403 Forbidden
-func (h *Handler) ListFunctions(c *fiber.Ctx) error {
+func (h *Handler) ListFunctions(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	if !isAdminRole(role) {
@@ -579,10 +607,10 @@ func (h *Handler) ListFunctions(c *fiber.Ctx) error {
 
 	if namespace != "" {
 		// If namespace is specified, list functions in that namespace
-		functions, err = h.storage.ListFunctionsByNamespace(c.Context(), namespace)
+		functions, err = h.storage.ListFunctionsByNamespace(c.RequestCtx(), namespace)
 	} else {
 		// Otherwise, list all functions (admin can see all)
-		functions, err = h.storage.ListAllFunctions(c.Context())
+		functions, err = h.storage.ListAllFunctions(c.RequestCtx())
 	}
 
 	if err != nil {
@@ -603,8 +631,8 @@ func (h *Handler) ListFunctions(c *fiber.Ctx) error {
 }
 
 // ListNamespaces lists all unique namespaces with edge functions
-func (h *Handler) ListNamespaces(c *fiber.Ctx) error {
-	namespaces, err := h.storage.ListFunctionNamespaces(c.Context())
+func (h *Handler) ListNamespaces(c fiber.Ctx) error {
+	namespaces, err := h.storage.ListFunctionNamespaces(c.RequestCtx())
 	if err != nil {
 		reqID := getRequestID(c)
 		log.Error().
@@ -628,7 +656,7 @@ func (h *Handler) ListNamespaces(c *fiber.Ctx) error {
 
 // GetFunction gets a single function by name
 // Admin-only endpoint - non-admin users receive 403 Forbidden
-func (h *Handler) GetFunction(c *fiber.Ctx) error {
+func (h *Handler) GetFunction(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	if !isAdminRole(role) {
@@ -639,7 +667,7 @@ func (h *Handler) GetFunction(c *fiber.Ctx) error {
 
 	name := c.Params("name")
 
-	fn, err := h.storage.GetFunction(c.Context(), name)
+	fn, err := h.storage.GetFunction(c.RequestCtx(), name)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Function not found"})
 	}
@@ -648,11 +676,11 @@ func (h *Handler) GetFunction(c *fiber.Ctx) error {
 }
 
 // UpdateFunction updates an existing function
-func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
+func (h *Handler) UpdateFunction(c fiber.Ctx) error {
 	name := c.Params("name")
 
 	var updates map[string]interface{}
-	if err := c.BodyParser(&updates); err != nil {
+	if err := c.Bind().Body(&updates); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
@@ -675,10 +703,10 @@ func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
 
 			if hasSharedImports {
 				// Load all shared modules from database
-				sharedModules, err := h.storage.ListSharedModules(c.Context())
+				sharedModules, err := h.storage.ListSharedModules(c.RequestCtx())
 				if err != nil {
 					log.Warn().Err(err).Msg("Failed to load shared modules for update, proceeding with regular bundle")
-					result, bundleErr = bundler.Bundle(c.Context(), codeUpdate)
+					result, bundleErr = bundler.Bundle(c.RequestCtx(), codeUpdate)
 				} else {
 					// Build map of shared module paths to content
 					sharedModulesMap := make(map[string]string)
@@ -688,11 +716,11 @@ func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
 
 					// Bundle with shared modules
 					supportingFiles := make(map[string]string)
-					result, bundleErr = bundler.BundleWithFiles(c.Context(), codeUpdate, supportingFiles, sharedModulesMap)
+					result, bundleErr = bundler.BundleWithFiles(c.RequestCtx(), codeUpdate, supportingFiles, sharedModulesMap)
 				}
 			} else {
 				// No shared imports - use regular bundling
-				result, bundleErr = bundler.Bundle(c.Context(), codeUpdate)
+				result, bundleErr = bundler.Bundle(c.RequestCtx(), codeUpdate)
 			}
 
 			if bundleErr != nil {
@@ -717,7 +745,7 @@ func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
 	}
 
 	reqID := getRequestID(c)
-	if err := h.storage.UpdateFunction(c.Context(), name, updates); err != nil {
+	if err := h.storage.UpdateFunction(c.RequestCtx(), name, updates); err != nil {
 		log.Error().
 			Err(err).
 			Str("function_name", name).
@@ -732,7 +760,7 @@ func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
 	}
 
 	// Return updated function
-	fn, err := h.storage.GetFunction(c.Context(), name)
+	fn, err := h.storage.GetFunction(c.RequestCtx(), name)
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -751,10 +779,10 @@ func (h *Handler) UpdateFunction(c *fiber.Ctx) error {
 }
 
 // DeleteFunction deletes a function
-func (h *Handler) DeleteFunction(c *fiber.Ctx) error {
+func (h *Handler) DeleteFunction(c fiber.Ctx) error {
 	name := c.Params("name")
 
-	if err := h.storage.DeleteFunction(c.Context(), name); err != nil {
+	if err := h.storage.DeleteFunction(c.RequestCtx(), name); err != nil {
 		reqID := getRequestID(c)
 		log.Error().
 			Err(err).
@@ -773,7 +801,7 @@ func (h *Handler) DeleteFunction(c *fiber.Ctx) error {
 }
 
 // InvokeFunction invokes an edge function
-func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
+func (h *Handler) InvokeFunction(c fiber.Ctx) error {
 	name := c.Params("name")
 	namespace := c.Query("namespace")
 
@@ -781,9 +809,9 @@ func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
 	var fn *EdgeFunction
 	var err error
 	if namespace != "" {
-		fn, err = h.storage.GetFunctionByNamespace(c.Context(), name, namespace)
+		fn, err = h.storage.GetFunctionByNamespace(c.RequestCtx(), name, namespace)
 	} else {
-		fn, err = h.storage.GetFunction(c.Context(), name)
+		fn, err = h.storage.GetFunction(c.RequestCtx(), name)
 	}
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Function not found"})
@@ -875,7 +903,7 @@ func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
 		// Limit: 5 attempts per 5 minutes per IP address
 		store := ratelimit.GetGlobalStore()
 		rateLimitKey := "impersonation:" + c.IP()
-		result, err := ratelimit.Check(c.Context(), store, rateLimitKey, 5, 5*time.Minute)
+		result, err := ratelimit.Check(c.RequestCtx(), store, rateLimitKey, 5, 5*time.Minute)
 		if err != nil {
 			log.Error().Err(err).Str("ip", c.IP()).Msg("Failed to check impersonation rate limit")
 			// Continue on rate limit check error to avoid blocking legitimate requests
@@ -955,7 +983,7 @@ func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
 	// Create execution record BEFORE running to enable real-time logging
 	// Skip if execution logs are disabled for this function
 	if !fn.DisableExecutionLogs {
-		if err := h.storage.CreateExecution(c.Context(), executionID, fn.ID, "http"); err != nil {
+		if err := h.storage.CreateExecution(c.RequestCtx(), executionID, fn.ID, "http"); err != nil {
 			log.Error().Err(err).Str("execution_id", executionID.String()).Msg("Failed to create execution record")
 			// Continue anyway - logging will still work via stderr fallback
 		}
@@ -977,7 +1005,7 @@ func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
 	var functionSecrets map[string]string
 	if h.secretsStorage != nil {
 		var err error
-		functionSecrets, err = h.secretsStorage.GetSecretsForNamespace(c.Context(), fn.Namespace)
+		functionSecrets, err = h.secretsStorage.GetSecretsForNamespace(c.RequestCtx(), fn.Namespace)
 		if err != nil {
 			log.Warn().Err(err).Str("namespace", fn.Namespace).Msg("Failed to load secrets for function execution")
 			// Continue without secrets - don't fail the function invocation
@@ -992,7 +1020,7 @@ func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
 			userIDPtr = &parsed
 		}
 	}
-	settingsSecrets := h.loadSettingsSecrets(c.Context(), userIDPtr)
+	settingsSecrets := h.loadSettingsSecrets(c.RequestCtx(), userIDPtr)
 
 	// Merge all secrets: function secrets first, then settings secrets (which include the env var prefix already)
 	allSecrets := make(map[string]string)
@@ -1004,7 +1032,7 @@ func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
 	}
 
 	// Execute function (nil cancel signal for basic invocation - streaming endpoint will use actual signal)
-	result, err := h.runtime.Execute(c.Context(), fn.Code, req, perms, nil, timeoutOverride, allSecrets)
+	result, err := h.runtime.Execute(c.RequestCtx(), fn.Code, req, perms, nil, timeoutOverride, allSecrets)
 
 	// Complete execution record
 	durationMs := int(result.DurationMs)
@@ -1075,15 +1103,15 @@ func (h *Handler) InvokeFunction(c *fiber.Ctx) error {
 }
 
 // GetExecutions returns execution history
-func (h *Handler) GetExecutions(c *fiber.Ctx) error {
+func (h *Handler) GetExecutions(c fiber.Ctx) error {
 	name := c.Params("name")
-	limit := c.QueryInt("limit", 50)
+	limit := fiber.Query[int](c, "limit", 50)
 
 	if limit > 100 {
 		limit = 100
 	}
 
-	executions, err := h.storage.GetExecutions(c.Context(), name, limit)
+	executions, err := h.storage.GetExecutions(c.RequestCtx(), name, limit)
 	if err != nil {
 		reqID := getRequestID(c)
 		log.Error().
@@ -1104,9 +1132,9 @@ func (h *Handler) GetExecutions(c *fiber.Ctx) error {
 }
 
 // ListAllExecutions returns execution history across all functions (admin only)
-func (h *Handler) ListAllExecutions(c *fiber.Ctx) error {
-	limit := c.QueryInt("limit", 25)
-	offset := c.QueryInt("offset", 0)
+func (h *Handler) ListAllExecutions(c fiber.Ctx) error {
+	limit := fiber.Query[int](c, "limit", 25)
+	offset := fiber.Query[int](c, "offset", 0)
 	namespace := c.Query("namespace")
 	functionName := c.Query("function_name")
 	status := c.Query("status")
@@ -1123,7 +1151,7 @@ func (h *Handler) ListAllExecutions(c *fiber.Ctx) error {
 		Offset:       offset,
 	}
 
-	executions, total, err := h.storage.ListAllExecutions(c.Context(), filters)
+	executions, total, err := h.storage.ListAllExecutions(c.RequestCtx(), filters)
 	if err != nil {
 		reqID := getRequestID(c)
 		log.Error().
@@ -1146,7 +1174,7 @@ func (h *Handler) ListAllExecutions(c *fiber.Ctx) error {
 }
 
 // GetExecutionLogs returns logs for a specific function execution
-func (h *Handler) GetExecutionLogs(c *fiber.Ctx) error {
+func (h *Handler) GetExecutionLogs(c fiber.Ctx) error {
 	executionIDStr := c.Params("executionId")
 
 	_, err := uuid.Parse(executionIDStr)
@@ -1165,7 +1193,7 @@ func (h *Handler) GetExecutionLogs(c *fiber.Ctx) error {
 	}
 
 	// Query logs from central logging
-	entries, err := h.loggingService.GetExecutionLogs(c.Context(), executionIDStr, afterLine)
+	entries, err := h.loggingService.GetExecutionLogs(c.RequestCtx(), executionIDStr, afterLine)
 	if err != nil {
 		log.Error().Err(err).Str("execution_id", executionIDStr).Msg("Failed to get execution logs")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1241,8 +1269,8 @@ func (h *Handler) bundleFunctionFromFilesystem(ctx context.Context, functionName
 
 // ReloadFunctions scans the functions directory and syncs with database
 // Admin-only endpoint - requires authentication and admin role
-func (h *Handler) ReloadFunctions(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *Handler) ReloadFunctions(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Scan functions directory for all .ts files
 	functionFiles, err := ListFunctionFiles(h.functionsDir)
@@ -1378,7 +1406,7 @@ func (h *Handler) ReloadFunctions(c *fiber.Ctx) error {
 
 // SyncFunctions syncs a list of functions to a specific namespace
 // Admin-only endpoint - requires authentication and admin role
-func (h *Handler) SyncFunctions(c *fiber.Ctx) error {
+func (h *Handler) SyncFunctions(c fiber.Ctx) error {
 	var req struct {
 		Namespace string `json:"namespace"`
 		Functions []struct {
@@ -1404,7 +1432,7 @@ func (h *Handler) SyncFunctions(c *fiber.Ctx) error {
 		} `json:"options"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
@@ -1414,7 +1442,7 @@ func (h *Handler) SyncFunctions(c *fiber.Ctx) error {
 		namespace = "default"
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Get user ID from context (if authenticated)
 	var createdBy *uuid.UUID
@@ -1941,12 +1969,10 @@ func truncateString(s string, maxLen int) string {
 }
 
 // getRequestID extracts the request ID from the fiber context
-func getRequestID(c *fiber.Ctx) string {
-	requestID := c.Locals("requestid")
-	if requestID != nil {
-		if reqIDStr, ok := requestID.(string); ok {
-			return reqIDStr
-		}
+func getRequestID(c fiber.Ctx) string {
+	requestID := requestid.FromContext(c)
+	if requestID != "" {
+		return requestID
 	}
 	return c.Get("X-Request-ID", "")
 }
@@ -1969,14 +1995,14 @@ func toString(v interface{}) string {
 }
 
 // CreateSharedModule creates a new shared module
-func (h *Handler) CreateSharedModule(c *fiber.Ctx) error {
+func (h *Handler) CreateSharedModule(c fiber.Ctx) error {
 	var req struct {
 		ModulePath  string  `json:"module_path"`
 		Content     string  `json:"content"`
 		Description *string `json:"description"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
@@ -2000,7 +2026,7 @@ func (h *Handler) CreateSharedModule(c *fiber.Ctx) error {
 		CreatedBy:   userID,
 	}
 
-	if err := h.storage.CreateSharedModule(c.Context(), module); err != nil {
+	if err := h.storage.CreateSharedModule(c.RequestCtx(), module); err != nil {
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "already exists") {
 			return c.Status(409).JSON(fiber.Map{"error": "Shared module already exists"})
 		}
@@ -2017,8 +2043,8 @@ func (h *Handler) CreateSharedModule(c *fiber.Ctx) error {
 }
 
 // ListSharedModules returns all shared modules
-func (h *Handler) ListSharedModules(c *fiber.Ctx) error {
-	modules, err := h.storage.ListSharedModules(c.Context())
+func (h *Handler) ListSharedModules(c fiber.Ctx) error {
+	modules, err := h.storage.ListSharedModules(c.RequestCtx())
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to list shared modules")
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to list shared modules"})
@@ -2028,7 +2054,7 @@ func (h *Handler) ListSharedModules(c *fiber.Ctx) error {
 }
 
 // GetSharedModule retrieves a shared module by path
-func (h *Handler) GetSharedModule(c *fiber.Ctx) error {
+func (h *Handler) GetSharedModule(c fiber.Ctx) error {
 	// Get full path from wildcard (e.g., "cors.ts" from "/shared/cors.ts")
 	modulePath := strings.TrimPrefix(c.Params("*"), "/")
 
@@ -2037,7 +2063,7 @@ func (h *Handler) GetSharedModule(c *fiber.Ctx) error {
 		modulePath = "_shared/" + modulePath
 	}
 
-	module, err := h.storage.GetSharedModule(c.Context(), modulePath)
+	module, err := h.storage.GetSharedModule(c.RequestCtx(), modulePath)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return c.Status(404).JSON(fiber.Map{"error": "Shared module not found"})
@@ -2050,7 +2076,7 @@ func (h *Handler) GetSharedModule(c *fiber.Ctx) error {
 }
 
 // UpdateSharedModule updates an existing shared module
-func (h *Handler) UpdateSharedModule(c *fiber.Ctx) error {
+func (h *Handler) UpdateSharedModule(c fiber.Ctx) error {
 	// Get full path from wildcard
 	modulePath := strings.TrimPrefix(c.Params("*"), "/")
 
@@ -2064,11 +2090,11 @@ func (h *Handler) UpdateSharedModule(c *fiber.Ctx) error {
 		Description *string `json:"description"`
 	}
 
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	if err := h.storage.UpdateSharedModule(c.Context(), modulePath, req.Content, req.Description); err != nil {
+	if err := h.storage.UpdateSharedModule(c.RequestCtx(), modulePath, req.Content, req.Description); err != nil {
 		if err == pgx.ErrNoRows {
 			return c.Status(404).JSON(fiber.Map{"error": "Shared module not found"})
 		}
@@ -2077,7 +2103,7 @@ func (h *Handler) UpdateSharedModule(c *fiber.Ctx) error {
 	}
 
 	// Get updated module
-	module, err := h.storage.GetSharedModule(c.Context(), modulePath)
+	module, err := h.storage.GetSharedModule(c.RequestCtx(), modulePath)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Module updated but failed to retrieve"})
 	}
@@ -2091,7 +2117,7 @@ func (h *Handler) UpdateSharedModule(c *fiber.Ctx) error {
 }
 
 // DeleteSharedModule deletes a shared module
-func (h *Handler) DeleteSharedModule(c *fiber.Ctx) error {
+func (h *Handler) DeleteSharedModule(c fiber.Ctx) error {
 	// Get full path from wildcard
 	modulePath := strings.TrimPrefix(c.Params("*"), "/")
 
@@ -2100,7 +2126,7 @@ func (h *Handler) DeleteSharedModule(c *fiber.Ctx) error {
 		modulePath = "_shared/" + modulePath
 	}
 
-	if err := h.storage.DeleteSharedModule(c.Context(), modulePath); err != nil {
+	if err := h.storage.DeleteSharedModule(c.RequestCtx(), modulePath); err != nil {
 		log.Error().Err(err).Str("module_path", modulePath).Msg("Failed to delete shared module")
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete shared module"})
 	}
@@ -2109,3 +2135,5 @@ func (h *Handler) DeleteSharedModule(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Shared module deleted successfully"})
 }
+
+// fiber:context-methods migrated

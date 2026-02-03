@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -59,7 +59,7 @@ func (r *ipRateLimiter) allow(ip string) bool {
 
 // GenerateSignedURL generates a presigned URL for temporary access
 // POST /api/v1/storage/:bucket/sign/*
-func (h *StorageHandler) GenerateSignedURL(c *fiber.Ctx) error {
+func (h *StorageHandler) GenerateSignedURL(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 	key := c.Params("*")
 
@@ -82,7 +82,7 @@ func (h *StorageHandler) GenerateSignedURL(c *fiber.Ctx) error {
 			Fit     string `json:"fit"`
 		} `json:"transform,omitempty"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid request body",
 		})
@@ -111,7 +111,7 @@ func (h *StorageHandler) GenerateSignedURL(c *fiber.Ctx) error {
 		opts.TransformFit = req.Transform.Fit
 	}
 
-	url, err := h.storage.Provider.GenerateSignedURL(c.Context(), bucket, key, opts)
+	url, err := h.storage.Provider.GenerateSignedURL(c.RequestCtx(), bucket, key, opts)
 	if err != nil {
 		log.Error().Err(err).Str("bucket", bucket).Str("key", key).Msg("Failed to generate signed URL")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -129,7 +129,7 @@ func (h *StorageHandler) GenerateSignedURL(c *fiber.Ctx) error {
 // DownloadSignedObject handles file downloads via signed URL tokens
 // GET /api/v1/storage/object?token=...
 // This is a PUBLIC endpoint - authentication is provided by the signed token
-func (h *StorageHandler) DownloadSignedObject(c *fiber.Ctx) error {
+func (h *StorageHandler) DownloadSignedObject(c fiber.Ctx) error {
 	// Rate limit by IP to prevent DoS via shared signed URLs
 	clientIP := c.IP()
 	if !signedURLRateLimiter.allow(clientIP) {
@@ -177,7 +177,7 @@ func (h *StorageHandler) DownloadSignedObject(c *fiber.Ctx) error {
 		opts.Range = rangeHeader
 	}
 
-	reader, object, err := h.storage.Provider.Download(c.Context(), tokenResult.Bucket, tokenResult.Key, opts)
+	reader, object, err := h.storage.Provider.Download(c.RequestCtx(), tokenResult.Bucket, tokenResult.Key, opts)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -254,3 +254,5 @@ func (h *StorageHandler) DownloadSignedObject(c *fiber.Ctx) error {
 	// Stream the file
 	return c.SendStream(reader)
 }
+
+// fiber:context-methods migrated

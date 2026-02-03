@@ -2,16 +2,16 @@ package middleware
 
 import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // RequireFeatureEnabled returns a middleware that checks if a feature flag is enabled
 // If the feature is disabled, it returns HTTP 404 Not Found
 // Feature flags can be controlled via database settings or environment variables
 func RequireFeatureEnabled(settingsCache *auth.SettingsCache, featureKey string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Check if feature is enabled (checks env vars first, then cache, then database)
-		ctx := c.Context()
+		ctx := c.RequestCtx()
 		isEnabled := settingsCache.GetBool(ctx, featureKey, false)
 
 		if !isEnabled {
@@ -54,3 +54,5 @@ func RequireAIEnabled(settingsCache *auth.SettingsCache) fiber.Handler {
 func RequireRPCEnabled(settingsCache *auth.SettingsCache) fiber.Handler {
 	return RequireFeatureEnabled(settingsCache, "app.rpc.enabled")
 }
+
+// fiber:context-methods migrated

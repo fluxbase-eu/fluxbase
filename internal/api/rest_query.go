@@ -7,7 +7,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -51,12 +51,12 @@ type PostQueryOrderBy struct {
 // makePostQueryHandler creates a handler for POST-based queries
 // This allows complex filter expressions that would exceed URL length limits
 func (h *RESTHandler) makePostQueryHandler(table database.TableInfo) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.Context()
+	return func(c fiber.Ctx) error {
+		ctx := c.RequestCtx()
 
 		// Parse request body
 		var req PostQueryRequest
-		if err := c.BodyParser(&req); err != nil {
+		if err := c.Bind().Body(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   "Invalid request body",
 				"details": err.Error(),
@@ -308,7 +308,7 @@ func (h *RESTHandler) columnExists(table database.TableInfo, columnName string) 
 }
 
 // getCount gets the row count for a query
-func (h *RESTHandler) getCount(ctx context.Context, c *fiber.Ctx, table database.TableInfo, params *QueryParams) (int, error) {
+func (h *RESTHandler) getCount(ctx context.Context, c fiber.Ctx, table database.TableInfo, params *QueryParams) (int, error) {
 	// Build count query - use quoteIdentifier for defense in depth
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s.%s", quoteIdentifier(table.Schema), quoteIdentifier(table.Name))
 
@@ -331,3 +331,5 @@ func (h *RESTHandler) getCount(ctx context.Context, c *fiber.Ctx, table database
 
 	return count, err
 }
+
+// fiber:context-methods migrated

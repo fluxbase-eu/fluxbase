@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 //go:embed all:dist
@@ -55,7 +55,7 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 	httpFS := http.FS(distFS)
 
 	// Custom handler for admin UI with proper SPA routing
-	app.Use("/admin", func(c *fiber.Ctx) error {
+	app.Use("/admin", func(c fiber.Ctx) error {
 		// Get the path relative to /admin
 		path := strings.TrimPrefix(c.Path(), "/admin")
 		if path == "" {

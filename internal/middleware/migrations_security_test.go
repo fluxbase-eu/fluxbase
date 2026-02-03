@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -79,7 +79,7 @@ func TestGetClientIP(t *testing.T) {
 			app := fiber.New()
 
 			var resultIP string
-			app.Get("/test", func(c *fiber.Ctx) error {
+			app.Get("/test", func(c fiber.Ctx) error {
 				ip := getClientIP(c)
 				if ip != nil {
 					resultIP = ip.String()
@@ -109,7 +109,7 @@ func TestGetClientIP_MultipleIPsInForwardedFor(t *testing.T) {
 	app := fiber.New()
 
 	var resultIP string
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		ip := getClientIP(c)
 		if ip != nil {
 			resultIP = ip.String()
@@ -166,7 +166,7 @@ func TestRequireMigrationsEnabled(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsEnabled(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("Migrations API")
 		})
 
@@ -186,7 +186,7 @@ func TestRequireMigrationsEnabled(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsEnabled(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("Migrations API")
 		})
 
@@ -216,7 +216,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -237,7 +237,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -260,7 +260,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -286,7 +286,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -310,7 +310,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -334,7 +334,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg))
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -368,14 +368,14 @@ func TestRequireMigrationScope(t *testing.T) {
 	t.Run("allows JWT with service_role", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("auth_type", "jwt")
 			c.Locals("user_role", "service_role")
 			return c.Next()
 		})
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -390,14 +390,14 @@ func TestRequireMigrationScope(t *testing.T) {
 	t.Run("denies JWT without service_role", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("auth_type", "jwt")
 			c.Locals("user_role", "authenticated")
 			return c.Next()
 		})
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -415,14 +415,14 @@ func TestRequireMigrationScope(t *testing.T) {
 	t.Run("allows service key with migrations:execute scope", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("auth_type", "service_key")
 			c.Locals("service_key_scopes", []string{"migrations:execute", "storage:read"})
 			return c.Next()
 		})
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -437,14 +437,14 @@ func TestRequireMigrationScope(t *testing.T) {
 	t.Run("allows service key with wildcard scope", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("auth_type", "service_key")
 			c.Locals("service_key_scopes", []string{"*"})
 			return c.Next()
 		})
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -459,14 +459,14 @@ func TestRequireMigrationScope(t *testing.T) {
 	t.Run("denies service key without migrations scope", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("auth_type", "service_key")
 			c.Locals("service_key_scopes", []string{"storage:read", "storage:write"})
 			return c.Next()
 		})
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -484,14 +484,14 @@ func TestRequireMigrationScope(t *testing.T) {
 	t.Run("denies service key with no scopes", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("auth_type", "service_key")
 			// No scopes set
 			return c.Next()
 		})
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -509,13 +509,13 @@ func TestRequireMigrationScope(t *testing.T) {
 	t.Run("denies unknown auth type", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("auth_type", "api_key") // Not JWT or service_key
 			return c.Next()
 		})
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -531,7 +531,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(RequireMigrationScope())
-		app.Get("/migrations", func(c *fiber.Ctx) error {
+		app.Get("/migrations", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -552,14 +552,14 @@ func TestMigrationsAuditLog(t *testing.T) {
 	t.Run("logs request and response", func(t *testing.T) {
 		app := fiber.New()
 
-		app.Use(func(c *fiber.Ctx) error {
+		app.Use(func(c fiber.Ctx) error {
 			c.Locals("service_key_id", "key-123")
 			c.Locals("service_key_name", "production-key")
 			return c.Next()
 		})
 
 		app.Use(MigrationsAuditLog())
-		app.Get("/migrations/status", func(c *fiber.Ctx) error {
+		app.Get("/migrations/status", func(c fiber.Ctx) error {
 			return c.SendString("Migration Status")
 		})
 
@@ -575,7 +575,7 @@ func TestMigrationsAuditLog(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(MigrationsAuditLog())
-		app.Post("/migrations/run", func(c *fiber.Ctx) error {
+		app.Post("/migrations/run", func(c fiber.Ctx) error {
 			return c.SendString("Migration Run")
 		})
 
@@ -591,7 +591,7 @@ func TestMigrationsAuditLog(t *testing.T) {
 		app := fiber.New()
 
 		app.Use(MigrationsAuditLog())
-		app.Get("/migrations/fail", func(c *fiber.Ctx) error {
+		app.Get("/migrations/fail", func(c fiber.Ctx) error {
 			return c.Status(500).SendString("Internal Error")
 		})
 
@@ -609,7 +609,7 @@ func TestMigrationsAuditLog(t *testing.T) {
 		expectedError := fiber.NewError(400, "Bad Request")
 
 		app.Use(MigrationsAuditLog())
-		app.Get("/migrations/error", func(c *fiber.Ctx) error {
+		app.Get("/migrations/error", func(c fiber.Ctx) error {
 			return expectedError
 		})
 
@@ -634,7 +634,7 @@ func TestRequireServiceKeyOnly_NoAuth(t *testing.T) {
 
 	// Use nil for db and authService - will fail before database calls
 	app.Use(RequireServiceKeyOnly(nil, nil))
-	app.Get("/migrations", func(c *fiber.Ctx) error {
+	app.Get("/migrations", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -654,7 +654,7 @@ func TestRequireServiceKeyOnly_InvalidServiceKeyFormat(t *testing.T) {
 
 	// Use nil for db - will fail on invalid key format before database call
 	app.Use(RequireServiceKeyOnly(nil, nil))
-	app.Get("/migrations", func(c *fiber.Ctx) error {
+	app.Get("/migrations", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -688,7 +688,7 @@ func TestRequireServiceKeyOnly_NoAuthProvided(t *testing.T) {
 	t.Run("rejects request with no auth", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(RequireServiceKeyOnly(nil, nil))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -703,7 +703,7 @@ func TestRequireServiceKeyOnly_NoAuthProvided(t *testing.T) {
 	t.Run("rejects short service key format", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(RequireServiceKeyOnly(nil, nil))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -720,7 +720,7 @@ func TestRequireServiceKeyOnly_NoAuthProvided(t *testing.T) {
 	t.Run("rejects non-sk prefix key", func(t *testing.T) {
 		app := fiber.New()
 		app.Use(RequireServiceKeyOnly(nil, nil))
-		app.Get("/test", func(c *fiber.Ctx) error {
+		app.Get("/test", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
 
@@ -741,7 +741,7 @@ func TestRequireServiceKeyOnly_NoAuthProvided(t *testing.T) {
 
 func BenchmarkGetClientIP_WithForwardedFor(b *testing.B) {
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		_ = getClientIP(c)
 		return c.SendString("OK")
 	})
@@ -758,7 +758,7 @@ func BenchmarkGetClientIP_WithForwardedFor(b *testing.B) {
 
 func BenchmarkGetClientIP_WithRealIP(b *testing.B) {
 	app := fiber.New()
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		_ = getClientIP(c)
 		return c.SendString("OK")
 	})
@@ -788,7 +788,7 @@ func BenchmarkRequireMigrationsIPAllowlist_InRange(b *testing.B) {
 	}
 
 	app.Use(RequireMigrationsIPAllowlist(cfg))
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -805,14 +805,14 @@ func BenchmarkRequireMigrationsIPAllowlist_InRange(b *testing.B) {
 func BenchmarkRequireMigrationScope_JWT(b *testing.B) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "jwt")
 		c.Locals("user_role", "service_role")
 		return c.Next()
 	})
 
 	app.Use(RequireMigrationScope())
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -828,14 +828,14 @@ func BenchmarkRequireMigrationScope_JWT(b *testing.B) {
 func BenchmarkRequireMigrationScope_ServiceKey(b *testing.B) {
 	app := fiber.New()
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Locals("auth_type", "service_key")
 		c.Locals("service_key_scopes", []string{"migrations:execute", "storage:read", "storage:write"})
 		return c.Next()
 	})
 
 	app.Use(RequireMigrationScope())
-	app.Get("/test", func(c *fiber.Ctx) error {
+	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 

@@ -11,7 +11,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/crypto"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -107,8 +107,8 @@ func (h *OAuthHandler) Stop() {
 
 // Authorize initiates the OAuth flow
 // GET /api/v1/auth/oauth/:provider/authorize
-func (h *OAuthHandler) Authorize(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthHandler) Authorize(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	providerName := c.Params("provider")
 
 	// Get optional redirect_uri parameter for custom callback URL
@@ -162,8 +162,8 @@ func (h *OAuthHandler) Authorize(c *fiber.Ctx) error {
 
 // Callback handles the OAuth callback
 // GET /api/v1/auth/oauth/:provider/callback
-func (h *OAuthHandler) Callback(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthHandler) Callback(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	providerName := c.Params("provider")
 	code := c.Query("code")
 	state := c.Query("state")
@@ -356,8 +356,8 @@ func (h *OAuthHandler) Callback(c *fiber.Ctx) error {
 
 // ListEnabledProviders lists all enabled OAuth providers for app login
 // GET /api/v1/auth/oauth/providers
-func (h *OAuthHandler) ListEnabledProviders(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthHandler) ListEnabledProviders(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 
 	// Check if database connection is available
 	if h.db == nil {
@@ -683,8 +683,8 @@ func (h *OAuthHandler) createOrLinkOAuthUser(
 
 // Logout initiates OAuth Single Logout
 // POST /api/v1/auth/oauth/:provider/logout
-func (h *OAuthHandler) Logout(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthHandler) Logout(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	providerName := c.Params("provider")
 
 	// Get user ID from JWT
@@ -700,7 +700,7 @@ func (h *OAuthHandler) Logout(c *fiber.Ctx) error {
 	var reqBody struct {
 		RedirectURL string `json:"redirect_url"`
 	}
-	_ = c.BodyParser(&reqBody)
+	_ = c.Bind().Body(&reqBody)
 
 	// Check if database connection is available
 	if h.db == nil {
@@ -856,8 +856,8 @@ func (h *OAuthHandler) Logout(c *fiber.Ctx) error {
 
 // LogoutCallback handles the callback after OIDC logout
 // GET /api/v1/auth/oauth/:provider/logout/callback
-func (h *OAuthHandler) LogoutCallback(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *OAuthHandler) LogoutCallback(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
 	providerName := c.Params("provider")
 	state := c.Query("state")
 
@@ -884,7 +884,7 @@ func (h *OAuthHandler) LogoutCallback(c *fiber.Ctx) error {
 
 	// Redirect to the post-logout redirect URI if specified
 	if logoutState.PostLogoutRedirectURI != "" && logoutState.PostLogoutRedirectURI != c.OriginalURL() {
-		return c.Redirect(logoutState.PostLogoutRedirectURI)
+		return c.Redirect().To(logoutState.PostLogoutRedirectURI)
 	}
 
 	return c.JSON(fiber.Map{
@@ -899,3 +899,5 @@ func (h *OAuthHandler) LogoutCallback(c *fiber.Ctx) error {
 func (h *OAuthHandler) GetAndValidateState(state string) (*auth.StateMetadata, bool) {
 	return h.stateStore.GetAndValidate(state)
 }
+
+// fiber:context-methods migrated

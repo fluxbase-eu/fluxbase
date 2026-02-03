@@ -5,13 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 )
 
 // CreateBucket handles bucket creation
 // POST /api/v1/storage/buckets/:bucket
-func (h *StorageHandler) CreateBucket(c *fiber.Ctx) error {
+func (h *StorageHandler) CreateBucket(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 
 	if bucket == "" {
@@ -27,10 +27,10 @@ func (h *StorageHandler) CreateBucket(c *fiber.Ctx) error {
 		MaxFileSize      *int64   `json:"max_file_size"`
 	}
 	// Try to parse body, but allow empty body (use defaults)
-	_ = c.BodyParser(&req)
+	_ = c.Bind().Body(&req)
 
 	// Start database transaction
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 	tx, err := h.db.Pool().Begin(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to start transaction for bucket creation")
@@ -112,7 +112,7 @@ func (h *StorageHandler) CreateBucket(c *fiber.Ctx) error {
 
 // UpdateBucketSettings handles updating bucket settings
 // PUT /api/v1/storage/buckets/:bucket
-func (h *StorageHandler) UpdateBucketSettings(c *fiber.Ctx) error {
+func (h *StorageHandler) UpdateBucketSettings(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 
 	if bucket == "" {
@@ -127,13 +127,13 @@ func (h *StorageHandler) UpdateBucketSettings(c *fiber.Ctx) error {
 		AllowedMimeTypes []string `json:"allowed_mime_types"`
 		MaxFileSize      *int64   `json:"max_file_size"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid request body",
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Start database transaction
 	tx, err := h.db.Pool().Begin(ctx)
@@ -231,7 +231,7 @@ func (h *StorageHandler) UpdateBucketSettings(c *fiber.Ctx) error {
 
 // DeleteBucket handles bucket deletion
 // DELETE /api/v1/storage/buckets/:bucket
-func (h *StorageHandler) DeleteBucket(c *fiber.Ctx) error {
+func (h *StorageHandler) DeleteBucket(c fiber.Ctx) error {
 	bucket := c.Params("bucket")
 
 	if bucket == "" {
@@ -241,7 +241,7 @@ func (h *StorageHandler) DeleteBucket(c *fiber.Ctx) error {
 	}
 
 	// Delete the bucket
-	if err := h.storage.Provider.DeleteBucket(c.Context(), bucket); err != nil {
+	if err := h.storage.Provider.DeleteBucket(c.RequestCtx(), bucket); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "bucket not found",
@@ -269,7 +269,7 @@ func (h *StorageHandler) DeleteBucket(c *fiber.Ctx) error {
 // ListBuckets handles listing all buckets
 // GET /api/v1/storage/buckets
 // Admin-only endpoint - non-admin users receive 403 Forbidden
-func (h *StorageHandler) ListBuckets(c *fiber.Ctx) error {
+func (h *StorageHandler) ListBuckets(c fiber.Ctx) error {
 	// Check if user has admin role
 	role, _ := c.Locals("user_role").(string)
 	if role != "admin" && role != "dashboard_admin" && role != "service_role" {
@@ -278,7 +278,7 @@ func (h *StorageHandler) ListBuckets(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx := c.Context()
+	ctx := c.RequestCtx()
 
 	// Start database transaction
 	tx, err := h.db.Pool().Begin(ctx)
@@ -352,3 +352,5 @@ func (h *StorageHandler) ListBuckets(c *fiber.Ctx) error {
 		"buckets": buckets,
 	})
 }
+
+// fiber:context-methods migrated
