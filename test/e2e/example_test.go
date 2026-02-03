@@ -371,9 +371,14 @@ func TestExampleWaitForCondition(t *testing.T) {
 func setupExampleTest(t *testing.T) *test.TestContext {
 	tc := test.NewTestContext(t)
 
+	// Ensure database connection is healthy before proceeding
+	// This handles transient connection issues in CI environments
+	tc.EnsureAuthSchema()
+
 	// Truncate products table to ensure test isolation
 	// Each test starts with a clean slate
-	tc.ExecuteSQL("TRUNCATE TABLE products CASCADE")
+	// Use ExecuteSQLAsSuperuser to create a fresh connection and avoid pool issues
+	tc.ExecuteSQLAsSuperuser("TRUNCATE TABLE products CASCADE")
 
 	return tc
 }
