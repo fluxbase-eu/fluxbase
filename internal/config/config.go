@@ -290,18 +290,18 @@ type AdaptiveTrustConfig struct {
 	CaptchaThreshold int `mapstructure:"captcha_threshold"` // Default: 50
 
 	// Trust signal weights (positive signals)
-	WeightKnownIP            int `mapstructure:"weight_known_ip"`             // User logged in from this IP before (default: 30)
-	WeightKnownDevice        int `mapstructure:"weight_known_device"`         // Device fingerprint seen before (default: 25)
-	WeightRecentCaptcha      int `mapstructure:"weight_recent_captcha"`       // Solved CAPTCHA recently (default: 40)
-	WeightVerifiedEmail      int `mapstructure:"weight_verified_email"`       // Email address is confirmed (default: 15)
-	WeightAccountAge         int `mapstructure:"weight_account_age"`          // Account older than 7 days (default: 10)
-	WeightSuccessfulLogins   int `mapstructure:"weight_successful_logins"`    // 3+ successful logins (default: 10)
-	WeightMFAEnabled         int `mapstructure:"weight_mfa_enabled"`          // User has MFA configured (default: 20)
+	WeightKnownIP          int `mapstructure:"weight_known_ip"`          // User logged in from this IP before (default: 30)
+	WeightKnownDevice      int `mapstructure:"weight_known_device"`      // Device fingerprint seen before (default: 25)
+	WeightRecentCaptcha    int `mapstructure:"weight_recent_captcha"`    // Solved CAPTCHA recently (default: 40)
+	WeightVerifiedEmail    int `mapstructure:"weight_verified_email"`    // Email address is confirmed (default: 15)
+	WeightAccountAge       int `mapstructure:"weight_account_age"`       // Account older than 7 days (default: 10)
+	WeightSuccessfulLogins int `mapstructure:"weight_successful_logins"` // 3+ successful logins (default: 10)
+	WeightMFAEnabled       int `mapstructure:"weight_mfa_enabled"`       // User has MFA configured (default: 20)
 
 	// Trust signal weights (negative signals)
-	WeightNewIP            int `mapstructure:"weight_new_ip"`             // Never seen this IP (default: -30)
-	WeightNewDevice        int `mapstructure:"weight_new_device"`         // Unknown device fingerprint (default: -25)
-	WeightFailedAttempts   int `mapstructure:"weight_failed_attempts"`    // Recent failed login attempts (default: -20)
+	WeightNewIP          int `mapstructure:"weight_new_ip"`          // Never seen this IP (default: -30)
+	WeightNewDevice      int `mapstructure:"weight_new_device"`      // Unknown device fingerprint (default: -25)
+	WeightFailedAttempts int `mapstructure:"weight_failed_attempts"` // Recent failed login attempts (default: -20)
 
 	// Per-endpoint overrides (some actions always need CAPTCHA regardless of trust)
 	AlwaysRequireEndpoints []string `mapstructure:"always_require_endpoints"` // Endpoints that always require CAPTCHA (default: ["password_reset"])
@@ -712,11 +712,11 @@ func setDefaults() {
 	viper.SetDefault("security.captcha.endpoints", []string{"signup", "login", "password_reset", "magic_link"})
 
 	// Adaptive CAPTCHA trust defaults
-	viper.SetDefault("security.captcha.adaptive_trust.enabled", false)           // Disabled by default
-	viper.SetDefault("security.captcha.adaptive_trust.trust_token_ttl", "15m")   // 15 minutes trust after CAPTCHA
+	viper.SetDefault("security.captcha.adaptive_trust.enabled", false)         // Disabled by default
+	viper.SetDefault("security.captcha.adaptive_trust.trust_token_ttl", "15m") // 15 minutes trust after CAPTCHA
 	viper.SetDefault("security.captcha.adaptive_trust.trust_token_bound_ip", true)
-	viper.SetDefault("security.captcha.adaptive_trust.challenge_expiry", "5m")   // 5 minute challenge validity
-	viper.SetDefault("security.captcha.adaptive_trust.captcha_threshold", 50)    // Score below 50 requires CAPTCHA
+	viper.SetDefault("security.captcha.adaptive_trust.challenge_expiry", "5m") // 5 minute challenge validity
+	viper.SetDefault("security.captcha.adaptive_trust.captcha_threshold", 50)  // Score below 50 requires CAPTCHA
 	// Positive trust weights
 	viper.SetDefault("security.captcha.adaptive_trust.weight_known_ip", 30)
 	viper.SetDefault("security.captcha.adaptive_trust.weight_known_device", 25)

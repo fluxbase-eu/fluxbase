@@ -19,12 +19,12 @@ import (
 
 // Trust-related errors
 var (
-	ErrChallengeNotFound  = errors.New("challenge not found")
-	ErrChallengeExpired   = errors.New("challenge expired")
-	ErrChallengeConsumed  = errors.New("challenge already consumed")
-	ErrChallengeMismatch  = errors.New("challenge context mismatch")
-	ErrTrustTokenInvalid  = errors.New("trust token invalid")
-	ErrTrustTokenExpired  = errors.New("trust token expired")
+	ErrChallengeNotFound = errors.New("challenge not found")
+	ErrChallengeExpired  = errors.New("challenge expired")
+	ErrChallengeConsumed = errors.New("challenge already consumed")
+	ErrChallengeMismatch = errors.New("challenge context mismatch")
+	ErrTrustTokenInvalid = errors.New("trust token invalid")
+	ErrTrustTokenExpired = errors.New("trust token expired")
 )
 
 // TrustSignal represents a single factor in trust calculation
@@ -214,8 +214,10 @@ func (s *CaptchaTrustService) CalculateTrust(ctx context.Context, req TrustReque
 	if req.Email != "" {
 		user, _ = s.getUserByEmail(ctx, req.Email)
 		if user != nil {
-			req.UserID = &user.ID
-			userTrustSignal, _ = s.getTrustSignal(ctx, user.ID, req.IPAddress, req.DeviceFingerprint)
+			if userUUID, err := uuid.Parse(user.ID); err == nil {
+				req.UserID = &userUUID
+				userTrustSignal, _ = s.getTrustSignal(ctx, userUUID, req.IPAddress, req.DeviceFingerprint)
+			}
 		}
 	}
 
@@ -248,7 +250,7 @@ func (s *CaptchaTrustService) CalculateTrust(ctx context.Context, req TrustReque
 // evaluateKnownUserSignals adds trust signals for known users
 func (s *CaptchaTrustService) evaluateKnownUserSignals(ctx context.Context, result *TrustResult, user *User, trustSignal *UserTrustSignal, req TrustRequest) {
 	// Check verified email
-	if user.EmailConfirmedAt != nil {
+	if user.EmailVerified {
 		result.Signals = append(result.Signals, TrustSignal{
 			Name:   "verified_email",
 			Score:  s.config.WeightVerifiedEmail,
@@ -266,7 +268,8 @@ func (s *CaptchaTrustService) evaluateKnownUserSignals(ctx context.Context, resu
 	}
 
 	// Check MFA
-	if s.userHasMFA(ctx, user.ID) {
+	userUUID, _ := uuid.Parse(user.ID)
+	if s.userHasMFA(ctx, userUUID) {
 		result.Signals = append(result.Signals, TrustSignal{
 			Name:   "mfa_enabled",
 			Score:  s.config.WeightMFAEnabled,
@@ -547,7 +550,7 @@ func (s *CaptchaTrustService) GetChallenge(ctx context.Context, challengeID stri
 // IssueTrustToken creates a trust token after successful CAPTCHA verification
 func (s *CaptchaTrustService) IssueTrustToken(ctx context.Context, ipAddress, deviceFingerprint, userAgent string) (string, error) {
 	token := generateTrustToken()
-	tokenHash := hashToken(token)
+	tokenHash := hashTrustToken(token)
 	expiresAt := time.Now().Add(s.config.TrustTokenTTL)
 	if s.config.TrustTokenTTL == 0 {
 		expiresAt = time.Now().Add(15 * time.Minute)
@@ -568,7 +571,7 @@ func (s *CaptchaTrustService) IssueTrustToken(ctx context.Context, ipAddress, de
 
 // ValidateTrustToken checks if a trust token is valid
 func (s *CaptchaTrustService) ValidateTrustToken(ctx context.Context, token, ipAddress, deviceFingerprint string) (bool, error) {
-	tokenHash := hashToken(token)
+	tokenHash := hashTrustToken(token)
 
 	query := `
 		SELECT ip_address, device_fingerprint, expires_at
@@ -664,13 +667,13 @@ func (s *CaptchaTrustService) RecordCaptchaSolved(ctx context.Context, userID *u
 
 func (s *CaptchaTrustService) getUserByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
-		SELECT id, email, email_confirmed_at, created_at
+		SELECT id, email, email_verified, created_at
 		FROM auth.users
 		WHERE email = $1 AND deleted_at IS NULL
 	`
 
 	var user User
-	err := s.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.EmailConfirmedAt, &user.CreatedAt)
+	err := s.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.EmailVerified, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -735,7 +738,7 @@ func generateTrustToken() string {
 	return "tt_" + hex.EncodeToString(b)
 }
 
-func hashToken(token string) string {
+func hashTrustToken(token string) string {
 	h := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(h[:])
 }

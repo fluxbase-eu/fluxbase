@@ -9,6 +9,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
@@ -421,9 +422,11 @@ func (h *AuthHandler) SignIn(c *fiber.Ctx) error {
 
 	// Record successful login for trust tracking
 	if h.captchaTrustService != nil {
-		_ = h.captchaTrustService.RecordSuccessfulLogin(ctx, resp.User.ID, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
-		if captchaVerified {
-			_ = h.captchaTrustService.RecordCaptchaSolved(ctx, &resp.User.ID, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+		if userUUID, err := uuid.Parse(resp.User.ID); err == nil {
+			_ = h.captchaTrustService.RecordSuccessfulLogin(ctx, userUUID, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+			if captchaVerified {
+				_ = h.captchaTrustService.RecordCaptchaSolved(ctx, &userUUID, c.IP(), req.DeviceFingerprint, c.Get("User-Agent"))
+			}
 		}
 	}
 

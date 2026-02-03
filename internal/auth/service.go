@@ -209,11 +209,11 @@ func NewService(
 type SignUpRequest struct {
 	Email             string                 `json:"email"`
 	Password          string                 `json:"password"`
-	UserMetadata      map[string]interface{} `json:"user_metadata,omitempty"`       // User-editable metadata
-	AppMetadata       map[string]interface{} `json:"app_metadata,omitempty"`        // Application/admin-only metadata
-	CaptchaToken      string                 `json:"captcha_token,omitempty"`       // CAPTCHA verification token
-	ChallengeID       string                 `json:"challenge_id,omitempty"`        // Challenge ID from pre-flight check
-	DeviceFingerprint string                 `json:"device_fingerprint,omitempty"`  // Optional device fingerprint for trust tracking
+	UserMetadata      map[string]interface{} `json:"user_metadata,omitempty"`      // User-editable metadata
+	AppMetadata       map[string]interface{} `json:"app_metadata,omitempty"`       // Application/admin-only metadata
+	CaptchaToken      string                 `json:"captcha_token,omitempty"`      // CAPTCHA verification token
+	ChallengeID       string                 `json:"challenge_id,omitempty"`       // Challenge ID from pre-flight check
+	DeviceFingerprint string                 `json:"device_fingerprint,omitempty"` // Optional device fingerprint for trust tracking
 }
 
 // SignUpResponse represents a successful registration response
