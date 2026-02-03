@@ -160,6 +160,13 @@ If you didn't request a password reset, you can safely ignore this email. Your p
 func (h *EmailTemplateHandler) ListTemplates(c *fiber.Ctx) error {
 	ctx := context.Background()
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	rows, err := h.db.Query(ctx, `
 		SELECT id, template_type, subject, html_body, text_body, is_custom, created_at, updated_at
 		FROM dashboard.email_templates
@@ -216,6 +223,13 @@ func (h *EmailTemplateHandler) GetTemplate(c *fiber.Ctx) error {
 	if _, exists := defaultTemplates[templateType]; !exists {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid template type",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -283,6 +297,13 @@ func (h *EmailTemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	// Insert or update template
 	var templateID uuid.UUID
 	err := h.db.QueryRow(ctx, `
@@ -321,6 +342,13 @@ func (h *EmailTemplateHandler) ResetTemplate(c *fiber.Ctx) error {
 	if !exists {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid template type",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -368,10 +396,17 @@ func (h *EmailTemplateHandler) TestTemplate(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if email service is available
+	// Check if email service is available first (more specific error for this endpoint)
 	if h.emailService == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Email service not configured",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 

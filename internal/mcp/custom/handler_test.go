@@ -300,7 +300,7 @@ func TestDynamicResourceProvider_RequiredScopes(t *testing.T) {
 	assert.Contains(t, scopes, "read:tables")
 }
 
-func TestValidateToolCode(t *testing.T) {
+func TestValidateToolCodeHandler(t *testing.T) {
 	tests := []struct {
 		name    string
 		code    string
@@ -350,7 +350,7 @@ func TestValidateToolCode(t *testing.T) {
 	}
 }
 
-func TestValidateResourceCode(t *testing.T) {
+func TestValidateResourceCodeHanler(t *testing.T) {
 	// Resource code validation uses the same rules as tool code
 	tests := []struct {
 		name    string

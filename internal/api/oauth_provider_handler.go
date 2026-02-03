@@ -201,6 +201,13 @@ var providerNamePattern = regexp.MustCompile(`^[a-z][a-z0-9_]{1,49}$`)
 func (h *OAuthProviderHandler) ListOAuthProviders(c *fiber.Ctx) error {
 	ctx := c.Context()
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	query := `
 		SELECT id, provider_name, display_name, enabled, client_id, redirect_url, scopes,
 		       is_custom, authorization_url, token_url, user_info_url,
@@ -314,6 +321,13 @@ func (h *OAuthProviderHandler) GetOAuthProvider(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	query := `
 		SELECT id, provider_name, display_name, enabled, client_id, redirect_url, scopes,
 		       is_custom, authorization_url, token_url, user_info_url,
@@ -394,6 +408,13 @@ func (h *OAuthProviderHandler) CreateOAuthProvider(c *fiber.Ctx) error {
 				"error": "Custom providers require authorization_url, token_url, and user_info_url",
 			})
 		}
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	// Get user ID from context (set by auth middleware)
@@ -491,6 +512,25 @@ func (h *OAuthProviderHandler) UpdateOAuthProvider(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate that at least one field is provided
+	if req.DisplayName == nil && req.Enabled == nil && req.ClientID == nil &&
+		req.ClientSecret == nil && req.RedirectURL == nil && req.Scopes == nil &&
+		req.AuthorizationURL == nil && req.TokenURL == nil && req.UserInfoURL == nil &&
+		req.RevocationEndpoint == nil && req.EndSessionEndpoint == nil &&
+		req.AllowDashboardLogin == nil && req.AllowAppLogin == nil &&
+		req.RequiredClaims == nil && req.DeniedClaims == nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "No fields to update",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	// Build dynamic update query
 	updates := []string{}
 	args := []interface{}{providerID}
@@ -585,12 +625,6 @@ func (h *OAuthProviderHandler) UpdateOAuthProvider(c *fiber.Ctx) error {
 		argPos++
 	}
 
-	if len(updates) == 0 {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "No fields to update",
-		})
-	}
-
 	// Add updated_by
 	userID := getUserIDFromContext(c)
 	updates = append(updates, fmt.Sprintf("updated_by = $%d", argPos))
@@ -636,6 +670,13 @@ func (h *OAuthProviderHandler) DeleteOAuthProvider(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	query := "DELETE FROM dashboard.oauth_providers WHERE id = $1 RETURNING display_name"
 
 	var displayName string
@@ -664,6 +705,13 @@ func (h *OAuthProviderHandler) DeleteOAuthProvider(c *fiber.Ctx) error {
 // GetAuthSettings retrieves authentication settings
 func (h *OAuthProviderHandler) GetAuthSettings(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	query := "SELECT key, value FROM app.settings WHERE category = 'auth'"
 	rows, err := h.db.Query(ctx, query)
@@ -772,6 +820,13 @@ func (h *OAuthProviderHandler) UpdateAuthSettings(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid request body",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 

@@ -445,3 +445,82 @@ func (m *MockSubscriptionDB) CheckFunctionOwnership(ctx context.Context, execID,
 	}
 	return false, false, nil
 }
+
+// MockSAMLService provides a mock for auth.SAMLService for testing
+type MockSAMLService struct {
+	mu sync.RWMutex
+
+	// Callbacks for custom behavior
+	OnInitiateLogin  func(ctx context.Context, providerName, relayState string) (redirectURL string, err error)
+	OnHandleCallback func(ctx context.Context, samlResponse, relayState string, providerName string) (nameID, email string, attributes map[string][]string, err error)
+	OnGetProviders   func(ctx context.Context) ([]interface{}, error)
+	OnLogout         func(ctx context.Context, sessionID string) error
+
+	// State tracking for assertions
+	Providers      map[string]bool   // provider name -> enabled
+	Sessions       map[string]string // session ID -> user ID
+	UsedAssertions map[string]bool   // assertion ID -> used (for replay detection)
+}
+
+// NewMockSAMLService creates a new mock SAML service
+func NewMockSAMLService() *MockSAMLService {
+	return &MockSAMLService{
+		Providers:      make(map[string]bool),
+		Sessions:       make(map[string]string),
+		UsedAssertions: make(map[string]bool),
+	}
+}
+
+// InitiateLogin mocks SAML login initiation
+func (m *MockSAMLService) InitiateLogin(ctx context.Context, providerName, relayState string) (string, error) {
+	if m.OnInitiateLogin != nil {
+		return m.OnInitiateLogin(ctx, providerName, relayState)
+	}
+
+	m.mu.RLock()
+	enabled := m.Providers[providerName]
+	m.mu.RUnlock()
+
+	if !enabled {
+		return "", errors.New("provider not found or disabled")
+	}
+
+	// Return a mock redirect URL
+	return "https://idp.example.com/sso?SAMLRequest=mock", nil
+}
+
+// HandleCallback mocks SAML callback processing
+func (m *MockSAMLService) HandleCallback(ctx context.Context, samlResponse, relayState, providerName string) (nameID, email string, attributes map[string][]string, err error) {
+	if m.OnHandleCallback != nil {
+		return m.OnHandleCallback(ctx, samlResponse, relayState, providerName)
+	}
+
+	// Check for replay attack
+	m.mu.Lock()
+	if m.UsedAssertions[samlResponse] {
+		m.mu.Unlock()
+		return "", "", nil, errors.New("assertion already used")
+	}
+	m.UsedAssertions[samlResponse] = true
+	m.mu.Unlock()
+
+	// Return mock user data
+	return "test-name-id", "test@example.com", map[string][]string{
+		"email": {"test@example.com"},
+		"name":  {"Test User"},
+	}, nil
+}
+
+// AddProvider adds a provider to the mock for testing
+func (m *MockSAMLService) AddProvider(name string, enabled bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Providers[name] = enabled
+}
+
+// MarkAssertionUsed marks an assertion as used for replay detection testing
+func (m *MockSAMLService) MarkAssertionUsed(assertionID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.UsedAssertions[assertionID] = true
+}

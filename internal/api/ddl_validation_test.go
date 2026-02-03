@@ -155,7 +155,7 @@ func TestValidateIdentifier(t *testing.T) {
 	})
 }
 
-func TestValidDataTypes(t *testing.T) {
+func TestValidDataTypes_MapContents(t *testing.T) {
 	t.Run("all valid data types are accepted", func(t *testing.T) {
 		validTypes := []string{
 			"text", "varchar", "char",
@@ -367,7 +367,7 @@ func TestIdentifierPatternRegex(t *testing.T) {
 	})
 }
 
-func TestNewDDLHandler(t *testing.T) {
+func TestNewDDLHandler_NilDB(t *testing.T) {
 	t.Run("creates handler with nil db", func(t *testing.T) {
 		handler := NewDDLHandler(nil)
 		assert.NotNil(t, handler)

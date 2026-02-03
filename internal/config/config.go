@@ -1410,7 +1410,8 @@ func (ec *EmailConfig) IsConfigured() bool {
 	case "mailgun":
 		return ec.MailgunAPIKey != "" && ec.MailgunDomain != ""
 	case "ses":
-		return ec.SESAccessKey != "" && ec.SESSecretKey != "" && ec.SESRegion != ""
+		// SES credentials are optional (can use AWS default credential chain)
+		return ec.SESRegion != ""
 	default:
 		return false
 	}

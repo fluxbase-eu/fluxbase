@@ -3987,7 +3987,11 @@ func (h *OpenAPIHandler) columnToSchema(col database.ColumnInfo) map[string]inte
 	schema := make(map[string]interface{})
 
 	// Map PostgreSQL types to JSON Schema types
+	// NOTE: Array check must come BEFORE int check to handle _int4, _int8, etc.
 	switch {
+	case strings.Contains(col.DataType, "array") || strings.HasSuffix(col.DataType, "[]") || strings.HasPrefix(col.DataType, "_"):
+		schema["type"] = "array"
+		schema["items"] = map[string]string{"type": "string"}
 	case strings.Contains(col.DataType, "int"):
 		schema["type"] = "integer"
 	case strings.Contains(col.DataType, "numeric") || strings.Contains(col.DataType, "decimal") || strings.Contains(col.DataType, "float") || strings.Contains(col.DataType, "double"):
@@ -3996,9 +4000,6 @@ func (h *OpenAPIHandler) columnToSchema(col database.ColumnInfo) map[string]inte
 		schema["type"] = "boolean"
 	case strings.Contains(col.DataType, "json"):
 		schema["type"] = "object"
-	case strings.Contains(col.DataType, "array") || strings.HasPrefix(col.DataType, "_"):
-		schema["type"] = "array"
-		schema["items"] = map[string]string{"type": "string"}
 	case strings.Contains(col.DataType, "timestamp") || strings.Contains(col.DataType, "date"):
 		schema["type"] = "string"
 		schema["format"] = "date-time"

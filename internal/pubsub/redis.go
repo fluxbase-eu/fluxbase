@@ -118,13 +118,25 @@ func (r *RedisPubSub) unsubscribe(channel string, ch chan Message) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	subs := r.subscribers[channel]
-	for i, sub := range subs {
-		if sub == ch {
-			r.subscribers[channel] = append(subs[:i], subs[i+1:]...)
-			close(ch)
-			break
+	subs, exists := r.subscribers[channel]
+	if !exists || len(subs) == 0 {
+		return
+	}
+
+	// Create a new slice to avoid issues with concurrent modifications
+	// to the backing array when using append with sub-slices
+	newSubs := make([]chan Message, 0, len(subs))
+	found := false
+	for _, sub := range subs {
+		if sub == ch && !found {
+			found = true
+			continue
 		}
+		newSubs = append(newSubs, sub)
+	}
+	r.subscribers[channel] = newSubs
+	if found {
+		close(ch)
 	}
 }
 

@@ -158,6 +158,13 @@ type CreateBranchRequest struct {
 	ExpiresAt      *time.Time    `json:"expires_at,omitempty"`
 }
 
+// UpdateBranchRequest is the request to update an existing branch
+type UpdateBranchRequest struct {
+	Name      *string     `json:"name,omitempty"`
+	Type      *BranchType `json:"type,omitempty"`
+	ExpiresAt *time.Time  `json:"expires_at,omitempty"`
+}
+
 // ListBranchesFilter filters for listing branches
 type ListBranchesFilter struct {
 	Status     *BranchStatus `json:"status,omitempty"`

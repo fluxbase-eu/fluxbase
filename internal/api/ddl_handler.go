@@ -86,6 +86,13 @@ func (h *DDLHandler) CreateSchema(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 
 	// Check if schema already exists
@@ -153,6 +160,13 @@ func (h *DDLHandler) CreateTable(c *fiber.Ctx) error {
 	if len(req.Columns) == 0 {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "At least one column is required",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 
@@ -238,6 +252,13 @@ func (h *DDLHandler) DeleteTable(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 
 	// Check if table exists
@@ -306,6 +327,13 @@ func (h *DDLHandler) AddColumn(c *fiber.Ctx) error {
 	// Validate column name
 	if err := validateIdentifier(req.Name, "column"); err != nil {
 		return SendBadRequest(c, err.Error(), ErrCodeValidationFailed)
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	// Validate data type
@@ -390,6 +418,13 @@ func (h *DDLHandler) DropColumn(c *fiber.Ctx) error {
 		return SendBadRequest(c, err.Error(), ErrCodeValidationFailed)
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 
 	// Check if table exists
@@ -454,6 +489,13 @@ func (h *DDLHandler) RenameTable(c *fiber.Ctx) error {
 	var req RenameTableRequest
 	if err := c.BodyParser(&req); err != nil {
 		return SendInvalidBody(c)
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	// Validate new table name
@@ -626,6 +668,13 @@ func escapeLiteral(value string) string {
 
 // ListSchemas returns all user schemas (excluding system schemas)
 func (h *DDLHandler) ListSchemas(c *fiber.Ctx) error {
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 
 	schemas, err := h.db.Inspector().GetSchemas(ctx)
@@ -653,6 +702,13 @@ func (h *DDLHandler) ListSchemas(c *fiber.Ctx) error {
 
 // ListTables returns all tables, optionally filtered by schema
 func (h *DDLHandler) ListTables(c *fiber.Ctx) error {
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 	schemaParam := c.Query("schema")
 

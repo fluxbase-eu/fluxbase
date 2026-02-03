@@ -97,6 +97,14 @@ func (h *CustomMCPHandler) ListTools(c *fiber.Ctx) error {
 		filter.Offset = offset
 	}
 
+	// Nil check for storage (can happen in tests)
+	if h.storage == nil {
+		return c.JSON(fiber.Map{
+			"tools": []*custom.CustomTool{},
+			"count": 0,
+		})
+	}
+
 	tools, err := h.storage.ListTools(c.Context(), filter)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -116,6 +124,13 @@ func (h *CustomMCPHandler) GetTool(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid tool ID",
+		})
+	}
+
+	// Nil check for storage (can happen in tests)
+	if h.storage == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Storage not initialized",
 		})
 	}
 

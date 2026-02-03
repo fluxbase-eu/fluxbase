@@ -84,6 +84,13 @@ func (h *SQLHandler) ExecuteSQL(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	// Get user information for audit logging
 	userID, _ := GetUserID(c)
 	userEmail, _ := GetUserEmail(c)

@@ -27,6 +27,13 @@ func NewSystemSettingsHandler(settingsService *auth.SystemSettingsService, setti
 func (h *SystemSettingsHandler) ListSettings(c *fiber.Ctx) error {
 	ctx := context.Background()
 
+	// Check if settings service is available
+	if h.settingsService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Settings service not initialized",
+		})
+	}
+
 	settings, err := h.settingsService.ListSettings(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get system settings")
@@ -57,6 +64,13 @@ func (h *SystemSettingsHandler) GetSetting(c *fiber.Ctx) error {
 	if key == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Setting key is required",
+		})
+	}
+
+	// Check if settings service is available
+	if h.settingsService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Settings service not initialized",
 		})
 	}
 
@@ -136,6 +150,13 @@ func (h *SystemSettingsHandler) UpdateSetting(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if settings service is available
+	if h.settingsService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Settings service not initialized",
+		})
+	}
+
 	if err := h.settingsService.SetSetting(ctx, key, req.Value, req.Description); err != nil {
 		log.Error().Err(err).Str("key", key).Msg("Failed to update setting")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -168,6 +189,13 @@ func (h *SystemSettingsHandler) DeleteSetting(c *fiber.Ctx) error {
 	if key == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Setting key is required",
+		})
+	}
+
+	// Check if settings service is available
+	if h.settingsService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Settings service not initialized",
 		})
 	}
 

@@ -129,6 +129,13 @@ func (h *MonitoringHandler) GetMetrics(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
@@ -221,6 +228,13 @@ func (h *MonitoringHandler) GetHealth(c *fiber.Ctx) error {
 	if role != "admin" && role != "dashboard_admin" && role != "service_role" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "Admin access required to view system health",
+		})
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
 	}
 

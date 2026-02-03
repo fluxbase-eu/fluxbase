@@ -193,6 +193,13 @@ func (h *OAuthHandler) Callback(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	// Get OAuth provider configuration
 	oauthConfig, err := h.getProviderConfig(ctx, providerName)
 	if err != nil {
@@ -351,6 +358,13 @@ func (h *OAuthHandler) Callback(c *fiber.Ctx) error {
 // GET /api/v1/auth/oauth/providers
 func (h *OAuthHandler) ListEnabledProviders(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	// SECURITY: Only list providers that allow app login
 	query := `
@@ -687,6 +701,13 @@ func (h *OAuthHandler) Logout(c *fiber.Ctx) error {
 		RedirectURL string `json:"redirect_url"`
 	}
 	_ = c.BodyParser(&reqBody)
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	// Get provider configuration to check for SLO endpoints
 	var revocationEndpoint, endSessionEndpoint, clientID, clientSecret *string

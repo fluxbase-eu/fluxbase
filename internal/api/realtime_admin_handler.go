@@ -119,6 +119,13 @@ func (h *RealtimeAdminHandler) HandleEnableRealtime(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 
 	// Check if table exists
@@ -225,6 +232,13 @@ func (h *RealtimeAdminHandler) HandleDisableRealtime(c *fiber.Ctx) error {
 		return SendBadRequest(c, err.Error(), ErrCodeValidationFailed)
 	}
 
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 
 	// Check if table exists
@@ -289,6 +303,13 @@ WHERE schema_name = $1 AND table_name = $2`
 
 // HandleListRealtimeTables lists all realtime-enabled tables
 func (h *RealtimeAdminHandler) HandleListRealtimeTables(c *fiber.Ctx) error {
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
 	ctx := c.Context()
 
 	// Get optional filter for enabled-only
@@ -349,6 +370,13 @@ func (h *RealtimeAdminHandler) HandleGetRealtimeStatus(c *fiber.Ctx) error {
 	}
 	if err := validateIdentifier(table, "table"); err != nil {
 		return SendBadRequest(c, err.Error(), ErrCodeValidationFailed)
+	}
+
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
 	}
 
 	ctx := c.Context()
@@ -426,13 +454,14 @@ func (h *RealtimeAdminHandler) HandleUpdateRealtimeConfig(c *fiber.Ctx) error {
 		return SendInvalidBody(c)
 	}
 
-	ctx := c.Context()
+	// Validate that at least one update is provided
+	if len(req.Events) == 0 && req.Exclude == nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "No updates provided",
+		})
+	}
 
-	// Build update query dynamically
-	updates := []string{}
-	args := []interface{}{schema, table}
-	argIdx := 3
-
+	// Validate event types
 	if len(req.Events) > 0 {
 		for _, event := range req.Events {
 			if event != "INSERT" && event != "UPDATE" && event != "DELETE" {
@@ -441,12 +470,10 @@ func (h *RealtimeAdminHandler) HandleUpdateRealtimeConfig(c *fiber.Ctx) error {
 				})
 			}
 		}
-		updates = append(updates, fmt.Sprintf("events = $%d", argIdx))
-		args = append(args, req.Events)
-		argIdx++
 	}
 
-	if req.Exclude != nil { // Allow empty array to clear exclusions
+	// Validate excluded columns
+	if req.Exclude != nil {
 		for _, col := range req.Exclude {
 			if err := validateIdentifier(col, "column"); err != nil {
 				return c.Status(400).JSON(fiber.Map{
@@ -454,14 +481,31 @@ func (h *RealtimeAdminHandler) HandleUpdateRealtimeConfig(c *fiber.Ctx) error {
 				})
 			}
 		}
-		updates = append(updates, fmt.Sprintf("excluded_columns = $%d", argIdx))
-		args = append(args, req.Exclude)
 	}
 
-	if len(updates) == 0 {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "No updates provided",
+	// Check if database connection is available
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
 		})
+	}
+
+	ctx := c.Context()
+
+	// Build update query dynamically
+	updates := []string{}
+	args := []interface{}{schema, table}
+	argIdx := 3
+
+	if len(req.Events) > 0 {
+		updates = append(updates, fmt.Sprintf("events = $%d", argIdx))
+		args = append(args, req.Events)
+		argIdx++
+	}
+
+	if req.Exclude != nil { // Allow empty array to clear exclusions
+		updates = append(updates, fmt.Sprintf("excluded_columns = $%d", argIdx))
+		args = append(args, req.Exclude)
 	}
 
 	query := fmt.Sprintf(`

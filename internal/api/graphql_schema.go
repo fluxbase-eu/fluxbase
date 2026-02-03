@@ -596,14 +596,12 @@ func (g *GraphQLSchemaGenerator) tableToCollectionName(table string) string {
 func (g *GraphQLSchemaGenerator) tableToSingleName(table string) string {
 	name := toCamelCase(table)
 	// Simple singularization - remove trailing 's' if present
-	if len(name) > 1 && name[len(name)-1] == 's' {
-		// Handle special cases
-		if strings.HasSuffix(name, "ies") {
+	if len(name) > 0 && name[len(name)-1] == 's' {
+		// Handle special case for "ies" -> "y"
+		if strings.HasSuffix(name, "ies") && len(name) > 3 {
 			return name[:len(name)-3] + "y"
 		}
-		if strings.HasSuffix(name, "es") && !strings.HasSuffix(name, "ves") {
-			return name[:len(name)-2]
-		}
+		// Otherwise just remove the trailing 's'
 		return name[:len(name)-1]
 	}
 	return name
@@ -628,26 +626,46 @@ func (g *GraphQLSchemaGenerator) fkToRelationName(fkColumn string) string {
 
 // toPascalCase converts a snake_case string to PascalCase
 func toPascalCase(s string) string {
-	words := splitWords(s)
-	for i, word := range words {
-		if len(word) > 0 {
-			words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
-		}
+	if s == "" {
+		return ""
 	}
-	return strings.Join(words, "")
+
+	// If the string contains underscores or hyphens, split and process
+	if strings.ContainsAny(s, "_-") {
+		words := splitWords(s)
+		for i, word := range words {
+			if len(word) > 0 {
+				words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+			}
+		}
+		return strings.Join(words, "")
+	}
+
+	// Otherwise, just capitalize first letter and lowercase the rest
+	return strings.ToUpper(s[:1]) + strings.ToLower(s[1:])
 }
 
 // toCamelCase converts a snake_case string to camelCase
 func toCamelCase(s string) string {
-	words := splitWords(s)
-	for i, word := range words {
-		if i == 0 {
-			words[i] = strings.ToLower(word)
-		} else if len(word) > 0 {
-			words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
-		}
+	if s == "" {
+		return ""
 	}
-	return strings.Join(words, "")
+
+	// If the string contains underscores or hyphens, split and process
+	if strings.ContainsAny(s, "_-") {
+		words := splitWords(s)
+		for i, word := range words {
+			if i == 0 {
+				words[i] = strings.ToLower(word)
+			} else if len(word) > 0 {
+				words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+			}
+		}
+		return strings.Join(words, "")
+	}
+
+	// Otherwise, just lowercase everything
+	return strings.ToLower(s)
 }
 
 // splitWords splits a string by underscores, hyphens, and camelCase boundaries

@@ -111,7 +111,7 @@ func TestValueOrEmpty(t *testing.T) {
 	})
 }
 
-func TestMigration_Struct(t *testing.T) {
+func TestMigrationHandler_Struct(t *testing.T) {
 	t.Run("creates migration with required fields", func(t *testing.T) {
 		m := Migration{
 			ID:        uuid.New(),
@@ -155,7 +155,7 @@ func TestMigration_Struct(t *testing.T) {
 	})
 }
 
-func TestExecutionLog_Struct(t *testing.T) {
+func TestExecutionLogHandler_Struct(t *testing.T) {
 	t.Run("creates execution log with success", func(t *testing.T) {
 		migrationID := uuid.New()
 		durationMs := 150

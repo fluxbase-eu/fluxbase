@@ -90,6 +90,9 @@ func (s *Server) handleInitialize(ctx context.Context, req *Request) *Response {
 	if err != nil {
 		return NewInvalidParams(req.ID, err.Error())
 	}
+	if params == nil {
+		return NewInvalidParams(req.ID, "initialize params are required")
+	}
 
 	log.Info().
 		Str("client_name", params.ClientInfo.Name).
