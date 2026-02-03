@@ -126,9 +126,9 @@ func TestSearchKnowledgeBaseRequest_Struct(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "test", req.Query)
-		assert.Equal(t, 0, req.MaxChunks)      // Will use default in handler
+		assert.Equal(t, 0, req.MaxChunks)          // Will use default in handler
 		assert.Equal(t, float64(0), req.Threshold) // Will use default in handler
-		assert.Empty(t, req.Mode)              // Will default to semantic
+		assert.Empty(t, req.Mode)                  // Will default to semantic
 	})
 }
 
