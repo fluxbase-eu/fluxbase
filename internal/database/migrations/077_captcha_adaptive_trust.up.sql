@@ -143,11 +143,11 @@ CREATE TRIGGER trigger_update_trust_signals_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION auth.update_trust_signals_updated_at();
 
--- Grant permissions to fluxbase_auth role
-GRANT SELECT, INSERT, UPDATE, DELETE ON auth.user_trust_signals TO fluxbase_auth;
-GRANT SELECT, INSERT, UPDATE, DELETE ON auth.captcha_challenges TO fluxbase_auth;
-GRANT SELECT, INSERT, UPDATE, DELETE ON auth.captcha_trust_tokens TO fluxbase_auth;
-GRANT EXECUTE ON FUNCTION auth.cleanup_expired_captcha_data() TO fluxbase_auth;
+-- Grant permissions to service_role
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth.user_trust_signals TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth.captcha_challenges TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth.captcha_trust_tokens TO service_role;
+GRANT EXECUTE ON FUNCTION auth.cleanup_expired_captcha_data() TO service_role;
 
 -- Comments for documentation
 COMMENT ON TABLE auth.user_trust_signals IS 'Tracks known devices and IPs for adaptive CAPTCHA trust scoring';
