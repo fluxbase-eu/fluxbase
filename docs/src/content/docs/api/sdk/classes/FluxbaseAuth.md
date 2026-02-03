@@ -13,17 +13,71 @@ title: "FluxbaseAuth"
 
 #### Parameters
 
-| Parameter | Type | Default value |
-| ------ | ------ | ------ |
-| `fetch` | [`FluxbaseFetch`](/api/sdk/classes/fluxbasefetch/) | `undefined` |
-| `autoRefresh` | `boolean` | `true` |
-| `persist` | `boolean` | `true` |
+| Parameter     | Type                                               | Default value |
+| ------------- | -------------------------------------------------- | ------------- |
+| `fetch`       | [`FluxbaseFetch`](/api/sdk/classes/fluxbasefetch/) | `undefined`   |
+| `autoRefresh` | `boolean`                                          | `true`        |
+| `persist`     | `boolean`                                          | `true`        |
 
 #### Returns
 
 `FluxbaseAuth`
 
 ## Methods
+
+### checkCaptcha()
+
+> **checkCaptcha**(`request`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`CaptchaCheckResponse`\>\>
+
+Check if CAPTCHA is required for an authentication action (adaptive trust)
+
+This pre-flight check evaluates trust signals (known IP, device, previous CAPTCHA)
+to determine if CAPTCHA verification is needed. Use this before showing auth forms
+to provide a better user experience for trusted users.
+
+#### Parameters
+
+| Parameter | Type                  | Description                                            |
+| --------- | --------------------- | ------------------------------------------------------ |
+| `request` | `CaptchaCheckRequest` | Check request with endpoint and optional trust signals |
+
+#### Returns
+
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`CaptchaCheckResponse`\>\>
+
+Promise with whether CAPTCHA is required and challenge tracking info
+
+#### Example
+
+```typescript
+// Check if CAPTCHA is needed for login
+const { data, error } = await client.auth.checkCaptcha({
+  endpoint: "login",
+  email: "user@example.com",
+});
+
+if (data?.captcha_required) {
+  // Show CAPTCHA widget using data.provider and data.site_key
+  const captchaToken = await showCaptchaWidget(data.provider, data.site_key);
+
+  // Include challenge_id and captcha token in sign in
+  await client.auth.signIn({
+    email: "user@example.com",
+    password: "password",
+    captchaToken,
+    challengeId: data.challenge_id,
+  });
+} else {
+  // No CAPTCHA needed - trusted user
+  await client.auth.signIn({
+    email: "user@example.com",
+    password: "password",
+    challengeId: data?.challenge_id, // Still include challenge_id
+  });
+}
+```
+
+---
 
 ### disable2FA()
 
@@ -34,8 +88,8 @@ Unenrolls the MFA factor
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter  | Type     | Description                    |
+| ---------- | -------- | ------------------------------ |
 | `password` | `string` | User password for confirmation |
 
 #### Returns
@@ -44,7 +98,7 @@ Unenrolls the MFA factor
 
 Promise with unenrolled factor id
 
-***
+---
 
 ### enable2FA()
 
@@ -55,9 +109,9 @@ Verifies the TOTP code and returns new tokens with MFA session
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `code` | `string` | TOTP code from authenticator app |
+| Parameter | Type     | Description                      |
+| --------- | -------- | -------------------------------- |
+| `code`    | `string` | TOTP code from authenticator app |
 
 #### Returns
 
@@ -65,7 +119,7 @@ Verifies the TOTP code and returns new tokens with MFA session
 
 Promise with access_token, refresh_token, and user
 
-***
+---
 
 ### exchangeCodeForSession()
 
@@ -76,16 +130,16 @@ This is typically called in your OAuth callback handler
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `code` | `string` | Authorization code from OAuth callback |
-| `state?` | `string` | State parameter from OAuth callback (for CSRF protection) |
+| Parameter | Type     | Description                                               |
+| --------- | -------- | --------------------------------------------------------- |
+| `code`    | `string` | Authorization code from OAuth callback                    |
+| `state?`  | `string` | State parameter from OAuth callback (for CSRF protection) |
 
 #### Returns
 
 `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
 
-***
+---
 
 ### get2FAStatus()
 
@@ -100,7 +154,7 @@ Lists all enrolled MFA factors
 
 Promise with all factors and TOTP factors
 
-***
+---
 
 ### getAccessToken()
 
@@ -112,7 +166,7 @@ Get the current access token
 
 `string` \| `null`
 
-***
+---
 
 ### getAuthConfig()
 
@@ -123,6 +177,7 @@ Returns all public auth settings including signup status, OAuth providers,
 SAML providers, password requirements, and CAPTCHA config in a single request.
 
 Use this to:
+
 - Conditionally render signup forms based on signup_enabled
 - Display available OAuth/SAML provider buttons
 - Show password requirements to users
@@ -139,13 +194,13 @@ Promise with complete authentication configuration
 ```typescript
 const { data, error } = await client.auth.getAuthConfig();
 if (data) {
-  console.log('Signup enabled:', data.signup_enabled);
-  console.log('OAuth providers:', data.oauth_providers);
-  console.log('Password min length:', data.password_min_length);
+  console.log("Signup enabled:", data.signup_enabled);
+  console.log("OAuth providers:", data.oauth_providers);
+  console.log("Password min length:", data.password_min_length);
 }
 ```
 
-***
+---
 
 ### getCaptchaConfig()
 
@@ -160,7 +215,7 @@ Use this to determine which CAPTCHA provider to load and configure
 
 Promise with CAPTCHA configuration (provider, site key, enabled endpoints)
 
-***
+---
 
 ### getCurrentUser()
 
@@ -172,7 +227,7 @@ Get the current user from the server
 
 `Promise`\<[`UserResponse`](/api/sdk/type-aliases/userresponse/)\>
 
-***
+---
 
 ### getOAuthLogoutUrl()
 
@@ -183,10 +238,10 @@ Use this to get the logout URL without automatically redirecting
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options?` | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
+| Parameter  | Type                                                            | Description                                    |
+| ---------- | --------------------------------------------------------------- | ---------------------------------------------- |
+| `provider` | `string`                                                        | OAuth provider name (e.g., 'google', 'github') |
+| `options?` | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration                  |
 
 #### Returns
 
@@ -197,14 +252,14 @@ Promise with OAuth logout response including redirect URL if applicable
 #### Example
 
 ```typescript
-const { data, error } = await client.auth.getOAuthLogoutUrl('google')
+const { data, error } = await client.auth.getOAuthLogoutUrl("google");
 if (!error && data.redirect_url) {
   // Redirect user to complete logout at provider
-  window.location.href = data.redirect_url
+  window.location.href = data.redirect_url;
 }
 ```
 
-***
+---
 
 ### getOAuthProviders()
 
@@ -216,7 +271,7 @@ Get list of enabled OAuth providers
 
 `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`OAuthProvidersResponse`\>\>
 
-***
+---
 
 ### getOAuthUrl()
 
@@ -226,16 +281,16 @@ Get OAuth authorization URL for a provider
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options?` | `OAuthOptions` | Optional OAuth configuration |
+| Parameter  | Type           | Description                                    |
+| ---------- | -------------- | ---------------------------------------------- |
+| `provider` | `string`       | OAuth provider name (e.g., 'google', 'github') |
+| `options?` | `OAuthOptions` | Optional OAuth configuration                   |
 
 #### Returns
 
 `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`OAuthUrlResponse`\>\>
 
-***
+---
 
 ### getSAMLLoginUrl()
 
@@ -246,9 +301,9 @@ Use this to redirect the user to the IdP for authentication
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `provider` | `string` | SAML provider name/ID |
+| Parameter  | Type                                                        | Description                  |
+| ---------- | ----------------------------------------------------------- | ---------------------------- |
+| `provider` | `string`                                                    | SAML provider name/ID        |
 | `options?` | [`SAMLLoginOptions`](/api/sdk/interfaces/samlloginoptions/) | Optional login configuration |
 
 #### Returns
@@ -260,13 +315,13 @@ Promise with SAML login URL
 #### Example
 
 ```typescript
-const { data, error } = await client.auth.getSAMLLoginUrl('okta')
+const { data, error } = await client.auth.getSAMLLoginUrl("okta");
 if (!error) {
-  window.location.href = data.url
+  window.location.href = data.url;
 }
 ```
 
-***
+---
 
 ### getSAMLMetadataUrl()
 
@@ -277,8 +332,8 @@ Use this when configuring your IdP to download the SP metadata XML
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter  | Type     | Description           |
+| ---------- | -------- | --------------------- |
 | `provider` | `string` | SAML provider name/ID |
 
 #### Returns
@@ -290,11 +345,11 @@ Promise with SP metadata URL
 #### Example
 
 ```typescript
-const metadataUrl = client.auth.getSAMLMetadataUrl('okta')
+const metadataUrl = client.auth.getSAMLMetadataUrl("okta");
 // Share this URL with your IdP administrator
 ```
 
-***
+---
 
 ### getSAMLProviders()
 
@@ -311,13 +366,13 @@ Promise with list of configured SAML providers
 #### Example
 
 ```typescript
-const { data, error } = await client.auth.getSAMLProviders()
+const { data, error } = await client.auth.getSAMLProviders();
 if (!error) {
-  console.log('Available providers:', data.providers)
+  console.log("Available providers:", data.providers);
 }
 ```
 
-***
+---
 
 ### getSession()
 
@@ -330,7 +385,7 @@ Returns the session from the client-side cache without making a network request
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/) \| `null`; \}\>\>
 
-***
+---
 
 ### getUser()
 
@@ -344,7 +399,7 @@ For server-side validation, use getCurrentUser() instead
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `user`: [`User`](/api/sdk/interfaces/user/) \| `null`; \}\>\>
 
-***
+---
 
 ### getUserIdentities()
 
@@ -359,7 +414,7 @@ Lists all OAuth identities linked to the current user
 
 Promise with list of user identities
 
-***
+---
 
 ### handleSAMLCallback()
 
@@ -370,10 +425,10 @@ Call this from your SAML callback page to complete authentication
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `samlResponse` | `string` | Base64-encoded SAML response from the ACS endpoint |
-| `provider?` | `string` | SAML provider name (optional, extracted from RelayState) |
+| Parameter      | Type     | Description                                              |
+| -------------- | -------- | -------------------------------------------------------- |
+| `samlResponse` | `string` | Base64-encoded SAML response from the ACS endpoint       |
+| `provider?`    | `string` | SAML provider name (optional, extracted from RelayState) |
 
 #### Returns
 
@@ -385,18 +440,18 @@ Promise with user and session
 
 ```typescript
 // In your SAML callback page
-const urlParams = new URLSearchParams(window.location.search)
-const samlResponse = urlParams.get('SAMLResponse')
+const urlParams = new URLSearchParams(window.location.search);
+const samlResponse = urlParams.get("SAMLResponse");
 
 if (samlResponse) {
-  const { data, error } = await client.auth.handleSAMLCallback(samlResponse)
+  const { data, error } = await client.auth.handleSAMLCallback(samlResponse);
   if (!error) {
-    console.log('Logged in:', data.user)
+    console.log("Logged in:", data.user);
   }
 }
 ```
 
-***
+---
 
 ### linkIdentity()
 
@@ -407,8 +462,8 @@ Links an additional OAuth provider to the existing account
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter     | Type                      | Description      |
+| ------------- | ------------------------- | ---------------- |
 | `credentials` | `LinkIdentityCredentials` | Provider to link |
 
 #### Returns
@@ -417,7 +472,7 @@ Links an additional OAuth provider to the existing account
 
 Promise with OAuth URL to complete linking
 
-***
+---
 
 ### onAuthStateChange()
 
@@ -427,8 +482,8 @@ Listen to auth state changes (Supabase-compatible)
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter  | Type                      | Description                             |
+| ---------- | ------------------------- | --------------------------------------- |
 | `callback` | `AuthStateChangeCallback` | Function called when auth state changes |
 
 #### Returns
@@ -437,23 +492,25 @@ Listen to auth state changes (Supabase-compatible)
 
 Object containing subscription data
 
-| Name | Type |
-| ------ | ------ |
-| `data` | `object` |
+| Name                | Type               |
+| ------------------- | ------------------ |
+| `data`              | `object`           |
 | `data.subscription` | `AuthSubscription` |
 
 #### Example
 
 ```typescript
-const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
-  console.log('Auth event:', event, session)
-})
+const {
+  data: { subscription },
+} = client.auth.onAuthStateChange((event, session) => {
+  console.log("Auth event:", event, session);
+});
 
 // Later, to unsubscribe:
-subscription.unsubscribe()
+subscription.unsubscribe();
 ```
 
-***
+---
 
 ### reauthenticate()
 
@@ -468,7 +525,7 @@ Get a security nonce for sensitive operations (password change, etc.)
 
 Promise with nonce for reauthentication
 
-***
+---
 
 ### refreshSession()
 
@@ -481,7 +538,7 @@ Returns a new session with refreshed tokens
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/); `user`: [`User`](/api/sdk/interfaces/user/); \}\>\>
 
-***
+---
 
 ### refreshToken()
 
@@ -495,7 +552,7 @@ Returns a new session with refreshed tokens
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<\{ `session`: [`AuthSession`](/api/sdk/interfaces/authsession/); `user`: [`User`](/api/sdk/interfaces/user/); \}\>\>
 
-***
+---
 
 ### resendOtp()
 
@@ -506,9 +563,9 @@ Resend OTP code when user doesn't receive it
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `params` | `ResendOtpParams` | Resend parameters including type and email/phone |
+| Parameter | Type              | Description                                      |
+| --------- | ----------------- | ------------------------------------------------ |
+| `params`  | `ResendOtpParams` | Resend parameters including type and email/phone |
 
 #### Returns
 
@@ -516,7 +573,7 @@ Resend OTP code when user doesn't receive it
 
 Promise with OTP-style response
 
-***
+---
 
 ### resetPassword()
 
@@ -527,10 +584,10 @@ Complete the password reset process with a valid token
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `token` | `string` | Password reset token |
-| `newPassword` | `string` | New password to set |
+| Parameter     | Type     | Description          |
+| ------------- | -------- | -------------------- |
+| `token`       | `string` | Password reset token |
+| `newPassword` | `string` | New password to set  |
 
 #### Returns
 
@@ -538,7 +595,7 @@ Complete the password reset process with a valid token
 
 Promise with user and new session
 
-***
+---
 
 ### resetPasswordForEmail()
 
@@ -548,12 +605,12 @@ Supabase-compatible alias for sendPasswordReset()
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `email` | `string` | Email address to send reset link to |
-| `options?` | \{ `captchaToken?`: `string`; `redirectTo?`: `string`; \} | Optional redirect and CAPTCHA configuration |
-| `options.captchaToken?` | `string` | - |
-| `options.redirectTo?` | `string` | - |
+| Parameter               | Type                                                      | Description                                 |
+| ----------------------- | --------------------------------------------------------- | ------------------------------------------- |
+| `email`                 | `string`                                                  | Email address to send reset link to         |
+| `options?`              | \{ `captchaToken?`: `string`; `redirectTo?`: `string`; \} | Optional redirect and CAPTCHA configuration |
+| `options.captchaToken?` | `string`                                                  | -                                           |
+| `options.redirectTo?`   | `string`                                                  | -                                           |
 
 #### Returns
 
@@ -561,7 +618,7 @@ Supabase-compatible alias for sendPasswordReset()
 
 Promise with OTP-style response
 
-***
+---
 
 ### sendMagicLink()
 
@@ -571,9 +628,9 @@ Send magic link for passwordless authentication (Supabase-compatible)
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `email` | `string` | Email address to send magic link to |
+| Parameter  | Type               | Description                           |
+| ---------- | ------------------ | ------------------------------------- |
+| `email`    | `string`           | Email address to send magic link to   |
 | `options?` | `MagicLinkOptions` | Optional configuration for magic link |
 
 #### Returns
@@ -582,7 +639,7 @@ Send magic link for passwordless authentication (Supabase-compatible)
 
 Promise with OTP-style response
 
-***
+---
 
 ### sendPasswordReset()
 
@@ -593,12 +650,12 @@ Sends a password reset link to the provided email address
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `email` | `string` | Email address to send reset link to |
-| `options?` | \{ `captchaToken?`: `string`; `redirectTo?`: `string`; \} | Optional configuration including redirect URL and CAPTCHA token |
-| `options.captchaToken?` | `string` | - |
-| `options.redirectTo?` | `string` | - |
+| Parameter               | Type                                                      | Description                                                     |
+| ----------------------- | --------------------------------------------------------- | --------------------------------------------------------------- |
+| `email`                 | `string`                                                  | Email address to send reset link to                             |
+| `options?`              | \{ `captchaToken?`: `string`; `redirectTo?`: `string`; \} | Optional configuration including redirect URL and CAPTCHA token |
+| `options.captchaToken?` | `string`                                                  | -                                                               |
+| `options.redirectTo?`   | `string`                                                  | -                                                               |
 
 #### Returns
 
@@ -606,7 +663,7 @@ Sends a password reset link to the provided email address
 
 Promise with OTP-style response
 
-***
+---
 
 ### setSession()
 
@@ -617,11 +674,11 @@ Useful for restoring a session from storage or SSR scenarios
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `session` | \{ `access_token`: `string`; `refresh_token`: `string`; \} | Object containing access_token and refresh_token |
-| `session.access_token` | `string` | - |
-| `session.refresh_token` | `string` | - |
+| Parameter               | Type                                                       | Description                                      |
+| ----------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| `session`               | \{ `access_token`: `string`; `refresh_token`: `string`; \} | Object containing access_token and refresh_token |
+| `session.access_token`  | `string`                                                   | -                                                |
+| `session.refresh_token` | `string`                                                   | -                                                |
 
 #### Returns
 
@@ -629,7 +686,7 @@ Useful for restoring a session from storage or SSR scenarios
 
 Promise with session data
 
-***
+---
 
 ### setup2FA()
 
@@ -640,8 +697,8 @@ Enrolls a new MFA factor and returns TOTP details
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter | Type     | Description                                                                                        |
+| --------- | -------- | -------------------------------------------------------------------------------------------------- |
 | `issuer?` | `string` | Optional custom issuer name for the QR code (e.g., "MyApp"). If not provided, uses server default. |
 
 #### Returns
@@ -650,7 +707,7 @@ Enrolls a new MFA factor and returns TOTP details
 
 Promise with factor id, type, and TOTP setup details
 
-***
+---
 
 ### signIn()
 
@@ -661,15 +718,15 @@ Returns { user, session } if successful, or SignInWith2FAResponse if 2FA is requ
 
 #### Parameters
 
-| Parameter | Type |
-| ------ | ------ |
+| Parameter     | Type                                                          |
+| ------------- | ------------------------------------------------------------- |
 | `credentials` | [`SignInCredentials`](/api/sdk/interfaces/signincredentials/) |
 
 #### Returns
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`SignInWith2FAResponse`](/api/sdk/interfaces/signinwith2faresponse/) \| [`AuthResponseData`](/api/sdk/type-aliases/authresponsedata/)\>\>
 
-***
+---
 
 ### signInAnonymously()
 
@@ -682,7 +739,7 @@ Creates a temporary anonymous user session
 
 `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
 
-***
+---
 
 ### signInWithIdToken()
 
@@ -693,8 +750,8 @@ Authenticate using native mobile app ID tokens (Google, Apple)
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter     | Type                           | Description                            |
+| ------------- | ------------------------------ | -------------------------------------- |
 | `credentials` | `SignInWithIdTokenCredentials` | Provider, ID token, and optional nonce |
 
 #### Returns
@@ -703,7 +760,7 @@ Authenticate using native mobile app ID tokens (Google, Apple)
 
 Promise with user and session
 
-***
+---
 
 ### signInWithOAuth()
 
@@ -714,16 +771,16 @@ Redirects the user to the OAuth provider's authorization page
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options?` | `OAuthOptions` | Optional OAuth configuration |
+| Parameter  | Type           | Description                                    |
+| ---------- | -------------- | ---------------------------------------------- |
+| `provider` | `string`       | OAuth provider name (e.g., 'google', 'github') |
+| `options?` | `OAuthOptions` | Optional OAuth configuration                   |
 
 #### Returns
 
 `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<\{ `provider`: `string`; `url`: `string`; \}\>\>
 
-***
+---
 
 ### signInWithOtp()
 
@@ -734,8 +791,8 @@ Sends a one-time password via email or SMS for passwordless authentication
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter     | Type                       | Description                                      |
+| ------------- | -------------------------- | ------------------------------------------------ |
 | `credentials` | `SignInWithOtpCredentials` | Email or phone number and optional configuration |
 
 #### Returns
@@ -744,7 +801,7 @@ Sends a one-time password via email or SMS for passwordless authentication
 
 Promise with OTP-style response
 
-***
+---
 
 ### signInWithPassword()
 
@@ -756,15 +813,15 @@ Returns { user, session } if successful, or SignInWith2FAResponse if 2FA is requ
 
 #### Parameters
 
-| Parameter | Type |
-| ------ | ------ |
+| Parameter     | Type                                                          |
+| ------------- | ------------------------------------------------------------- |
 | `credentials` | [`SignInCredentials`](/api/sdk/interfaces/signincredentials/) |
 
 #### Returns
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`SignInWith2FAResponse`](/api/sdk/interfaces/signinwith2faresponse/) \| [`AuthResponseData`](/api/sdk/type-aliases/authresponsedata/)\>\>
 
-***
+---
 
 ### signInWithSAML()
 
@@ -775,9 +832,9 @@ This is a convenience method that redirects the user to the SAML IdP
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `provider` | `string` | SAML provider name/ID |
+| Parameter  | Type                                                        | Description                  |
+| ---------- | ----------------------------------------------------------- | ---------------------------- |
+| `provider` | `string`                                                    | SAML provider name/ID        |
 | `options?` | [`SAMLLoginOptions`](/api/sdk/interfaces/samlloginoptions/) | Optional login configuration |
 
 #### Returns
@@ -790,10 +847,10 @@ Promise with provider and URL (browser will redirect)
 
 ```typescript
 // In browser, this will redirect to the SAML IdP
-await client.auth.signInWithSAML('okta')
+await client.auth.signInWithSAML("okta");
 ```
 
-***
+---
 
 ### signOut()
 
@@ -805,7 +862,7 @@ Sign out the current user
 
 `Promise`\<[`VoidResponse`](/api/sdk/type-aliases/voidresponse/)\>
 
-***
+---
 
 ### signOutWithOAuth()
 
@@ -816,10 +873,10 @@ Revokes tokens at the OAuth provider and optionally redirects for OIDC logout
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `provider` | `string` | OAuth provider name (e.g., 'google', 'github') |
-| `options?` | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration |
+| Parameter  | Type                                                            | Description                                    |
+| ---------- | --------------------------------------------------------------- | ---------------------------------------------- |
+| `provider` | `string`                                                        | OAuth provider name (e.g., 'google', 'github') |
+| `options?` | [`OAuthLogoutOptions`](/api/sdk/interfaces/oauthlogoutoptions/) | Optional logout configuration                  |
 
 #### Returns
 
@@ -831,12 +888,12 @@ Promise with OAuth logout response
 
 ```typescript
 // This will revoke tokens and redirect to provider's logout page if supported
-await client.auth.signOutWithOAuth('google', {
-  redirect_url: 'https://myapp.com/logged-out'
-})
+await client.auth.signOutWithOAuth("google", {
+  redirect_url: "https://myapp.com/logged-out",
+});
 ```
 
-***
+---
 
 ### signUp()
 
@@ -848,15 +905,15 @@ Returns null session when email confirmation is required
 
 #### Parameters
 
-| Parameter | Type |
-| ------ | ------ |
+| Parameter     | Type                                                          |
+| ------------- | ------------------------------------------------------------- |
 | `credentials` | [`SignUpCredentials`](/api/sdk/interfaces/signupcredentials/) |
 
 #### Returns
 
 `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
 
-***
+---
 
 ### startAutoRefresh()
 
@@ -870,7 +927,7 @@ Only works in browser environments
 
 `void`
 
-***
+---
 
 ### stopAutoRefresh()
 
@@ -883,7 +940,7 @@ Call this when you want to disable auto-refresh without signing out
 
 `void`
 
-***
+---
 
 ### unlinkIdentity()
 
@@ -894,9 +951,9 @@ Removes a linked OAuth provider from the account
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `params` | `UnlinkIdentityParams` | Identity to unlink |
+| Parameter | Type                   | Description        |
+| --------- | ---------------------- | ------------------ |
+| `params`  | `UnlinkIdentityParams` | Identity to unlink |
 
 #### Returns
 
@@ -904,7 +961,7 @@ Removes a linked OAuth provider from the account
 
 Promise with void response
 
-***
+---
 
 ### updateUser()
 
@@ -914,15 +971,15 @@ Update the current user (Supabase-compatible)
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter    | Type                                                                | Description                                                    |
+| ------------ | ------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `attributes` | [`UpdateUserAttributes`](/api/sdk/interfaces/updateuserattributes/) | User attributes to update (email, password, data for metadata) |
 
 #### Returns
 
 `Promise`\<[`UserResponse`](/api/sdk/type-aliases/userresponse/)\>
 
-***
+---
 
 ### verify2FA()
 
@@ -933,8 +990,8 @@ Call this after signIn returns requires_2fa: true
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
+| Parameter | Type                                                                    | Description           |
+| --------- | ----------------------------------------------------------------------- | --------------------- |
 | `request` | [`TwoFactorVerifyRequest`](/api/sdk/interfaces/twofactorverifyrequest/) | User ID and TOTP code |
 
 #### Returns
@@ -943,7 +1000,7 @@ Call this after signIn returns requires_2fa: true
 
 Promise with access_token, refresh_token, and user
 
-***
+---
 
 ### verifyMagicLink()
 
@@ -953,15 +1010,15 @@ Verify magic link token and sign in
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `token` | `string` | Magic link token from email |
+| Parameter | Type     | Description                 |
+| --------- | -------- | --------------------------- |
+| `token`   | `string` | Magic link token from email |
 
 #### Returns
 
 `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
 
-***
+---
 
 ### verifyOtp()
 
@@ -972,9 +1029,9 @@ Verify OTP tokens for various authentication flows
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `params` | `VerifyOtpParams` | OTP verification parameters including token and type |
+| Parameter | Type              | Description                                          |
+| --------- | ----------------- | ---------------------------------------------------- |
+| `params`  | `VerifyOtpParams` | OTP verification parameters including token and type |
 
 #### Returns
 
@@ -982,7 +1039,7 @@ Verify OTP tokens for various authentication flows
 
 Promise with user and session if successful
 
-***
+---
 
 ### verifyResetToken()
 
@@ -993,9 +1050,9 @@ Check if a password reset token is valid before allowing password reset
 
 #### Parameters
 
-| Parameter | Type | Description |
-| ------ | ------ | ------ |
-| `token` | `string` | Password reset token to verify |
+| Parameter | Type     | Description                    |
+| --------- | -------- | ------------------------------ |
+| `token`   | `string` | Password reset token to verify |
 
 #### Returns
 
