@@ -23,11 +23,12 @@ CREATE TABLE IF NOT EXISTS auth.user_trust_signals (
     is_blocked BOOLEAN DEFAULT FALSE,  -- Explicitly blocked
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    -- Unique constraint: one record per user+IP+device combo
-    UNIQUE(user_id, ip_address, COALESCE(device_fingerprint, ''))
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Unique constraint: one record per user+IP+device combo (using index for COALESCE expression)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_trust_signals_unique
+    ON auth.user_trust_signals(user_id, ip_address, COALESCE(device_fingerprint, ''));
 
 -- Index for fast lookups by user and IP
 CREATE INDEX IF NOT EXISTS idx_user_trust_signals_user_ip
