@@ -327,7 +327,7 @@ func TestIsPrivateIPAddress(t *testing.T) {
 		publicIPs := []string{
 			"8.8.8.8",
 			"1.1.1.1",
-			"93.184.216.34", // example.com
+			"93.184.216.34",  // example.com
 			"142.250.190.46", // google.com
 		}
 		for _, ip := range publicIPs {
@@ -345,7 +345,7 @@ func TestIsPrivateIPAddress(t *testing.T) {
 	})
 
 	t.Run("returns true for TEST-NET addresses", func(t *testing.T) {
-		assert.True(t, isPrivateIPAddress(net.ParseIP("192.0.2.1")))   // TEST-NET-1
+		assert.True(t, isPrivateIPAddress(net.ParseIP("192.0.2.1")))    // TEST-NET-1
 		assert.True(t, isPrivateIPAddress(net.ParseIP("198.51.100.1"))) // TEST-NET-2
 		assert.True(t, isPrivateIPAddress(net.ParseIP("203.0.113.1")))  // TEST-NET-3
 	})

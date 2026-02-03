@@ -170,7 +170,7 @@ func TestGraphQLConfig_CommonConfigurations(t *testing.T) {
 	t.Run("strict configuration", func(t *testing.T) {
 		cfg := GraphQLConfig{
 			Enabled:       true,
-			MaxDepth:      5,  // Very limited depth
+			MaxDepth:      5,   // Very limited depth
 			MaxComplexity: 100, // Very limited complexity
 			Introspection: false,
 		}

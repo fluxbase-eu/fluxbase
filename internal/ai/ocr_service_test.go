@@ -10,11 +10,11 @@ import (
 
 // mockOCRProvider implements OCRProvider for testing
 type mockOCRProvider struct {
-	name                    string
-	available               bool
-	extractPDFFunc          func(ctx context.Context, data []byte, languages []string) (*OCRResult, error)
-	extractImageFunc        func(ctx context.Context, data []byte, languages []string) (*OCRResult, error)
-	closeFunc               func() error
+	name             string
+	available        bool
+	extractPDFFunc   func(ctx context.Context, data []byte, languages []string) (*OCRResult, error)
+	extractImageFunc func(ctx context.Context, data []byte, languages []string) (*OCRResult, error)
+	closeFunc        func() error
 }
 
 func newMockOCRProvider(available bool) *mockOCRProvider {
