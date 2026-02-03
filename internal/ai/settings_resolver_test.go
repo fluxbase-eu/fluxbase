@@ -168,13 +168,13 @@ func TestTemplatePattern_Matches(t *testing.T) {
 
 func TestTemplatePattern_InvalidPatterns(t *testing.T) {
 	invalidPatterns := []string{
-		"{{}}",           // empty
-		"{{123key}}",     // starts with number
-		"{{-key}}",       // starts with hyphen
-		"{{ space }}",    // contains spaces
-		"{single}",       // single braces
-		"{{key",          // unclosed
-		"key}}",          // no opening
+		"{{}}",        // empty
+		"{{123key}}",  // starts with number
+		"{{-key}}",    // starts with hyphen
+		"{{ space }}", // contains spaces
+		"{single}",    // single braces
+		"{{key",       // unclosed
+		"key}}",       // no opening
 	}
 
 	for _, pattern := range invalidPatterns {

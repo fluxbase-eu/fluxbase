@@ -49,7 +49,7 @@ func TestLeaderLockID_Constants(t *testing.T) {
 	t.Run("lock IDs share common prefix", func(t *testing.T) {
 		// All lock IDs should share the "Flux" prefix (0x466C7578)
 		prefix := int64(0x466C7578_00000000)
-		mask := int64(0xFFFFFFFF_00000000)
+		mask := int64(-1) << 32 // Upper 32 bits mask (0xFFFFFFFF_00000000)
 
 		assert.Equal(t, prefix, JobsSchedulerLockID&mask)
 		assert.Equal(t, prefix, FunctionsSchedulerLockID&mask)

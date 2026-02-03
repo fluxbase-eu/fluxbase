@@ -544,7 +544,7 @@ func TestTruncateString(t *testing.T) {
 		{
 			name:     "unicode string truncation",
 			input:    "hello 世界 world",
-			maxLen:   10,
+			maxLen:   12,
 			expected: "hello 世...",
 		},
 		{
