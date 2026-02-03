@@ -649,3 +649,557 @@ func TestSourceTypes(t *testing.T) {
 		assert.Equal(t, "api", fn.Source)
 	})
 }
+
+// =============================================================================
+// Helper Function Tests - isAdminRole
+// =============================================================================
+
+func TestIsAdminRole(t *testing.T) {
+	t.Run("admin role is admin", func(t *testing.T) {
+		assert.True(t, isAdminRole("admin"))
+	})
+
+	t.Run("dashboard_admin role is admin", func(t *testing.T) {
+		assert.True(t, isAdminRole("dashboard_admin"))
+	})
+
+	t.Run("service_role is admin", func(t *testing.T) {
+		assert.True(t, isAdminRole("service_role"))
+	})
+
+	t.Run("authenticated role is not admin", func(t *testing.T) {
+		assert.False(t, isAdminRole("authenticated"))
+	})
+
+	t.Run("anon role is not admin", func(t *testing.T) {
+		assert.False(t, isAdminRole("anon"))
+	})
+
+	t.Run("empty role is not admin", func(t *testing.T) {
+		assert.False(t, isAdminRole(""))
+	})
+
+	t.Run("user role is not admin", func(t *testing.T) {
+		assert.False(t, isAdminRole("user"))
+	})
+
+	t.Run("case sensitive - ADMIN is not admin", func(t *testing.T) {
+		assert.False(t, isAdminRole("ADMIN"))
+	})
+
+	t.Run("case sensitive - Admin is not admin", func(t *testing.T) {
+		assert.False(t, isAdminRole("Admin"))
+	})
+}
+
+// =============================================================================
+// Helper Function Tests - valueOr
+// =============================================================================
+
+func TestValueOr(t *testing.T) {
+	t.Run("returns value when pointer is non-nil (int)", func(t *testing.T) {
+		val := 42
+		result := valueOr(&val, 0)
+		assert.Equal(t, 42, result)
+	})
+
+	t.Run("returns default when pointer is nil (int)", func(t *testing.T) {
+		var ptr *int
+		result := valueOr(ptr, 100)
+		assert.Equal(t, 100, result)
+	})
+
+	t.Run("returns value when pointer is non-nil (string)", func(t *testing.T) {
+		val := "hello"
+		result := valueOr(&val, "default")
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("returns default when pointer is nil (string)", func(t *testing.T) {
+		var ptr *string
+		result := valueOr(ptr, "default")
+		assert.Equal(t, "default", result)
+	})
+
+	t.Run("returns value when pointer is non-nil (bool)", func(t *testing.T) {
+		val := true
+		result := valueOr(&val, false)
+		assert.True(t, result)
+	})
+
+	t.Run("returns default when pointer is nil (bool)", func(t *testing.T) {
+		var ptr *bool
+		result := valueOr(ptr, true)
+		assert.True(t, result)
+	})
+
+	t.Run("returns zero value when set", func(t *testing.T) {
+		val := 0
+		result := valueOr(&val, 42)
+		assert.Equal(t, 0, result)
+	})
+
+	t.Run("returns empty string when set", func(t *testing.T) {
+		val := ""
+		result := valueOr(&val, "default")
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("returns false when set to false", func(t *testing.T) {
+		val := false
+		result := valueOr(&val, true)
+		assert.False(t, result)
+	})
+}
+
+// =============================================================================
+// Helper Function Tests - truncateString
+// =============================================================================
+
+func TestTruncateString(t *testing.T) {
+	t.Run("returns string unchanged if shorter than maxLen", func(t *testing.T) {
+		result := truncateString("hello", 10)
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("returns string unchanged if equal to maxLen", func(t *testing.T) {
+		result := truncateString("hello", 5)
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("truncates string if longer than maxLen", func(t *testing.T) {
+		result := truncateString("hello world", 5)
+		assert.Equal(t, "hello...", result)
+	})
+
+	t.Run("handles empty string", func(t *testing.T) {
+		result := truncateString("", 10)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("handles maxLen of 0", func(t *testing.T) {
+		result := truncateString("hello", 0)
+		assert.Equal(t, "...", result)
+	})
+
+	t.Run("handles maxLen of 1", func(t *testing.T) {
+		result := truncateString("hello", 1)
+		assert.Equal(t, "h...", result)
+	})
+
+	t.Run("handles very long string", func(t *testing.T) {
+		longStr := "This is a very long string that should be truncated"
+		result := truncateString(longStr, 10)
+		assert.Equal(t, "This is a ...", result)
+		assert.Len(t, result, 13) // 10 + "..."
+	})
+
+	t.Run("handles unicode strings", func(t *testing.T) {
+		result := truncateString("hello 世界", 8)
+		// Note: truncateString works on byte length, not rune count
+		assert.Contains(t, result, "...")
+	})
+}
+
+// =============================================================================
+// Helper Function Tests - toString
+// =============================================================================
+
+func TestToString(t *testing.T) {
+	t.Run("returns empty string for nil interface", func(t *testing.T) {
+		result := toString(nil)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("returns string as-is", func(t *testing.T) {
+		result := toString("hello")
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("returns empty string for nil uuid pointer", func(t *testing.T) {
+		var uid *uuid.UUID
+		result := toString(uid)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("returns uuid string for non-nil uuid pointer", func(t *testing.T) {
+		uid := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+		result := toString(&uid)
+		assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", result)
+	})
+
+	t.Run("converts int to string", func(t *testing.T) {
+		result := toString(42)
+		assert.Equal(t, "42", result)
+	})
+
+	t.Run("converts float to string", func(t *testing.T) {
+		result := toString(3.14)
+		assert.Equal(t, "3.14", result)
+	})
+
+	t.Run("converts bool to string", func(t *testing.T) {
+		result := toString(true)
+		assert.Equal(t, "true", result)
+	})
+
+	t.Run("converts struct to string", func(t *testing.T) {
+		type testStruct struct {
+			Name string
+		}
+		result := toString(testStruct{Name: "test"})
+		assert.Contains(t, result, "test")
+	})
+}
+
+// =============================================================================
+// Helper Function Tests - normalizeSettingsKey
+// =============================================================================
+
+func TestNormalizeSettingsKey(t *testing.T) {
+	t.Run("simple key with underscores", func(t *testing.T) {
+		result := normalizeSettingsKey("openai_api_key")
+		assert.Equal(t, "OPENAI_API_KEY", result)
+	})
+
+	t.Run("key with dots", func(t *testing.T) {
+		result := normalizeSettingsKey("ai.openai.api_key")
+		assert.Equal(t, "AI_OPENAI_API_KEY", result)
+	})
+
+	t.Run("already uppercase", func(t *testing.T) {
+		result := normalizeSettingsKey("API_KEY")
+		assert.Equal(t, "API_KEY", result)
+	})
+
+	t.Run("mixed case", func(t *testing.T) {
+		result := normalizeSettingsKey("apiKey")
+		assert.Equal(t, "APIKEY", result)
+	})
+
+	t.Run("empty string", func(t *testing.T) {
+		result := normalizeSettingsKey("")
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("multiple dots", func(t *testing.T) {
+		result := normalizeSettingsKey("app.config.database.host")
+		assert.Equal(t, "APP_CONFIG_DATABASE_HOST", result)
+	})
+
+	t.Run("dots and underscores mixed", func(t *testing.T) {
+		result := normalizeSettingsKey("app.api_config.max_retries")
+		assert.Equal(t, "APP_API_CONFIG_MAX_RETRIES", result)
+	})
+
+	t.Run("single character", func(t *testing.T) {
+		result := normalizeSettingsKey("a")
+		assert.Equal(t, "A", result)
+	})
+
+	t.Run("numeric suffix", func(t *testing.T) {
+		result := normalizeSettingsKey("retry_limit_v2")
+		assert.Equal(t, "RETRY_LIMIT_V2", result)
+	})
+}
+
+// =============================================================================
+// AdminExecutionFilters Struct Tests
+// =============================================================================
+
+func TestAdminExecutionFilters_Struct(t *testing.T) {
+	t.Run("zero values", func(t *testing.T) {
+		filters := AdminExecutionFilters{}
+
+		assert.Empty(t, filters.Namespace)
+		assert.Empty(t, filters.FunctionName)
+		assert.Empty(t, filters.Status)
+		assert.Equal(t, 0, filters.Limit)
+		assert.Equal(t, 0, filters.Offset)
+	})
+
+	t.Run("all fields set", func(t *testing.T) {
+		filters := AdminExecutionFilters{
+			Namespace:    "production",
+			FunctionName: "my-function",
+			Status:       "success",
+			Limit:        50,
+			Offset:       100,
+		}
+
+		assert.Equal(t, "production", filters.Namespace)
+		assert.Equal(t, "my-function", filters.FunctionName)
+		assert.Equal(t, "success", filters.Status)
+		assert.Equal(t, 50, filters.Limit)
+		assert.Equal(t, 100, filters.Offset)
+	})
+
+	t.Run("namespace filter only", func(t *testing.T) {
+		filters := AdminExecutionFilters{
+			Namespace: "staging",
+			Limit:     25,
+		}
+
+		assert.Equal(t, "staging", filters.Namespace)
+		assert.Empty(t, filters.FunctionName)
+		assert.Empty(t, filters.Status)
+		assert.Equal(t, 25, filters.Limit)
+	})
+
+	t.Run("status filter only", func(t *testing.T) {
+		filters := AdminExecutionFilters{
+			Status: "error",
+			Limit:  10,
+		}
+
+		assert.Empty(t, filters.Namespace)
+		assert.Empty(t, filters.FunctionName)
+		assert.Equal(t, "error", filters.Status)
+	})
+
+	t.Run("pagination only", func(t *testing.T) {
+		filters := AdminExecutionFilters{
+			Limit:  20,
+			Offset: 40,
+		}
+
+		assert.Equal(t, 20, filters.Limit)
+		assert.Equal(t, 40, filters.Offset)
+	})
+
+	t.Run("valid status values", func(t *testing.T) {
+		statuses := []string{"pending", "running", "success", "error", "timeout", "cancelled"}
+		for _, status := range statuses {
+			filters := AdminExecutionFilters{Status: status}
+			assert.Equal(t, status, filters.Status)
+		}
+	})
+}
+
+// =============================================================================
+// AdminExecution Struct Tests
+// =============================================================================
+
+func TestAdminExecution_Struct(t *testing.T) {
+	t.Run("success execution", func(t *testing.T) {
+		now := time.Now()
+		completedAt := now.Add(5 * time.Second)
+		duration := 5000
+		statusCode := 200
+		result := `{"status": "ok"}`
+
+		exec := AdminExecution{
+			EdgeFunctionExecution: EdgeFunctionExecution{
+				ID:          uuid.New(),
+				FunctionID:  uuid.New(),
+				TriggerType: "http",
+				Status:      "success",
+				StatusCode:  &statusCode,
+				DurationMs:  &duration,
+				Result:      &result,
+				ExecutedAt:  now,
+				CompletedAt: &completedAt,
+			},
+			FunctionName: "test-function",
+			Namespace:    "default",
+		}
+
+		assert.Equal(t, "success", exec.Status)
+		assert.Equal(t, 200, *exec.StatusCode)
+		assert.Equal(t, 5000, *exec.DurationMs)
+		assert.Equal(t, "test-function", exec.FunctionName)
+		assert.Equal(t, "default", exec.Namespace)
+	})
+
+	t.Run("error execution", func(t *testing.T) {
+		errorMsg := "Function failed"
+		logs := "Error: something went wrong"
+
+		exec := AdminExecution{
+			EdgeFunctionExecution: EdgeFunctionExecution{
+				ID:           uuid.New(),
+				FunctionID:   uuid.New(),
+				TriggerType:  "cron",
+				Status:       "error",
+				ErrorMessage: &errorMsg,
+				Logs:         &logs,
+			},
+			FunctionName: "scheduled-task",
+			Namespace:    "workers",
+		}
+
+		assert.Equal(t, "error", exec.Status)
+		assert.Equal(t, "Function failed", *exec.ErrorMessage)
+		assert.Equal(t, "Error: something went wrong", *exec.Logs)
+		assert.Equal(t, "scheduled-task", exec.FunctionName)
+		assert.Equal(t, "workers", exec.Namespace)
+	})
+
+	t.Run("pending execution", func(t *testing.T) {
+		exec := AdminExecution{
+			EdgeFunctionExecution: EdgeFunctionExecution{
+				ID:          uuid.New(),
+				FunctionID:  uuid.New(),
+				TriggerType: "http",
+				Status:      "pending",
+				ExecutedAt:  time.Now(),
+			},
+			FunctionName: "new-function",
+			Namespace:    "test",
+		}
+
+		assert.Equal(t, "pending", exec.Status)
+		assert.Nil(t, exec.CompletedAt)
+		assert.Nil(t, exec.DurationMs)
+		assert.Nil(t, exec.StatusCode)
+	})
+}
+
+// =============================================================================
+// Handler SetSettingsSecretsService Tests
+// =============================================================================
+
+func TestHandler_SetSettingsSecretsService(t *testing.T) {
+	t.Run("sets settings secrets service", func(t *testing.T) {
+		handler := NewHandler(nil, "/tmp/functions", config.CORSConfig{}, "secret", "http://localhost", "", "", nil, nil, nil)
+		assert.Nil(t, handler.settingsSecretsService)
+
+		// Note: We can't create a real SecretsService without a database,
+		// but we verify the method exists and nil case is handled
+		handler.SetSettingsSecretsService(nil)
+		assert.Nil(t, handler.settingsSecretsService)
+	})
+}
+
+// =============================================================================
+// Handler loadSettingsSecrets Tests
+// =============================================================================
+
+func TestHandler_loadSettingsSecrets(t *testing.T) {
+	t.Run("returns nil when service is nil", func(t *testing.T) {
+		handler := NewHandler(nil, "/tmp/functions", config.CORSConfig{}, "secret", "http://localhost", "", "", nil, nil, nil)
+
+		result := handler.loadSettingsSecrets(nil, nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("returns nil when service is nil with user ID", func(t *testing.T) {
+		handler := NewHandler(nil, "/tmp/functions", config.CORSConfig{}, "secret", "http://localhost", "", "", nil, nil, nil)
+
+		userID := uuid.New()
+		result := handler.loadSettingsSecrets(nil, &userID)
+		assert.Nil(t, result)
+	})
+}
+
+// =============================================================================
+// Handler CORS Configuration Tests
+// =============================================================================
+
+func TestHandler_CORSConfig(t *testing.T) {
+	t.Run("stores CORS config", func(t *testing.T) {
+		corsConfig := config.CORSConfig{
+			AllowedOrigins:   []string{"https://example.com"},
+			AllowedMethods:   []string{"GET", "POST"},
+			AllowedHeaders:   []string{"Content-Type"},
+			AllowCredentials: true,
+			MaxAge:           3600,
+			ExposedHeaders:   []string{"X-Request-Id"},
+		}
+
+		handler := NewHandler(nil, "/tmp/functions", corsConfig, "secret", "http://localhost", "", "", nil, nil, nil)
+
+		assert.Equal(t, []string{"https://example.com"}, handler.corsConfig.AllowedOrigins)
+		assert.Equal(t, []string{"GET", "POST"}, handler.corsConfig.AllowedMethods)
+		assert.True(t, handler.corsConfig.AllowCredentials)
+		assert.Equal(t, 3600, handler.corsConfig.MaxAge)
+	})
+}
+
+// =============================================================================
+// Handler Log Counter Tests
+// =============================================================================
+
+func TestHandler_LogCounters(t *testing.T) {
+	t.Run("log counters are thread-safe", func(t *testing.T) {
+		handler := NewHandler(nil, "/tmp/functions", config.CORSConfig{}, "secret", "http://localhost", "", "", nil, nil, nil)
+
+		// Run concurrent operations
+		done := make(chan bool)
+		for i := 0; i < 10; i++ {
+			go func(id int) {
+				execID := uuid.New()
+				counter := 0
+				handler.logCounters.Store(execID, &counter)
+
+				for j := 0; j < 100; j++ {
+					handler.handleLogMessage(execID, "info", "message")
+				}
+
+				handler.logCounters.Delete(execID)
+				done <- true
+			}(i)
+		}
+
+		// Wait for all goroutines
+		for i := 0; i < 10; i++ {
+			<-done
+		}
+
+		// Should complete without panics
+		assert.NotNil(t, handler)
+	})
+}
+
+// =============================================================================
+// Bundled Status Tests
+// =============================================================================
+
+func TestEdgeFunction_BundleStatus(t *testing.T) {
+	t.Run("pre-bundled from client", func(t *testing.T) {
+		original := "import { x } from './utils'; export default () => x;"
+		bundled := "const x = 1; export default () => x;"
+
+		fn := EdgeFunction{
+			Name:         "pre-bundled",
+			Code:         bundled,
+			OriginalCode: &original,
+			IsBundled:    true,
+			Source:       "api",
+		}
+
+		assert.True(t, fn.IsBundled)
+		assert.Equal(t, bundled, fn.Code)
+		assert.Equal(t, original, *fn.OriginalCode)
+	})
+
+	t.Run("server-side bundled", func(t *testing.T) {
+		original := "import { serve } from 'https://deno.land/std/http/server.ts';"
+
+		fn := EdgeFunction{
+			Name:         "server-bundled",
+			Code:         "// bundled content",
+			OriginalCode: &original,
+			IsBundled:    true,
+			Source:       "filesystem",
+		}
+
+		assert.True(t, fn.IsBundled)
+		assert.NotEqual(t, fn.Code, *fn.OriginalCode)
+	})
+
+	t.Run("unbundled simple function", func(t *testing.T) {
+		code := "export default () => ({ hello: 'world' });"
+
+		fn := EdgeFunction{
+			Name:         "simple",
+			Code:         code,
+			OriginalCode: &code,
+			IsBundled:    false,
+		}
+
+		assert.False(t, fn.IsBundled)
+		assert.Equal(t, code, fn.Code)
+		assert.Equal(t, code, *fn.OriginalCode)
+	})
+}

@@ -550,19 +550,21 @@ func ParseFunctionConfig(code string) FunctionConfig {
 
 	// Match @fluxbase:rate-limit with value and unit (e.g., 100/min, 1000/hour, 10000/day)
 	rateLimitPattern := regexp.MustCompile(`(?m)^\s*(?://|/\*|\*)\s*@fluxbase:rate-limit\s+(\d+)/(min|hour|day)\s*$`)
-	if matches := rateLimitPattern.FindStringSubmatch(code); len(matches) > 2 {
-		if value, err := strconv.Atoi(matches[1]); err == nil {
-			unit := matches[2]
-			switch unit {
-			case "min":
-				config.RateLimitPerMinute = &value
-				log.Debug().Int("rate_limit", value).Str("unit", unit).Msg("Found @fluxbase:rate-limit directive")
-			case "hour":
-				config.RateLimitPerHour = &value
-				log.Debug().Int("rate_limit", value).Str("unit", unit).Msg("Found @fluxbase:rate-limit directive")
-			case "day":
-				config.RateLimitPerDay = &value
-				log.Debug().Int("rate_limit", value).Str("unit", unit).Msg("Found @fluxbase:rate-limit directive")
+	for _, matches := range rateLimitPattern.FindAllStringSubmatch(code, -1) {
+		if len(matches) > 2 {
+			if value, err := strconv.Atoi(matches[1]); err == nil {
+				unit := matches[2]
+				switch unit {
+				case "min":
+					config.RateLimitPerMinute = &value
+					log.Debug().Int("rate_limit", value).Str("unit", unit).Msg("Found @fluxbase:rate-limit directive")
+				case "hour":
+					config.RateLimitPerHour = &value
+					log.Debug().Int("rate_limit", value).Str("unit", unit).Msg("Found @fluxbase:rate-limit directive")
+				case "day":
+					config.RateLimitPerDay = &value
+					log.Debug().Int("rate_limit", value).Str("unit", unit).Msg("Found @fluxbase:rate-limit directive")
+				}
 			}
 		}
 	}
