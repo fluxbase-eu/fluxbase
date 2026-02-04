@@ -463,8 +463,7 @@ func TestProgressToJSON(t *testing.T) {
 
 	t.Run("basic progress", func(t *testing.T) {
 		progress := &Progress{
-			Current: 50,
-			Total:   100,
+			Percent: 50,
 			Message: "Processing...",
 		}
 
@@ -472,17 +471,17 @@ func TestProgressToJSON(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		assert.Contains(t, *result, `"current":50`)
-		assert.Contains(t, *result, `"total":100`)
+		assert.Contains(t, *result, `"percent":50`)
 		assert.Contains(t, *result, `"message":"Processing..."`)
 	})
 
 	t.Run("progress with all fields", func(t *testing.T) {
+		estSeconds := 30
 		progress := &Progress{
-			Current: 75,
-			Total:   100,
-			Message: "Almost done",
-			Details: map[string]interface{}{
+			Percent:              75,
+			Message:              "Almost done",
+			EstimatedSecondsLeft: &estSeconds,
+			Data: map[string]interface{}{
 				"items_processed": 75,
 				"errors":          0,
 			},
@@ -497,14 +496,13 @@ func TestProgressToJSON(t *testing.T) {
 		err = json.Unmarshal([]byte(*result), &parsed)
 		require.NoError(t, err)
 
-		assert.Equal(t, float64(75), parsed["current"])
-		assert.Equal(t, float64(100), parsed["total"])
+		assert.Equal(t, float64(75), parsed["percent"])
+		assert.Equal(t, float64(30), parsed["estimated_seconds_left"])
 	})
 
 	t.Run("progress with zero values", func(t *testing.T) {
 		progress := &Progress{
-			Current: 0,
-			Total:   0,
+			Percent: 0,
 			Message: "",
 		}
 
@@ -520,8 +518,7 @@ func TestProgressToJSON(t *testing.T) {
 
 	t.Run("progress with special characters", func(t *testing.T) {
 		progress := &Progress{
-			Current: 10,
-			Total:   20,
+			Percent: 50,
 			Message: `Processing "file.txt" with special chars: <>&`,
 		}
 
@@ -556,13 +553,12 @@ func TestJSONToProgress(t *testing.T) {
 	})
 
 	t.Run("valid JSON parses correctly", func(t *testing.T) {
-		jsonStr := `{"current":50,"total":100,"message":"Half done"}`
+		jsonStr := `{"percent":50,"message":"Half done"}`
 		result, err := JSONToProgress(&jsonStr)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		assert.Equal(t, int64(50), result.Current)
-		assert.Equal(t, int64(100), result.Total)
+		assert.Equal(t, 50, result.Percent)
 		assert.Equal(t, "Half done", result.Message)
 	})
 
@@ -574,42 +570,42 @@ func TestJSONToProgress(t *testing.T) {
 	})
 
 	t.Run("partial JSON parses available fields", func(t *testing.T) {
-		partialJSON := `{"current":25}`
+		partialJSON := `{"percent":25}`
 		result, err := JSONToProgress(&partialJSON)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		assert.Equal(t, int64(25), result.Current)
-		assert.Equal(t, int64(0), result.Total)
+		assert.Equal(t, 25, result.Percent)
 		assert.Equal(t, "", result.Message)
 	})
 
 	t.Run("JSON with extra fields ignores unknown fields", func(t *testing.T) {
-		jsonWithExtra := `{"current":10,"total":20,"message":"test","unknown_field":"ignored"}`
+		jsonWithExtra := `{"percent":50,"message":"test","unknown_field":"ignored"}`
 		result, err := JSONToProgress(&jsonWithExtra)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		assert.Equal(t, int64(10), result.Current)
-		assert.Equal(t, int64(20), result.Total)
+		assert.Equal(t, 50, result.Percent)
+		assert.Equal(t, "test", result.Message)
 	})
 
-	t.Run("JSON with details", func(t *testing.T) {
-		jsonStr := `{"current":5,"total":10,"message":"Processing","details":{"batch":1}}`
+	t.Run("JSON with data", func(t *testing.T) {
+		jsonStr := `{"percent":50,"message":"Processing","data":{"batch":1}}`
 		result, err := JSONToProgress(&jsonStr)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		assert.Equal(t, int64(5), result.Current)
-		assert.NotNil(t, result.Details)
+		assert.Equal(t, 50, result.Percent)
+		assert.NotNil(t, result.Data)
 	})
 
 	t.Run("roundtrip ProgressToJSON and JSONToProgress", func(t *testing.T) {
+		estSeconds := 60
 		original := &Progress{
-			Current: 42,
-			Total:   100,
-			Message: "Processing items",
-			Details: map[string]interface{}{
+			Percent:              42,
+			Message:              "Processing items",
+			EstimatedSecondsLeft: &estSeconds,
+			Data: map[string]interface{}{
 				"processed": float64(42),
 			},
 		}
@@ -620,8 +616,8 @@ func TestJSONToProgress(t *testing.T) {
 		parsed, err := JSONToProgress(jsonStr)
 		require.NoError(t, err)
 
-		assert.Equal(t, original.Current, parsed.Current)
-		assert.Equal(t, original.Total, parsed.Total)
+		assert.Equal(t, original.Percent, parsed.Percent)
 		assert.Equal(t, original.Message, parsed.Message)
+		assert.Equal(t, *original.EstimatedSecondsLeft, *parsed.EstimatedSecondsLeft)
 	})
 }
