@@ -18,29 +18,31 @@ After detailed analysis, the codebase has **extensive test coverage** across all
 | Email | 8 files | ✅ Comprehensive |
 | Jobs | 7 files | ✅ Comprehensive |
 | Ratelimit | 6 files | ✅ Comprehensive |
-| AI | 5 files | ✅ Extended this session |
+| AI | 5 files | ✅ Extended (+150 lines) |
+| Database | 5 files | ✅ Extended (+190 lines) |
 | Pubsub | 5 files | ✅ Comprehensive |
 | Auth | Multiple | ✅ Comprehensive |
 | Config | 3 files | ✅ Comprehensive |
 | Migrations | 3 files | ✅ Comprehensive |
-| Extensions | 3 files | ✅ Comprehensive |
+| Extensions | 3 files | ✅ Extended (+200 lines) |
 | Webhook | 3 files | ✅ Comprehensive |
+| Secrets | 2 files | ✅ Extended (+210 lines) |
 | Branching | 2 files | ✅ Comprehensive |
 | Crypto | 1 file | ✅ Comprehensive (550+ lines) |
-| Settings | 1 file | ✅ Extended this session |
+| Settings | 1 file | ✅ Extended (+200 lines) |
 | Scaling | 1 file | ✅ Comprehensive |
 
 ---
 
-## Tests Added This Session
+## Tests Added This Session (~950 new lines total)
 
-### internal/ai/handler_test.go (~150 new lines):
+### internal/ai/handler_test.go (~150 lines):
 - `TestHandler_ValidateConfig` - 11 test cases for all provider types
 - `MockVectorManager` and `TestVectorManagerInterface`
 - `TestHandler_Fields`
 - `BenchmarkNormalizeConfig` - 3 benchmark variants
 
-### internal/settings/custom_settings_test.go (~200 new lines):
+### internal/settings/custom_settings_test.go (~200 lines):
 - `TestSecretSettingMetadata_Struct`
 - `TestCreateSecretSettingRequest_Struct`
 - `TestUpdateSecretSettingRequest_Struct`
@@ -49,6 +51,33 @@ After detailed analysis, the codebase has **extensive test coverage** across all
 - `TestCreateUserSettingRequest_Struct`
 - `TestUpdateUserSettingRequest_Struct`
 - `BenchmarkCanEditSetting` - 4 benchmark variants
+
+### internal/database/errors_test.go (~190 lines):
+- `TestErrorCodes_AllConstants` - code distinctness and PostgreSQL standard
+- `TestPgError_FullFields` - complete error field testing
+- `TestWrappedErrors` - error wrapping detection
+- `TestErrorCategorization` - comprehensive error type checks
+- 6 benchmark tests for error detection functions
+
+### internal/secrets/storage_test.go (~210 lines):
+- `TestSecretNameValidation` - name validation rules
+- `TestSecret_EdgeCases` - optional fields and expiration
+- `TestStorage_Initialization` - storage setup validation
+- 5 benchmark tests for struct creation and encryption
+
+### internal/extensions/handler_test.go (~80 lines):
+- `TestHandler_Fields` - field initialization
+- `TestHandler_Methods` - method definition verification
+- `TestHandler_ServiceDependency` - service sharing tests
+- `BenchmarkNewHandler` - 2 benchmark variants
+
+### internal/extensions/models_test.go (~120 lines):
+- `TestExtension_EdgeCases` - empty names, special characters
+- `TestListExtensionsResponse_EdgeCases` - empty/nil slices
+- `BenchmarkExtension_Creation`
+- `BenchmarkCategory_Creation`
+- `BenchmarkCategoryDisplayNames_Lookup`
+- `BenchmarkListExtensionsResponse_Creation`
 
 ---
 
