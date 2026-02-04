@@ -492,7 +492,7 @@ func TestActivityConstants(t *testing.T) {
 	})
 
 	t.Run("activity actions are distinct", func(t *testing.T) {
-		actions := []string{
+		actions := []ActivityAction{
 			ActivityActionCreated,
 			ActivityActionDeleted,
 			ActivityActionReset,
@@ -500,7 +500,7 @@ func TestActivityConstants(t *testing.T) {
 			ActivityActionSeeding,
 		}
 
-		seen := make(map[string]bool)
+		seen := make(map[ActivityAction]bool)
 		for _, action := range actions {
 			assert.False(t, seen[action], "Duplicate action: %s", action)
 			seen[action] = true
@@ -508,13 +508,13 @@ func TestActivityConstants(t *testing.T) {
 	})
 
 	t.Run("activity statuses are distinct", func(t *testing.T) {
-		statuses := []string{
+		statuses := []ActivityStatus{
 			ActivityStatusStarted,
 			ActivityStatusSuccess,
 			ActivityStatusFailed,
 		}
 
-		seen := make(map[string]bool)
+		seen := make(map[ActivityStatus]bool)
 		for _, status := range statuses {
 			assert.False(t, seen[status], "Duplicate status: %s", status)
 			seen[status] = true
