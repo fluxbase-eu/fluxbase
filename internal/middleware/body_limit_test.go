@@ -616,12 +616,12 @@ func TestBodyLimitsFromConfig_NegativeValues(t *testing.T) {
 }
 
 func TestBodyLimitsFromConfig_CustomValues(t *testing.T) {
-	customDefault := int64(2 * 1024 * 1024)     // 2MB
-	customREST := int64(5 * 1024 * 1024)        // 5MB
-	customAuth := int64(128 * 1024)             // 128KB
-	customStorage := int64(1024 * 1024 * 1024)  // 1GB
-	customBulk := int64(50 * 1024 * 1024)       // 50MB
-	customAdmin := int64(20 * 1024 * 1024)      // 20MB
+	customDefault := int64(2 * 1024 * 1024)    // 2MB
+	customREST := int64(5 * 1024 * 1024)       // 5MB
+	customAuth := int64(128 * 1024)            // 128KB
+	customStorage := int64(1024 * 1024 * 1024) // 1GB
+	customBulk := int64(50 * 1024 * 1024)      // 50MB
+	customAdmin := int64(20 * 1024 * 1024)     // 20MB
 	customJSONDepth := 128
 
 	config := BodyLimitsFromConfig(

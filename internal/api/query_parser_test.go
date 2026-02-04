@@ -1409,10 +1409,10 @@ func TestParseVectorOrder(t *testing.T) {
 	parser := NewQueryParser(testConfig())
 
 	tests := []struct {
-		name     string
-		order    string
-		want     OrderBy
-		wantOK   bool
+		name   string
+		order  string
+		want   OrderBy
+		wantOK bool
 	}{
 		{
 			name:  "vector L2 order ascending",

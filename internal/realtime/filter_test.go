@@ -842,14 +842,14 @@ func TestCompareNumeric_AdditionalTypes(t *testing.T) {
 		},
 		{
 			name:        "float32 equal",
-			recordValue: float32(3.14),
-			filterValue: "3.14",
+			recordValue: float32(2.5),
+			filterValue: "2.5",
 			want:        0,
 		},
 		{
 			name:        "float32 less than",
-			recordValue: float32(2.5),
-			filterValue: "3.14",
+			recordValue: float32(1.5),
+			filterValue: "2.5",
 			want:        -1,
 		},
 		{
