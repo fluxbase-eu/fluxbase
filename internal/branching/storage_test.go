@@ -550,14 +550,14 @@ func TestActivityLog_Struct(t *testing.T) {
 	t.Run("creates activity log", func(t *testing.T) {
 		branchID := uuid.New()
 		userID := uuid.New()
-		durationMs := int64(1500)
+		durationMs := 1500
 		errorMsg := "test error"
 
 		log := ActivityLog{
 			ID:           uuid.New(),
 			BranchID:     branchID,
-			Action:       "create",
-			Status:       "completed",
+			Action:       ActivityActionCreated,
+			Status:       ActivityStatusSuccess,
 			Details:      map[string]interface{}{"key": "value"},
 			ErrorMessage: &errorMsg,
 			ExecutedBy:   &userID,
@@ -567,11 +567,11 @@ func TestActivityLog_Struct(t *testing.T) {
 
 		assert.NotEqual(t, uuid.Nil, log.ID)
 		assert.Equal(t, branchID, log.BranchID)
-		assert.Equal(t, "create", log.Action)
-		assert.Equal(t, "completed", log.Status)
+		assert.Equal(t, ActivityActionCreated, log.Action)
+		assert.Equal(t, ActivityStatusSuccess, log.Status)
 		assert.NotNil(t, log.Details)
 		assert.Equal(t, "test error", *log.ErrorMessage)
-		assert.Equal(t, int64(1500), *log.DurationMs)
+		assert.Equal(t, 1500, *log.DurationMs)
 	})
 }
 
@@ -583,18 +583,19 @@ func TestMigrationHistory_Struct(t *testing.T) {
 	t.Run("creates migration history", func(t *testing.T) {
 		branchID := uuid.New()
 
+		migrationName := "add_users_table"
 		mh := MigrationHistory{
 			ID:               uuid.New(),
 			BranchID:         branchID,
 			MigrationVersion: 42,
-			MigrationName:    "add_users_table",
+			MigrationName:    &migrationName,
 			AppliedAt:        time.Now(),
 		}
 
 		assert.NotEqual(t, uuid.Nil, mh.ID)
 		assert.Equal(t, branchID, mh.BranchID)
 		assert.Equal(t, int64(42), mh.MigrationVersion)
-		assert.Equal(t, "add_users_table", mh.MigrationName)
+		assert.Equal(t, "add_users_table", *mh.MigrationName)
 	})
 }
 

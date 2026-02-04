@@ -405,8 +405,8 @@ func TestStorage_Initialization(t *testing.T) {
 		key := "12345678901234567890123456789012"
 		storage := NewStorage(nil, key)
 
-		if storage.pool != nil {
-			t.Error("pool should be nil when initialized with nil")
+		if storage.db != nil {
+			t.Error("db should be nil when initialized with nil")
 		}
 		if storage.encryptionKey != key {
 			t.Error("encryption key should match input")
