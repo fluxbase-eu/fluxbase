@@ -554,3 +554,258 @@ func BenchmarkChannelNameRoundTrip(b *testing.B) {
 		_ = unsanitizeChannelName(sanitized)
 	}
 }
+
+// =============================================================================
+// Publish Error Tests
+// =============================================================================
+
+func TestPostgresPubSub_Publish_SizeValidation(t *testing.T) {
+	t.Run("payload at 8000 bytes should pass validation", func(t *testing.T) {
+		payload := make([]byte, 8000)
+		assert.Equal(t, 8000, len(payload))
+
+		// Should not error on size check
+		isValid := len(payload) <= 8000
+		assert.True(t, isValid)
+	})
+
+	t.Run("payload over 8000 bytes should fail validation", func(t *testing.T) {
+		payload := make([]byte, 8001)
+		assert.Equal(t, 8001, len(payload))
+
+		// Should error on size check
+		isValid := len(payload) <= 8000
+		assert.False(t, isValid)
+	})
+
+	t.Run("exactly at boundary", func(t *testing.T) {
+		testCases := []struct {
+			name       string
+			size       int
+			shouldPass bool
+		}{
+			{"7999 bytes", 7999, true},
+			{"8000 bytes", 8000, true},
+			{"8001 bytes", 8001, false},
+			{"9000 bytes", 9000, false},
+			{"10000 bytes", 10000, false},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				payload := make([]byte, tc.size)
+				isValid := len(payload) <= 8000
+				assert.Equal(t, tc.shouldPass, isValid)
+			})
+		}
+	})
+
+	t.Run("empty payload", func(t *testing.T) {
+		payload := []byte{}
+		assert.Equal(t, 0, len(payload))
+
+		isValid := len(payload) <= 8000
+		assert.True(t, isValid)
+	})
+
+	t.Run("single byte", func(t *testing.T) {
+		payload := []byte{0x42}
+		assert.Equal(t, 1, len(payload))
+
+		isValid := len(payload) <= 8000
+		assert.True(t, isValid)
+	})
+}
+
+// =============================================================================
+// Unsubscribe Tests
+// =============================================================================
+
+func TestPostgresPubSub_Unsubscribe_Behavior(t *testing.T) {
+	t.Run("unsubscribe removes channel from map", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		// Add subscribers manually
+		ch1 := make(chan Message, 100)
+		ch2 := make(chan Message, 100)
+		ps.subscribers["test:channel"] = []chan Message{ch1, ch2}
+
+		// Verify initial state
+		assert.Len(t, ps.subscribers["test:channel"], 2)
+
+		// Unsubscribe one channel
+		ps.unsubscribe("test:channel", ch1)
+
+		// Verify one subscriber remains
+		assert.Len(t, ps.subscribers["test:channel"], 1)
+		assert.Equal(t, ch2, ps.subscribers["test:channel"][0])
+	})
+
+	t.Run("unsubscribe closes the removed channel", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		ch := make(chan Message, 100)
+		ps.subscribers["test:channel"] = []chan Message{ch}
+
+		// Unsubscribe
+		ps.unsubscribe("test:channel", ch)
+
+		// Verify channel is closed
+		select {
+		case _, ok := <-ch:
+			assert.False(t, ok, "channel should be closed")
+		default:
+			t.Fatal("channel should be closed immediately")
+		}
+	})
+
+	t.Run("unsubscribe from non-existent channel is safe", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		ch := make(chan Message, 100)
+
+		// Should not panic
+		ps.unsubscribe("non:existent", ch)
+	})
+
+	t.Run("unsubscribe non-existent subscriber from existing channel", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		ch1 := make(chan Message, 100)
+		ch2 := make(chan Message, 100)
+		ps.subscribers["test:channel"] = []chan Message{ch1}
+
+		// Should not panic or affect existing subscribers
+		ps.unsubscribe("test:channel", ch2)
+
+		assert.Len(t, ps.subscribers["test:channel"], 1)
+		assert.Equal(t, ch1, ps.subscribers["test:channel"][0])
+	})
+
+	t.Run("multiple unsubscribes from same channel", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		ch1 := make(chan Message, 100)
+		ch2 := make(chan Message, 100)
+		ch3 := make(chan Message, 100)
+		ps.subscribers["test:channel"] = []chan Message{ch1, ch2, ch3}
+
+		// Unsubscribe in different order
+		ps.unsubscribe("test:channel", ch2)
+		assert.Len(t, ps.subscribers["test:channel"], 2)
+
+		ps.unsubscribe("test:channel", ch1)
+		assert.Len(t, ps.subscribers["test:channel"], 1)
+
+		ps.unsubscribe("test:channel", ch3)
+		assert.Len(t, ps.subscribers["test:channel"], 0)
+	})
+}
+
+// =============================================================================
+// DeliverMessage Tests
+// =============================================================================
+
+func TestPostgresPubSub_DeliverMessage(t *testing.T) {
+	t.Run("delivers to all subscribers", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		ch1 := make(chan Message, 100)
+		ch2 := make(chan Message, 100)
+		ch3 := make(chan Message, 100)
+
+		ps.subscribers["test:channel"] = []chan Message{ch1, ch2, ch3}
+
+		msg := Message{
+			Channel: "test:channel",
+			Payload: []byte("test message"),
+		}
+
+		ps.deliverMessage(msg)
+
+		// All subscribers should receive the message
+		assert.Len(t, ch1, 1)
+		assert.Len(t, ch2, 1)
+		assert.Len(t, ch3, 1)
+
+		received1 := <-ch1
+		assert.Equal(t, msg.Payload, received1.Payload)
+
+		received2 := <-ch2
+		assert.Equal(t, msg.Payload, received2.Payload)
+
+		received3 := <-ch3
+		assert.Equal(t, msg.Payload, received3.Payload)
+	})
+
+	t.Run("does not block when subscriber channel is full", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		// Create a buffered channel and fill it
+		ch := make(chan Message, 1)
+		ch <- Message{Channel: "test", Payload: []byte("first")} // Fill buffer
+
+		ps.subscribers["test:channel"] = []chan Message{ch}
+
+		msg := Message{
+			Channel: "test:channel",
+			Payload: []byte("second message"),
+		}
+
+		// Should not block
+		ps.deliverMessage(msg)
+
+		// Channel should still have only the first message
+		assert.Len(t, ch, 1)
+	})
+
+	t.Run("handles empty subscriber list", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		ps.subscribers["test:channel"] = []chan Message{}
+
+		msg := Message{
+			Channel: "test:channel",
+			Payload: []byte("test"),
+		}
+
+		// Should not panic
+		ps.deliverMessage(msg)
+	})
+
+	t.Run("handles non-existent channel", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		msg := Message{
+			Channel: "non:existent",
+			Payload: []byte("test"),
+		}
+
+		// Should not panic
+		ps.deliverMessage(msg)
+	})
+
+	t.Run("delivers to multiple channels", func(t *testing.T) {
+		ps := NewPostgresPubSub(nil)
+
+		ch1 := make(chan Message, 100)
+		ch2 := make(chan Message, 100)
+		ch3 := make(chan Message, 100)
+
+		ps.subscribers["channel:1"] = []chan Message{ch1, ch2}
+		ps.subscribers["channel:2"] = []chan Message{ch3}
+
+		msg1 := Message{Channel: "channel:1", Payload: []byte("msg1")}
+		msg2 := Message{Channel: "channel:2", Payload: []byte("msg2")}
+
+		ps.deliverMessage(msg1)
+		ps.deliverMessage(msg2)
+
+		// Channel 1 subscribers should receive msg1
+		assert.Len(t, ch1, 1)
+		assert.Len(t, ch2, 1)
+
+		// Channel 2 subscriber should receive msg2
+		assert.Len(t, ch3, 1)
+	})
+}

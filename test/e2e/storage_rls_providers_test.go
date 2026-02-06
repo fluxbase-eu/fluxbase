@@ -25,8 +25,10 @@ func TestStorageRLS_StorageProviders(t *testing.T) {
 
 	for _, provider := range providers {
 		t.Run(provider, func(t *testing.T) {
+			// Use shared RLS context to avoid creating multiple connection pools
+			// NewRLSTestContext will automatically reset RLS state between sub-tests
 			tc := test.NewRLSTestContext(t)
-			defer tc.Close()
+			// NO defer tc.Close() - shared context is managed by TestMain
 
 			// Configure storage provider
 			tc.Config.Storage.Provider = provider
