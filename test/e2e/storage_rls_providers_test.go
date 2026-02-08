@@ -52,7 +52,8 @@ func TestStorageRLS_StorageProviders(t *testing.T) {
 			// Create service key and bucket
 			serviceKey := tc.CreateServiceKey("test-bucket-creation")
 
-			bucketName := "test-bucket"
+			// Use unique bucket name to avoid conflicts between provider tests
+			bucketName := "test-bucket-" + test.RandomString(8)
 			tc.NewRequest("POST", "/api/v1/storage/buckets/"+bucketName).
 				WithServiceKey(serviceKey).
 				Send().

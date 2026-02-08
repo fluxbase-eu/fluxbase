@@ -328,7 +328,7 @@ func ReadBody(t *testing.T, r io.ReadCloser) string {
 
 	data, err := io.ReadAll(r)
 	require.NoError(t, err, "Failed to read body")
-	r.Close()
+	_ = r.Close() // Best effort close, body already read
 
 	return string(data)
 }

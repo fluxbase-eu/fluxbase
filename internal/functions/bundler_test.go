@@ -926,57 +926,57 @@ func TestSanitizeAndValidatePath(t *testing.T) {
 	baseDir := "/tmp/functions-test"
 
 	tests := []struct {
-		name        string
-		baseDir     string
+		name         string
+		baseDir      string
 		relativePath string
-		expectError bool
-		errContains string
+		expectError  bool
+		errContains  string
 	}{
 		{
-			name:        "valid path within base",
-			baseDir:     baseDir,
+			name:         "valid path within base",
+			baseDir:      baseDir,
 			relativePath: "utils/helper.ts",
-			expectError: false,
+			expectError:  false,
 		},
 		{
-			name:        "nested valid path",
-			baseDir:     baseDir,
+			name:         "nested valid path",
+			baseDir:      baseDir,
 			relativePath: "modules/auth/middleware.ts",
-			expectError: false,
+			expectError:  false,
 		},
 		{
-			name:        "path with dot segments but stays within",
-			baseDir:     baseDir,
+			name:         "path with dot segments but stays within",
+			baseDir:      baseDir,
 			relativePath: "utils/./helper.ts",
-			expectError: false,
+			expectError:  false,
 		},
 		{
-			name:        "escapes base directory - caught by validateModulePath",
-			baseDir:     baseDir,
+			name:         "escapes base directory - caught by validateModulePath",
+			baseDir:      baseDir,
 			relativePath: "../etc/passwd",
-			expectError: true,
-			errContains: "path traversal",
+			expectError:  true,
+			errContains:  "path traversal",
 		},
 		{
-			name:        "complex escape path - caught by validateModulePath",
-			baseDir:     baseDir,
+			name:         "complex escape path - caught by validateModulePath",
+			baseDir:      baseDir,
 			relativePath: "utils/../../../etc/passwd",
-			expectError: true,
-			errContains: "path traversal",
+			expectError:  true,
+			errContains:  "path traversal",
 		},
 		{
-			name:        "null byte injection",
-			baseDir:     baseDir,
+			name:         "null byte injection",
+			baseDir:      baseDir,
 			relativePath: "utils\x00passwd",
-			expectError: true,
-			errContains: "null byte",
+			expectError:  true,
+			errContains:  "null byte",
 		},
 		{
-			name:        "absolute path rejected",
-			baseDir:     baseDir,
+			name:         "absolute path rejected",
+			baseDir:      baseDir,
 			relativePath: "/etc/passwd",
-			expectError: true,
-			errContains: "absolute paths",
+			expectError:  true,
+			errContains:  "absolute paths",
 		},
 	}
 

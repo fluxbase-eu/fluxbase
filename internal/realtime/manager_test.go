@@ -863,8 +863,16 @@ func TestManager_GetConnectionsForStats(t *testing.T) {
 		connections := manager.GetConnectionsForStats()
 
 		assert.Len(t, connections, 2)
-		assert.Equal(t, "conn1", connections[0].ID)
-		assert.Equal(t, "conn2", connections[1].ID)
+
+		// Connections may be returned in any order since they're stored in a map
+		// Create a map of connection IDs for order-independent comparison
+		connIDs := make(map[string]bool)
+		for _, conn := range connections {
+			connIDs[conn.ID] = true
+		}
+
+		assert.True(t, connIDs["conn1"], "conn1 should be present")
+		assert.True(t, connIDs["conn2"], "conn2 should be present")
 	})
 }
 

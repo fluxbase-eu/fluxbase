@@ -850,8 +850,8 @@ func TestEscapeLiteral_EdgeCases(t *testing.T) {
 			expected: `'it''s a "test"'`,
 		},
 		{
-			name:     "newlines",
-			input:    "line1\nline2",
+			name:  "newlines",
+			input: "line1\nline2",
 			expected: `'line1
 line2'`,
 		},

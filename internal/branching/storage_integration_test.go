@@ -24,13 +24,13 @@ func TestStorage_CreateBranch_Integration(t *testing.T) {
 
 	t.Run("creates branch successfully", func(t *testing.T) {
 		branch := &Branch{
-			ID:             uuid.New(),
-			Name:           fmt.Sprintf("test-branch-%s", uuid.New().String()),
-			Slug:           fmt.Sprintf("test-branch-%s", uuid.New().String()),
-			DatabaseName:   "test_db",
-			Status:         BranchStatusReady,
-			Type:           BranchTypePreview,
-			DataCloneMode:  DataCloneModeSchemaOnly,
+			ID:            uuid.New(),
+			Name:          fmt.Sprintf("test-branch-%s", uuid.New().String()),
+			Slug:          fmt.Sprintf("test-branch-%s", uuid.New().String()),
+			DatabaseName:  "test_db",
+			Status:        BranchStatusReady,
+			Type:          BranchTypePreview,
+			DataCloneMode: DataCloneModeSchemaOnly,
 		}
 
 		err := storage.CreateBranch(context.Background(), branch)

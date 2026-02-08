@@ -14,9 +14,9 @@ import (
 // =============================================================================
 
 type MockExecutor struct {
-	queryFunc  func(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+	queryFunc    func(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	queryRowFunc func(ctx context.Context, sql string, args ...interface{}) pgx.Row
-	execFunc   func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
+	execFunc     func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 }
 
 func (m *MockExecutor) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {

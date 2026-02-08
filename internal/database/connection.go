@@ -601,7 +601,7 @@ func (c *Connection) applyMigrations(m *migrate.Migrate, source string) error {
 	// If database is in dirty state, force the version to clean it
 	if dirty {
 		log.Warn().Str("source", source).Uint("version", version).Msg("Database is in dirty state, forcing version to clean")
-		if err := m.Force(int(version)); err != nil {
+		if err := m.Force(int(version)); err != nil { // #nosec G104 - Migration versions are small (<100K)
 			return fmt.Errorf("failed to force migration version: %w", err)
 		}
 	}

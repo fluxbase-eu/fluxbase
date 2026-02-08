@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/joho/godotenv"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

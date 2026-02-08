@@ -531,8 +531,6 @@ func (m *MockSAMLService) MarkAssertionUsed(assertionID string) {
 
 // MockOAuthProvider implements OAuth provider functionality for testing
 type MockOAuthProvider struct {
-	mu sync.RWMutex
-
 	// Callbacks for custom behavior
 	AuthURLFunc  func(state string) string
 	ExchangeFunc func(token string) (*OAuthToken, error)
@@ -647,6 +645,7 @@ func (m *MockTOTPValidator) Generate() (string, []byte, error) {
 	if m.ShouldError {
 		return "", nil, errors.New(m.ErrorMessage)
 	}
+	//nolint:gosec // Test mock data, not real credentials
 	secret := "JBSWY3DPEHPK3PXP"
 	qrCode := []byte("mock-qr-code-data")
 	return secret, qrCode, nil
@@ -859,8 +858,6 @@ func (m *MockVectorDatabase) Delete(ids []string) error {
 
 // MockOpenAIClient implements OpenAI client for testing
 type MockOpenAIClient struct {
-	mu sync.RWMutex
-
 	// Callbacks for custom behavior
 	ChatCompletionFunc func(ctx context.Context, messages []interface{}, opts map[string]interface{}) (string, error)
 	EmbeddingFunc      func(ctx context.Context, texts []string) ([][]float32, error)
@@ -938,8 +935,6 @@ func NewMockOllamaClient() *MockOllamaClient {
 
 // MockRuntime implements Deno runtime for testing
 type MockRuntime struct {
-	mu sync.RWMutex
-
 	// Callbacks for custom behavior
 	ExecuteFunc func(code string, env map[string]string) (string, error)
 	BundleFunc  func(entryPoint string) (string, []byte, error)
@@ -989,8 +984,6 @@ func (m *MockRuntime) Bundle(entryPoint string) (string, []byte, error) {
 
 // MockOCRProvider implements OCR for testing
 type MockOCRProvider struct {
-	mu sync.RWMutex
-
 	// Callbacks for custom behavior
 	ExtractPDFFunc   func(ctx context.Context, data []byte, languages []string) (string, error)
 	ExtractImageFunc func(ctx context.Context, data []byte, languages []string) (string, error)

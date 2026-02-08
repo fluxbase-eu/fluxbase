@@ -610,9 +610,9 @@ func TestValidateKey_EdgeCases(t *testing.T) {
 func TestCustomSetting_MetadataHandling(t *testing.T) {
 	t.Run("nil metadata is handled", func(t *testing.T) {
 		setting := CustomSetting{
-			ID:     uuid.New(),
-			Key:    "custom.test",
-			Value:  map[string]interface{}{},
+			ID:       uuid.New(),
+			Key:      "custom.test",
+			Value:    map[string]interface{}{},
 			Metadata: nil,
 		}
 

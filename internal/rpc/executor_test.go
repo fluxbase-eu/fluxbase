@@ -363,6 +363,32 @@ func TestFormatVectorLiteralInterface(t *testing.T) {
 		assert.Contains(t, result, "'[")
 		assert.Contains(t, result, "]'::vector")
 	})
+
+	t.Run("formats float32 elements", func(t *testing.T) {
+		result := formatVectorLiteralInterface([]interface{}{float32(0.1), float32(0.2)})
+		assert.Equal(t, "'[0.1,0.2]'::vector", result)
+	})
+
+	t.Run("formats int32 elements", func(t *testing.T) {
+		result := formatVectorLiteralInterface([]interface{}{int32(1), int32(2)})
+		assert.Equal(t, "'[1,2]'::vector", result)
+	})
+
+	t.Run("handles unknown types with default formatting", func(t *testing.T) {
+		// This tests the default case in the switch statement
+		// Using uint which would fall into the default case
+		result := formatVectorLiteralInterface([]interface{}{uint(1), uint(2)})
+		assert.Contains(t, result, "'[")
+		assert.Contains(t, result, "]'::vector")
+		assert.Contains(t, result, "1")
+		assert.Contains(t, result, "2")
+	})
+
+	t.Run("handles mixed types with float32", func(t *testing.T) {
+		result := formatVectorLiteralInterface([]interface{}{float32(1.5), int64(2), float64(3.5)})
+		assert.Contains(t, result, "'[")
+		assert.Contains(t, result, "]'::vector")
+	})
 }
 
 // =============================================================================

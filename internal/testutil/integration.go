@@ -1,3 +1,5 @@
+//go:build integration && !no_e2e
+
 // Package testutil provides shared test utilities and mocks for unit testing.
 package testutil
 

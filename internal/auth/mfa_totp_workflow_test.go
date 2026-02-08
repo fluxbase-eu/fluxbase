@@ -26,10 +26,10 @@ func TestEnableMFA_Success(t *testing.T) {
 	assert.NotEmpty(t, otpauthURI, "OTPAuth URI should be generated")
 
 	// Generate backup codes
-	backupCodes, hashedCodes, err := GenerateBackupCodes(10)
+	backupCodes, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
-	assert.Len(t, backupCodes, 10, "Should generate 10 backup codes")
-	assert.Len(t, hashedCodes, 10, "Should hash all backup codes")
+	assert.Len(t, backupCodes, 3, "Should generate 3 backup codes")
+	assert.Len(t, hashedCodes, 3, "Should hash all backup codes")
 
 	// Verify backup codes are unique
 	codeMap := make(map[string]bool)
@@ -212,7 +212,7 @@ func TestVerifyMFA_RateLimitExpires(t *testing.T) {
 // TestVerifyMFA_BackupCode tests backup code verification
 func TestVerifyMFA_BackupCode(t *testing.T) {
 	// Generate backup codes
-	plainCodes, hashedCodes, err := GenerateBackupCodes(10)
+	plainCodes, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Test each backup code
@@ -235,7 +235,7 @@ func TestVerifyMFA_BackupCode_OneTimeUse(t *testing.T) {
 	// This test simulates that behavior
 
 	// Generate backup codes
-	plainCodes, hashedCodes, err := GenerateBackupCodes(10)
+	plainCodes, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Use first backup code
@@ -338,12 +338,13 @@ func TestGenerateBackupCodes_Success(t *testing.T) {
 
 // TestGenerateBackupCodes_AlreadyExists tests regenerating backup codes
 func TestGenerateBackupCodes_AlreadyExists(t *testing.T) {
-	// Generate first set of codes
-	firstSet, firstHashes, err := GenerateBackupCodes(10)
+	// Use smaller code count for faster tests (especially with -race flag)
+	// Testing the "already exists" scenario doesn't require many codes
+	firstSet, firstHashes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Generate second set of codes
-	secondSet, secondHashes, err := GenerateBackupCodes(10)
+	secondSet, secondHashes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Verify they're different
@@ -364,7 +365,8 @@ func TestGenerateBackupCodes_AlreadyExists(t *testing.T) {
 
 // TestVerifyBackupCode_Success tests successful backup code verification
 func TestVerifyBackupCode_Success(t *testing.T) {
-	plainCodes, hashedCodes, err := GenerateBackupCodes(10)
+	// Use smaller code count for faster tests (especially with -race flag)
+	plainCodes, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Verify each code works
@@ -377,7 +379,7 @@ func TestVerifyBackupCode_Success(t *testing.T) {
 
 // TestVerifyBackupCode_AlreadyUsed tests that used backup codes can't be reused
 func TestVerifyBackupCode_AlreadyUsed(t *testing.T) {
-	plainCodes, hashedCodes, err := GenerateBackupCodes(10)
+	plainCodes, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Use a backup code
@@ -398,13 +400,13 @@ func TestVerifyBackupCode_AlreadyUsed(t *testing.T) {
 
 	// Verify used code is not in remaining codes
 	assert.NotContains(t, newPlainCodes, usedCode)
-	assert.Len(t, newPlainCodes, 9)
-	assert.Len(t, newHashedCodes, 9)
+	assert.Len(t, newPlainCodes, 2)
+	assert.Len(t, newHashedCodes, 2)
 }
 
 // TestVerifyBackupCode_InvalidCode tests invalid backup codes
 func TestVerifyBackupCode_InvalidCode(t *testing.T) {
-	_, hashedCodes, err := GenerateBackupCodes(10)
+	_, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	invalidCodes := []string{
@@ -429,14 +431,14 @@ func TestVerifyBackupCode_InvalidCode(t *testing.T) {
 // TestRegenerateBackupCodes_Success tests regenerating backup codes
 func TestRegenerateBackupCodes_Success(t *testing.T) {
 	// Generate initial codes
-	initialCodes, initialHashes, err := GenerateBackupCodes(10)
+	initialCodes, initialHashes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
-	assert.Len(t, initialCodes, 10)
+	assert.Len(t, initialCodes, 3)
 
 	// "Regenerate" - generate new codes
-	newCodes, newHashes, err := GenerateBackupCodes(10)
+	newCodes, newHashes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
-	assert.Len(t, newCodes, 10)
+	assert.Len(t, newCodes, 3)
 
 	// Verify new codes are different
 	assert.NotEqual(t, initialCodes, newCodes, "Regenerated codes should be different")
@@ -524,7 +526,7 @@ func TestTOTPSetupResponse_Format(t *testing.T) {
 
 // TestBackupCodeSecurity tests backup code security properties
 func TestBackupCodeSecurity(t *testing.T) {
-	plainCodes, hashedCodes, err := GenerateBackupCodes(10)
+	plainCodes, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Test 1: Plain codes should be reversible
@@ -574,7 +576,7 @@ func TestMFAWorkflow_CompleteFlow(t *testing.T) {
 	assert.True(t, totpValid, "TOTP code should verify")
 
 	// Step 4: Generate backup codes
-	backupCodes, hashedCodes, err := GenerateBackupCodes(10)
+	backupCodes, hashedCodes, err := GenerateBackupCodes(3)
 	require.NoError(t, err)
 
 	// Step 5: User can use backup code instead of TOTP

@@ -1764,8 +1764,8 @@ func TestHandlerFactories_VariousTableConfigurations(t *testing.T) {
 	handler := &RESTHandler{}
 
 	tests := []struct {
-		name   string
-		table  database.TableInfo
+		name  string
+		table database.TableInfo
 	}{
 		{
 			name: "table with single primary key",
@@ -1960,9 +1960,9 @@ func TestBuildSelectQuery_QueryGeneration(t *testing.T) {
 		limit := 10
 		offset := 5
 		params := &QueryParams{
-			Select:  []string{"id", "name"},
-			Limit:   &limit,
-			Offset:  &offset,
+			Select: []string{"id", "name"},
+			Limit:  &limit,
+			Offset: &offset,
 		}
 
 		query, args := handler.buildSelectQuery(table, params)
