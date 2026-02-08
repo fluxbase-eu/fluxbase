@@ -31,7 +31,11 @@
       "Bash(head:*)",
       "Bash(do basename:*)",
       "Bash(go run:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(go clean:*)",
+      "Bash(git checkout:*)",
+      "Bash(wait:*)"
     ],
     "deny": [],
     "ask": []

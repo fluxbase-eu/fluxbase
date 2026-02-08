@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
@@ -1706,6 +1707,362 @@ func TestGetConflictTargetUnquoted_MoreScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := handler.getConflictTargetUnquoted(tt.table)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// =============================================================================
+// Additional Handler Coverage Tests
+// =============================================================================
+
+func TestHandlerFactories_CreatesNonNilHandlers(t *testing.T) {
+	handler := &RESTHandler{}
+
+	table := database.TableInfo{
+		Schema:     "public",
+		Name:       "items",
+		PrimaryKey: []string{"id"},
+		Columns: []database.ColumnInfo{
+			{Name: "id", DataType: "uuid"},
+			{Name: "name", DataType: "text"},
+		},
+	}
+
+	t.Run("makeGetHandler returns non-nil", func(t *testing.T) {
+		getHandler := handler.makeGetHandler(table)
+		assert.NotNil(t, getHandler)
+	})
+
+	t.Run("makeGetByIdHandler returns non-nil", func(t *testing.T) {
+		getByIdHandler := handler.makeGetByIdHandler(table)
+		assert.NotNil(t, getByIdHandler)
+	})
+
+	t.Run("makePostHandler returns non-nil", func(t *testing.T) {
+		postHandler := handler.makePostHandler(table)
+		assert.NotNil(t, postHandler)
+	})
+
+	t.Run("makePutHandler returns non-nil", func(t *testing.T) {
+		putHandler := handler.makePutHandler(table)
+		assert.NotNil(t, putHandler)
+	})
+
+	t.Run("makePatchHandler returns non-nil", func(t *testing.T) {
+		patchHandler := handler.makePatchHandler(table)
+		assert.NotNil(t, patchHandler)
+	})
+
+	t.Run("makeDeleteHandler returns non-nil", func(t *testing.T) {
+		deleteHandler := handler.makeDeleteHandler(table)
+		assert.NotNil(t, deleteHandler)
+	})
+}
+
+func TestHandlerFactories_VariousTableConfigurations(t *testing.T) {
+	handler := &RESTHandler{}
+
+	tests := []struct {
+		name   string
+		table  database.TableInfo
+	}{
+		{
+			name: "table with single primary key",
+			table: database.TableInfo{
+				Schema:     "public",
+				Name:       "users",
+				PrimaryKey: []string{"id"},
+				Columns: []database.ColumnInfo{
+					{Name: "id", DataType: "uuid"},
+					{Name: "email", DataType: "text"},
+				},
+			},
+		},
+		{
+			name: "table with composite primary key",
+			table: database.TableInfo{
+				Schema:     "public",
+				Name:       "user_roles",
+				PrimaryKey: []string{"user_id", "role_id"},
+				Columns: []database.ColumnInfo{
+					{Name: "user_id", DataType: "uuid"},
+					{Name: "role_id", DataType: "text"},
+				},
+			},
+		},
+		{
+			name: "table without primary key",
+			table: database.TableInfo{
+				Schema:     "public",
+				Name:       "logs",
+				PrimaryKey: []string{},
+				Columns: []database.ColumnInfo{
+					{Name: "message", DataType: "text"},
+					{Name: "timestamp", DataType: "timestamptz"},
+				},
+			},
+		},
+		{
+			name: "table with custom schema",
+			table: database.TableInfo{
+				Schema:     "my_schema",
+				Name:       "items",
+				PrimaryKey: []string{"id"},
+				Columns: []database.ColumnInfo{
+					{Name: "id", DataType: "integer"},
+					{Name: "name", DataType: "text"},
+				},
+			},
+		},
+		{
+			name: "table with many columns",
+			table: database.TableInfo{
+				Schema:     "public",
+				Name:       "products",
+				PrimaryKey: []string{"id"},
+				Columns: []database.ColumnInfo{
+					{Name: "id", DataType: "uuid"},
+					{Name: "name", DataType: "text"},
+					{Name: "description", DataType: "text"},
+					{Name: "price", DataType: "numeric"},
+					{Name: "stock", DataType: "integer"},
+					{Name: "created_at", DataType: "timestamptz"},
+					{Name: "updated_at", DataType: "timestamptz"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// All factory functions should create non-nil handlers
+			assert.NotNil(t, handler.makeGetHandler(tt.table))
+			assert.NotNil(t, handler.makeGetByIdHandler(tt.table))
+			assert.NotNil(t, handler.makePostHandler(tt.table))
+			assert.NotNil(t, handler.makePutHandler(tt.table))
+			assert.NotNil(t, handler.makePatchHandler(tt.table))
+			assert.NotNil(t, handler.makeDeleteHandler(tt.table))
+		})
+	}
+}
+
+func TestColumnExists_Validation(t *testing.T) {
+	handler := &RESTHandler{}
+
+	table := database.TableInfo{
+		Schema: "public",
+		Name:   "items",
+		Columns: []database.ColumnInfo{
+			{Name: "id", DataType: "uuid"},
+			{Name: "name", DataType: "text"},
+			{Name: "email", DataType: "text"},
+		},
+	}
+
+	t.Run("existing column returns true", func(t *testing.T) {
+		assert.True(t, handler.columnExists(table, "id"))
+		assert.True(t, handler.columnExists(table, "name"))
+		assert.True(t, handler.columnExists(table, "email"))
+	})
+
+	t.Run("non-existing column returns false", func(t *testing.T) {
+		assert.False(t, handler.columnExists(table, "unknown"))
+		assert.False(t, handler.columnExists(table, "password"))
+		assert.False(t, handler.columnExists(table, ""))
+	})
+
+	t.Run("case sensitive column names", func(t *testing.T) {
+		// Column names should be case sensitive
+		assert.False(t, handler.columnExists(table, "ID"))
+		assert.False(t, handler.columnExists(table, "Name"))
+		assert.False(t, handler.columnExists(table, "EMAIL"))
+	})
+}
+
+func TestBuildSelectQuery_QueryGeneration(t *testing.T) {
+	handler := &RESTHandler{
+		parser: NewQueryParser(&config.Config{}),
+	}
+
+	table := database.TableInfo{
+		Schema: "public",
+		Name:   "items",
+		Columns: []database.ColumnInfo{
+			{Name: "id", DataType: "uuid"},
+			{Name: "name", DataType: "text"},
+			{Name: "price", DataType: "numeric"},
+		},
+	}
+
+	t.Run("basic SELECT query", func(t *testing.T) {
+		params := &QueryParams{
+			Select: []string{"id", "name"},
+		}
+
+		query, args := handler.buildSelectQuery(table, params)
+		assert.Contains(t, query, "SELECT")
+		assert.Contains(t, query, "FROM")
+		assert.Contains(t, query, `"public"."items"`)
+		assert.NotEmpty(t, query)
+		_ = args // Just verify it returns args
+	})
+
+	t.Run("SELECT with WHERE clause", func(t *testing.T) {
+		limit := 10
+		params := &QueryParams{
+			Select:  []string{"id", "name"},
+			Filters: []Filter{{Column: "name", Operator: OpEqual, Value: "test"}},
+			Limit:   &limit,
+		}
+
+		query, args := handler.buildSelectQuery(table, params)
+		assert.Contains(t, query, "WHERE")
+		assert.NotEmpty(t, args)
+	})
+
+	t.Run("SELECT with ORDER BY", func(t *testing.T) {
+		params := &QueryParams{
+			Select: []string{"id", "name"},
+			Order:  []OrderBy{{Column: "name", Desc: false}},
+		}
+
+		query, args := handler.buildSelectQuery(table, params)
+		assert.Contains(t, query, "ORDER BY")
+		_ = args
+	})
+
+	t.Run("SELECT with ORDER BY DESC", func(t *testing.T) {
+		params := &QueryParams{
+			Select: []string{"id", "name"},
+			Order:  []OrderBy{{Column: "name", Desc: true}},
+		}
+
+		query, args := handler.buildSelectQuery(table, params)
+		assert.Contains(t, query, "ORDER BY")
+		assert.Contains(t, query, "DESC")
+		_ = args
+	})
+
+	t.Run("SELECT with LIMIT", func(t *testing.T) {
+		limit := 10
+		params := &QueryParams{
+			Select: []string{"id", "name"},
+			Limit:  &limit,
+		}
+
+		query, args := handler.buildSelectQuery(table, params)
+		assert.Contains(t, query, "LIMIT")
+		_ = args
+	})
+
+	t.Run("SELECT with OFFSET", func(t *testing.T) {
+		limit := 10
+		offset := 5
+		params := &QueryParams{
+			Select:  []string{"id", "name"},
+			Limit:   &limit,
+			Offset:  &offset,
+		}
+
+		query, args := handler.buildSelectQuery(table, params)
+		assert.Contains(t, query, "OFFSET")
+		_ = args
+	})
+}
+
+func TestQuoteIdentifier_SQLInjection(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple identifier",
+			input:    "column_name",
+			expected: `"column_name"`,
+		},
+		{
+			name:     "identifier with numbers",
+			input:    "column123",
+			expected: `"column123"`,
+		},
+		{
+			name:     "identifier with underscores",
+			input:    "column_name_test",
+			expected: `"column_name_test"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := quoteIdentifier(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsValidIdentifier_Validation(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "simple name",
+			input:    "column",
+			expected: true,
+		},
+		{
+			name:     "name with underscores",
+			input:    "column_name",
+			expected: true,
+		},
+		{
+			name:     "name with numbers",
+			input:    "column123",
+			expected: true,
+		},
+		{
+			name:     "starts with letter",
+			input:    "a1",
+			expected: true,
+		},
+		{
+			name:     "starts with underscore",
+			input:    "_private",
+			expected: true,
+		},
+		{
+			name:     "starts with number - invalid",
+			input:    "1column",
+			expected: false,
+		},
+		{
+			name:     "contains special characters - invalid",
+			input:    "column-name",
+			expected: false,
+		},
+		{
+			name:     "contains space - invalid",
+			input:    "column name",
+			expected: false,
+		},
+		{
+			name:     "empty string - invalid",
+			input:    "",
+			expected: false,
+		},
+		{
+			name:     "contains dot - invalid",
+			input:    "column.name",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidIdentifier(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

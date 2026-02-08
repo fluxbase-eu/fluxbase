@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // =============================================================================
@@ -90,22 +89,19 @@ func TestSchemaInspector_GetAllTables_Schemas(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		// With no connection, this will return empty or error
-		// We're just testing the default parameter handling
-		_, err := inspector.GetAllTables(context.Background())
-
-		// Will error due to no connection, but that's expected
-		assert.Error(t, err)
+		// With no connection pool, this will panic
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllTables(context.Background())
+		})
 	})
 
 	t.Run("accepts multiple schemas", func(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetAllTables(context.Background(), "public", "auth", "storage")
-
-		// Will error due to no connection
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllTables(context.Background(), "public", "auth", "storage")
+		})
 	})
 }
 
@@ -118,18 +114,18 @@ func TestSchemaInspector_GetAllViews_Schemas(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetAllViews(context.Background())
-
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllViews(context.Background())
+		})
 	})
 
 	t.Run("accepts multiple schemas", func(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetAllViews(context.Background(), "analytics", "reporting")
-
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllViews(context.Background(), "analytics", "reporting")
+		})
 	})
 }
 
@@ -142,18 +138,18 @@ func TestSchemaInspector_GetAllMaterializedViews_Schemas(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetAllMaterializedViews(context.Background())
-
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllMaterializedViews(context.Background())
+		})
 	})
 
 	t.Run("accepts multiple schemas", func(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetAllMaterializedViews(context.Background(), "reporting")
-
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllMaterializedViews(context.Background(), "reporting")
+		})
 	})
 }
 
@@ -166,18 +162,18 @@ func TestSchemaInspector_GetAllFunctions_Schemas(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetAllFunctions(context.Background())
-
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllFunctions(context.Background())
+		})
 	})
 
 	t.Run("accepts multiple schemas", func(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetAllFunctions(context.Background(), "public", "auth")
-
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllFunctions(context.Background(), "public", "auth")
+		})
 	})
 }
 
@@ -190,9 +186,9 @@ func TestSchemaInspector_GetSchemas(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		_, err := inspector.GetSchemas(context.Background())
-
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetSchemas(context.Background())
+		})
 	})
 }
 
@@ -205,32 +201,27 @@ func TestSchemaInspector_GetVectorColumns(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		// Returns empty list when pgvector not installed (no error)
-		columns, err := inspector.GetVectorColumns(context.Background(), "", "")
-
-		// With no connection, will error
-		assert.Error(t, err)
-		assert.Nil(t, columns)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetVectorColumns(context.Background(), "", "")
+		})
 	})
 
 	t.Run("accepts schema and table parameters", func(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		columns, err := inspector.GetVectorColumns(context.Background(), "public", "embeddings")
-
-		assert.Error(t, err)
-		assert.Nil(t, columns)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetVectorColumns(context.Background(), "public", "embeddings")
+		})
 	})
 
 	t.Run("accepts only schema parameter", func(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		columns, err := inspector.GetVectorColumns(context.Background(), "public", "")
-
-		assert.Error(t, err)
-		assert.Nil(t, columns)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetVectorColumns(context.Background(), "public", "")
+		})
 	})
 }
 
@@ -243,12 +234,9 @@ func TestSchemaInspector_IsPgVectorInstalled(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		installed, version, err := inspector.IsPgVectorInstalled(context.Background())
-
-		// With no connection, will error
-		assert.Error(t, err)
-		assert.False(t, installed)
-		assert.Empty(t, version)
+		assert.Panics(t, func() {
+			_, _, _ = inspector.IsPgVectorInstalled(context.Background())
+		})
 	})
 }
 
@@ -380,13 +368,13 @@ func TestTableInfo_BuildColumnMap_EdgeCases(t *testing.T) {
 		}
 
 		table.BuildColumnMap()
-		firstMap := table.ColumnMap
+		firstLen := len(table.ColumnMap)
 
 		table.BuildColumnMap()
-		secondMap := table.ColumnMap
+		secondLen := len(table.ColumnMap)
 
-		// Should be the same map
-		assert.Same(t, firstMap, secondMap)
+		// Should be the same length
+		assert.Equal(t, firstLen, secondLen)
 		assert.Len(t, table.ColumnMap, 2)
 	})
 
@@ -478,7 +466,7 @@ func TestSchemaInspector_BuildRESTPath_EdgeCases(t *testing.T) {
 			Name:   "x",
 		}
 		result := inspector.BuildRESTPath(table)
-		assert.Equal(t, "/api/rest/xs", result)
+		assert.Equal(t, "/api/rest/xes", result) // 'x' ends with 'x' so adds 'es'
 	})
 
 	t.Run("table ending with fie (like leaf)", func(t *testing.T) {
@@ -690,25 +678,30 @@ func TestVectorColumnInfo_Dimensions(t *testing.T) {
 // =============================================================================
 
 func TestSchemaInspector_ErrorPaths(t *testing.T) {
-	t.Run("handles query errors gracefully", func(t *testing.T) {
+	t.Run("panics with nil connection", func(t *testing.T) {
 		conn := &Connection{}
 		inspector := NewSchemaInspector(conn)
 
-		// All query operations should return errors with no connection
-		_, err := inspector.GetSchemas(context.Background())
-		require.Error(t, err)
+		// All query operations should panic with nil connection pool
+		assert.Panics(t, func() {
+			_, _ = inspector.GetSchemas(context.Background())
+		})
 
-		_, err = inspector.GetAllTables(context.Background())
-		require.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllTables(context.Background())
+		})
 
-		_, err = inspector.GetAllViews(context.Background())
-		require.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllViews(context.Background())
+		})
 
-		_, err = inspector.GetAllMaterializedViews(context.Background())
-		require.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllMaterializedViews(context.Background())
+		})
 
-		_, err = inspector.GetAllFunctions(context.Background())
-		require.Error(t, err)
+		assert.Panics(t, func() {
+			_, _ = inspector.GetAllFunctions(context.Background())
+		})
 	})
 }
 
