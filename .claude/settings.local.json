@@ -1,7 +1,37 @@
 {
   "permissions": {
     "allow": [
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(go tool cover:*)",
+      "Read(//workspace/**)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(go build:*)",
+      "Bash(go fmt:*)",
+      "Bash(go list:*)",
+      "Bash(/Users/bart/Dev/fluxbase/internal/storage/transform_types.go << 'EOF'\n\n// ParseTransformOptions parses query parameters into TransformOptions\nfunc ParseTransformOptions\\(width, height int, format string, quality int, fit string\\) *TransformOptions {\n\t// Return nil if no transform options specified\n\tif width == 0 && height == 0 && format == \"\" && quality == 0 && fit == \"\" {\n\t\treturn nil\n\t}\n\n\topts := &TransformOptions{\n\t\tWidth:   width,\n\t\tHeight:  height,\n\t\tFormat:  format,\n\t\tQuality: quality,\n\t}\n\n\t// Parse fit mode\n\tswitch fit {\n\tcase \"cover\":\n\t\topts.Fit = FitCover\n\tcase \"contain\":\n\t\topts.Fit = FitContain\n\tcase \"fill\":\n\t\topts.Fit = FitFill\n\tcase \"inside\":\n\t\topts.Fit = FitInside\n\tcase \"outside\":\n\t\topts.Fit = FitOutside\n\tdefault:\n\t\topts.Fit = FitCover\n\t}\n\n\treturn opts\n}\n\n// CanTransform checks if the given content type can be transformed\nfunc CanTransform\\(contentType string\\) bool {\n\t// Check if empty\n\tif contentType == \"\" {\n\t\treturn false\n\t}\n\treturn SupportedInputMimeTypes[contentType]\n}\nEOF)",
+      "Bash(cat:*)",
+      "Bash(EOF)",
+      "Bash(done)",
+      "Bash(for:*)",
+      "Bash(do)",
+      "Bash(test_file=\"$file%.go_test.go\")",
+      "Bash(if:*)",
+      "Bash(then)",
+      "Bash(echo:*)",
+      "Bash(else)",
+      "Bash(fi)",
+      "Bash(make:*)",
+      "Bash(sort:*)",
+      "Bash(xxd:*)",
+      "Bash(psql:*)",
+      "Bash(tee:*)",
+      "Bash(head:*)",
+      "Bash(do basename:*)",
+      "Bash(go run:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
