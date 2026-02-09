@@ -2286,14 +2286,14 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 		// Layer 2: IP allowlist (only allow app container)
 		// Layer 3: Service key authentication (no JWT/client keys)
 		// Layer 4: Scope validation (migrations:execute)
-		// Layer 5: Rate limiting (10 req/hour)
+		// Layer 5: Rate limiting (10 req/hour for service keys, service_role rate limit from config)
 		// Layer 6: Audit logging
 		migrationsAuth := []any{
 			middleware.RequireMigrationsEnabled(&s.config.Migrations),
 			middleware.RequireMigrationsIPAllowlist(&s.config.Migrations),
 			middleware.RequireServiceKeyOnly(s.db.Pool(), s.authHandler.authService),
 			middleware.RequireMigrationScope(),
-			middleware.MigrationAPILimiter(),
+			middleware.MigrationAPILimiterWithConfig(s.config.Security.ServiceRoleRateLimit, s.config.Security.ServiceRoleRateWindow),
 			middleware.MigrationsAuditLog(),
 		}
 

@@ -728,9 +728,9 @@ func setDefaults() {
 	viper.SetDefault("security.admin_login_rate_limit", 10)     // 10 attempts
 	viper.SetDefault("security.admin_login_rate_window", "1m")  // per minute
 
-	// service_role rate limiting defaults (disabled by default - set to 0 for unlimited)
-	viper.SetDefault("security.service_role_rate_limit", 0)       // 0 = unlimited (service_role bypasses rate limiting by default)
-	viper.SetDefault("security.service_role_rate_window", "1m")   // per minute (if enabled)
+	// service_role rate limiting defaults (H-2: enabled by default to prevent abuse)
+	viper.SetDefault("security.service_role_rate_limit", 10000)   // 10000 requests per minute for service_role tokens (H-2)
+	viper.SetDefault("security.service_role_rate_window", "1m")   // per minute
 	viper.SetDefault("security.enable_per_user_rate_limit", true) // Enable per-user rate limiting for authenticated users
 
 	// CAPTCHA defaults
@@ -869,6 +869,7 @@ func setDefaults() {
 	viper.SetDefault("api.max_page_size", 1000)      // Max 1000 rows per request
 	viper.SetDefault("api.max_total_results", 10000) // Max 10k total rows retrievable
 	viper.SetDefault("api.default_page_size", 1000)  // Default to 1000 rows if not specified
+	viper.SetDefault("api.max_batch_size", 1000)     // Max 1000 records in batch insert/update (H-4)
 
 	// Migrations defaults
 	viper.SetDefault("migrations.enabled", true) // Enabled by default for better DX (security still enforced via service key + IP allowlist)
@@ -975,10 +976,12 @@ func setDefaults() {
 	})
 
 	// GraphQL defaults
-	viper.SetDefault("graphql.enabled", true)        // Enabled by default
-	viper.SetDefault("graphql.max_depth", 10)        // Maximum query depth
-	viper.SetDefault("graphql.max_complexity", 1000) // Maximum query complexity
-	viper.SetDefault("graphql.introspection", true)  // Enable introspection (disable in production for security)
+	viper.SetDefault("graphql.enabled", true)           // Enabled by default
+	viper.SetDefault("graphql.max_depth", 10)           // Maximum query depth
+	viper.SetDefault("graphql.max_complexity", 1000)    // Maximum query complexity
+	viper.SetDefault("graphql.introspection", true)     // Enable introspection (disable in production for security)
+	viper.SetDefault("graphql.allow_fragments", false)   // H-5: Fragment spreads disabled by default (security)
+	viper.SetDefault("graphql.max_fields_per_lvl", 50)   // H-6: Max 50 unique fields per level (alias abuse protection)
 
 	// MCP defaults (Model Context Protocol server for AI assistants)
 	viper.SetDefault("mcp.enabled", true)                      // Enabled by default

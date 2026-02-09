@@ -538,7 +538,16 @@ func GitHubWebhookLimiter() fiber.Handler {
 // Should be applied AFTER service key authentication middleware
 // NOTE: service_role JWT tokens bypass rate limiting entirely (trusted keys)
 // Service keys (sk_*) use per-key configurable rate limits from the database
+// Deprecated: Use MigrationAPILimiterWithConfig for H-2 security fix
 func MigrationAPILimiter() fiber.Handler {
+	return MigrationAPILimiterWithConfig(0, 0)
+}
+
+// MigrationAPILimiterWithConfig creates a migrations API rate limiter with custom limits
+// H-2: Enforces rate limiting for service_role tokens when configured
+// serviceRoleRateLimit: Max requests for service_role tokens (0 = unlimited, for backward compatibility)
+// serviceRoleRateWindow: Time window for service_role rate limiting
+func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWindow time.Duration) fiber.Handler {
 	// Default rate limiter for service keys without custom limits
 	defaultRateLimiter := NewRateLimiter(RateLimiterConfig{
 		Max:        10,            // 10 requests
@@ -555,15 +564,43 @@ func MigrationAPILimiter() fiber.Handler {
 		Message: "Migrations API rate limit exceeded. Maximum 10 requests per hour allowed.",
 	})
 
+	// H-2: Service role rate limiter (if configured)
+	var serviceRoleLimiter fiber.Handler
+	if serviceRoleRateLimit > 0 && serviceRoleRateWindow > 0 {
+		serviceRoleLimiter = NewRateLimiter(RateLimiterConfig{
+			Max:        serviceRoleRateLimit,
+			Expiration: serviceRoleRateWindow,
+			KeyFunc: func(c fiber.Ctx) string {
+				// Rate limit by JWT ID (jti) for service_role tokens
+				if jti := c.Locals("jti"); jti != nil {
+					if jtiStr, ok := jti.(string); ok && jtiStr != "" {
+						return "service_role:" + jtiStr
+					}
+				}
+				// Fallback to service key ID
+				if keyID := c.Locals("service_key_id"); keyID != nil {
+					if kid, ok := keyID.(string); ok && kid != "" {
+						return "service_role_key:" + kid
+					}
+				}
+				return "service_role_ip:" + c.IP()
+			},
+			Message: fmt.Sprintf("Service role rate limit exceeded. Maximum %d requests per %v allowed.", serviceRoleRateLimit, serviceRoleRateWindow),
+		})
+	}
+
 	// Cache for per-key rate limiters (keyed by key ID + limit config)
 	perKeyLimiters := make(map[string]fiber.Handler)
 	var limiterMu sync.RWMutex
 
 	return func(c fiber.Ctx) error {
-		// service_role tokens bypass rate limiting entirely
-		// This applies to both JWT tokens and service keys with service_role
 		role := c.Locals("user_role")
 		if role == "service_role" {
+			// H-2: Apply rate limiting to service_role tokens if configured
+			if serviceRoleLimiter != nil {
+				return serviceRoleLimiter(c)
+			}
+			// Backward compatibility: bypass if no rate limit configured
 			return c.Next()
 		}
 
