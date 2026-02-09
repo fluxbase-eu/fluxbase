@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
@@ -111,4 +112,39 @@ func (h *StorageHandler) setRLSContext(ctx context.Context, tx pgx.Tx, c fiber.C
 
 	log.Debug().Str("user_id", userIDStr).Str("role", roleStr).Msg("Set RLS context for storage operation")
 	return nil
+}
+
+// sanitizeFilename sanitizes uploaded filenames to prevent path traversal and control characters
+// H-20: Removes null bytes, control characters, and prevents path traversal attacks
+func sanitizeFilename(filename string) string {
+	if filename == "" {
+		return ""
+	}
+
+	// Remove null bytes and control characters (except tab)
+	var sanitized strings.Builder
+	for _, r := range filename {
+		if r == '\t' || !unicode.IsControl(r) {
+			sanitized.WriteRune(r)
+		}
+	}
+	filename = sanitized.String()
+
+	// Prevent path traversal by removing .. sequences
+	filename = strings.ReplaceAll(filename, "..", "")
+	// Remove absolute path attempts
+	filename = strings.TrimPrefix(filename, "/")
+	filename = strings.TrimPrefix(filename, "\\")
+	// Remove drive letters (Windows)
+	if len(filename) >= 2 && filename[1] == ':' {
+		filename = filename[2:]
+	}
+
+	// Clean the path but preserve the structure
+	filename = filepath.Clean(filename)
+	// Remove leading slashes that Clean() might add back
+	filename = strings.TrimPrefix(filename, "/")
+	filename = strings.TrimPrefix(filename, "\\")
+
+	return filename
 }

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/fluxbase-eu/fluxbase/internal/webhook"
@@ -8,6 +10,45 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// WebhookResponse represents a webhook response without the secret
+// H-21: WebhookResponse DTO excludes secret field for security
+type WebhookResponse struct {
+	ID                  uuid.UUID             `json:"id"`
+	Name                string                `json:"name"`
+	Description         *string               `json:"description,omitempty"`
+	URL                 string                `json:"url"`
+	Enabled             bool                  `json:"enabled"`
+	Events              []webhook.EventConfig `json:"events"`
+	MaxRetries          int                   `json:"max_retries"`
+	RetryBackoffSeconds int                   `json:"retry_backoff_seconds"`
+	TimeoutSeconds      int                   `json:"timeout_seconds"`
+	Headers             map[string]string     `json:"headers"`
+	Scope               string                `json:"scope"` // "user" or "global"
+	CreatedBy           *uuid.UUID            `json:"created_by,omitempty"`
+	CreatedAt           time.Time             `json:"created_at"`
+	UpdatedAt           time.Time             `json:"updated_at"`
+}
+
+// toWebhookResponse converts a webhook.Webhook to WebhookResponse (without secret)
+func toWebhookResponse(w webhook.Webhook) WebhookResponse {
+	return WebhookResponse{
+		ID:                  w.ID,
+		Name:                w.Name,
+		Description:         w.Description,
+		URL:                 w.URL,
+		Enabled:             w.Enabled,
+		Events:              w.Events,
+		MaxRetries:          w.MaxRetries,
+		RetryBackoffSeconds: w.RetryBackoffSeconds,
+		TimeoutSeconds:      w.TimeoutSeconds,
+		Headers:             w.Headers,
+		Scope:               w.Scope,
+		CreatedBy:           w.CreatedBy,
+		CreatedAt:           w.CreatedAt,
+		UpdatedAt:           w.UpdatedAt,
+	}
+}
 
 // WebhookHandler handles HTTP requests for webhooks
 type WebhookHandler struct {
@@ -94,7 +135,8 @@ func (h *WebhookHandler) CreateWebhook(c fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(req)
+	// H-21: Return WebhookResponse (without secret)
+	return c.Status(fiber.StatusCreated).JSON(toWebhookResponse(req))
 }
 
 // ListWebhooks lists all webhooks
@@ -106,7 +148,13 @@ func (h *WebhookHandler) ListWebhooks(c fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(webhooks)
+	// H-21: Convert to WebhookResponse (without secret)
+	responses := make([]WebhookResponse, len(webhooks))
+	for i, wh := range webhooks {
+		responses[i] = toWebhookResponse(*wh)
+	}
+
+	return c.JSON(responses)
 }
 
 // GetWebhook retrieves a webhook by ID
@@ -125,7 +173,8 @@ func (h *WebhookHandler) GetWebhook(c fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(wh)
+	// H-21: Return WebhookResponse (without secret)
+	return c.JSON(toWebhookResponse(*wh))
 }
 
 // UpdateWebhook updates a webhook

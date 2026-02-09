@@ -321,6 +321,10 @@ func (m *mockErrorStore) Reset(ctx context.Context, key string) error {
 	return m.errorToReturn
 }
 
+func (m *mockErrorStore) ResetAll(ctx context.Context, pattern string) error {
+	return m.errorToReturn
+}
+
 func (m *mockErrorStore) Close() error {
 	return nil
 }
@@ -628,6 +632,10 @@ func (m *mockIncrementStore) Increment(ctx context.Context, key string, expirati
 }
 
 func (m *mockIncrementStore) Reset(ctx context.Context, key string) error {
+	return nil
+}
+
+func (m *mockIncrementStore) ResetAll(ctx context.Context, pattern string) error {
 	return nil
 }
 

@@ -231,14 +231,14 @@ func (r *IdentityRepository) DeleteByProvider(ctx context.Context, userID, provi
 type IdentityService struct {
 	repo         *IdentityRepository
 	oauthManager *OAuthManager
-	stateStore   *StateStore
+	stateStore   StateStorer
 }
 
 // NewIdentityService creates a new identity service
 func NewIdentityService(
 	repo *IdentityRepository,
 	oauthManager *OAuthManager,
-	stateStore *StateStore,
+	stateStore StateStorer,
 ) *IdentityService {
 	return &IdentityService{
 		repo:         repo,
@@ -265,8 +265,10 @@ func (s *IdentityService) LinkIdentityProvider(ctx context.Context, userID strin
 		return "", "", fmt.Errorf("failed to generate state: %w", err)
 	}
 
-	// Store state with user ID embedded (you might want to use a proper state store with user context)
-	s.stateStore.Set(state)
+	// Store state with user ID embedded
+	s.stateStore.Set(ctx, state, StateMetadata{
+		Provider: provider,
+	})
 
 	// Get OAuth authorization URL
 	authURL, err := s.oauthManager.GetAuthURL(OAuthProvider(provider), state)
@@ -280,7 +282,7 @@ func (s *IdentityService) LinkIdentityProvider(ctx context.Context, userID strin
 // LinkIdentityCallback handles the OAuth callback to complete identity linking
 func (s *IdentityService) LinkIdentityCallback(ctx context.Context, userID, provider, code, state string) (*UserIdentity, error) {
 	// Validate state
-	if !s.stateStore.Validate(state) {
+	if !s.stateStore.Validate(ctx, state) {
 		return nil, ErrInvalidState
 	}
 

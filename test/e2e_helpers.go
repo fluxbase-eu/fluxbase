@@ -664,13 +664,17 @@ func (tc *TestContext) Close() {
 //   - Any test that makes requests through the server
 type TestContextTx struct {
 	*TestContext
-	tx     pgx.Tx
-	ctx    context.Context
-	closed bool
+	tx          pgx.Tx
+	ctx         context.Context
+	closed      bool
+	testServer  *api.Server // Test-mode server that uses the transaction
 }
 
 // BeginTestTx creates a new test context with a transaction.
 // The transaction is automatically rolled back when the test completes.
+//
+// IMPORTANT: This now enables transaction isolation for HTTP API tests!
+// HTTP requests made via NewRequest() will use the transaction.
 //
 // Usage:
 //
@@ -678,7 +682,7 @@ type TestContextTx struct {
 //	    txCtx := test.BeginTestTx(t)
 //	    defer txCtx.Close()
 //
-//	    resp := txCtx.NewRequest("POST", "/api/v1/auth/users").
+//	    resp := txCtx.NewRequest("POST", "/api/v1/auth/signup").
 //	        WithBody(map[string]string{"email": "test@example.com"}).
 //	        Send()
 //
@@ -696,11 +700,16 @@ func BeginTestTx(t *testing.T) *TestContextTx {
 	tx, err := tc.DB.BeginTx(ctx)
 	require.NoError(t, err, "Failed to begin test transaction")
 
+	// Create a test-mode server with the transaction
+	// NewServerWithTx accepts *pgx.Tx directly (TxConnection is an alias for pgx.Tx)
+	testServer := api.NewServerWithTx(tc.Config, tc.DB, tx, "dev")
+
 	return &TestContextTx{
 		TestContext: tc,
 		tx:          tx,
 		ctx:         ctx,
 		closed:      false,
+		testServer:  testServer, // Store the test server
 	}
 }
 
@@ -739,6 +748,19 @@ func (tct *TestContextTx) Tx() pgx.Tx {
 //	defer txCtx.Close()
 func (tct *TestContextTx) Close() {
 	tct.Rollback()
+}
+
+// NewRequest creates a new HTTP request using the test-mode server.
+// This overrides the TestContext.NewRequest method to use the transaction-aware server.
+func (tct *TestContextTx) NewRequest(method, path string) *APIRequest {
+	// Use the testServer which has the transaction in its testTx field
+	return &APIRequest{
+		tc:      tct.TestContext, // Reference the base TestContext for other data
+		method:  method,
+		path:    path,
+		headers: make(map[string]string),
+		server:  tct.testServer, // Use the test-mode server
+	}
 }
 
 // =============================================================================
@@ -1079,6 +1101,7 @@ type APIRequest struct {
 	path    string
 	body    interface{}
 	headers map[string]string
+	server  *api.Server // Optional: use specific server instead of tc.Server
 }
 
 // NewAPIRequest creates a new API request builder
@@ -1230,7 +1253,14 @@ func (r *APIRequest) Send() *APIResponse {
 	}
 
 	// Execute request with 15 second timeout (to accommodate race detector slowness)
-	resp, err := r.tc.App.Test(req, fiber.TestConfig{Timeout: 15 * time.Second})
+	// Use test-mode server if provided (for transaction isolation)
+	var resp *http.Response
+	var err error
+	if r.server != nil {
+		resp, err = r.server.App().Test(req, fiber.TestConfig{Timeout: 15 * time.Second})
+	} else {
+		resp, err = r.tc.App.Test(req, fiber.TestConfig{Timeout: 15 * time.Second})
+	}
 	require.NoError(r.tc.T, err)
 
 	return &APIResponse{

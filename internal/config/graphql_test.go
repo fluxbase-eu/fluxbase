@@ -21,10 +21,11 @@ func TestGraphQLConfig_Validate(t *testing.T) {
 
 	t.Run("valid enabled config passes", func(t *testing.T) {
 		cfg := GraphQLConfig{
-			Enabled:       true,
-			MaxDepth:      10,
-			MaxComplexity: 1000,
-			Introspection: true,
+			Enabled:         true,
+			MaxDepth:        10,
+			MaxComplexity:   1000,
+			MaxFieldsPerLvl: 50,
+			Introspection:   true,
 		}
 
 		err := cfg.Validate()
@@ -33,9 +34,10 @@ func TestGraphQLConfig_Validate(t *testing.T) {
 
 	t.Run("minimum valid values pass", func(t *testing.T) {
 		cfg := GraphQLConfig{
-			Enabled:       true,
-			MaxDepth:      1,
-			MaxComplexity: 1,
+			Enabled:         true,
+			MaxDepth:        1,
+			MaxComplexity:   1,
+			MaxFieldsPerLvl: 1,
 		}
 
 		err := cfg.Validate()
@@ -143,10 +145,11 @@ func TestGraphQLConfig_Struct(t *testing.T) {
 func TestGraphQLConfig_CommonConfigurations(t *testing.T) {
 	t.Run("development configuration", func(t *testing.T) {
 		cfg := GraphQLConfig{
-			Enabled:       true,
-			MaxDepth:      20,
-			MaxComplexity: 5000,
-			Introspection: true, // Enabled in development
+			Enabled:         true,
+			MaxDepth:        20,
+			MaxComplexity:   5000,
+			MaxFieldsPerLvl: 50,   // H-6: Add MaxFieldsPerLvl
+			Introspection:   true, // Enabled in development
 		}
 
 		err := cfg.Validate()
@@ -156,10 +159,11 @@ func TestGraphQLConfig_CommonConfigurations(t *testing.T) {
 
 	t.Run("production configuration", func(t *testing.T) {
 		cfg := GraphQLConfig{
-			Enabled:       true,
-			MaxDepth:      10,
-			MaxComplexity: 1000,
-			Introspection: false, // Disabled in production
+			Enabled:         true,
+			MaxDepth:        10,
+			MaxComplexity:   1000,
+			MaxFieldsPerLvl: 50,    // H-6: Add MaxFieldsPerLvl
+			Introspection:   false, // Disabled in production
 		}
 
 		err := cfg.Validate()
@@ -169,10 +173,11 @@ func TestGraphQLConfig_CommonConfigurations(t *testing.T) {
 
 	t.Run("strict configuration", func(t *testing.T) {
 		cfg := GraphQLConfig{
-			Enabled:       true,
-			MaxDepth:      5,   // Very limited depth
-			MaxComplexity: 100, // Very limited complexity
-			Introspection: false,
+			Enabled:         true,
+			MaxDepth:        5,   // Very limited depth
+			MaxComplexity:   100, // Very limited complexity
+			MaxFieldsPerLvl: 20,  // H-6: Add MaxFieldsPerLvl (lower for strict)
+			Introspection:   false,
 		}
 
 		err := cfg.Validate()

@@ -85,6 +85,16 @@ func (s *PostgresStore) Reset(ctx context.Context, key string) error {
 	return err
 }
 
+// ResetAll removes all rate limit counters matching a key pattern.
+// The pattern uses SQL LIKE syntax (e.g., "api:%" matches all keys starting with "api:").
+// This is primarily useful for testing.
+func (s *PostgresStore) ResetAll(ctx context.Context, pattern string) error {
+	_, err := s.pool.Exec(ctx, `
+		DELETE FROM system.rate_limits WHERE key LIKE $1
+	`, pattern)
+	return err
+}
+
 // Close is a no-op for PostgresStore as we don't own the connection pool.
 func (s *PostgresStore) Close() error {
 	return nil

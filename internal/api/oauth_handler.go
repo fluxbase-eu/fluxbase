@@ -64,7 +64,7 @@ func NewOAuthHandler(db *pgxpool.Pool, authSvc *auth.Service, jwtManager *auth.J
 		for {
 			select {
 			case <-ticker.C:
-				stateStore.Cleanup()
+				stateStore.Cleanup(context.Background())
 			case <-stopCleanup:
 				return
 			}
@@ -148,7 +148,13 @@ func (h *OAuthHandler) Authorize(c fiber.Ctx) error {
 	}
 
 	// Store state with optional redirect URI for callback validation
-	h.stateStore.Set(state, redirectURI)
+	metadata := auth.StateMetadata{RedirectURI: redirectURI}
+	if err := h.stateStore.Set(ctx, state, metadata); err != nil {
+		log.Error().Err(err).Msg("Failed to store OAuth state")
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to initiate OAuth flow",
+		})
+	}
 
 	// Generate authorization URL
 	authURL := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
@@ -191,7 +197,7 @@ func (h *OAuthHandler) Callback(c fiber.Ctx) error {
 	}
 
 	// Validate state and retrieve metadata
-	stateMetadata, valid := h.stateStore.GetAndValidate(state)
+	stateMetadata, valid := h.stateStore.GetAndValidate(ctx, state)
 	if !valid {
 		log.Warn().Str("provider", providerName).Str("state", state).Msg("Invalid OAuth state")
 		return c.Status(400).JSON(fiber.Map{
@@ -903,7 +909,7 @@ func (h *OAuthHandler) LogoutCallback(c fiber.Ctx) error {
 // Returns the state metadata and true if valid, nil and false if not found or expired
 // This is used by the dashboard OAuth callback to validate states created by the app OAuth authorize endpoint
 func (h *OAuthHandler) GetAndValidateState(state string) (*auth.StateMetadata, bool) {
-	return h.stateStore.GetAndValidate(state)
+	return h.stateStore.GetAndValidate(context.Background(), state)
 }
 
 // fiber:context-methods migrated

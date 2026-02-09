@@ -27,6 +27,32 @@ func (h *StorageHandler) UploadFile(c fiber.Ctx) error {
 		})
 	}
 
+	// H-20: Sanitize the filename/key to prevent path traversal and control characters
+	key = sanitizeFilename(key)
+	if key == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid filename after sanitization",
+		})
+	}
+
+	// H-19: Check if bucket exists before upload
+	var bucketExists bool
+	err := h.db.Pool().QueryRow(c.RequestCtx(),
+		`SELECT EXISTS(SELECT 1 FROM storage.buckets WHERE name = $1)`,
+		bucket,
+	).Scan(&bucketExists)
+	if err != nil {
+		log.Error().Err(err).Str("bucket", bucket).Msg("Failed to check bucket existence")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to validate bucket",
+		})
+	}
+	if !bucketExists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("bucket '%s' does not exist", bucket),
+		})
+	}
+
 	// Get file from form data
 	file, err := c.FormFile("file")
 	if err != nil {

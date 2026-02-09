@@ -406,8 +406,25 @@ func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.C
 				if err == nil {
 					// Check if this is a service_role or anon token
 					if claims.Role == "service_role" || claims.Role == "anon" {
-						// Valid service role JWT - intentionally skip revocation check.
-						// Service role tokens are system-level credentials that should never be blacklisted.
+						// SECURITY: Check emergency revocation for service_role tokens
+						// This provides a mechanism to revoke compromised service_role tokens immediately
+						if claims.Role == "service_role" {
+							isRevoked, err := authService.IsServiceRoleTokenRevoked(c.RequestCtx(), claims.ID)
+							if err != nil {
+								log.Error().Err(err).Str("jti", claims.ID).Msg("Failed to check service_role token emergency revocation status")
+								// For service_role tokens, fail-open to avoid breaking production
+								// Emergency revocation is a secondary security measure
+							} else if isRevoked {
+								log.Warn().Str("jti", claims.ID).Msg("Service role token has been emergency revoked")
+								return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+									"error":             "Service role token has been revoked",
+									"error_code":        "token_revoked",
+									"revocation_reason": "emergency_revocation",
+								})
+							}
+						}
+
+						// Valid service role JWT
 						c.Locals("user_role", claims.Role)
 						c.Locals("auth_type", "service_role_jwt")
 						c.Locals("jwt_claims", claims)

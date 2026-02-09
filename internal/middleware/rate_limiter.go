@@ -305,12 +305,22 @@ func AuthEmailBasedLimiter(prefix string, max int, expiration time.Duration) fib
 }
 
 // GlobalAPILimiter is a general rate limiter for all API endpoints
+// Uses per-IP rate limiting by default, can use per-user rate limiting if enabled
 func GlobalAPILimiter() fiber.Handler {
 	return NewRateLimiter(RateLimiterConfig{
+		Name:       "global",
 		Max:        100,
 		Expiration: 1 * time.Minute,
 		KeyFunc: func(c fiber.Ctx) string {
-			return "global:" + c.IP()
+			// Try to get user ID from locals (set by auth middleware)
+			userID := c.Locals("user_id")
+			if userID != nil {
+				if uid, ok := userID.(string); ok && uid != "" && uid != "anonymous" {
+					return "global_user:" + uid
+				}
+			}
+			// Fallback to IP for anonymous users or when user ID not available
+			return "global_ip:" + c.IP()
 		},
 		Message: "API rate limit exceeded. Maximum 100 requests per minute allowed.",
 	})
@@ -319,7 +329,8 @@ func GlobalAPILimiter() fiber.Handler {
 // DynamicGlobalAPILimiter creates a rate limiter that respects the dynamic setting
 // It checks the settings cache on each request, allowing real-time toggling of rate limiting
 // without server restart
-// Admin users (admin, dashboard_admin, service_role) are exempt from rate limiting
+// Admin users (admin, dashboard_admin) are exempt from rate limiting
+// service_role users can be rate-limited if service_role_rate_limit > 0
 func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 	// Create the actual rate limiter once
 	rateLimiter := GlobalAPILimiter()
@@ -327,7 +338,7 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		// First check if role is already set by auth middleware
 		role := c.Locals("user_role")
-		if role == "admin" || role == "dashboard_admin" || role == "service_role" {
+		if role == "admin" || role == "dashboard_admin" {
 			return c.Next()
 		}
 
@@ -353,8 +364,30 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 			// We use a simplified parsing that doesn't validate signatures
 			// since the auth middleware will do full validation later
 			role := extractRoleFromToken(token)
-			if role == "admin" || role == "dashboard_admin" || role == "service_role" {
+			if role == "admin" || role == "dashboard_admin" {
 				return c.Next()
+			}
+			// For service_role, check if rate limiting is configured
+			if role == "service_role" {
+				// Check if service_role rate limiting is enabled
+				ctx := c.RequestCtx()
+				serviceRoleRateLimit := settingsCache.GetInt(ctx, "app.security.service_role_rate_limit", 0)
+				if serviceRoleRateLimit <= 0 {
+					// No rate limiting for service_role (default)
+					return c.Next()
+				}
+				// Apply service_role rate limiting
+				rateWindow := settingsCache.GetDuration(ctx, "app.security.service_role_rate_window", 1*time.Minute)
+				serviceRoleLimiter := NewRateLimiter(RateLimiterConfig{
+					Name:       "service_role",
+					Max:        serviceRoleRateLimit,
+					Expiration: rateWindow,
+					KeyFunc: func(c fiber.Ctx) string {
+						return "service_role:" + c.IP()
+					},
+					Message: fmt.Sprintf("Service role rate limit exceeded. Maximum %d requests per %s allowed.", serviceRoleRateLimit, rateWindow.String()),
+				})
+				return serviceRoleLimiter(c)
 			}
 		}
 
@@ -591,6 +624,49 @@ func MigrationAPILimiter() fiber.Handler {
 
 		return limiter(c)
 	}
+}
+
+// StorageUploadLimiter limits file upload requests per user/IP
+// Prevents abuse of storage upload endpoints including streaming uploads
+func StorageUploadLimiter() fiber.Handler {
+	return NewRateLimiter(RateLimiterConfig{
+		Name:       "storage_upload",
+		Max:        60, // 60 uploads
+		Expiration: 1 * time.Minute,
+		KeyFunc: func(c fiber.Ctx) string {
+			// Try to get user ID from locals (set by auth middleware)
+			userID := c.Locals("user_id")
+			if userID != nil {
+				if uid, ok := userID.(string); ok && uid != "" && uid != "anonymous" {
+					return "storage_upload_user:" + uid
+				}
+			}
+			// Fallback to IP for anonymous users
+			return "storage_upload_ip:" + c.IP()
+		},
+		Message: "Storage upload rate limit exceeded. Maximum 60 uploads per minute allowed.",
+	})
+}
+
+// StorageUploadLimiterWithConfig creates a storage upload rate limiter with custom limits
+func StorageUploadLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
+	return NewRateLimiter(RateLimiterConfig{
+		Name:       "storage_upload",
+		Max:        max,
+		Expiration: expiration,
+		KeyFunc: func(c fiber.Ctx) string {
+			// Try to get user ID from locals (set by auth middleware)
+			userID := c.Locals("user_id")
+			if userID != nil {
+				if uid, ok := userID.(string); ok && uid != "" && uid != "anonymous" {
+					return "storage_upload_user:" + uid
+				}
+			}
+			// Fallback to IP for anonymous users
+			return "storage_upload_ip:" + c.IP()
+		},
+		Message: fmt.Sprintf("Storage upload rate limit exceeded. Maximum %d requests per %s allowed.", max, expiration.String()),
+	})
 }
 
 // fiber:context-methods migrated

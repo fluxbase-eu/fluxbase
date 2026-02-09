@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // SettingsCache provides a simple in-memory cache for settings with TTL
@@ -178,6 +180,32 @@ func (c *SettingsCache) GetString(ctx context.Context, key string, defaultValue 
 	c.mu.Unlock()
 
 	return strValue
+}
+
+// GetDuration retrieves a duration setting with caching
+// Duration values are stored as strings and parsed using time.ParseDuration
+// Priority: Environment variables > Cache > Database > Default value
+func (c *SettingsCache) GetDuration(ctx context.Context, key string, defaultValue time.Duration) time.Duration {
+	// First get as string
+	strValue := c.GetString(ctx, key, "")
+
+	if strValue == "" {
+		return defaultValue
+	}
+
+	// Parse duration string
+	duration, err := time.ParseDuration(strValue)
+	if err != nil {
+		log.Warn().
+			Err(err).
+			Str("key", key).
+			Str("value", strValue).
+			Dur("default", defaultValue).
+			Msg("Failed to parse duration setting, using default")
+		return defaultValue
+	}
+
+	return duration
 }
 
 // GetJSON retrieves a JSON setting and unmarshals it into the target

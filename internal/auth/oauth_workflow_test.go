@@ -143,20 +143,22 @@ func TestHandleOAuthCallback_StateMismatch(t *testing.T) {
 	// Generate and store valid state
 	validState, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(validState)
+	stateStore.Set(context.Background(), validState, StateMetadata{
+		Expiry: time.Now().Add(10 * time.Minute),
+	})
 
 	// Test with invalid state
 	invalidState := "invalid_state_123"
 
-	isValid := stateStore.Validate(invalidState)
+	isValid := stateStore.Validate(context.Background(), invalidState)
 	assert.False(t, isValid, "Invalid state should fail validation")
 
 	// Valid state should pass (and be consumed)
-	isValid = stateStore.Validate(validState)
+	isValid = stateStore.Validate(context.Background(), validState)
 	assert.True(t, isValid, "Valid state should pass validation")
 
 	// Second validation of same state should fail (state consumed)
-	isValid = stateStore.Validate(validState)
+	isValid = stateStore.Validate(context.Background(), validState)
 	assert.False(t, isValid, "State should only be valid once (consumed after first use)")
 }
 
@@ -191,7 +193,9 @@ func TestLinkOAuthIdentity_Success(t *testing.T) {
 	// Initiate OAuth flow
 	state, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(state)
+	stateStore.Set(context.Background(), state, StateMetadata{
+		Expiry: time.Now().Add(10 * time.Minute),
+	})
 
 	authURL, err := manager.GetAuthURL(provider, state)
 	require.NoError(t, err)
@@ -208,7 +212,7 @@ func TestLinkOAuthIdentity_Success(t *testing.T) {
 	}
 
 	// Validate state
-	valid := stateStore.Validate(state)
+	valid := stateStore.Validate(context.Background(), state)
 	assert.True(t, valid, "State should be valid")
 
 	// Exchange code
@@ -278,14 +282,14 @@ func TestOAuthState_StoreAndValidate(t *testing.T) {
 	require.NoError(t, err)
 
 	customRedirectURI := "https://custom.example.com/callback"
-	stateStore.SetWithMetadata(context.Background(), state, StateMetadata{
+	stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry:      time.Now().Add(10 * time.Minute),
 		RedirectURI: customRedirectURI,
 		Provider:    "google",
 	})
 
 	// Validate and retrieve metadata
-	metadata, valid := stateStore.GetAndValidateWithContext(context.Background(), state)
+	metadata, valid := stateStore.GetAndValidate(context.Background(), state)
 
 	require.True(t, valid, "State should be valid")
 	require.NotNil(t, metadata)
@@ -293,7 +297,7 @@ func TestOAuthState_StoreAndValidate(t *testing.T) {
 	assert.Equal(t, "google", metadata.Provider)
 
 	// Second validation should fail (state consumed)
-	_, valid = stateStore.GetAndValidateWithContext(context.Background(), state)
+	_, valid = stateStore.GetAndValidate(context.Background(), state)
 	assert.False(t, valid, "State should be consumed after first validation")
 }
 
@@ -305,13 +309,13 @@ func TestOAuthState_Expiration(t *testing.T) {
 	state, err := GenerateState()
 	require.NoError(t, err)
 
-	stateStore.SetWithMetadata(context.Background(), state, StateMetadata{
+	stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry:   time.Now().Add(-1 * time.Hour), // Expired
 		Provider: "github",
 	})
 
 	// Validate expired state
-	metadata, valid := stateStore.GetAndValidateWithContext(context.Background(), state)
+	metadata, valid := stateStore.GetAndValidate(context.Background(), state)
 
 	assert.False(t, valid, "Expired state should be invalid")
 	assert.Nil(t, metadata)
@@ -330,7 +334,9 @@ func TestOAuthState_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func(idx int) {
 			state, _ := GenerateState()
-			stateStore.Set(state)
+			stateStore.Set(context.Background(), state, StateMetadata{
+				Expiry: time.Now().Add(10 * time.Minute),
+			})
 			done <- true
 		}(i)
 	}
@@ -338,7 +344,7 @@ func TestOAuthState_ConcurrentAccess(t *testing.T) {
 	// Concurrent reads
 	for i := 0; i < 5; i++ {
 		go func() {
-			stateStore.Cleanup()
+			stateStore.Cleanup(context.Background())
 			done <- true
 		}()
 	}
@@ -456,7 +462,9 @@ func TestOAuthWorkflow_CompleteFlow(t *testing.T) {
 	// Step 1: Initiate OAuth flow
 	state, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(state)
+	stateStore.Set(context.Background(), state, StateMetadata{
+		Expiry: time.Now().Add(10 * time.Minute),
+	})
 
 	authURL, err := manager.GetAuthURL("google", state)
 	require.NoError(t, err)
@@ -467,7 +475,7 @@ func TestOAuthWorkflow_CompleteFlow(t *testing.T) {
 	authCode := "auth_code_xyz"
 
 	// Step 3: Validate state
-	valid := stateStore.Validate(state)
+	valid := stateStore.Validate(context.Background(), state)
 	assert.True(t, valid, "State should be valid")
 
 	// Step 4: Exchange authorization code for tokens and user info
@@ -496,7 +504,7 @@ func TestOAuthWorkflow_CompleteFlow(t *testing.T) {
 	assert.Equal(t, "OAuth User", userInfo["name"])
 
 	// Step 6: Verify state was consumed (can't be used again)
-	valid = stateStore.Validate(state)
+	valid = stateStore.Validate(context.Background(), state)
 	assert.False(t, valid, "State should be consumed after use")
 }
 
@@ -510,31 +518,31 @@ func TestOAuthState_Cleanup(t *testing.T) {
 	validState, _ := GenerateState()
 
 	// Store expired states
-	stateStore.SetWithMetadata(context.Background(), expiredState1, StateMetadata{
+	stateStore.Set(context.Background(), expiredState1, StateMetadata{
 		Expiry: time.Now().Add(-1 * time.Hour),
 	})
 
-	stateStore.SetWithMetadata(context.Background(), expiredState2, StateMetadata{
+	stateStore.Set(context.Background(), expiredState2, StateMetadata{
 		Expiry: time.Now().Add(-30 * time.Minute),
 	})
 
 	// Store valid state
-	stateStore.SetWithMetadata(context.Background(), validState, StateMetadata{
+	stateStore.Set(context.Background(), validState, StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
 	// Run cleanup
-	stateStore.CleanupWithContext(context.Background())
+	stateStore.Cleanup(context.Background())
 
 	// Expired states should no longer be valid
-	_, valid1 := stateStore.GetAndValidateWithContext(context.Background(), expiredState1)
-	_, valid2 := stateStore.GetAndValidateWithContext(context.Background(), expiredState2)
+	_, valid1 := stateStore.GetAndValidate(context.Background(), expiredState1)
+	_, valid2 := stateStore.GetAndValidate(context.Background(), expiredState2)
 
 	assert.False(t, valid1, "Expired state 1 should be cleaned up")
 	assert.False(t, valid2, "Expired state 2 should be cleaned up")
 
 	// Valid state should still exist
-	_, valid3 := stateStore.GetAndValidateWithContext(context.Background(), validState)
+	_, valid3 := stateStore.GetAndValidate(context.Background(), validState)
 	assert.True(t, valid3, "Valid state should still exist")
 }
 
@@ -545,29 +553,33 @@ func TestOAuthSecurity_CSRFProtection(t *testing.T) {
 	// Generate and store state
 	state, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(state)
+	stateStore.Set(context.Background(), state, StateMetadata{
+		Expiry: time.Now().Add(10 * time.Minute),
+	})
 
 	// Test 1: Correct state should validate
-	valid := stateStore.Validate(state)
+	valid := stateStore.Validate(context.Background(), state)
 	assert.True(t, valid, "Correct state should validate")
 
 	// Generate new state for subsequent tests (state was consumed)
 	state, err = GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(state)
+	stateStore.Set(context.Background(), state, StateMetadata{
+		Expiry: time.Now().Add(10 * time.Minute),
+	})
 
 	// Test 2: Modified state should not validate
 	modifiedState := state + "modified"
-	valid = stateStore.Validate(modifiedState)
+	valid = stateStore.Validate(context.Background(), modifiedState)
 	assert.False(t, valid, "Modified state should not validate")
 
 	// Test 3: Different state should not validate
 	differentState, _ := GenerateState()
-	valid = stateStore.Validate(differentState)
+	valid = stateStore.Validate(context.Background(), differentState)
 	assert.False(t, valid, "Different state should not validate")
 
 	// Test 4: Empty state should not validate
-	valid = stateStore.Validate("")
+	valid = stateStore.Validate(context.Background(), "")
 	assert.False(t, valid, "Empty state should not validate")
 }
 

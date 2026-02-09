@@ -97,6 +97,8 @@ func NewSchemaInspector(conn *Connection) *SchemaInspector {
 // GetAllTables retrieves information about all tables in the specified schemas.
 // This uses batched queries to avoid N+1 query patterns.
 func (si *SchemaInspector) GetAllTables(ctx context.Context, schemas ...string) ([]TableInfo, error) {
+	// Log schema introspection for audit purposes
+	LogSchemaIntrospection(ctx, "GetAllTables", map[string]interface{}{"schemas": schemas})
 	if len(schemas) == 0 {
 		schemas = []string{"public"}
 	}
@@ -171,6 +173,8 @@ func (si *SchemaInspector) GetAllTables(ctx context.Context, schemas ...string) 
 
 // GetTableInfo retrieves detailed information about a specific table
 func (si *SchemaInspector) GetTableInfo(ctx context.Context, schema, table string) (*TableInfo, error) {
+	// Log schema introspection for audit purposes
+	LogSchemaIntrospection(ctx, "GetTableInfo", map[string]interface{}{"schema": schema, "table": table})
 	tableInfo := &TableInfo{
 		Schema: schema,
 		Name:   table,
@@ -842,6 +846,8 @@ func (si *SchemaInspector) batchGetIndexes(ctx context.Context, schemas []string
 
 // GetSchemas retrieves all available schemas
 func (si *SchemaInspector) GetSchemas(ctx context.Context) ([]string, error) {
+	// Log schema introspection for audit purposes
+	LogSchemaIntrospection(ctx, "GetSchemas", nil)
 	query := `
 		SELECT schema_name
 		FROM information_schema.schemata
@@ -871,6 +877,8 @@ func (si *SchemaInspector) GetSchemas(ctx context.Context) ([]string, error) {
 // GetAllViews retrieves information about all views in the specified schemas.
 // This uses batched queries to avoid N+1 query patterns.
 func (si *SchemaInspector) GetAllViews(ctx context.Context, schemas ...string) ([]TableInfo, error) {
+	// Log schema introspection for audit purposes
+	LogSchemaIntrospection(ctx, "GetAllViews", map[string]interface{}{"schemas": schemas})
 	if len(schemas) == 0 {
 		schemas = []string{"public"}
 	}
@@ -936,6 +944,8 @@ func (si *SchemaInspector) GetAllViews(ctx context.Context, schemas ...string) (
 // GetAllMaterializedViews retrieves information about all materialized views in the specified schemas.
 // This uses batched queries to avoid N+1 query patterns.
 func (si *SchemaInspector) GetAllMaterializedViews(ctx context.Context, schemas ...string) ([]TableInfo, error) {
+	// Log schema introspection for audit purposes
+	LogSchemaIntrospection(ctx, "GetAllMaterializedViews", map[string]interface{}{"schemas": schemas})
 	if len(schemas) == 0 {
 		schemas = []string{"public"}
 	}
@@ -1021,6 +1031,8 @@ type FunctionParam struct {
 
 // GetAllFunctions retrieves information about all functions in the specified schemas
 func (si *SchemaInspector) GetAllFunctions(ctx context.Context, schemas ...string) ([]FunctionInfo, error) {
+	// Log schema introspection for audit purposes
+	LogSchemaIntrospection(ctx, "GetAllFunctions", map[string]interface{}{"schemas": schemas})
 	if len(schemas) == 0 {
 		schemas = []string{"public"}
 	}

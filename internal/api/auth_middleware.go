@@ -41,8 +41,14 @@ func AuthMiddleware(authService *auth.Service) fiber.Handler {
 		// Check if token has been revoked
 		isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 		if err != nil {
+			// SECURITY: Fail-closed for sensitive operations
+			// If we cannot verify token revocation status, deny access to sensitive operations
+			if isSensitiveOperation(c) {
+				log.Error().Err(err).Str("jti", claims.ID).Str("method", c.Method()).Str("path", c.Path()).Msg("Failed to check token revocation status for sensitive operation - denying access")
+				return SendUnauthorized(c, "Unable to verify token status", ErrCodeInvalidToken)
+			}
+			// For non-sensitive operations, continue (fail-open)
 			log.Error().Err(err).Msg("Failed to check token revocation status")
-			// Continue anyway - revocation check failure shouldn't block valid tokens
 		} else if isRevoked {
 			log.Debug().Str("jti", claims.ID).Msg("Token has been revoked")
 			return SendTokenRevoked(c)
@@ -226,8 +232,14 @@ func UnifiedAuthMiddleware(authService *auth.Service, jwtManager *auth.JWTManage
 			// Check if token has been revoked
 			isRevoked, err := authService.IsTokenRevoked(c.RequestCtx(), claims.ID)
 			if err != nil {
+				// SECURITY: Fail-closed for sensitive operations
+				// If we cannot verify token revocation status, deny access to sensitive operations
+				if isSensitiveOperation(c) {
+					log.Error().Err(err).Str("jti", claims.ID).Str("method", c.Method()).Str("path", c.Path()).Msg("Failed to check token revocation status for sensitive operation - denying access")
+					return SendUnauthorized(c, "Unable to verify token status", ErrCodeInvalidToken)
+				}
+				// For non-sensitive operations, continue (fail-open)
 				log.Error().Err(err).Msg("Failed to check token revocation status")
-				// Continue anyway - revocation check failure shouldn't block valid tokens
 			} else if isRevoked {
 				log.Debug().Str("jti", claims.ID).Msg("Token has been revoked")
 				return SendTokenRevoked(c)
@@ -307,6 +319,40 @@ func getUserRoleFromDB(ctx context.Context, db *pgxpool.Pool, userID string) (st
 	// Only use the explicit database role column for authorization
 	// app_metadata.role is NOT used for privilege elevation as it could be user-editable
 	return role, nil
+}
+
+// isSensitiveOperation determines if an HTTP request is a sensitive operation that should
+// fail-closed when token revocation status cannot be verified. This provides defense-in-depth
+// by ensuring that potentially dangerous operations cannot proceed if we cannot verify the
+// token's validity.
+//
+// Sensitive operations include:
+// - DELETE requests (data destruction)
+// - PATCH requests (data modification)
+// - POST requests to /graphql ( GraphQL mutations can modify data)
+// - POST requests to /rest/* (REST mutations)
+func isSensitiveOperation(c fiber.Ctx) bool {
+	method := c.Method()
+	path := c.Path()
+
+	// All DELETE and PATCH operations are sensitive
+	if method == "DELETE" || method == "PATCH" {
+		return true
+	}
+
+	// POST requests can be sensitive depending on the endpoint
+	if method == "POST" {
+		// GraphQL mutations use POST
+		if strings.HasPrefix(path, "/graphql") {
+			return true
+		}
+		// REST CRUD operations use POST
+		if strings.HasPrefix(path, "/rest/") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // fiber:context-methods migrated
