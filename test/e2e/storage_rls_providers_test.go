@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"fmt"
 	"mime/multipart"
 	"net/http/httptest"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/fluxbase-eu/fluxbase/test"
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,7 +55,7 @@ func TestStorageRLS_StorageProviders(t *testing.T) {
 			serviceKey := tc.CreateServiceKey("test-bucket-creation")
 
 			// Use unique bucket name to avoid conflicts between provider tests
-			bucketName := "test-bucket-" + test.RandomString(8)
+			bucketName := fmt.Sprintf("test-bucket-%s", uuid.New().String()[:8])
 			tc.NewRequest("POST", "/api/v1/storage/buckets/"+bucketName).
 				WithServiceKey(serviceKey).
 				Send().
