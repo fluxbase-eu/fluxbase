@@ -664,10 +664,10 @@ func (tc *TestContext) Close() {
 //   - Any test that makes requests through the server
 type TestContextTx struct {
 	*TestContext
-	tx          pgx.Tx
-	ctx         context.Context
-	closed      bool
-	testServer  *api.Server // Test-mode server that uses the transaction
+	tx         pgx.Tx
+	ctx        context.Context
+	closed     bool
+	testServer *api.Server // Test-mode server that uses the transaction
 }
 
 // BeginTestTx creates a new test context with a transaction.

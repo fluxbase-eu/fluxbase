@@ -209,7 +209,7 @@ func (l *Loader) WatchForChanges(ctx context.Context) (<-chan ChatbotChange, err
 // watchLoop runs the file watching loop
 func (l *Loader) watchLoop(ctx context.Context, watcher *fsnotify.Watcher, changes chan<- ChatbotChange) {
 	defer close(changes)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Track pending changes with debounce timer
 	var (

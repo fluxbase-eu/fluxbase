@@ -266,9 +266,11 @@ func (s *IdentityService) LinkIdentityProvider(ctx context.Context, userID strin
 	}
 
 	// Store state with user ID embedded
-	s.stateStore.Set(ctx, state, StateMetadata{
+	if err := s.stateStore.Set(ctx, state, StateMetadata{
 		Provider: provider,
-	})
+	}); err != nil {
+		return "", "", fmt.Errorf("failed to store state: %w", err)
+	}
 
 	// Get OAuth authorization URL
 	authURL, err := s.oauthManager.GetAuthURL(OAuthProvider(provider), state)

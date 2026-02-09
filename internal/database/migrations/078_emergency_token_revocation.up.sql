@@ -16,10 +16,12 @@ CREATE TABLE IF NOT EXISTS auth.emergency_revocation (
 CREATE INDEX IF NOT EXISTS idx_emergency_revocation_jti ON auth.emergency_revocation(revoked_jti) WHERE revoked_jti IS NOT NULL;
 
 -- Index for checking if emergency revocation is active
-CREATE INDEX IF NOT EXISTS idx_emergency_revocation_active ON auth.emergency_revocation(expires_at) WHERE expires_at > NOW();
+-- Note: expires_at > NOW() filter must be applied in queries (not index predicate) because NOW() is not IMMUTABLE
+CREATE INDEX IF NOT EXISTS idx_emergency_revocation_active ON auth.emergency_revocation(expires_at);
 
 -- Index for quick lookups of global revocation status
-CREATE INDEX IF NOT EXISTS idx_emergency_revocation_all ON auth.emergency_revocation(revokes_all) WHERE revokes_all = TRUE AND expires_at > NOW();
+-- Note: expires_at > NOW() filter must be applied in queries (not index predicate) because NOW() is not IMMUTABLE
+CREATE INDEX IF NOT EXISTS idx_emergency_revocation_all ON auth.emergency_revocation(revokes_all, expires_at);
 
 -- Grant access to authenticated role for checking revocations (read-only)
 GRANT SELECT ON auth.emergency_revocation TO authenticated;

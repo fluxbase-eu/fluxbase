@@ -976,12 +976,12 @@ func setDefaults() {
 	})
 
 	// GraphQL defaults
-	viper.SetDefault("graphql.enabled", true)           // Enabled by default
-	viper.SetDefault("graphql.max_depth", 10)           // Maximum query depth
-	viper.SetDefault("graphql.max_complexity", 1000)    // Maximum query complexity
-	viper.SetDefault("graphql.introspection", true)     // Enable introspection (disable in production for security)
-	viper.SetDefault("graphql.allow_fragments", false)   // H-5: Fragment spreads disabled by default (security)
-	viper.SetDefault("graphql.max_fields_per_lvl", 50)   // H-6: Max 50 unique fields per level (alias abuse protection)
+	viper.SetDefault("graphql.enabled", true)          // Enabled by default
+	viper.SetDefault("graphql.max_depth", 10)          // Maximum query depth
+	viper.SetDefault("graphql.max_complexity", 1000)   // Maximum query complexity
+	viper.SetDefault("graphql.introspection", true)    // Enable introspection (disable in production for security)
+	viper.SetDefault("graphql.allow_fragments", false) // H-5: Fragment spreads disabled by default (security)
+	viper.SetDefault("graphql.max_fields_per_lvl", 50) // H-6: Max 50 unique fields per level (alias abuse protection)
 
 	// MCP defaults (Model Context Protocol server for AI assistants)
 	viper.SetDefault("mcp.enabled", true)                      // Enabled by default

@@ -64,7 +64,9 @@ func NewOAuthHandler(db *pgxpool.Pool, authSvc *auth.Service, jwtManager *auth.J
 		for {
 			select {
 			case <-ticker.C:
-				stateStore.Cleanup(context.Background())
+				if err := stateStore.Cleanup(context.Background()); err != nil {
+					log.Warn().Err(err).Msg("Failed to cleanup expired OAuth states")
+				}
 			case <-stopCleanup:
 				return
 			}
