@@ -29,6 +29,12 @@
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
+    },
+    {
+      "description": "Pin eslint to v9 until typescript-eslint v9 is stable",
+      "matchPackageNames": ["eslint", "@eslint/js"],
+      "allowedVersions": "9.x",
+      "matchManagers": ["npm"]
     }
   ]
 }
