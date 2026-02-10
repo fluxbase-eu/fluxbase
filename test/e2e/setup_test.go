@@ -698,14 +698,6 @@ func teardownTestTables() {
 		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test secrets")
 	}
 
-	// Delete test service/client keys from auth.api_keys (name starts with 'test')
-	result, err = db.Exec(ctx, "DELETE FROM auth.api_keys WHERE name LIKE 'test_%'")
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to delete test API keys")
-	} else if result.RowsAffected() > 0 {
-		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test API keys")
-	}
-
 	// Delete test client keys (name starts with 'test')
 	// Note: api_keys was renamed to client_keys in migration 047
 	result, err = db.Exec(ctx, "DELETE FROM auth.client_keys WHERE name LIKE 'test_%'")
