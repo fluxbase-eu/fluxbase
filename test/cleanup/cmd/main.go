@@ -113,15 +113,8 @@ func main() {
 		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test secrets")
 	}
 
-	// 4. Delete test API keys (legacy)
-	result, err = pool.Exec(ctx, "DELETE FROM auth.api_keys WHERE name LIKE 'test_%'")
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to delete test API keys")
-	} else if result.RowsAffected() > 0 {
-		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test API keys")
-	}
-
-	// 5. Delete test client keys
+	// 4. Delete test client keys
+	// Note: api_keys was renamed to client_keys in migration 047
 	result, err = pool.Exec(ctx, "DELETE FROM auth.client_keys WHERE name LIKE 'test_%'")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete test client keys")
@@ -129,7 +122,7 @@ func main() {
 		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test client keys")
 	}
 
-	// 6. Delete test storage buckets
+	// 5. Delete test storage buckets
 	result, err = pool.Exec(ctx, "DELETE FROM storage.buckets WHERE id LIKE 'test_%' OR name LIKE 'test_%'")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete test storage buckets")
