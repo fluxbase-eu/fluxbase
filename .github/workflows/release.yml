@@ -10,20 +10,20 @@ name: Release
 # How to create a release:
 #   1. Go to Actions → Release → Run workflow
 #   2. Select branch (usually 'main')
-#   3. Choose version_type: continue, patch, minor, or major
-#   4. Choose release_type: stable or rc
-#   5. Select which components to publish (all enabled by default)
-#   6. Click "Run workflow"
+#   3. Choose release_type: stable or rc
+#   4. Select which components to publish (all enabled by default)
+#   5. Click "Run workflow"
 #
-# Version type options:
-#   - continue: Keep same base version (increment RC number, or promote RC to stable)
-#   - new: Create new release (YYYY.MM.N based on current date)
+# Version is automatically calculated based on last release:
+#   - stable → rc/stable: New release (YYYY.MM.N with incremented iteration)
+#   - rc → rc: Continue RC series (increment RC number)
+#   - rc → stable: Promote RC to stable (remove -rc.N suffix)
 #
 # CalVer Examples:
-#   - 2026.01.1-rc.1 + continue + rc → 2026.01.1-rc.2 (continue RC series)
-#   - 2026.01.1-rc.5 + continue + stable → 2026.01.1 (promote RC to stable)
-#   - 2026.01.1 + new + rc → 2026.01.2-rc.1 (new release in same month)
-#   - 2025.12.5 + new + rc → 2026.01.1-rc.1 (new month, reset to 1)
+#   - v2026.01.1 (stable) + rc → v2026.01.2-rc.1 (new RC for next iteration)
+#   - v2026.01.1 (stable) + stable → v2026.01.2 (new stable release)
+#   - v2026.01.1-rc.3 + rc → v2026.01.1-rc.4 (continue RC series)
+#   - v2026.01.1-rc.5 + stable → v2026.01.1 (promote to stable)
 #
 # Component Toggles (workflow_dispatch only):
 #   - Publish binaries: Build and publish Go binaries for multiple platforms
@@ -61,14 +61,6 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
-      version_type:
-        description: "Version type (continue = same base version, new = new CalVer release)"
-        required: true
-        type: choice
-        options:
-          - continue
-          - new
-        default: "new"
       release_type:
         description: "Release type"
         required: true
@@ -170,51 +162,58 @@ jobs:
               IS_CALVER=false
             fi
 
-            # Determine new version based on version_type and release_type
-            VERSION_TYPE="${{ github.event.inputs.version_type }}"
+            # Determine new version based on last release type and desired release type
             RELEASE_TYPE="${{ github.event.inputs.release_type }}"
 
             # Get current date for CalVer
             CURRENT_YEAR=$(date +%Y)
             CURRENT_MONTH=$(date +%-m)  # %-m removes leading zero (1-12)
 
-            # Calculate base version based on version_type
-            case $VERSION_TYPE in
-              continue)
-                if [ "$IS_CALVER" = true ]; then
-                  # Already on CalVer - keep same base version
-                  BASE_YEAR="$YEAR"
-                  BASE_MONTH="$MONTH"
-                  BASE_ITERATION="$ITERATION"
-                else
-                  # Migrating from SemVer to CalVer - use current date, iteration 1
-                  BASE_YEAR="$CURRENT_YEAR"
-                  BASE_MONTH="$CURRENT_MONTH"
-                  BASE_ITERATION="1"
-                fi
-                ;;
-              new)
-                # New release with current date
-                # Use current date and reset iteration to 1
+            # Determine if we should continue existing RC series or start fresh
+            if [[ "$LATEST_VERSION" =~ -rc\.([0-9]+)$ ]]; then
+              LAST_IS_RC=true
+              RC_NUM="${BASH_REMATCH[1]}"
+            else
+              LAST_IS_RC=false
+              RC_NUM=0
+            fi
+
+            # Auto-deduce version_type based on last release and desired release
+            if [ "$LAST_IS_RC" = true ] && [ "$RELEASE_TYPE" = "rc" ]; then
+              # rc → rc: Continue same RC series (increment RC number)
+              BASE_YEAR="$YEAR"
+              BASE_MONTH="$MONTH"
+              BASE_ITERATION="$ITERATION"
+              MODE="continue_rc"
+            elif [ "$LAST_IS_RC" = true ] && [ "$RELEASE_TYPE" = "stable" ]; then
+              # rc → stable: Promote RC to stable
+              BASE_YEAR="$YEAR"
+              BASE_MONTH="$MONTH"
+              BASE_ITERATION="$ITERATION"
+              MODE="promote_rc"
+            else
+              # stable → rc OR stable → stable: Start new release (increment iteration)
+              if [ "$IS_CALVER" = true ] && [ "$YEAR" = "$CURRENT_YEAR" ] && [ "$MONTH" = "$CURRENT_MONTH" ]; then
+                # Same month: increment iteration
+                BASE_ITERATION="$((ITERATION + 1))"
+                BASE_YEAR="$YEAR"
+                BASE_MONTH="$MONTH"
+              else
+                # Different month or no CalVer: start fresh with current date
                 BASE_YEAR="$CURRENT_YEAR"
                 BASE_MONTH="$CURRENT_MONTH"
                 BASE_ITERATION="1"
+              fi
+              MODE="new"
+            fi
 
-                # If releasing multiple times in same month, increment iteration
-                if [ "$IS_CALVER" = true ] && [ "$YEAR" = "$CURRENT_YEAR" ] && [ "$MONTH" = "$CURRENT_MONTH" ]; then
-                  BASE_ITERATION="$((ITERATION + 1))"
-                fi
-                ;;
-            esac
-
-            # Apply release type (stable or rc)
+            # Apply release type
             if [ "$RELEASE_TYPE" = "rc" ]; then
-              # For RC releases, check if we're continuing an existing RC series
-              # If latest version is an RC with the same base version, increment RC number
-              if [[ "$LATEST_VERSION" =~ -rc\.([0-9]+)$ ]] && \
-                 [ "$YEAR" = "$BASE_YEAR" ] && [ "$MONTH" = "$BASE_MONTH" ] && [ "$ITERATION" = "$BASE_ITERATION" ]; then
+              if [ "$MODE" = "continue_rc" ]; then
+                # Continue existing RC series: increment RC number
                 NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}-rc.$((RC_NUM + 1))"
               else
+                # Start new RC series
                 NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}-rc.1"
               fi
               IS_PRERELEASE="true"
