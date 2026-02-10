@@ -70,7 +70,7 @@ auth:
 			HealthCheck:     10 * time.Second,
 		},
 		Auth: AuthConfig{
-			JWTSecret:           "test-secret-key-at-least-32-char",
+			JWTSecret:           "kH7xN9pQ2mT8vL4wR6jY5cF3dZ1aB0eG7iU8oP5sM2nC3hV9fX4bW6qD7rJ1yK0lZ" + "8oN3mP5uL6iJ9kH2gF4dS7xA1zB0cE8vR5tY6wQ3sN4mP7oL8iK9jH2gF3dS5xC",
 			JWTExpiry:           24 * time.Hour,
 			RefreshExpiry:       7 * 24 * time.Hour,
 			ServiceRoleTTL:      24 * time.Hour,
@@ -241,7 +241,7 @@ func TestConfigValidate_MissingRequiredFields_ReturnsError(t *testing.T) {
 			setupConfig: func() *Config {
 				return &Config{
 					Database: DatabaseConfig{Host: "localhost", Port: 5432, Database: "fluxbase", SSLMode: "disable"},
-					Auth:     AuthConfig{JWTSecret: "test-secret-key-at-least-32-char"},
+					Auth:     AuthConfig{JWTSecret: "GJqclQcUNUUL8OFtyHPFrMlCkcGJZ+0cJ+sp_xrPjlc82RosltsS+6vZcXxtVCaeJPoKoDxMbnQ5LJXUx48+VqhDEgObZUH3Hru_vkU+rqT0LHEHDj_v8QfuSIEaojF2"},
 				}
 			},
 			wantErr:     true,
@@ -258,7 +258,7 @@ func TestConfigValidate_MissingRequiredFields_ReturnsError(t *testing.T) {
 						IdleTimeout:  60 * time.Second,
 						BodyLimit:    1048576,
 					},
-					Auth: AuthConfig{JWTSecret: "test-secret-key-at-least-32-char"},
+					Auth: AuthConfig{JWTSecret: "GJqclQcUNUUL8OFtyHPFrMlCkcGJZ+0cJ+sp_xrPjlc82RosltsS+6vZcXxtVCaeJPoKoDxMbnQ5LJXUx48+VqhDEgObZUH3Hru_vkU+rqT0LHEHDj_v8QfuSIEaojF2"},
 				}
 			},
 			wantErr:     true,
@@ -570,7 +570,7 @@ func TestConfigValidation_AllSections_Valid(t *testing.T) {
 			HealthCheck:     10 * time.Second,
 		},
 		Auth: AuthConfig{
-			JWTSecret:           "test-secret-key-at-least-32-char",
+			JWTSecret:           "kH7xN9pQ2mT8vL4wR6jY5cF3dZ1aB0eG7iU8oP5sM2nC3hV9fX4bW6qD7rJ1yK0lZ" + "8oN3mP5uL6iJ9kH2gF4dS7xA1zB0cE8vR5tY6wQ3sN4mP7oL8iK9jH2gF3dS5xC",
 			JWTExpiry:           24 * time.Hour,
 			RefreshExpiry:       7 * 24 * time.Hour,
 			ServiceRoleTTL:      24 * time.Hour,

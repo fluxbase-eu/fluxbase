@@ -1,4 +1,7 @@
 // Package testutil provides shared test helper functions for unit testing.
+//
+// For integration tests requiring database access, use test/dbhelpers instead.
+// This package provides lightweight helpers for unit tests without external dependencies.
 package testutil
 
 import (
@@ -14,8 +17,11 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fluxbase-eu/fluxbase/internal/config"
 )
 
 // =============================================================================
@@ -23,20 +29,54 @@ import (
 // =============================================================================
 
 // SetupTestDB creates a test database connection.
-// This is a helper function that should be implemented based on your test database setup.
-// For now, it returns nil - you should integrate with your existing test infrastructure.
 //
-// Example integration:
+// This function connects to the test database using environment variables or default config.
+// For integration tests, consider using test/dbhelpers.NewDBTestContext() instead, which provides
+// additional features like connection pooling and test table setup.
 //
-//	ctx := testutil.SetupTestDB(t)
-//	defer testutil.CleanupTestDB(t, ctx)
+// Example:
+//
+//	db := testutil.SetupTestDB(t)
+//	defer testutil.CleanupTestDB(t, db)
 func SetupTestDB(t *testing.T) *pgxpool.Pool {
-	// TODO: Integrate with existing test database infrastructure
-	// This should connect to a test database and return the connection pool
-	// Consider using the existing test.TestContext or IntegrationTestContext
 	t.Helper()
-	t.Skip("SetupTestDB: integrate with existing test infrastructure")
-	return nil
+
+	// Load configuration from environment variables
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Build connection URL
+	connURL := buildConnectionURL(cfg.Database)
+
+	// Create connection pool
+	pool, err := pgxpool.New(context.Background(), connURL)
+	if err != nil {
+		t.Fatalf("Failed to connect to test database: %v", err)
+	}
+
+	// Verify connection
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		t.Fatalf("Failed to ping test database: %v", err)
+	}
+
+	log.Info().Str("database", cfg.Database.Database).Msg("Test database connection established")
+	return pool
+}
+
+// buildConnectionURL constructs a PostgreSQL connection URL from config.
+func buildConnectionURL(cfg config.DatabaseConfig) string {
+	return fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=disable",
+		cfg.User,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.Database,
+	)
 }
 
 // CleanupTestDB cleans up a test database connection.
@@ -49,13 +89,13 @@ func CleanupTestDB(t *testing.T, db *pgxpool.Pool) {
 
 // CreateTestUser creates a test user in the database.
 // Returns the user ID.
+//
+// Uses the auth.users table schema with password_hash column.
 func CreateTestUser(t *testing.T, db *pgxpool.Pool, email string) string {
 	t.Helper()
-	// TODO: Implement user creation based on your auth schema
-	// This should insert a user into auth.users and return the ID
 	var userID string
 	err := db.QueryRow(context.Background(),
-		"INSERT INTO auth.users (email, encrypted_password, email_confirmed_at) VALUES ($1, 'hash', NOW()) RETURNING id",
+		"INSERT INTO auth.users (email, password_hash, email_verified) VALUES ($1, 'hash', true) RETURNING id",
 		email).Scan(&userID)
 	require.NoError(t, err)
 	return userID
@@ -107,16 +147,14 @@ func TruncateTable(t *testing.T, db *pgxpool.Pool, schema, table string) {
 // =============================================================================
 
 // AssertCoverage asserts that the coverage for a package meets the minimum percentage.
-// This is a placeholder - you should integrate with your coverage tooling.
 //
-// Example:
+// Deprecated: Coverage is now enforced globally via .testcoverage.yml and the go-test-coverage tool.
+// Use `make test-coverage` to verify coverage thresholds.
 //
-//	testutil.AssertCoverage(t, "./internal/auth", 0.75)
+// For programmatic coverage assertions in specific tests, use the testing/cover package directly.
 func AssertCoverage(t *testing.T, packagePath string, minPercent float64) {
 	t.Helper()
-	// TODO: Integrate with coverage tooling (go test -coverprofile=coverage.out)
-	// This should read coverage data and assert the minimum percentage
-	t.Logf("AssertCoverage: package %s should have at least %.1f%% coverage", packagePath, minPercent*100)
+	t.Log("AssertCoverage is deprecated. Use make test-coverage or the testing/cover package directly.")
 }
 
 // =============================================================================
@@ -152,21 +190,21 @@ func WaitForCondition(t *testing.T, condition func() bool, timeout time.Duration
 // =============================================================================
 
 // MockFiberContext creates a mock Fiber context for testing handlers.
-// This creates a minimal test context using httptest.
 //
-// Note: For most handler tests, use SetupTestServer() and make actual HTTP requests
-// instead of mocking the context directly. This function is provided for special cases.
+// Deprecated: Creating a Fiber context directly requires fasthttp internals and is complex.
+// Instead, use SetupTestServer() and make actual HTTP requests using httptest.
 //
-// Example:
+// For integration tests with full HTTP handling, use test/e2e_helpers.go helpers.
+//
+// Example (recommended approach):
 //
 //	app := testutil.SetupTestServer(t)
 //	req := httptest.NewRequest("GET", "/api/v1/users", nil)
 //	resp, err := app.Test(req)
 //	require.NoError(t, err)
 func MockFiberContext(method, path string, body io.Reader) *fiber.Ctx {
-	// This is a placeholder - for actual usage, use SetupTestServer and httptest
-	// Creating a Fiber context directly requires fasthttp which is complex
-	// Most tests should use the SetupTestServer pattern instead
+	// Deprecated: This function returns nil as it cannot create a valid Fiber context.
+	// Use SetupTestServer() and make actual HTTP requests instead.
 	return nil
 }
 

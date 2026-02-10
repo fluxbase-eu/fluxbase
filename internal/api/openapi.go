@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -92,10 +93,17 @@ func (h *OpenAPIHandler) GetOpenAPISpec(c fiber.Ctx) error {
 		return c.JSON(spec)
 	}
 
+	ctx := context.Background()
+
+	// Add auth context for audit logging
+	if userID, ok := GetUserID(c); ok {
+		ctx = database.ContextWithAuth(ctx, userID, role, isAdmin)
+	}
+
 	inspector := database.NewSchemaInspector(h.db)
 
 	// Get all tables (admin only)
-	tables, err := inspector.GetAllTables(c.RequestCtx(), "public", "auth")
+	tables, err := inspector.GetAllTables(ctx, "public", "auth")
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to fetch database schema",

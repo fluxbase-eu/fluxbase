@@ -118,6 +118,34 @@ func (s *RedisStore) Reset(ctx context.Context, key string) error {
 	return s.client.Del(ctx, prefixedKey).Err()
 }
 
+// ResetAll removes all rate limit counters matching a key pattern.
+// The pattern uses Redis glob syntax (e.g., "api:*" matches all keys starting with "api:").
+// This is primarily useful for testing.
+func (s *RedisStore) ResetAll(ctx context.Context, pattern string) error {
+	prefixedPattern := "ratelimit:" + pattern
+
+	var cursor uint64
+	for {
+		keys, nextCursor, err := s.client.Scan(ctx, cursor, prefixedPattern, 100).Result()
+		if err != nil {
+			return err
+		}
+
+		if len(keys) > 0 {
+			if err := s.client.Del(ctx, keys...).Err(); err != nil {
+				return err
+			}
+		}
+
+		if nextCursor == 0 {
+			break
+		}
+		cursor = nextCursor
+	}
+
+	return nil
+}
+
 // Close closes the Redis client connection.
 func (s *RedisStore) Close() error {
 	return s.client.Close()

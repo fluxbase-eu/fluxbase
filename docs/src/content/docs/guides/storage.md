@@ -455,6 +455,243 @@ storage:
 - Separate buckets by access level
 - Use metadata for searchability
 
+## S3 Credential Management
+
+**SECURITY WARNING:** Never hardcode S3 credentials in configuration files or commit them to version control. Always use environment variables or secret management systems.
+
+### Environment Variables (Recommended for Development)
+
+```yaml
+# fluxbase.yaml - DO NOT hardcode credentials here
+storage:
+  provider: "s3"
+  s3_endpoint: "${FLUXBASE_STORAGE_S3_ENDPOINT}"
+  s3_access_key: "${FLUXBASE_STORAGE_S3_ACCESS_KEY}"
+  s3_secret_key: "${FLUXBASE_STORAGE_S3_SECRET_KEY}"
+  s3_region: "${FLUXBASE_STORAGE_S3_REGION}"
+  s3_bucket: "${FLUXBASE_STORAGE_S3_BUCKET}"
+```
+
+Set environment variables:
+
+```bash
+# .env file (NEVER commit this)
+export FLUXBASE_STORAGE_S3_ENDPOINT="s3.amazonaws.com"
+export FLUXBASE_STORAGE_S3_ACCESS_KEY="AKIAIOSFODNN7EXAMPLE"
+export FLUXBASE_STORAGE_S3_SECRET_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+export FLUXBASE_STORAGE_S3_REGION="us-east-1"
+export FLUXBASE_STORAGE_S3_BUCKET="my-app-storage"
+
+# Load and run
+source .env
+fluxbase server
+```
+
+### Secret Management Systems (Recommended for Production)
+
+#### HashiCorp Vault
+
+```yaml
+# fluxbase.yaml
+storage:
+  provider: "s3"
+  s3_endpoint: "{{ vault `secret/storage/s3#endpoint` }}"
+  s3_access_key: "{{ vault `secret/storage/s3#access_key` }}"
+  s3_secret_key: "{{ vault `secret/storage/s3#secret_key` }}"
+```
+
+#### AWS Secrets Manager
+
+```yaml
+# fluxbase.yaml
+storage:
+  provider: "s3"
+  s3_endpoint: "{{ aws_secret `fluxbase/storage/s3_endpoint` }}"
+  s3_access_key: "{{ aws_secret `fluxbase/storage/access_key` }}"
+  s3_secret_key: "{{ aws_secret `fluxbase/storage/secret_key` }}"
+```
+
+#### Docker Secrets
+
+```yaml
+# docker-compose.yml
+services:
+  fluxbase:
+    environment:
+      - FLUXBASE_STORAGE_S3_ENDPOINT=file:/run/secrets/s3_endpoint
+      - FLUXBASE_STORAGE_S3_ACCESS_KEY=file:/run/secrets/s3_access_key
+      - FLUXBASE_STORAGE_S3_SECRET_KEY=file:/run/secrets/s3_secret_key
+    secrets:
+      - s3_endpoint
+      - s3_access_key
+      - s3_secret_key
+
+secrets:
+  s3_endpoint:
+    external: true
+  s3_access_key:
+    external: true
+  s3_secret_key:
+    external: true
+```
+
+### IAM Roles (Best for AWS Deployments)
+
+For applications running on AWS EC2, ECS, or Lambda, use IAM roles instead of credentials:
+
+```yaml
+# fluxbase.yaml
+storage:
+  provider: "s3"
+  s3_endpoint: "s3.amazonaws.com"
+  s3_region: "us-east-1"
+  s3_bucket: "my-app-storage"
+  # No access_key/secret_key needed - uses IAM role from EC2/ECS
+```
+
+Attach an IAM policy to your EC2 instance or ECS task:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::my-app-storage",
+        "arn:aws:s3:::my-app-storage/*"
+      ]
+    }
+  ]
+}
+```
+
+### Credential Rotation
+
+Regularly rotate S3 credentials:
+
+1. **Generate new credentials** in AWS IAM or S3 provider
+2. **Update environment variables** or secret management system
+3. **Restart Fluxbase** to load new credentials
+4. **Revoke old credentials** after confirming new ones work
+
+Automation tools like AWS Secrets Manager or HashiCorp Vault can automate this process.
+
+## Malware Scanning Integration
+
+Fluxbase supports integration with malware scanning services to automatically scan uploaded files for viruses, malware, and malicious content.
+
+### ClamAV (Self-Hosted)
+
+Install ClamAV and configure Fluxbase to scan files:
+
+```yaml
+# fluxbase.yaml
+storage:
+  malware_scanning:
+    enabled: true
+    provider: "clamav"
+    clamav_socket: "/var/run/clamav/clamd.ctl"
+    scan_on_upload: true
+    quarantine_infected: true
+    quarantine_bucket: "quarantine"
+```
+
+Install ClamAV:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install clamav clamav-daemon
+
+# Start ClamAV daemon
+sudo systemctl start clamav-daemon
+sudo systemctl enable clamav-daemon
+```
+
+### AWS Advanced Virus Protection
+
+For AWS S3 buckets, enable AWS Advanced Virus Protection:
+
+```yaml
+# fluxbase.yaml
+storage:
+  malware_scanning:
+    enabled: true
+    provider: "aws_avp"
+    aws_region: "us-east-1"
+    scan_on_upload: true
+    quarantine_infected: true
+```
+
+Enable in AWS S3:
+
+```bash
+# Enable AVP for S3 bucket
+aws s3api put-bucket-configuration \
+  --bucket my-app-storage \
+  --configuration '{
+    "AdvancedVirusProtectionConfiguration": {
+      "AdvancedVirusProtection": "Enabled"
+    }
+  }'
+```
+
+### VirusTotal API
+
+Use VirusTotal API for cloud-based scanning:
+
+```yaml
+# fluxbase.yaml
+storage:
+  malware_scanning:
+    enabled: true
+    provider: "virustotal"
+    virustotal_api_key: "${VIRUSTOTAL_API_KEY}"
+    scan_on_upload: true
+    quarantine_infected: true
+```
+
+Get API key from [VirusTotal Developer Portal](https://www.virustotal.com/).
+
+### Scanning Behavior
+
+When malware scanning is enabled:
+
+1. **Upload receives file** -> File stored temporarily
+2. **Scanner processes file** -> Asynchronous scan
+3. **Scan results:**
+   - **Clean**: File moved to permanent storage
+   - **Infected**: File moved to quarantine bucket, upload rejected
+   - **Error**: Configurable fail-open or fail-closed
+
+### Quarantine Management
+
+```bash
+# List quarantined files
+fluxbase-cli storage list --bucket quarantine
+
+# Download quarantined file for analysis
+fluxbase-cli storage download --bucket quarantine --path suspicious.exe
+
+# Delete quarantined files (after review)
+fluxbase-cli storage delete --bucket quarantine --path suspicious.exe
+```
+
+### Best Practices
+
+- **Enable in production**: Always scan files from untrusted sources
+- **Quarantine first**: Review quarantined files before permanent deletion
+- **Rate limiting**: Malware scanning can be slow, implement rate limiting
+- **Async scanning**: Consider async scanning for better UX
+- **False positives**: Whitelist known-safe files as needed
+- **Regular updates**: Keep ClamAV definitions updated
+
 ## Error Handling
 
 ```typescript

@@ -373,6 +373,7 @@ api:
   max_page_size: 1000                   # FLUXBASE_API_MAX_PAGE_SIZE - Maximum rows per request (-1 for unlimited)
   max_total_results: 10000              # FLUXBASE_API_MAX_TOTAL_RESULTS - Maximum total rows via offset+limit (-1 for unlimited)
   default_page_size: 1000               # FLUXBASE_API_DEFAULT_PAGE_SIZE - Default page size when not specified (-1 for no default)
+  max_batch_size: 1000                  # FLUXBASE_API_MAX_BATCH_SIZE - Maximum records in batch insert/update (-1 for unlimited, default: 1000)
 
   # Pagination behavior:
   # - If a client requests ?limit=5000 and max_page_size=1000, they receive 1000 rows
@@ -523,11 +524,15 @@ graphql:
   introspection: true                   # FLUXBASE_GRAPHQL_INTROSPECTION - Enable GraphQL introspection (disable in production)
   max_depth: 10                         # FLUXBASE_GRAPHQL_MAX_DEPTH - Maximum query nesting depth
   max_complexity: 1000                  # FLUXBASE_GRAPHQL_MAX_COMPLEXITY - Maximum query complexity score
+  allow_fragments: false                # FLUXBASE_GRAPHQL_ALLOW_FRAGMENTS - Allow fragment spreads in queries (default: false for security)
+  max_fields_per_lvl: 50                # FLUXBASE_GRAPHQL_MAX_FIELDS_PER_LVL - Maximum unique fields per query level (default: 50)
 
   # Security notes:
   # - max_depth prevents deeply nested queries that cause exponential resource usage
   # - max_complexity limits total query cost (list fields cost more than scalar fields)
   # - introspection should be disabled in production to prevent schema discovery
+  # - allow_fragments=false prevents fragment spread abuse (H-5)
+  # - max_fields_per_lvl prevents alias abuse attacks (H-6)
   # - Example rejected query at depth 5:
   #   { users { posts { comments { author { posts { title } } } } } }
 

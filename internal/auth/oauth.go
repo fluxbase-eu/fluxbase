@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
@@ -245,26 +247,21 @@ func NewStateStore() *StateStore {
 	}
 }
 
-// Set stores a state token with optional redirect URI
-func (s *StateStore) Set(state string, redirectURI ...string) {
+// Set stores a state token with metadata (implements StateStorer)
+func (s *StateStore) Set(ctx context.Context, state string, metadata StateMetadata) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	metadata := &StateMetadata{
-		Expiry: time.Now().Add(10 * time.Minute),
+	if metadata.Expiry.IsZero() {
+		metadata.Expiry = time.Now().Add(10 * time.Minute)
 	}
 
-	// Store redirect URI if provided
-	if len(redirectURI) > 0 && redirectURI[0] != "" {
-		metadata.RedirectURI = redirectURI[0]
-	}
-
-	s.states[state] = metadata
+	s.states[state] = &metadata
+	return nil
 }
 
-// Validate checks if a state token is valid and removes it
-// Uses a full lock since we both read and delete atomically
-func (s *StateStore) Validate(state string) bool {
+// Validate checks if a state token is valid and removes it (implements StateStorer)
+func (s *StateStore) Validate(ctx context.Context, state string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -279,9 +276,9 @@ func (s *StateStore) Validate(state string) bool {
 	return time.Now().Before(metadata.Expiry)
 }
 
-// GetAndValidate checks if a state token is valid, removes it, and returns the metadata
+// GetAndValidate checks if a state token is valid, removes it, and returns the metadata (implements StateStorer)
 // Returns the metadata and a boolean indicating if the state was valid
-func (s *StateStore) GetAndValidate(state string) (*StateMetadata, bool) {
+func (s *StateStore) GetAndValidate(ctx context.Context, state string) (*StateMetadata, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -300,8 +297,8 @@ func (s *StateStore) GetAndValidate(state string) (*StateMetadata, bool) {
 	return metadata, true
 }
 
-// Cleanup removes expired state tokens
-func (s *StateStore) Cleanup() {
+// Cleanup removes expired state tokens (implements StateStorer)
+func (s *StateStore) Cleanup(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -311,35 +308,43 @@ func (s *StateStore) Cleanup() {
 			delete(s.states, state)
 		}
 	}
+	return nil
 }
 
-// SetWithMetadata stores a state token with full metadata (implements StateStorer)
-func (s *StateStore) SetWithMetadata(ctx context.Context, state string, metadata StateMetadata) error {
+// SetLegacy stores a state token with optional redirect URI (legacy method for backward compatibility)
+// Deprecated: Use Set(ctx context.Context, state string, metadata StateMetadata) instead
+func (s *StateStore) SetLegacy(state string, redirectURI ...string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if metadata.Expiry.IsZero() {
-		metadata.Expiry = time.Now().Add(10 * time.Minute)
+	metadata := &StateMetadata{
+		Expiry: time.Now().Add(10 * time.Minute),
 	}
 
-	s.states[state] = &metadata
-	return nil
+	// Store redirect URI if provided
+	if len(redirectURI) > 0 && redirectURI[0] != "" {
+		metadata.RedirectURI = redirectURI[0]
+	}
+
+	s.states[state] = metadata
 }
 
-// ValidateWithContext checks if a state token is valid (implements StateStorer)
-func (s *StateStore) ValidateWithContext(ctx context.Context, state string) bool {
-	return s.Validate(state)
+// ValidateLegacy checks if a state token is valid and removes it (legacy method)
+// Deprecated: Use Validate(ctx context.Context, state string) instead
+func (s *StateStore) ValidateLegacy(state string) bool {
+	return s.Validate(context.Background(), state)
 }
 
-// GetAndValidateWithContext validates and returns metadata (implements StateStorer)
-func (s *StateStore) GetAndValidateWithContext(ctx context.Context, state string) (*StateMetadata, bool) {
-	return s.GetAndValidate(state)
+// GetAndValidateLegacy checks if a state token is valid and returns metadata (legacy method)
+// Deprecated: Use GetAndValidate(ctx context.Context, state string) instead
+func (s *StateStore) GetAndValidateLegacy(state string) (*StateMetadata, bool) {
+	return s.GetAndValidate(context.Background(), state)
 }
 
-// CleanupWithContext removes expired state tokens (implements StateStorer)
-func (s *StateStore) CleanupWithContext(ctx context.Context) error {
-	s.Cleanup()
-	return nil
+// CleanupLegacy removes expired state tokens (legacy method)
+// Deprecated: Use Cleanup(ctx context.Context) instead
+func (s *StateStore) CleanupLegacy() {
+	_ = s.Cleanup(context.Background())
 }
 
 // StateStorer is the interface for OAuth state storage
@@ -373,10 +378,8 @@ func DefaultDBStateStoreConfig() DBStateStoreConfig {
 
 // DBPool is the interface for database operations (subset of pgxpool.Pool)
 type DBPool interface {
-	Exec(ctx context.Context, sql string, arguments ...any) (interface{ RowsAffected() int64 }, error)
-	QueryRow(ctx context.Context, sql string, args ...any) interface {
-		Scan(dest ...any) error
-	}
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
 // DBStateStore provides database-backed OAuth state storage

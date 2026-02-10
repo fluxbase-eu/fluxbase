@@ -367,8 +367,8 @@ func TestIdentityService_LinkIdentityProvider_StateGeneration(t *testing.T) {
 	assert.NotEqual(t, state1, state2)
 
 	// Both should be valid in state store
-	assert.True(t, stateStore.Validate(state1))
-	assert.True(t, stateStore.Validate(state2))
+	assert.True(t, stateStore.Validate(context.Background(), state1))
+	assert.True(t, stateStore.Validate(context.Background(), state2))
 }
 
 func TestIdentityService_UnlinkIdentity_Success(t *testing.T) {
@@ -1007,11 +1007,11 @@ func TestIdentityService_StateStoreIntegration(t *testing.T) {
 
 	// State should be stored in state store
 	// Note: Validate consumes the state, so we can only check once
-	valid := stateStore.Validate(state)
+	valid := stateStore.Validate(context.Background(), state)
 	assert.True(t, valid)
 
 	// After validation, state should be consumed
-	validAgain := stateStore.Validate(state)
+	validAgain := stateStore.Validate(context.Background(), state)
 	assert.False(t, validAgain)
 }
 

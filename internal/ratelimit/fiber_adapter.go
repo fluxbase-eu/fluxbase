@@ -53,10 +53,17 @@ func (a *FiberAdapter) Delete(key string) error {
 	return a.store.Reset(ctx, key)
 }
 
-// Reset clears all data (not implemented for distributed stores).
+// Reset clears all rate limit data.
+// For distributed stores, this removes ALL rate limit counters.
 func (a *FiberAdapter) Reset() error {
-	// Not supported for distributed stores
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Use wildcard pattern to clear all rate limits
+	// PostgreSQL uses "%" wildcard, Redis uses "*" wildcard
+	// Since we don't know the backend, we try both patterns
+	_ = a.store.ResetAll(ctx, "%")    // PostgreSQL style
+	return a.store.ResetAll(ctx, "*") // Redis style
 }
 
 // Close releases resources.
@@ -118,9 +125,15 @@ func (a *IncrementAdapter) Delete(key string) error {
 	return a.store.Reset(ctx, key)
 }
 
-// Reset clears all data (not implemented for distributed stores).
+// Reset clears all rate limit data.
+// For distributed stores, this removes ALL rate limit counters.
 func (a *IncrementAdapter) Reset() error {
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Use wildcard pattern to clear all rate limits
+	_ = a.store.ResetAll(ctx, "%")    // PostgreSQL style
+	return a.store.ResetAll(ctx, "*") // Redis style
 }
 
 // Close releases resources.

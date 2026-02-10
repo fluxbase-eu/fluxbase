@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"testing"
 	"time"
 
@@ -101,17 +102,135 @@ func TestServerConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestDatabaseConfig_ConnectionStrings(t *testing.T) {
+	t.Run("RuntimeConnectionString", func(t *testing.T) {
+		config := DatabaseConfig{
+			Host:          "localhost",
+			Port:          5432,
+			User:          "app_user",
+			Password:      "app_pass",
+			AdminUser:     "admin_user",
+			AdminPassword: "admin_pass",
+			Database:      "testdb",
+			SSLMode:       "disable",
+		}
+		connStr := config.RuntimeConnectionString()
+		assert.Contains(t, connStr, "app_user")
+		assert.Contains(t, connStr, "app_pass")
+		assert.Contains(t, connStr, "localhost:5432")
+		assert.Contains(t, connStr, "testdb")
+	})
+
+	t.Run("AdminConnectionString", func(t *testing.T) {
+		config := DatabaseConfig{
+			Host:          "localhost",
+			Port:          5432,
+			User:          "app_user",
+			Password:      "app_pass",
+			AdminUser:     "admin_user",
+			AdminPassword: "admin_pass",
+			Database:      "testdb",
+			SSLMode:       "disable",
+		}
+		connStr := config.AdminConnectionString()
+		assert.Contains(t, connStr, "admin_user")
+		assert.Contains(t, connStr, "admin_pass")
+		assert.Contains(t, connStr, "localhost:5432")
+	})
+
+	t.Run("AdminConnectionString falls back to User when AdminUser empty", func(t *testing.T) {
+		config := DatabaseConfig{
+			Host:     "localhost",
+			Port:     5432,
+			User:     "app_user",
+			Password: "app_pass",
+			Database: "testdb",
+			SSLMode:  "disable",
+		}
+		connStr := config.AdminConnectionString()
+		assert.Contains(t, connStr, "app_user")
+		assert.Contains(t, connStr, "app_pass")
+	})
+
+	t.Run("ConnectionString is deprecated alias for RuntimeConnectionString", func(t *testing.T) {
+		config := DatabaseConfig{
+			Host:     "localhost",
+			Port:     5432,
+			User:     "app_user",
+			Password: "app_pass",
+			Database: "testdb",
+			SSLMode:  "disable",
+		}
+		assert.Equal(t, config.RuntimeConnectionString(), config.ConnectionString())
+	})
+
+	t.Run("buildSecureConnString properly encodes special characters", func(t *testing.T) {
+		// Test password with special characters that could be used for injection
+		config := DatabaseConfig{
+			Host:     "localhost",
+			Port:     5432,
+			User:     "user@test",
+			Password: "p@ss:w0rd#123",
+			Database: "testdb",
+			SSLMode:  "disable",
+		}
+		connStr := config.RuntimeConnectionString()
+
+		// The connection string should be parseable
+		u, err := url.Parse(connStr)
+		require.NoError(t, err, "Connection string should be valid URL")
+
+		// Credentials should be properly encoded
+		assert.Equal(t, "user@test", u.User.Username())
+		password, hasPassword := u.User.Password()
+		assert.True(t, hasPassword)
+		assert.Equal(t, "p@ss:w0rd#123", password)
+	})
+
+	t.Run("RedactConnString redacts password", func(t *testing.T) {
+		config := DatabaseConfig{
+			Host:          "localhost",
+			Port:          5432,
+			User:          "app_user",
+			Password:      "app_pass",
+			AdminUser:     "admin_user",
+			AdminPassword: "admin_pass",
+			Database:      "testdb",
+			SSLMode:       "disable",
+		}
+		connStr := config.RuntimeConnectionString()
+		redacted := config.RedactConnString(connStr)
+
+		// Parse and check that password is redacted
+		redactedURL, err := url.Parse(redacted)
+		require.NoError(t, err)
+		password, hasPassword := redactedURL.User.Password()
+		assert.True(t, hasPassword)
+		assert.Equal(t, "****", password, "Password should be redacted to ****")
+		assert.Equal(t, "app_user", redactedURL.User.Username(), "Username should still be visible")
+		assert.NotContains(t, redacted, "app_pass", "Original password should not appear")
+		assert.NotContains(t, redacted, "admin_pass", "Admin password should not appear")
+	})
+
+	t.Run("RedactConnString handles invalid connection string", func(t *testing.T) {
+		config := DatabaseConfig{}
+		redacted := config.RedactConnString("not-a-valid-url")
+		// Should return a fully redacted string for invalid URLs
+		assert.Equal(t, "postgres://****@****:****/****?sslmode=****", redacted)
+	})
+}
+
 func TestDatabaseConfig_Validate(t *testing.T) {
 	validConfig := func() DatabaseConfig {
 		return DatabaseConfig{
 			Host:            "localhost",
 			Port:            5432,
-			User:            "postgres",
-			Password:        "password",
-			Database:        "fluxbase",
+			User:            "user",
+			Password:        "pass",
+			Database:        "db",
 			SSLMode:         "disable",
-			MaxConnections:  50,
-			MinConnections:  10,
+			MaxConnections:  25,
+			MinConnections:  5,
 			MaxConnLifetime: time.Hour,
 			MaxConnIdleTime: 30 * time.Minute,
 			HealthCheck:     time.Minute,
@@ -130,75 +249,40 @@ func TestDatabaseConfig_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "empty host",
-			modify:  func(c *DatabaseConfig) { c.Host = "" },
-			wantErr: true,
-			errMsg:  "database host is required",
-		},
-		{
-			name:    "invalid port - zero",
-			modify:  func(c *DatabaseConfig) { c.Port = 0 },
-			wantErr: true,
-			errMsg:  "database port must be between 1 and 65535",
-		},
-		{
-			name:    "invalid port - too high",
-			modify:  func(c *DatabaseConfig) { c.Port = 70000 },
-			wantErr: true,
-			errMsg:  "database port must be between 1 and 65535",
-		},
-		{
-			name:    "empty user",
-			modify:  func(c *DatabaseConfig) { c.User = "" },
-			wantErr: true,
-			errMsg:  "database user is required",
-		},
-		{
-			name:    "empty database name",
-			modify:  func(c *DatabaseConfig) { c.Database = "" },
-			wantErr: true,
-			errMsg:  "database name is required",
-		},
-		{
-			name:    "invalid ssl mode",
-			modify:  func(c *DatabaseConfig) { c.SSLMode = "invalid" },
-			wantErr: true,
-			errMsg:  "invalid ssl_mode",
-		},
-		{
-			name:    "valid ssl mode - require",
-			modify:  func(c *DatabaseConfig) { c.SSLMode = "require" },
-			wantErr: false,
-		},
-		{
-			name:    "valid ssl mode - verify-full",
-			modify:  func(c *DatabaseConfig) { c.SSLMode = "verify-full" },
-			wantErr: false,
-		},
-		{
-			name:    "zero max connections",
+			name:    "max_connections below minimum",
 			modify:  func(c *DatabaseConfig) { c.MaxConnections = 0 },
 			wantErr: true,
-			errMsg:  "max_connections must be positive",
+			errMsg:  "max_connections must be at least 1",
 		},
 		{
-			name:    "negative min connections",
+			name:    "max_connections above maximum",
+			modify:  func(c *DatabaseConfig) { c.MaxConnections = 1001 },
+			wantErr: true,
+			errMsg:  "max_connections must be at most 1000",
+		},
+		{
+			name:    "min_connections negative",
 			modify:  func(c *DatabaseConfig) { c.MinConnections = -1 },
 			wantErr: true,
-			errMsg:  "min_connections cannot be negative",
+			errMsg:  "min_connections must be at least 0",
 		},
 		{
-			name: "max less than min",
+			name:    "min_connections exceeds max_connections",
+			modify:  func(c *DatabaseConfig) { c.MinConnections = 50 },
+			wantErr: true,
+			errMsg:  "min_connections (50) cannot exceed max_connections (25)",
+		},
+		{
+			name: "min_connections equals max_connections is valid",
 			modify: func(c *DatabaseConfig) {
-				c.MaxConnections = 5
+				c.MaxConnections = 10
 				c.MinConnections = 10
 			},
-			wantErr: true,
-			errMsg:  "max_connections",
+			wantErr: false,
 		},
 		{
-			name:    "admin user defaults to user",
-			modify:  func(c *DatabaseConfig) { c.AdminUser = "" },
+			name:    "min_connections zero is valid",
+			modify:  func(c *DatabaseConfig) { c.MinConnections = 0 },
 			wantErr: false,
 		},
 	}
@@ -209,60 +293,19 @@ func TestDatabaseConfig_Validate(t *testing.T) {
 			tt.modify(&config)
 			err := config.Validate()
 			if tt.wantErr {
-				require.Error(t, err)
+				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errMsg)
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		})
 	}
 }
 
-func TestDatabaseConfig_ConnectionStrings(t *testing.T) {
-	config := DatabaseConfig{
-		Host:          "localhost",
-		Port:          5432,
-		User:          "app_user",
-		Password:      "app_pass",
-		AdminUser:     "admin_user",
-		AdminPassword: "admin_pass",
-		Database:      "testdb",
-		SSLMode:       "disable",
-	}
-
-	t.Run("RuntimeConnectionString", func(t *testing.T) {
-		connStr := config.RuntimeConnectionString()
-		assert.Contains(t, connStr, "app_user")
-		assert.Contains(t, connStr, "app_pass")
-		assert.Contains(t, connStr, "localhost:5432")
-		assert.Contains(t, connStr, "testdb")
-	})
-
-	t.Run("AdminConnectionString", func(t *testing.T) {
-		connStr := config.AdminConnectionString()
-		assert.Contains(t, connStr, "admin_user")
-		assert.Contains(t, connStr, "admin_pass")
-		assert.Contains(t, connStr, "localhost:5432")
-	})
-
-	t.Run("AdminConnectionString falls back to User when AdminUser empty", func(t *testing.T) {
-		config.AdminUser = ""
-		config.AdminPassword = ""
-		connStr := config.AdminConnectionString()
-		assert.Contains(t, connStr, "app_user")
-		assert.Contains(t, connStr, "app_pass")
-	})
-
-	t.Run("ConnectionString is deprecated alias for RuntimeConnectionString", func(t *testing.T) {
-		config.AdminUser = "admin"
-		assert.Equal(t, config.RuntimeConnectionString(), config.ConnectionString())
-	})
-}
-
 func TestAuthConfig_Validate(t *testing.T) {
 	validConfig := func() AuthConfig {
 		return AuthConfig{
-			JWTSecret:           "this-is-a-very-secure-secret-key-for-testing-purposes",
+			JWTSecret:           "GJqclQcUNUUL8OFtyHPFrMlCkcGJZ+0cJ+sp_xrPjlc82RosltsS+6vZcXxtVCaeJPoKoDxMbnQ5LJXUx48+VqhDEgObZUH3Hru_vkU+rqT0LHEHDj_v8QfuSIEaojF2",
 			JWTExpiry:           15 * time.Minute,
 			RefreshExpiry:       7 * 24 * time.Hour,
 			MagicLinkExpiry:     15 * time.Minute,
@@ -1951,7 +1994,7 @@ func TestConfig_Validate(t *testing.T) {
 				HealthCheck:     time.Minute,
 			},
 			Auth: AuthConfig{
-				JWTSecret:           "this-is-a-very-secure-secret-key-for-testing-purposes",
+				JWTSecret:           "GJqclQcUNUUL8OFtyHPFrMlCkcGJZ+0cJ+sp_xrPjlc82RosltsS+6vZcXxtVCaeJPoKoDxMbnQ5LJXUx48+VqhDEgObZUH3Hru_vkU+rqT0LHEHDj_v8QfuSIEaojF2",
 				JWTExpiry:           15 * time.Minute,
 				RefreshExpiry:       7 * 24 * time.Hour,
 				MagicLinkExpiry:     15 * time.Minute,

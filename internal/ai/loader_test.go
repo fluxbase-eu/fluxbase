@@ -1,9 +1,11 @@
 package ai
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -254,11 +256,97 @@ func TestLoader_ChatbotExists(t *testing.T) {
 }
 
 func TestLoader_WatchForChanges(t *testing.T) {
-	t.Run("returns nil channel (not implemented)", func(t *testing.T) {
-		loader := NewLoader("/path/to/chatbots")
-		ch, err := loader.WatchForChanges()
-		assert.NoError(t, err)
-		assert.Nil(t, ch)
+	t.Run("watches directory for file changes", func(t *testing.T) {
+		// Create temporary directory for test
+		tmpDir := t.TempDir()
+		loader := NewLoader(tmpDir)
+
+		// Create context with cancellation
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Start watching
+		changes, err := loader.WatchForChanges(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, changes)
+
+		// Give the watcher time to start
+		time.Sleep(100 * time.Millisecond)
+
+		// Create a chatbot file
+		namespaceDir := filepath.Join(tmpDir, "test")
+		err = os.MkdirAll(namespaceDir, 0755)
+		require.NoError(t, err)
+
+		// Give the watcher time to detect the new directory
+		time.Sleep(100 * time.Millisecond)
+
+		chatbotFile := filepath.Join(namespaceDir, "mybot.ts")
+		err = os.WriteFile(chatbotFile, []byte("export default function() {}"), 0644)
+		require.NoError(t, err)
+
+		// Wait for change event (with timeout)
+		// Note: fsnotify behavior varies by platform - we may get "created" or "modified"
+		select {
+		case change := <-changes:
+			assert.Contains(t, []string{"created", "modified"}, change.Type)
+			assert.Equal(t, "test", change.Namespace)
+			assert.Equal(t, "mybot", change.Name)
+		case <-time.After(2 * time.Second):
+			t.Fatal("Timeout waiting for file change event")
+		}
+
+		// Modify the file
+		err = os.WriteFile(chatbotFile, []byte("export default function() { return 'updated'; }"), 0644)
+		require.NoError(t, err)
+
+		// Wait for modify event
+		select {
+		case change := <-changes:
+			assert.Equal(t, "modified", change.Type)
+		case <-time.After(2 * time.Second):
+			t.Fatal("Timeout waiting for modify event")
+		}
+
+		// Cancel context to stop watcher
+		cancel()
+
+		// Verify channel is closed after a short delay
+		select {
+		case _, ok := <-changes:
+			if !ok {
+				return // Channel closed as expected
+			}
+		case <-time.After(500 * time.Millisecond):
+			// Expected - watcher should stop
+		}
+	})
+
+	t.Run("filters non-js/ts files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		loader := NewLoader(tmpDir)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		changes, err := loader.WatchForChanges(ctx)
+		require.NoError(t, err)
+
+		// Give the watcher time to start
+		time.Sleep(100 * time.Millisecond)
+
+		// Create a non-JS file
+		testFile := filepath.Join(tmpDir, "README.md")
+		err = os.WriteFile(testFile, []byte("# Test"), 0644)
+		require.NoError(t, err)
+
+		// Should not receive any events
+		select {
+		case <-changes:
+			t.Fatal("Should not receive events for non-JS/TS files")
+		case <-time.After(300 * time.Millisecond):
+			// Expected - no events
+		}
 	})
 }
 

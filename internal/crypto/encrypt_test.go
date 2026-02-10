@@ -550,3 +550,170 @@ func BenchmarkEncrypt_Large(b *testing.B) {
 		_, _ = Encrypt(plaintext, key)
 	}
 }
+
+// =============================================================================
+// []byte Key Tests (H-12: Use []byte for encryption keys)
+// =============================================================================
+
+func TestEncryptDecryptWithBytesKey(t *testing.T) {
+	key := []byte("12345678901234567890123456789012") // 32 bytes
+
+	tests := []struct {
+		name      string
+		plaintext string
+	}{
+		{"simple text", "hello world"},
+		{"special characters", "p@ssw0rd!#$%^&*()"},
+		{"unicode", "日本語テスト🎉"},
+		{"json", `{"key": "value", "nested": {"foo": "bar"}}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encrypted, err := EncryptWithBytesKey(tt.plaintext, key)
+			if err != nil {
+				t.Fatalf("EncryptWithBytesKey failed: %v", err)
+			}
+
+			// Encrypted should be different from plaintext
+			if encrypted == tt.plaintext {
+				t.Error("Encrypted text should not equal plaintext")
+			}
+
+			// Decrypt
+			decrypted, err := DecryptWithBytesKey(encrypted, key)
+			if err != nil {
+				t.Fatalf("DecryptWithBytesKey failed: %v", err)
+			}
+
+			if decrypted != tt.plaintext {
+				t.Errorf("Decrypted text mismatch: got %q, want %q", decrypted, tt.plaintext)
+			}
+		})
+	}
+}
+
+func TestEncryptWithBytesKey_KeyZeroing(t *testing.T) {
+	// This test verifies that []byte keys can be zeroed after use
+	// for security (prevent keys from remaining in memory)
+	key := []byte("12345678901234567890123456789012")
+	plaintext := "secret data"
+
+	// Encrypt with the key
+	encrypted, err := EncryptWithBytesKey(plaintext, key)
+	if err != nil {
+		t.Fatalf("EncryptWithBytesKey failed: %v", err)
+	}
+
+	// Zero the key after use (security best practice)
+	for i := range key {
+		key[i] = 0
+	}
+
+	// Verify key is zeroed
+	for i, b := range key {
+		if b != 0 {
+			t.Errorf("Key byte at index %d not zeroed: got %d", i, b)
+		}
+	}
+
+	// Create a new key for decryption (the zeroed key won't work)
+	newKey := []byte("12345678901234567890123456789012")
+
+	// Decrypt with the new key
+	decrypted, err := DecryptWithBytesKey(encrypted, newKey)
+	if err != nil {
+		t.Fatalf("DecryptWithBytesKey failed: %v", err)
+	}
+
+	if decrypted != plaintext {
+		t.Errorf("Decrypted text mismatch: got %q, want %q", decrypted, plaintext)
+	}
+}
+
+func TestEncryptWithBytesKey_InvalidKeyLength(t *testing.T) {
+	tests := []struct {
+		name string
+		key  []byte
+	}{
+		{"empty key", []byte{}},
+		{"too short", []byte("short")},
+		{"31 bytes", []byte("1234567890123456789012345678901")},
+		{"33 bytes", []byte("123456789012345678901234567890123")},
+	}
+
+	plaintext := "test"
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := EncryptWithBytesKey(plaintext, tt.key)
+			if err != ErrInvalidKey {
+				t.Errorf("Expected ErrInvalidKey, got %v", err)
+			}
+		})
+	}
+}
+
+func TestDecryptWithBytesKey_InvalidKeyLength(t *testing.T) {
+	tests := []struct {
+		name string
+		key  []byte
+	}{
+		{"empty key", []byte{}},
+		{"too short", []byte("short")},
+		{"31 bytes", []byte("1234567890123456789012345678901")},
+		{"33 bytes", []byte("123456789012345678901234567890123")},
+	}
+
+	// Valid ciphertext
+	validKey := []byte("12345678901234567890123456789012")
+	encrypted, _ := EncryptWithBytesKey("test", validKey)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := DecryptWithBytesKey(encrypted, tt.key)
+			if err != ErrInvalidKey {
+				t.Errorf("Expected ErrInvalidKey, got %v", err)
+			}
+		})
+	}
+}
+
+func TestEncryptWithBytesKey_BackwardCompatibility(t *testing.T) {
+	// Verify that []byte and string methods produce compatible results
+	keyBytes := []byte("12345678901234567890123456789012")
+	keyString := "12345678901234567890123456789012"
+	plaintext := "test data"
+
+	// Encrypt with []byte key
+	encryptedBytes, err := EncryptWithBytesKey(plaintext, keyBytes)
+	if err != nil {
+		t.Fatalf("EncryptWithBytesKey failed: %v", err)
+	}
+
+	// Encrypt with string key
+	encryptedString, err := Encrypt(plaintext, keyString)
+	if err != nil {
+		t.Fatalf("Encrypt failed: %v", err)
+	}
+
+	// Encrypted data should be different (due to random nonce)
+	if encryptedBytes == encryptedString {
+		t.Error("Encrypted data should differ due to random nonce")
+	}
+
+	// But both should decrypt correctly with their respective methods
+	decryptedFromBytes, err := DecryptWithBytesKey(encryptedBytes, keyBytes)
+	if err != nil {
+		t.Fatalf("DecryptWithBytesKey failed: %v", err)
+	}
+
+	decryptedFromString, err := Decrypt(encryptedString, keyString)
+	if err != nil {
+		t.Fatalf("Decrypt failed: %v", err)
+	}
+
+	if decryptedFromBytes != plaintext || decryptedFromString != plaintext {
+		t.Error("Both decryption methods should recover original plaintext")
+	}
+}

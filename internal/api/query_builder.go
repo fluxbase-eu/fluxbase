@@ -445,7 +445,13 @@ func (qb *QueryBuilder) filterToSQL(filter Filter) (string, interface{}) {
 		if filter.Value == nil || filter.Value == "null" {
 			return fmt.Sprintf("%s IS NULL", quotedCol), nil
 		}
-		return fmt.Sprintf("%s IS %v", quotedCol, filter.Value), nil
+		// H-14: Validate OpIs only accepts boolean literals (true/false) to prevent SQL injection
+		// This prevents injection via malicious filter.Value strings
+		valueStr := fmt.Sprintf("%v", filter.Value)
+		if valueStr != "true" && valueStr != "false" {
+			return "", fmt.Errorf("OpIs operator only accepts null, true, or false values, got: %v", filter.Value)
+		}
+		return fmt.Sprintf("%s IS %s", quotedCol, valueStr), nil
 	case OpIn:
 		return fmt.Sprintf("%s = ANY(%s)", quotedCol, placeholder), filter.Value
 	case OpContains:

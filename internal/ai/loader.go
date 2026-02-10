@@ -1,12 +1,15 @@
 package ai
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -186,13 +189,219 @@ func (l *Loader) ChatbotExists(namespace, name string) bool {
 
 // WatchForChanges sets up a file watcher for the chatbots directory
 // Returns a channel that receives updates when files change
-// The caller is responsible for closing the returned channel
-// NOTE: This is a placeholder - actual implementation would use fsnotify
-func (l *Loader) WatchForChanges() (<-chan ChatbotChange, error) {
-	// For now, return a nil channel - actual file watching can be added later
-	// using github.com/fsnotify/fsnotify
-	log.Warn().Msg("Chatbot file watching not yet implemented - changes require manual sync")
-	return nil, nil
+// The caller is responsible for closing the returned channel by cancelling the context
+func (l *Loader) WatchForChanges(ctx context.Context) (<-chan ChatbotChange, error) {
+	// Create fsnotify watcher
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file watcher: %w", err)
+	}
+
+	// Create channel for changes
+	changes := make(chan ChatbotChange, 10)
+
+	// Start watching goroutine
+	go l.watchLoop(ctx, watcher, changes)
+
+	return changes, nil
+}
+
+// watchLoop runs the file watching loop
+func (l *Loader) watchLoop(ctx context.Context, watcher *fsnotify.Watcher, changes chan<- ChatbotChange) {
+	defer close(changes)
+	defer func() { _ = watcher.Close() }()
+
+	// Track pending changes with debounce timer
+	var (
+		pendingMutex  sync.Mutex
+		pendingChange *ChatbotChange
+		debounceTimer *time.Timer
+	)
+
+	// Track watched directories to avoid duplicates
+	watchedDirs := make(map[string]bool)
+	var watchedDirsMutex sync.Mutex
+
+	// Helper to add directory to watcher (idempotent)
+	addWatchDir := func(dir string) error {
+		watchedDirsMutex.Lock()
+		defer watchedDirsMutex.Unlock()
+
+		if watchedDirs[dir] {
+			return nil
+		}
+
+		if err := watcher.Add(dir); err != nil {
+			return err
+		}
+
+		watchedDirs[dir] = true
+		log.Debug().Str("dir", dir).Msg("Added directory to watcher")
+		return nil
+	}
+
+	// Helper to send change with debouncing
+	sendChange := func(change ChatbotChange) {
+		pendingMutex.Lock()
+		defer pendingMutex.Unlock()
+
+		// Stop existing timer if any
+		if debounceTimer != nil {
+			debounceTimer.Stop()
+		}
+
+		// Store the pending change
+		pendingChange = &change
+
+		// Set debounce timer (150ms)
+		debounceTimer = time.AfterFunc(150*time.Millisecond, func() {
+			pendingMutex.Lock()
+			if pendingChange != nil {
+				changes <- *pendingChange
+				pendingChange = nil
+			}
+			pendingMutex.Unlock()
+		})
+	}
+
+	// Helper to check if file should be watched
+	shouldWatch := func(path string) bool {
+		// Filter for .ts and .js files only
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".ts" && ext != ".js" {
+			return false
+		}
+
+		// Filter out temporary editor files
+		base := filepath.Base(path)
+		if strings.HasPrefix(base, ".") || // Hidden files
+			strings.HasSuffix(base, "~") || // Backup files
+			strings.Contains(base, ".swp") || // Vim swap files
+			strings.Contains(base, "~") || // Other temp files
+			strings.HasPrefix(base, "#") && strings.HasSuffix(base, "#") { // Emacs lock files
+			return false
+		}
+
+		return true
+	}
+
+	// Helper to extract namespace and name from path
+	parsePath := func(path string) (namespace, name string, err error) {
+		// Get relative path from chatbotsDir
+		relPath, err := filepath.Rel(l.chatbotsDir, path)
+		if err != nil {
+			return "", "", err
+		}
+
+		// Expected format: namespace/name/index.ts or namespace/name.ts
+		parts := strings.Split(relPath, string(filepath.Separator))
+		if len(parts) < 1 {
+			return "", "", fmt.Errorf("invalid path: %s", path)
+		}
+
+		// Check for namespace/name/index.ts format
+		if len(parts) >= 3 && parts[len(parts)-1] == "index.ts" {
+			namespace = parts[len(parts)-3]
+			name = parts[len(parts)-2]
+			return namespace, name, nil
+		}
+
+		// Check for namespace/name.ts format
+		if len(parts) == 2 {
+			namespace = parts[len(parts)-2]
+			// Remove extension from name
+			name = strings.TrimSuffix(parts[len(parts)-1], filepath.Ext(parts[len(parts)-1]))
+			return namespace, name, nil
+		}
+
+		return "", "", fmt.Errorf("unexpected path format: %s", path)
+	}
+
+	// Recursively add directory and all subdirectories to watcher
+	addWatchRecursively := func(rootDir string) error {
+		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				if err := addWatchDir(path); err != nil {
+					log.Debug().Err(err).Str("dir", path).Msg("Failed to watch directory")
+				}
+			}
+			return nil
+		})
+		return err
+	}
+
+	// Add initial watch on chatbots directory and subdirectories
+	if err := addWatchRecursively(l.chatbotsDir); err != nil {
+		log.Error().Err(err).Str("dir", l.chatbotsDir).Msg("Failed to watch chatbots directory")
+		return
+	}
+
+	log.Info().Str("dir", l.chatbotsDir).Msg("Started watching chatbots directory for changes")
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("Stopping chatbots directory watcher")
+			return
+
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+
+			// If a directory was created, watch it
+			if event.Has(fsnotify.Create) {
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+					_ = addWatchDir(event.Name)
+				}
+			}
+
+			// Skip if not a file we care about
+			if !shouldWatch(event.Name) {
+				continue
+			}
+
+			// Parse namespace and name from path
+			namespace, name, err := parsePath(event.Name)
+			if err != nil {
+				log.Debug().Err(err).Str("path", event.Name).Msg("Failed to parse chatbot path")
+				continue
+			}
+
+			// Determine change type
+			changeType := "modified"
+			if event.Has(fsnotify.Create) {
+				changeType = "created"
+			} else if event.Has(fsnotify.Remove) {
+				changeType = "deleted"
+			}
+
+			// Send change with debouncing
+			change := ChatbotChange{
+				Type:      changeType,
+				Namespace: namespace,
+				Name:      name,
+				Path:      event.Name,
+			}
+			sendChange(change)
+
+			log.Debug().
+				Str("type", changeType).
+				Str("namespace", namespace).
+				Str("name", name).
+				Str("path", event.Name).
+				Msg("Chatbot file change detected")
+
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			log.Error().Err(err).Msg("File watcher error")
+		}
+	}
 }
 
 // ChatbotChange represents a change to a chatbot file

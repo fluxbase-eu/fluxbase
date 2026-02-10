@@ -22,7 +22,7 @@ func TestNewRouter(t *testing.T) {
 
 		assert.NotNil(t, router)
 		assert.NotNil(t, router.pools)
-		assert.NotNil(t, router.poolConfigs)
+		assert.NotNil(t, router.lruList)
 		assert.Empty(t, router.pools)
 	})
 

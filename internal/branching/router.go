@@ -1,6 +1,7 @@
 package branching
 
 import (
+	"container/list"
 	"context"
 	"fmt"
 	"net/url"
@@ -13,31 +14,58 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// poolEntry represents a connection pool with its last access time for LRU eviction
+type poolEntry struct {
+	slug       string
+	pool       *pgxpool.Pool
+	config     *pgxpool.Config
+	lastAccess time.Time
+	lruElement *list.Element // Pointer to the element in the LRU list
+}
+
 // Router manages connection pools for database branches
 type Router struct {
 	storage      *Storage
 	config       config.BranchingConfig
 	mainPool     *pgxpool.Pool
 	mainDBURL    string
-	pools        map[string]*pgxpool.Pool // slug -> pool
+	pools        map[string]*poolEntry // slug -> pool entry
 	poolsMu      sync.RWMutex
-	poolConfigs  map[string]*pgxpool.Config // slug -> config (for recreating pools)
-	activeBranch atomic.Value               // Thread-safe active branch slug (set via API)
+	lruList      *list.List   // LRU list of pools (least recently used at front)
+	lruMu        sync.Mutex   // Separate mutex for LRU operations
+	maxConns     int32        // Maximum total connections across all branch pools
+	currentConns int32        // Current total connections
+	activeBranch atomic.Value // Thread-safe active branch slug (set via API)
 }
 
 // NewRouter creates a new branch router
 func NewRouter(storage *Storage, cfg config.BranchingConfig, mainPool *pgxpool.Pool, mainDBURL string) *Router {
+	maxConns := int32(cfg.MaxTotalConnections)
+	if maxConns <= 0 {
+		maxConns = 500 // Default to 500 if not set
+	}
+
+	evictionAge := cfg.PoolEvictionAge
+	if evictionAge <= 0 {
+		evictionAge = time.Hour // Default to 1 hour if not set
+	}
+
 	r := &Router{
-		storage:     storage,
-		config:      cfg,
-		mainPool:    mainPool,
-		mainDBURL:   mainDBURL,
-		pools:       make(map[string]*pgxpool.Pool),
-		poolConfigs: make(map[string]*pgxpool.Config),
+		storage:   storage,
+		config:    cfg,
+		mainPool:  mainPool,
+		mainDBURL: mainDBURL,
+		pools:     make(map[string]*poolEntry),
+		lruList:   list.New(),
+		maxConns:  maxConns,
 	}
 	// Initialize active branch to empty (not set via API yet)
 	// Config default branch is used separately in GetDefaultBranch()
 	r.activeBranch.Store("")
+
+	// Start background eviction goroutine
+	go r.evictIdlePools(evictionAge)
+
 	return r
 }
 
@@ -56,15 +84,34 @@ func (r *Router) GetPool(ctx context.Context, slug string) (*pgxpool.Pool, error
 
 	// Check if we already have a pool for this branch
 	r.poolsMu.RLock()
-	pool, exists := r.pools[slug]
+	entry, exists := r.pools[slug]
 	r.poolsMu.RUnlock()
 
-	if exists && pool != nil {
-		return pool, nil
+	if exists && entry != nil {
+		// Update last access time and move to end of LRU list
+		r.updateAccess(slug)
+		return entry.pool, nil
 	}
 
 	// Need to create a new pool
 	return r.createPoolForBranch(ctx, slug)
+}
+
+// updateAccess updates the last access time for a pool and moves it to the end of the LRU list
+func (r *Router) updateAccess(slug string) {
+	r.poolsMu.RLock()
+	entry, exists := r.pools[slug]
+	r.poolsMu.RUnlock()
+
+	if exists && entry != nil {
+		r.lruMu.Lock()
+		entry.lastAccess = time.Now()
+		// Move to end of LRU list (most recently used)
+		if entry.lruElement != nil {
+			r.lruList.MoveToBack(entry.lruElement)
+		}
+		r.lruMu.Unlock()
+	}
 }
 
 // createPoolForBranch creates a new connection pool for a branch
@@ -73,8 +120,17 @@ func (r *Router) createPoolForBranch(ctx context.Context, slug string) (*pgxpool
 	defer r.poolsMu.Unlock()
 
 	// Double-check after acquiring write lock
-	if pool, exists := r.pools[slug]; exists && pool != nil {
-		return pool, nil
+	if entry, exists := r.pools[slug]; exists && entry != nil {
+		r.updateAccess(slug)
+		return entry.pool, nil
+	}
+
+	// Check if we would exceed global connection limit
+	if r.getCurrentTotalConns() >= r.maxConns {
+		// Try to evict idle pools to free up connections
+		if !r.evictLRUPool() {
+			return nil, fmt.Errorf("global branch connection limit reached (%d), cannot create new pool", r.maxConns)
+		}
 	}
 
 	// Get branch from storage
@@ -118,13 +174,29 @@ func (r *Router) createPoolForBranch(ctx context.Context, slug string) (*pgxpool
 		return nil, fmt.Errorf("failed to ping branch database: %w", err)
 	}
 
-	// Store the pool
-	r.pools[slug] = pool
-	r.poolConfigs[slug] = poolConfig
+	// Create pool entry and add to LRU list
+	r.lruMu.Lock()
+	entry := &poolEntry{
+		slug:       slug,
+		pool:       pool,
+		config:     poolConfig,
+		lastAccess: time.Now(),
+	}
+	entry.lruElement = r.lruList.PushBack(entry)
+	r.lruMu.Unlock()
+
+	// Store the pool entry
+	r.pools[slug] = entry
+
+	// Update current connection count
+	atomic.AddInt32(&r.currentConns, poolConfig.MaxConns)
 
 	log.Info().
 		Str("branch_slug", slug).
 		Str("database", branch.DatabaseName).
+		Int32("max_conns", poolConfig.MaxConns).
+		Int32("total_conns", r.getCurrentTotalConns()).
+		Int32("max_total_conns", r.maxConns).
 		Msg("Created connection pool for branch")
 
 	return pool, nil
@@ -149,14 +221,33 @@ func (r *Router) ClosePool(slug string) {
 	r.poolsMu.Lock()
 	defer r.poolsMu.Unlock()
 
-	if pool, exists := r.pools[slug]; exists {
-		pool.Close()
+	if entry, exists := r.pools[slug]; exists {
+		r.closePoolEntry(entry)
 		delete(r.pools, slug)
-		delete(r.poolConfigs, slug)
 
 		log.Info().
 			Str("branch_slug", slug).
 			Msg("Closed connection pool for branch")
+	}
+}
+
+// closePoolEntry closes a pool entry and updates connection count
+func (r *Router) closePoolEntry(entry *poolEntry) {
+	// Remove from LRU list
+	r.lruMu.Lock()
+	if entry.lruElement != nil {
+		r.lruList.Remove(entry.lruElement)
+	}
+	r.lruMu.Unlock()
+
+	// Update current connection count
+	if entry.config != nil {
+		atomic.AddInt32(&r.currentConns, -entry.config.MaxConns)
+	}
+
+	// Close the pool
+	if entry.pool != nil {
+		entry.pool.Close()
 	}
 }
 
@@ -165,15 +256,15 @@ func (r *Router) CloseAllPools() {
 	r.poolsMu.Lock()
 	defer r.poolsMu.Unlock()
 
-	for slug, pool := range r.pools {
-		pool.Close()
+	for slug, entry := range r.pools {
+		r.closePoolEntry(entry)
 		log.Debug().
 			Str("branch_slug", slug).
 			Msg("Closed connection pool for branch")
 	}
 
-	r.pools = make(map[string]*pgxpool.Pool)
-	r.poolConfigs = make(map[string]*pgxpool.Config)
+	r.pools = make(map[string]*poolEntry)
+	r.lruList.Init()
 }
 
 // RefreshPool recreates the pool for a branch (e.g., after migration)
@@ -217,8 +308,8 @@ func (r *Router) GetPoolStats() map[string]PoolStats {
 	}
 
 	// Add branch pool stats
-	for slug, pool := range r.pools {
-		stat := pool.Stat()
+	for slug, entry := range r.pools {
+		stat := entry.pool.Stat()
 		stats[slug] = PoolStats{
 			TotalConns:      stat.TotalConns(),
 			IdleConns:       stat.IdleConns(),
@@ -230,6 +321,79 @@ func (r *Router) GetPoolStats() map[string]PoolStats {
 	}
 
 	return stats
+}
+
+// getCurrentTotalConns returns the current total connections across all branch pools
+func (r *Router) getCurrentTotalConns() int32 {
+	return atomic.LoadInt32(&r.currentConns)
+}
+
+// evictLRUPool evicts the least recently used pool to free up connections
+// Returns true if a pool was evicted, false if no pools can be evicted
+func (r *Router) evictLRUPool() bool {
+	r.lruMu.Lock()
+	defer r.lruMu.Unlock()
+
+	// Get the least recently used element (front of list)
+	if r.lruList.Len() == 0 {
+		return false
+	}
+
+	lruElement := r.lruList.Front()
+	if lruElement == nil {
+		return false
+	}
+
+	entry, ok := lruElement.Value.(*poolEntry)
+	if !ok || entry == nil {
+		return false
+	}
+
+	// Close the pool
+	r.poolsMu.Lock()
+	r.closePoolEntry(entry)
+	delete(r.pools, entry.slug)
+	r.poolsMu.Unlock()
+
+	log.Info().
+		Str("branch_slug", entry.slug).
+		Int32("freed_conns", entry.config.MaxConns).
+		Int32("total_conns", r.getCurrentTotalConns()).
+		Msg("Evicted LRU branch pool to free connections")
+
+	return true
+}
+
+// evictIdlePools runs in the background to evict pools that haven't been accessed recently
+func (r *Router) evictIdlePools(evictionAge time.Duration) {
+	ticker := time.NewTicker(5 * time.Minute) // Check every 5 minutes
+	defer ticker.Stop()
+
+	for range ticker.C {
+		r.poolsMu.RLock()
+		poolsCopy := make(map[string]*poolEntry, len(r.pools))
+		for k, v := range r.pools {
+			poolsCopy[k] = v
+		}
+		r.poolsMu.RUnlock()
+
+		now := time.Now()
+		for slug, entry := range poolsCopy {
+			if now.Sub(entry.lastAccess) > evictionAge {
+				r.poolsMu.Lock()
+				// Double check the pool still exists and hasn't been accessed recently
+				if currentEntry, exists := r.pools[slug]; exists && now.Sub(currentEntry.lastAccess) > evictionAge {
+					r.closePoolEntry(currentEntry)
+					delete(r.pools, slug)
+					log.Info().
+						Str("branch_slug", slug).
+						Dur("idle_time", now.Sub(currentEntry.lastAccess)).
+						Msg("Evicted idle branch pool")
+				}
+				r.poolsMu.Unlock()
+			}
+		}
+	}
 }
 
 // PoolStats contains connection pool statistics

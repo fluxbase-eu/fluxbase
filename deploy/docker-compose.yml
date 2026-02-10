@@ -207,7 +207,10 @@ services:
       # ==========================================================================
       # CRITICAL: Generate with: openssl rand -base64 32
       FLUXBASE_SECURITY_SETUP_TOKEN: ${FLUXBASE_SECURITY_SETUP_TOKEN:-your-secret-setup-token-change-in-production}
-      # FLUXBASE_SECURITY_ENABLE_GLOBAL_RATE_LIMIT: "false"
+      FLUXBASE_SECURITY_ENABLE_GLOBAL_RATE_LIMIT: "true"
+      # FLUXBASE_SECURITY_ENABLE_PER_USER_RATE_LIMIT: "true"  # Enable per-user rate limiting for authenticated users (default: true)
+      # FLUXBASE_SECURITY_SERVICE_ROLE_RATE_LIMIT: "0"  # 0 = unlimited (default), set to e.g., 1000 to rate limit service_role
+      # FLUXBASE_SECURITY_SERVICE_ROLE_RATE_WINDOW: "1m"  # Time window for service_role rate limit
       # FLUXBASE_SECURITY_ADMIN_SETUP_RATE_LIMIT: "5"
       # FLUXBASE_SECURITY_ADMIN_SETUP_RATE_WINDOW: "15m"  # 15 minutes
       # FLUXBASE_SECURITY_AUTH_LOGIN_RATE_LIMIT: "10"
@@ -490,6 +493,8 @@ services:
       # FLUXBASE_BRANCHING_DEFAULT_DATA_CLONE_MODE: "schema_only"
       # FLUXBASE_BRANCHING_AUTO_DELETE_AFTER: "0"  # 0 = never, e.g., "24h"
       # FLUXBASE_BRANCHING_DATABASE_PREFIX: "branch_"
+      # FLUXBASE_BRANCHING_MAX_TOTAL_CONNECTIONS: "500"  # Global limit for branch pool connections
+      # FLUXBASE_BRANCHING_POOL_EVICTION_AGE: "1h"  # Age threshold for evicting idle branch pools
 
       # ==========================================================================
       # Horizontal Scaling Configuration - OPTIONAL

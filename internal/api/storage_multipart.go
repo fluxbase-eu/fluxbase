@@ -3,9 +3,12 @@ package api
 import (
 	"fmt"
 	"mime/multipart"
+	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
 	"github.com/gofiber/fiber/v3"
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // MultipartUpload handles multipart upload
@@ -16,6 +19,39 @@ func (h *StorageHandler) MultipartUpload(c fiber.Ctx) error {
 	if bucket == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "bucket is required",
+		})
+	}
+
+	// H-19: Check if bucket exists before upload
+	// Use SECURITY DEFINER function to bypass RLS when checking bucket existence
+	var bucketExists bool
+	err := h.db.Pool().QueryRow(c.RequestCtx(),
+		`SELECT storage.bucket_exists($1)`,
+		bucket,
+	).Scan(&bucketExists)
+	if err != nil {
+		log.Error().Err(err).Str("bucket", bucket).Msg("Failed to check bucket existence")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to validate bucket",
+		})
+	}
+	if !bucketExists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("bucket '%s' does not exist", bucket),
+		})
+	}
+
+	// C-3: Get bucket MIME type settings
+	// Use SECURITY DEFINER function to bypass RLS when fetching bucket settings
+	var bucketAllowedMimeTypes []string
+	err = h.db.Pool().QueryRow(c.RequestCtx(),
+		`SELECT allowed_mime_types FROM storage.get_bucket_settings($1)`,
+		bucket,
+	).Scan(&bucketAllowedMimeTypes)
+	if err != nil && err != pgx.ErrNoRows {
+		log.Error().Err(err).Str("bucket", bucket).Msg("Failed to get bucket settings")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to validate bucket settings",
 		})
 	}
 
@@ -41,14 +77,50 @@ func (h *StorageHandler) MultipartUpload(c fiber.Ctx) error {
 	for _, file := range files {
 		key := file.Filename
 
+		// H-20: Sanitize filename
+		key = sanitizeFilename(key)
+		if key == "" {
+			errors = append(errors, fmt.Sprintf("%s: invalid filename after sanitization", file.Filename))
+			continue
+		}
+
 		// Validate file size
 		if err := h.storage.ValidateUploadSize(file.Size); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %s", file.Filename, err.Error()))
 			continue
 		}
 
+		// C-3: Detect content type for MIME validation
+		contentType := file.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = detectContentType(file.Filename)
+		}
+
+		// C-3: Validate MIME type against bucket-specific allowed types
+		if len(bucketAllowedMimeTypes) > 0 {
+			mimeAllowed := false
+			for _, allowedType := range bucketAllowedMimeTypes {
+				if allowedType == contentType || allowedType == "*/*" {
+					mimeAllowed = true
+					break
+				}
+				// Support wildcard matching (e.g., "image/*")
+				if strings.HasSuffix(allowedType, "/*") {
+					prefix := strings.TrimSuffix(allowedType, "/*")
+					if strings.HasPrefix(contentType, prefix+"/") {
+						mimeAllowed = true
+						break
+					}
+				}
+			}
+			if !mimeAllowed {
+				errors = append(errors, fmt.Sprintf("%s: file type %s is not allowed for this bucket", file.Filename, contentType))
+				continue
+			}
+		}
+
 		// Upload file
-		if err := uploadMultipartFile(c, h.storage, bucket, key, file); err != nil {
+		if err := uploadMultipartFile(c, h.storage, bucket, key, file, contentType); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %s", file.Filename, err.Error()))
 			continue
 		}
@@ -73,17 +145,12 @@ func (h *StorageHandler) MultipartUpload(c fiber.Ctx) error {
 }
 
 // uploadMultipartFile uploads a single file from multipart form
-func uploadMultipartFile(c fiber.Ctx, svc *storage.Service, bucket, key string, file *multipart.FileHeader) error {
+func uploadMultipartFile(c fiber.Ctx, svc *storage.Service, bucket, key string, file *multipart.FileHeader, contentType string) error {
 	src, err := file.Open()
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
 	defer func() { _ = src.Close() }()
-
-	contentType := file.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = detectContentType(file.Filename)
-	}
 
 	opts := &storage.UploadOptions{
 		ContentType: contentType,

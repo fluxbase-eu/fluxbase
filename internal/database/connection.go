@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
+	"github.com/fluxbase-eu/fluxbase/internal/logutil"
 	"github.com/fluxbase-eu/fluxbase/internal/observability"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -22,11 +23,17 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pganalyze/pg_query_go/v6"
 	"github.com/rs/zerolog/log"
 )
 
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
+
+// Type aliases for backward compatibility with refactored code
+// These aliases allow the middleware and handlers to use simpler type names
+type Querier interface{}
+type TxConnection = pgx.Tx
 
 // quoteIdentifier safely quotes a PostgreSQL identifier to prevent SQL injection.
 // It wraps the identifier in double quotes and escapes any embedded double quotes.
@@ -89,6 +96,27 @@ func extractOperation(sql string) string {
 	default:
 		return "other"
 	}
+}
+
+// ExtractDDLMetadata extracts operation type and target from a DDL query for logging
+// Returns a safe, redacted string like "CREATE TABLE users", "DROP INDEX idx_name"
+func ExtractDDLMetadata(sql string) string {
+	sql = strings.TrimSpace(sql)
+	if sql == "" {
+		return "empty"
+	}
+
+	// Extract operation
+	operation := extractOperation(sql)
+
+	// Try to extract table name for better logging
+	tableName := extractTableName(sql)
+
+	if tableName != "unknown" && tableName != "" {
+		return fmt.Sprintf("%s (table: %s)", operation, tableName)
+	}
+
+	return operation
 }
 
 // NewConnection creates a new database connection pool
@@ -493,10 +521,17 @@ func (c *Connection) scanMigrationFiles(dir string) ([]migrationFile, error) {
 			return nil, fmt.Errorf("failed to read file %s: %w", name, err)
 		}
 
+		sql := string(content)
+
+		// Validate SQL syntax before applying
+		if err := c.validateMigrationSQL(sql, migName); err != nil {
+			return nil, fmt.Errorf("invalid SQL in migration file %s: %w", name, err)
+		}
+
 		if isUp {
-			migrationMap[migName].UpSQL = string(content)
+			migrationMap[migName].UpSQL = sql
 		} else {
-			migrationMap[migName].DownSQL = string(content)
+			migrationMap[migName].DownSQL = sql
 		}
 	}
 
@@ -799,10 +834,11 @@ func (c *Connection) Query(ctx context.Context, sql string, args ...interface{})
 
 	// Log slow queries (> 1 second)
 	if duration > 1*time.Second {
+		sanitizedQuery := truncateQuery(logutil.SanitizeSQL(sql), 200)
 		log.Warn().
 			Dur("duration", duration).
 			Int64("duration_ms", duration.Milliseconds()).
-			Str("query", truncateQuery(sql, 200)).
+			Str("query", sanitizedQuery).
 			Bool("slow_query", true).
 			Msg("Slow query detected")
 	}
@@ -825,10 +861,11 @@ func (c *Connection) QueryRow(ctx context.Context, sql string, args ...interface
 
 	// Log slow queries (> 1 second)
 	if duration > 1*time.Second {
+		sanitizedQuery := truncateQuery(logutil.SanitizeSQL(sql), 200)
 		log.Warn().
 			Dur("duration", duration).
 			Int64("duration_ms", duration.Milliseconds()).
-			Str("query", truncateQuery(sql, 200)).
+			Str("query", sanitizedQuery).
 			Bool("slow_query", true).
 			Msg("Slow query detected")
 	}
@@ -851,10 +888,11 @@ func (c *Connection) Exec(ctx context.Context, sql string, args ...interface{}) 
 
 	// Log slow queries (> 1 second)
 	if duration > 1*time.Second {
+		sanitizedQuery := truncateQuery(logutil.SanitizeSQL(sql), 200)
 		log.Warn().
 			Dur("duration", duration).
 			Int64("duration_ms", duration.Milliseconds()).
-			Str("query", truncateQuery(sql, 200)).
+			Str("query", sanitizedQuery).
 			Bool("slow_query", true).
 			Msg("Slow query detected")
 	}
@@ -987,5 +1025,25 @@ func (c *Connection) ExecuteWithAdminRole(ctx context.Context, fn func(conn *pgx
 	}
 
 	log.Debug().Msg("Migration executed successfully with admin privileges")
+	return nil
+}
+
+// validateMigrationSQL validates SQL syntax for user-provided migration files
+// This validates that the SQL is valid PostgreSQL syntax without executing it
+func (c *Connection) validateMigrationSQL(sql, migrationName string) error {
+	// Parse the SQL using pg_query to validate syntax
+	tree, err := pg_query.Parse(sql)
+	if err != nil {
+		return fmt.Errorf("SQL syntax error: %w", err)
+	}
+
+	// Log the migration SQL for audit trail (security feature)
+	// This helps track what schema changes were applied
+	log.Info().
+		Str("migration", migrationName).
+		Str("sql_preview", truncateQuery(sql, 200)).
+		Int("statement_count", len(tree.Stmts)).
+		Msg("Validated user migration SQL")
+
 	return nil
 }
