@@ -302,398 +302,399 @@ function PoliciesPage() {
       </div>
 
       <div className='flex-1 overflow-auto p-6'>
-
-      {/* Security Summary */}
-      {warningsData && (
-        <div className='grid grid-cols-4 gap-4'>
-          <Card
-            className={cn(
-              warningsData.summary.critical > 0 &&
-                'border-red-500/50 bg-red-500/5'
-            )}
-          >
-            <CardHeader className='pb-2'>
-              <CardDescription>Critical Issues</CardDescription>
-              <CardTitle className='flex items-center gap-2 text-2xl'>
-                <AlertCircle className='h-5 w-5 text-red-500' />
-                {warningsData.summary.critical}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card
-            className={cn(
-              warningsData.summary.high > 0 &&
-                'border-orange-500/50 bg-orange-500/5'
-            )}
-          >
-            <CardHeader className='pb-2'>
-              <CardDescription>High Priority</CardDescription>
-              <CardTitle className='flex items-center gap-2 text-2xl'>
-                <AlertTriangle className='h-5 w-5 text-orange-500' />
-                {warningsData.summary.high}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className='pb-2'>
-              <CardDescription>Medium Priority</CardDescription>
-              <CardTitle className='flex items-center gap-2 text-2xl'>
-                <Info className='h-5 w-5 text-yellow-500' />
-                {warningsData.summary.medium}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className='pb-2'>
-              <CardDescription>Tables with RLS</CardDescription>
-              <CardTitle className='flex items-center gap-2 text-2xl'>
-                <ShieldCheck className='h-5 w-5 text-green-500' />
-                {tablesData?.filter((t) => t.rls_enabled).length || 0}/
-                {tablesData?.length || 0}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      )}
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value='tables'>Tables</TabsTrigger>
-          <TabsTrigger value='warnings' className='gap-2'>
-            Security Warnings
-            {warningsData && warningsData.summary.total > 0 && (
-              <Badge variant='destructive' className='ml-1'>
-                {warningsData.summary.total}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value='templates'>Policy Templates</TabsTrigger>
-        </TabsList>
-
-        {/* Tables Tab */}
-        <TabsContent value='tables' className='space-y-4'>
-          <div className='flex items-center gap-4'>
-            <div className='relative max-w-sm flex-1'>
-              <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-              <Input
-                placeholder='Search tables...'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className='pl-9'
-              />
-            </div>
+        {/* Security Summary */}
+        {warningsData && (
+          <div className='grid grid-cols-4 gap-4'>
+            <Card
+              className={cn(
+                warningsData.summary.critical > 0 &&
+                  'border-red-500/50 bg-red-500/5'
+              )}
+            >
+              <CardHeader className='pb-2'>
+                <CardDescription>Critical Issues</CardDescription>
+                <CardTitle className='flex items-center gap-2 text-2xl'>
+                  <AlertCircle className='h-5 w-5 text-red-500' />
+                  {warningsData.summary.critical}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card
+              className={cn(
+                warningsData.summary.high > 0 &&
+                  'border-orange-500/50 bg-orange-500/5'
+              )}
+            >
+              <CardHeader className='pb-2'>
+                <CardDescription>High Priority</CardDescription>
+                <CardTitle className='flex items-center gap-2 text-2xl'>
+                  <AlertTriangle className='h-5 w-5 text-orange-500' />
+                  {warningsData.summary.high}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className='pb-2'>
+                <CardDescription>Medium Priority</CardDescription>
+                <CardTitle className='flex items-center gap-2 text-2xl'>
+                  <Info className='h-5 w-5 text-yellow-500' />
+                  {warningsData.summary.medium}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className='pb-2'>
+                <CardDescription>Tables with RLS</CardDescription>
+                <CardTitle className='flex items-center gap-2 text-2xl'>
+                  <ShieldCheck className='h-5 w-5 text-green-500' />
+                  {tablesData?.filter((t) => t.rls_enabled).length || 0}/
+                  {tablesData?.length || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
           </div>
+        )}
 
-          <div>
-            {/* Tables List */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className='mt-6'>
+          <TabsList>
+            <TabsTrigger value='tables'>Tables</TabsTrigger>
+            <TabsTrigger value='warnings' className='gap-2'>
+              Security Warnings
+              {warningsData && warningsData.summary.total > 0 && (
+                <Badge variant='destructive' className='ml-1'>
+                  {warningsData.summary.total}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value='templates'>Policy Templates</TabsTrigger>
+          </TabsList>
+
+          {/* Tables Tab */}
+          <TabsContent value='tables' className='space-y-4'>
+            <div className='flex items-center gap-4'>
+              <div className='relative max-w-sm flex-1'>
+                <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+                <Input
+                  placeholder='Search tables...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className='pl-9'
+                />
+              </div>
+            </div>
+
+            <div>
+              {/* Tables List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tables</CardTitle>
+                  <CardDescription>
+                    Click a table to view and manage its RLS policies
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {tablesLoading ? (
+                    <div className='flex justify-center py-8'>
+                      <Loader2 className='text-muted-foreground h-6 w-6 animate-spin' />
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Table</TableHead>
+                          <TableHead>Schema</TableHead>
+                          <TableHead>RLS</TableHead>
+                          <TableHead>Force RLS</TableHead>
+                          <TableHead>Policies</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTables.map((table) => (
+                          <TableRow
+                            key={`${table.schema}.${table.table}`}
+                            className='hover:bg-muted cursor-pointer'
+                            onClick={() => {
+                              setPolicyModal({
+                                open: true,
+                                schema: table.schema,
+                                table: table.table,
+                              })
+                            }}
+                          >
+                            <TableCell className='font-medium'>
+                              {table.table}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant='outline'>{table.schema}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Switch
+                                checked={table.rls_enabled}
+                                onCheckedChange={(checked) =>
+                                  toggleRLSMutation.mutate({
+                                    schema: table.schema,
+                                    table: table.table,
+                                    enable: checked,
+                                  })
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {table.rls_forced ? (
+                                <CheckCircle2 className='h-4 w-4 text-green-500' />
+                              ) : (
+                                <XCircle className='text-muted-foreground h-4 w-4' />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  table.policy_count > 0
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                              >
+                                {table.policy_count}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Security Warnings Tab */}
+          <TabsContent value='warnings'>
             <Card>
               <CardHeader>
-                <CardTitle>Tables</CardTitle>
-                <CardDescription>
-                  Click a table to view and manage its RLS policies
-                </CardDescription>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <CardTitle>Security Warnings</CardTitle>
+                    <CardDescription>
+                      Issues that may indicate security vulnerabilities in your
+                      RLS configuration
+                    </CardDescription>
+                  </div>
+                  {sortedWarnings.length > 0 && (
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={copyWarningsToClipboard}
+                    >
+                      <Copy className='mr-2 h-4 w-4' />
+                      Copy All
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                {tablesLoading ? (
+                {warningsLoading ? (
                   <div className='flex justify-center py-8'>
                     <Loader2 className='text-muted-foreground h-6 w-6 animate-spin' />
                   </div>
+                ) : sortedWarnings.length === 0 ? (
+                  <div className='text-muted-foreground py-12 text-center'>
+                    <ShieldCheck className='mx-auto mb-4 h-12 w-12 text-green-500' />
+                    <h3 className='text-lg font-medium'>
+                      No Security Issues Found
+                    </h3>
+                    <p className='mt-1 text-sm'>
+                      Your RLS configuration looks good
+                    </p>
+                  </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Table</TableHead>
-                        <TableHead>Schema</TableHead>
-                        <TableHead>RLS</TableHead>
-                        <TableHead>Force RLS</TableHead>
-                        <TableHead>Policies</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTables.map((table) => (
-                        <TableRow
-                          key={`${table.schema}.${table.table}`}
-                          className='hover:bg-muted cursor-pointer'
-                          onClick={() => {
-                            setPolicyModal({
-                              open: true,
-                              schema: table.schema,
-                              table: table.table,
-                            })
-                          }}
-                        >
-                          <TableCell className='font-medium'>
-                            {table.table}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant='outline'>{table.schema}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={table.rls_enabled}
-                              onCheckedChange={(checked) =>
-                                toggleRLSMutation.mutate({
-                                  schema: table.schema,
-                                  table: table.table,
-                                  enable: checked,
-                                })
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {table.rls_forced ? (
-                              <CheckCircle2 className='h-4 w-4 text-green-500' />
-                            ) : (
-                              <XCircle className='text-muted-foreground h-4 w-4' />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                table.policy_count > 0 ? 'default' : 'secondary'
-                              }
-                            >
-                              {table.policy_count}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className='space-y-3'>
+                    {sortedWarnings.map((warning, index) => (
+                      <WarningCard
+                        key={`${warning.id}-${index}`}
+                        warning={warning}
+                        onNavigate={() => {
+                          setPolicyModal({
+                            open: true,
+                            schema: warning.schema,
+                            table: warning.table,
+                            warning: warning,
+                          })
+                        }}
+                      />
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Security Warnings Tab */}
-        <TabsContent value='warnings'>
-          <Card>
-            <CardHeader>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <CardTitle>Security Warnings</CardTitle>
-                  <CardDescription>
-                    Issues that may indicate security vulnerabilities in your
-                    RLS configuration
-                  </CardDescription>
-                </div>
-                {sortedWarnings.length > 0 && (
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={copyWarningsToClipboard}
-                  >
-                    <Copy className='mr-2 h-4 w-4' />
-                    Copy All
-                  </Button>
+          {/* Templates Tab */}
+          <TabsContent value='templates'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Policy Templates</CardTitle>
+                <CardDescription>
+                  Common policy patterns you can use as starting points
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {templates?.length === 0 ? (
+                  <div className='text-muted-foreground py-12 text-center'>
+                    <FileCode className='mx-auto mb-4 h-12 w-12' />
+                    <h3 className='text-lg font-medium'>
+                      No Templates Available
+                    </h3>
+                  </div>
+                ) : (
+                  <div className='grid gap-4 md:grid-cols-2'>
+                    {templates?.map((template) => (
+                      <TemplateCard
+                        key={template.id}
+                        template={template}
+                        onUse={() => {
+                          setTemplateDialog({
+                            open: true,
+                            template,
+                            selectedTable: '',
+                          })
+                        }}
+                      />
+                    ))}
+                  </div>
                 )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {warningsLoading ? (
-                <div className='flex justify-center py-8'>
-                  <Loader2 className='text-muted-foreground h-6 w-6 animate-spin' />
-                </div>
-              ) : sortedWarnings.length === 0 ? (
-                <div className='text-muted-foreground py-12 text-center'>
-                  <ShieldCheck className='mx-auto mb-4 h-12 w-12 text-green-500' />
-                  <h3 className='text-lg font-medium'>
-                    No Security Issues Found
-                  </h3>
-                  <p className='mt-1 text-sm'>
-                    Your RLS configuration looks good
-                  </p>
-                </div>
-              ) : (
-                <div className='space-y-3'>
-                  {sortedWarnings.map((warning, index) => (
-                    <WarningCard
-                      key={`${warning.id}-${index}`}
-                      warning={warning}
-                      onNavigate={() => {
-                        setPolicyModal({
-                          open: true,
-                          schema: warning.schema,
-                          table: warning.table,
-                          warning: warning,
-                        })
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-        {/* Templates Tab */}
-        <TabsContent value='templates'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Policy Templates</CardTitle>
-              <CardDescription>
-                Common policy patterns you can use as starting points
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {templates?.length === 0 ? (
-                <div className='text-muted-foreground py-12 text-center'>
-                  <FileCode className='mx-auto mb-4 h-12 w-12' />
-                  <h3 className='text-lg font-medium'>
-                    No Templates Available
-                  </h3>
-                </div>
-              ) : (
-                <div className='grid gap-4 md:grid-cols-2'>
-                  {templates?.map((template) => (
-                    <TemplateCard
-                      key={template.id}
-                      template={template}
-                      onUse={() => {
-                        setTemplateDialog({
-                          open: true,
-                          template,
-                          selectedTable: '',
-                        })
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Policy Management Modal */}
-      <PolicyManagementModal
-        open={!!policyModal?.open}
-        onOpenChange={(open) => !open && setPolicyModal(null)}
-        schema={policyModal?.schema || ''}
-        table={policyModal?.table || ''}
-        warning={policyModal?.warning}
-        tableDetails={tableDetails}
-        detailsLoading={detailsLoading}
-        onToggleRLS={(enable) => {
-          if (policyModal) {
-            toggleRLSMutation.mutate({
-              schema: policyModal.schema,
-              table: policyModal.table,
-              enable,
-            })
-          }
-        }}
-        onEditPolicy={(policy) => setEditDialog({ open: true, policy })}
-        onDeletePolicy={(policy) => setDeleteDialog({ open: true, policy })}
-        onCreatePolicy={() => setCreateDialogOpen(true)}
-      />
-
-      {/* Create Policy Dialog */}
-      {policyModal && (
-        <CreatePolicyDialog
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          schema={policyModal.schema}
-          table={policyModal.table}
-          templates={templates || []}
-          onSubmit={(data) => createPolicyMutation.mutate(data)}
-          isLoading={createPolicyMutation.isPending}
-        />
-      )}
-
-      {/* Template Application Dialog */}
-      <TemplateApplicationDialog
-        open={templateDialog.open}
-        onOpenChange={(open) =>
-          setTemplateDialog({
-            open,
-            template: open ? templateDialog.template : null,
-            selectedTable: '',
-          })
-        }
-        template={templateDialog.template}
-        tables={tablesData || []}
-        selectedTable={templateDialog.selectedTable}
-        onTableSelect={(table) =>
-          setTemplateDialog({ ...templateDialog, selectedTable: table })
-        }
-        onApply={() => {
-          if (templateDialog.template && templateDialog.selectedTable) {
-            const [schema, table] = templateDialog.selectedTable.split('.')
-            setPolicyModal({ open: true, schema, table })
-            setCreateDialogOpen(true)
-            setTemplateDialog({
-              open: false,
-              template: null,
-              selectedTable: '',
-            })
-          }
-        }}
-      />
-
-      {/* Delete Policy Confirmation */}
-      <AlertDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) =>
-          setDeleteDialog({ open, policy: open ? deleteDialog.policy : null })
-        }
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Policy</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the policy &quot;
-              {deleteDialog.policy?.policy_name}&quot;? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteDialog.policy) {
-                  deletePolicyMutation.mutate({
-                    schema: deleteDialog.policy.schema,
-                    table: deleteDialog.policy.table,
-                    name: deleteDialog.policy.policy_name,
-                  })
-                }
-              }}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-            >
-              {deletePolicyMutation.isPending ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                'Delete'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Edit Policy Dialog */}
-      {editDialog.policy && (
-        <EditPolicyDialog
-          open={editDialog.open}
-          onOpenChange={(open) =>
-            setEditDialog({ open, policy: open ? editDialog.policy : null })
-          }
-          policy={editDialog.policy}
-          onSubmit={(data) => {
-            if (editDialog.policy) {
-              updatePolicyMutation.mutate({
-                schema: editDialog.policy.schema,
-                table: editDialog.policy.table,
-                name: editDialog.policy.policy_name,
-                data,
+        {/* Policy Management Modal */}
+        <PolicyManagementModal
+          open={!!policyModal?.open}
+          onOpenChange={(open) => !open && setPolicyModal(null)}
+          schema={policyModal?.schema || ''}
+          table={policyModal?.table || ''}
+          warning={policyModal?.warning}
+          tableDetails={tableDetails}
+          detailsLoading={detailsLoading}
+          onToggleRLS={(enable) => {
+            if (policyModal) {
+              toggleRLSMutation.mutate({
+                schema: policyModal.schema,
+                table: policyModal.table,
+                enable,
               })
             }
           }}
-          isLoading={updatePolicyMutation.isPending}
+          onEditPolicy={(policy) => setEditDialog({ open: true, policy })}
+          onDeletePolicy={(policy) => setDeleteDialog({ open: true, policy })}
+          onCreatePolicy={() => setCreateDialogOpen(true)}
         />
-      )}
+
+        {/* Create Policy Dialog */}
+        {policyModal && (
+          <CreatePolicyDialog
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            schema={policyModal.schema}
+            table={policyModal.table}
+            templates={templates || []}
+            onSubmit={(data) => createPolicyMutation.mutate(data)}
+            isLoading={createPolicyMutation.isPending}
+          />
+        )}
+
+        {/* Template Application Dialog */}
+        <TemplateApplicationDialog
+          open={templateDialog.open}
+          onOpenChange={(open) =>
+            setTemplateDialog({
+              open,
+              template: open ? templateDialog.template : null,
+              selectedTable: '',
+            })
+          }
+          template={templateDialog.template}
+          tables={tablesData || []}
+          selectedTable={templateDialog.selectedTable}
+          onTableSelect={(table) =>
+            setTemplateDialog({ ...templateDialog, selectedTable: table })
+          }
+          onApply={() => {
+            if (templateDialog.template && templateDialog.selectedTable) {
+              const [schema, table] = templateDialog.selectedTable.split('.')
+              setPolicyModal({ open: true, schema, table })
+              setCreateDialogOpen(true)
+              setTemplateDialog({
+                open: false,
+                template: null,
+                selectedTable: '',
+              })
+            }
+          }}
+        />
+
+        {/* Delete Policy Confirmation */}
+        <AlertDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) =>
+            setDeleteDialog({ open, policy: open ? deleteDialog.policy : null })
+          }
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Policy</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the policy &quot;
+                {deleteDialog.policy?.policy_name}&quot;? This action cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteDialog.policy) {
+                    deletePolicyMutation.mutate({
+                      schema: deleteDialog.policy.schema,
+                      table: deleteDialog.policy.table,
+                      name: deleteDialog.policy.policy_name,
+                    })
+                  }
+                }}
+                className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              >
+                {deletePolicyMutation.isPending ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  'Delete'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Edit Policy Dialog */}
+        {editDialog.policy && (
+          <EditPolicyDialog
+            open={editDialog.open}
+            onOpenChange={(open) =>
+              setEditDialog({ open, policy: open ? editDialog.policy : null })
+            }
+            policy={editDialog.policy}
+            onSubmit={(data) => {
+              if (editDialog.policy) {
+                updatePolicyMutation.mutate({
+                  schema: editDialog.policy.schema,
+                  table: editDialog.policy.table,
+                  name: editDialog.policy.policy_name,
+                  data,
+                })
+              }
+            }}
+            isLoading={updatePolicyMutation.isPending}
+          />
+        )}
       </div>
     </div>
   )
@@ -1273,7 +1274,7 @@ function PolicyManagementModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-h-[90vh] w-full sm:max-w-5xl overflow-y-auto'>
+      <DialogContent className='max-h-[90vh] w-full overflow-y-auto sm:max-w-5xl'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <Shield className='h-5 w-5' />

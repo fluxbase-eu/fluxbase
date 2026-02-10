@@ -1,4 +1,4 @@
-.PHONY: help dev build clean test migrate-up migrate-down migrate-create db-reset db-reset-full deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions viz-deps viz-deps-svg viz-internal viz-callgraph viz-callgraph-svg viz-uml viz-uml-api viz-uml-auth viz-module-deps viz-all
+.PHONY: help dev build clean test migrate-up migrate-down migrate-create db-reset db-reset-full deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions viz-deps viz-deps-svg viz-internal viz-callgraph viz-callgraph-svg viz-uml viz-uml-api viz-uml-auth viz-module-deps viz-all test-cleanup
 
 # Variables
 BINARY_NAME=fluxbase-server
@@ -92,25 +92,33 @@ clean: ## Clean build artifacts
 test: ## Run all tests with race detector (short mode - skips slow tests, excludes e2e)
 	@FLUXBASE_LOG_LEVEL=info ./scripts/test-runner.sh go test -timeout 2m -v -race -short -cover $(shell go list ./... | grep -v '/test/e2e')
 
+test-cleanup: ## Clean up test resources (tables, secrets, keys, buckets) after running tests
+	@echo "${YELLOW}Cleaning up test resources...${NC}"
+	@go run test/cleanup/cmd/main.go
+	@echo "${GREEN}Test resource cleanup complete${NC}"
+
 test-coverage: ## Run ALL tests (unit + e2e) with combined coverage (requires postgres, mailhog, minio - may take 20+ minutes)
 	@echo "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 	@echo "${BLUE}║           COVERAGE REPORT (Unit + E2E)                     ║${NC}"
 	@echo "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 	@echo ""
-	@echo "${YELLOW}[1/4] Running ALL Go tests with coverage (this may take 20+ minutes)...${NC}"
+	@echo "${YELLOW}[1/5] Running ALL Go tests with coverage (this may take 20+ minutes)...${NC}"
 	@echo "${BLUE}Watch for '=== RUN TestName' lines below showing test progress${NC}"
 	@echo ""
 	@FLUXBASE_LOG_LEVEL=info FLUXBASE_PARALLEL_TEST=true NO_COLOR=1 go test -v -timeout 30m -tags=integration -coverprofile=coverage.out -covermode=atomic -p 1 ./... 2>&1 | tee /tmp/go-test-output.txt
 	@echo ""
-	@echo "${YELLOW}[2/4] Checking coverage thresholds...${NC}"
+	@echo "${YELLOW}[2/5] Checking coverage thresholds...${NC}"
 	@-go-test-coverage --config=.testcoverage.yml || echo "${YELLOW}Coverage threshold not met (informational only)${NC}"
 	@echo ""
-	@echo "${YELLOW}[3/4] Generating Go coverage report...${NC}"
+	@echo "${YELLOW}[3/5] Generating Go coverage report...${NC}"
 	@go tool cover -html=coverage.out -o coverage.html
 	@go tool cover -func=coverage.out | grep total | awk '{print "  ${GREEN}Go Coverage (Unit + E2E): " $$3 "${NC}"}'
 	@echo ""
-	@echo "${YELLOW}[4/4] Running SDK tests with coverage...${NC}"
+	@echo "${YELLOW}[4/5] Running SDK tests with coverage...${NC}"
 	@cd sdk && unset NODE_OPTIONS && npx vitest --coverage --run 2>&1 | tail -20 || true
+	@echo ""
+	@echo "${YELLOW}[5/5] Cleaning up test resources...${NC}"
+	@$(MAKE) test-cleanup
 	@echo ""
 	@echo "${GREEN}Coverage reports generated:${NC}"
 	@echo "  - coverage.out     (Go profile - includes e2e)"
