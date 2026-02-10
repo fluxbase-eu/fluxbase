@@ -71,6 +71,7 @@ func extractRoleFromToken(token string) string {
 	// JWT format: header.payload.signature
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
+		log.Debug().Int("parts", len(parts)).Msg("Rate limiter: token is not a valid JWT (wrong number of parts)")
 		return ""
 	}
 
@@ -80,6 +81,7 @@ func extractRoleFromToken(token string) string {
 		// Try standard base64 encoding
 		payload, err = base64.URLEncoding.DecodeString(parts[1])
 		if err != nil {
+			log.Debug().Err(err).Msg("Rate limiter: failed to decode JWT payload")
 			return ""
 		}
 	}
@@ -89,9 +91,11 @@ func extractRoleFromToken(token string) string {
 		Role string `json:"role"`
 	}
 	if err := json.Unmarshal(payload, &claims); err != nil {
+		log.Debug().Err(err).Msg("Rate limiter: failed to parse JWT payload JSON")
 		return ""
 	}
 
+	log.Debug().Str("role", claims.Role).Msg("Rate limiter: extracted role from JWT")
 	return claims.Role
 }
 
@@ -339,11 +343,17 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 		// First check if role is already set by auth middleware
 		role := c.Locals("user_role")
 		if role == "admin" || role == "dashboard_admin" {
+			log.Debug().
+				Str("role", role.(string)).
+				Str("path", c.Path()).
+				Str("method", c.Method()).
+				Msg("Rate limiter: bypassing for admin user (role already set)")
 			return c.Next()
 		}
 
 		// If role is not set, try to extract it from JWT token
 		// This handles the case where global rate limiting runs before auth middleware
+		tokenSource := "none"
 		token := c.Cookies("fluxbase_access_token")
 		if token == "" {
 			// Try Authorization header
@@ -351,10 +361,14 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 			if authHeader != "" {
 				if strings.HasPrefix(authHeader, "Bearer ") {
 					token = strings.TrimPrefix(authHeader, "Bearer ")
+					tokenSource = "header"
 				} else {
 					token = authHeader
+					tokenSource = "header"
 				}
 			}
+		} else {
+			tokenSource = "cookie"
 		}
 
 		// If we have a token, try to extract the role claim without full validation
@@ -363,17 +377,30 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 			// Parse JWT token to extract role claim
 			// We use a simplified parsing that doesn't validate signatures
 			// since the auth middleware will do full validation later
-			role := extractRoleFromToken(token)
-			if role == "admin" || role == "dashboard_admin" {
+			extractedRole := extractRoleFromToken(token)
+			log.Debug().
+				Str("path", c.Path()).
+				Str("method", c.Method()).
+				Str("token_source", tokenSource).
+				Str("extracted_role", extractedRole).
+				Msg("Rate limiter: checked token for role")
+
+			if extractedRole == "admin" || extractedRole == "dashboard_admin" {
+				log.Debug().
+					Str("role", extractedRole).
+					Str("path", c.Path()).
+					Str("method", c.Method()).
+					Msg("Rate limiter: bypassing for admin user (extracted from token)")
 				return c.Next()
 			}
 			// For service_role, check if rate limiting is configured
-			if role == "service_role" {
+			if extractedRole == "service_role" {
 				// Check if service_role rate limiting is enabled
 				ctx := c.RequestCtx()
 				serviceRoleRateLimit := settingsCache.GetInt(ctx, "app.security.service_role_rate_limit", 0)
 				if serviceRoleRateLimit <= 0 {
 					// No rate limiting for service_role (default)
+					log.Debug().Msg("Rate limiter: bypassing for service_role (no rate limit configured)")
 					return c.Next()
 				}
 				// Apply service_role rate limiting
@@ -387,6 +414,10 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 					},
 					Message: fmt.Sprintf("Service role rate limit exceeded. Maximum %d requests per %s allowed.", serviceRoleRateLimit, rateWindow.String()),
 				})
+				log.Debug().
+					Int("limit", serviceRoleRateLimit).
+					Str("window", rateWindow.String()).
+					Msg("Rate limiter: applying service_role rate limit")
 				return serviceRoleLimiter(c)
 			}
 		}
@@ -396,9 +427,15 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 		isEnabled := settingsCache.GetBool(ctx, "app.security.enable_global_rate_limit", false)
 
 		if !isEnabled {
+			log.Debug().Msg("Rate limiter: disabled via settings, skipping")
 			return c.Next() // Skip rate limiting
 		}
 
+		log.Debug().
+			Str("path", c.Path()).
+			Str("method", c.Method()).
+			Str("ip", c.IP()).
+			Msg("Rate limiter: applying global rate limit")
 		return rateLimiter(c)
 	}
 }

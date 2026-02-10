@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/base64"
 	"io"
 	"net/http/httptest"
 	"testing"
@@ -601,4 +602,78 @@ func TestRateLimiter_ConcurrentRequests(t *testing.T) {
 	}
 
 	// No panics means success
+}
+
+// =============================================================================
+// Dashboard Admin Bypass Tests
+// =============================================================================
+
+func TestExtractRoleFromToken_DashboardAdmin(t *testing.T) {
+	// Create a mock JWT token with dashboard_admin role
+	// Format: header.payload.signature
+	// We only need the payload to contain {"role": "dashboard_admin"}
+	payload := `{"role":"dashboard_admin","user_id":"123","email":"admin@example.com"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+
+	// Construct a minimal JWT (header.payload.signature)
+	// The signature doesn't matter for extractRoleFromToken
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + encodedPayload + ".signature"
+
+	role := extractRoleFromToken(token)
+	assert.Equal(t, "dashboard_admin", role, "Should extract dashboard_admin role from JWT")
+}
+
+func TestExtractRoleFromToken_AdminRole(t *testing.T) {
+	payload := `{"role":"admin","user_id":"123"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	token := "header." + encodedPayload + ".signature"
+
+	role := extractRoleFromToken(token)
+	assert.Equal(t, "admin", role, "Should extract admin role from JWT")
+}
+
+func TestExtractRoleFromToken_ServiceRole(t *testing.T) {
+	payload := `{"role":"service_role"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	token := "header." + encodedPayload + ".signature"
+
+	role := extractRoleFromToken(token)
+	assert.Equal(t, "service_role", role, "Should extract service_role from JWT")
+}
+
+func TestExtractRoleFromToken_NoRole(t *testing.T) {
+	payload := `{"user_id":"123","email":"user@example.com"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	token := "header." + encodedPayload + ".signature"
+
+	role := extractRoleFromToken(token)
+	assert.Equal(t, "", role, "Should return empty string when no role claim")
+}
+
+func TestExtractRoleFromToken_InvalidJWT(t *testing.T) {
+	tests := []struct {
+		name  string
+		token string
+	}{
+		{"missing parts", "only.one"},
+		{"too many parts", "one.two.three.four"},
+		{"empty string", ""},
+		{"invalid base64", "header.invalid!base64.signature"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			role := extractRoleFromToken(tt.token)
+			assert.Equal(t, "", role, "Should return empty string for invalid JWT")
+		})
+	}
+}
+
+func TestExtractRoleFromToken_InvalidJSON(t *testing.T) {
+	// Valid base64 but invalid JSON in payload
+	invalidJSON := base64.RawURLEncoding.EncodeToString([]byte("not valid json"))
+	token := "header." + invalidJSON + ".signature"
+
+	role := extractRoleFromToken(token)
+	assert.Equal(t, "", role, "Should return empty string for invalid JSON payload")
 }
