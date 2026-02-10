@@ -615,26 +615,113 @@ func teardownTestTables() {
 
 	log.Info().Msg("Tearing down e2e test tables...")
 
-	// Drop test tables
-	_, err = db.Exec(ctx, `DROP TABLE IF EXISTS public.products CASCADE`)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to drop products table")
+	// Define test table patterns to clean up
+	// 1. Hardcoded e2e test tables
+	hardcodedTables := []string{
+		"public.products",
+		"public.tasks",
+		"public.locations",
+		"public.regions",
+		"public.role_check",
+		"public.sensitive_data",
 	}
 
-	_, err = db.Exec(ctx, `DROP TABLE IF EXISTS public.tasks CASCADE`)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to drop tasks table")
+	// 2. Integration test table patterns (test_table_XXXXXXXX, etc.)
+	// Note: These patterns are embedded in the SQL query below
+
+	// Drop hardcoded tables
+	for _, table := range hardcodedTables {
+		_, err = db.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table))
+		if err != nil {
+			log.Error().Err(err).Str("table", table).Msg("Failed to drop table")
+		} else {
+			log.Debug().Str("table", table).Msg("Dropped table")
+		}
 	}
 
-	// Drop PostGIS test tables (if they exist)
-	_, err = db.Exec(ctx, `DROP TABLE IF EXISTS public.locations CASCADE`)
+	// Drop tables matching test patterns using dynamic SQL
+	// Query pg_tables to find all tables matching the patterns
+	rows, err := db.Query(ctx, `
+		SELECT tablename
+		FROM pg_tables
+		WHERE schemaname = 'public'
+		AND (
+			tablename LIKE 'test_table_%'
+			OR tablename LIKE 'test_single_%'
+			OR tablename LIKE 'test_already_%'
+			OR tablename LIKE 'test_rollback_%'
+			OR tablename LIKE 'test_nodown_%'
+			OR tablename LIKE 'test_stop_%'
+			OR tablename LIKE 'test_history_%'
+			OR tablename LIKE 'test_retry_%'
+			OR tablename LIKE 'test_delete_%'
+			OR tablename LIKE 'ns_test_%'
+		)
+	`)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to drop locations table")
+		log.Error().Err(err).Msg("Failed to query test tables")
+	} else {
+		var tableNames []string
+		for rows.Next() {
+			var tableName string
+			if err := rows.Scan(&tableName); err != nil {
+				log.Error().Err(err).Msg("Failed to scan table name")
+				continue
+			}
+			tableNames = append(tableNames, tableName)
+		}
+		rows.Close()
+
+		// Drop each test table
+		for _, tableName := range tableNames {
+			// Quote the table name to handle any special characters
+			quotedTableName := fmt.Sprintf("\"%s\"", tableName)
+			_, err = db.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS public.%s CASCADE", quotedTableName))
+			if err != nil {
+				log.Error().Err(err).Str("table", tableName).Msg("Failed to drop test table")
+			} else {
+				log.Debug().Str("table", tableName).Msg("Dropped test table")
+			}
+		}
+
+		if len(tableNames) > 0 {
+			log.Info().Int("count", len(tableNames)).Msg("Dropped dynamic test tables")
+		}
 	}
 
-	_, err = db.Exec(ctx, `DROP TABLE IF EXISTS public.regions CASCADE`)
+	// Clean up test data from other tables
+	// Delete test secrets (name starts with 'test')
+	result, err := db.Exec(ctx, "DELETE FROM functions.secrets WHERE name LIKE 'test_%'")
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to drop regions table")
+		log.Error().Err(err).Msg("Failed to delete test secrets")
+	} else if result.RowsAffected() > 0 {
+		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test secrets")
+	}
+
+	// Delete test service/client keys from auth.api_keys (name starts with 'test')
+	result, err = db.Exec(ctx, "DELETE FROM auth.api_keys WHERE name LIKE 'test_%'")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to delete test API keys")
+	} else if result.RowsAffected() > 0 {
+		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test API keys")
+	}
+
+	// Delete test client keys (name starts with 'test')
+	// Note: api_keys was renamed to client_keys in migration 047
+	result, err = db.Exec(ctx, "DELETE FROM auth.client_keys WHERE name LIKE 'test_%'")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to delete test client keys")
+	} else if result.RowsAffected() > 0 {
+		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test client keys")
+	}
+
+	// Delete test storage buckets (id/name starts with 'test')
+	// Note: Cascade will delete associated objects and permissions
+	result, err = db.Exec(ctx, "DELETE FROM storage.buckets WHERE id LIKE 'test_%' OR name LIKE 'test_%'")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to delete test storage buckets")
+	} else if result.RowsAffected() > 0 {
+		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test storage buckets")
 	}
 
 	log.Info().Msg("E2E test tables teardown complete")

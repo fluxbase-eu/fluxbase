@@ -27,7 +27,8 @@ services:
       FLUXBASE_DATABASE_USER: fluxbase_app
       FLUXBASE_DATABASE_PASSWORD: fluxbase_app_password
       FLUXBASE_DATABASE_DATABASE: fluxbase_dev
-      FLUXBASE_AUTH_JWT_SECRET: dev-secret-key-change-in-production
+      # This is just for the devcontainer. In production, you should use a strong, unique secret and manage it securely.
+      FLUXBASE_AUTH_JWT_SECRET: u9fJD9GFueM7Y1UPySQqLs2U6SHm3QB/vo3PiKclYwc=
       FLUXBASE_DEBUG: "true"
       FLUXBASE_STORAGE_PROVIDER: s3
       FLUXBASE_STORAGE_S3_ENDPOINT: http://minio:9000
