@@ -26,14 +26,11 @@ CREATE INDEX IF NOT EXISTS idx_emergency_revocation_all ON auth.emergency_revoca
 -- Grant access to authenticated role for checking revocations (read-only)
 GRANT SELECT ON auth.emergency_revocation TO authenticated;
 
--- Grant access to service_role for checking revocations (read-only)
-GRANT SELECT ON auth.emergency_revocation TO service_role;
+-- Grant access to service_role for managing emergency revocations
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth.emergency_revocation TO service_role;
 
--- Grant full access to admin role for managing emergency revocations
-GRANT ALL ON auth.emergency_revocation TO admin;
-
--- Grant usage on sequence
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth TO admin;
+-- Grant usage on sequence to service_role
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth TO service_role;
 
 -- Comment for documentation
 COMMENT ON TABLE auth.emergency_revocation IS 'Emergency revocation table for service_role tokens. Allows immediate revocation of compromised service keys without waiting for expiry.';

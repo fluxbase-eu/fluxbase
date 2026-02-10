@@ -742,12 +742,24 @@ func (tct *TestContextTx) Tx() pgx.Tx {
 	return tct.tx
 }
 
-// Close implements automatic cleanup - rolls back the transaction if not already committed/rolled back.
+// Close implements automatic cleanup - rolls back the transaction if not already committed/rolled back,
+// and shuts down the test server to clean up background goroutines.
 // This should be called via defer at the start of each test:
 //
 //	defer txCtx.Close()
 func (tct *TestContextTx) Close() {
+	// First, roll back or commit the transaction
 	tct.Rollback()
+
+	// Then, shut down the test server to clean up background goroutines
+	// This is critical for tests that create a server - otherwise background
+	// goroutines (rate limiter cleanup, pub/sub, webhook, realtime, MCP, etc.)
+	// will keep running and prevent the test from completing
+	if tct.testServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = tct.testServer.Shutdown(ctx)
+	}
 }
 
 // NewRequest creates a new HTTP request using the test-mode server.

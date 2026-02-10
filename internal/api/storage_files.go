@@ -36,9 +36,10 @@ func (h *StorageHandler) UploadFile(c fiber.Ctx) error {
 	}
 
 	// H-19: Check if bucket exists before upload
+	// Use SECURITY DEFINER function to bypass RLS when checking bucket existence
 	var bucketExists bool
 	err := h.db.Pool().QueryRow(c.RequestCtx(),
-		`SELECT EXISTS(SELECT 1 FROM storage.buckets WHERE name = $1)`,
+		`SELECT storage.bucket_exists($1)`,
 		bucket,
 	).Scan(&bucketExists)
 	if err != nil {
@@ -69,10 +70,11 @@ func (h *StorageHandler) UploadFile(c fiber.Ctx) error {
 	}
 
 	// Get bucket settings for additional validation
+	// Use SECURITY DEFINER function to bypass RLS when fetching bucket settings
 	var bucketMaxFileSize *int64
 	var bucketAllowedMimeTypes []string
 	err = h.db.Pool().QueryRow(c.RequestCtx(),
-		`SELECT max_file_size, allowed_mime_types FROM storage.buckets WHERE name = $1`,
+		`SELECT max_file_size, allowed_mime_types FROM storage.get_bucket_settings($1)`,
 		bucket,
 	).Scan(&bucketMaxFileSize, &bucketAllowedMimeTypes)
 	if err != nil && err != pgx.ErrNoRows {
