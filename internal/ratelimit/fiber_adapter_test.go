@@ -15,11 +15,13 @@ import (
 // =============================================================================
 
 type mockStore struct {
-	count       int64
-	expiresAt   time.Time
-	incrementBy int64
-	resetCalled bool
-	closeCalled bool
+	count           int64
+	expiresAt       time.Time
+	incrementBy     int64
+	resetCalled     bool
+	resetAllCalled  bool
+	resetAllPattern string
+	closeCalled     bool
 }
 
 func (m *mockStore) Get(ctx context.Context, key string) (int64, time.Time, error) {
@@ -34,6 +36,13 @@ func (m *mockStore) Increment(ctx context.Context, key string, expiration time.D
 
 func (m *mockStore) Reset(ctx context.Context, key string) error {
 	m.resetCalled = true
+	m.count = 0
+	return nil
+}
+
+func (m *mockStore) ResetAll(ctx context.Context, pattern string) error {
+	m.resetAllCalled = true
+	m.resetAllPattern = pattern
 	m.count = 0
 	return nil
 }

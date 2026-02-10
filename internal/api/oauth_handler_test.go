@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"io"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/gofiber/fiber/v3"
@@ -415,7 +417,11 @@ func TestOAuthHandler_GetAndValidateState(t *testing.T) {
 		state, err := auth.GenerateState()
 		require.NoError(t, err)
 
-		handler.stateStore.Set(state, "/callback")
+		handler.stateStore.Set(context.Background(), state, auth.StateMetadata{
+			Expiry:      time.Now().Add(10 * time.Minute),
+			RedirectURI: "/callback",
+			Provider:    "test",
+		})
 
 		// Now validate it
 		metadata, valid := handler.GetAndValidateState(state)
@@ -434,7 +440,11 @@ func TestOAuthHandler_GetAndValidateState(t *testing.T) {
 		state, err := auth.GenerateState()
 		require.NoError(t, err)
 
-		handler.stateStore.Set(state, "/callback")
+		handler.stateStore.Set(context.Background(), state, auth.StateMetadata{
+			Expiry:      time.Now().Add(10 * time.Minute),
+			RedirectURI: "/callback",
+			Provider:    "test",
+		})
 
 		// First validation succeeds
 		_, valid := handler.GetAndValidateState(state)
@@ -503,7 +513,11 @@ func TestOAuthHandler_StateStoreIntegration(t *testing.T) {
 			state, err := auth.GenerateState()
 			require.NoError(t, err)
 			states[i] = state
-			handler.stateStore.Set(state, "/callback"+string(rune('0'+i)))
+			handler.stateStore.Set(context.Background(), state, auth.StateMetadata{
+				Expiry:      time.Now().Add(10 * time.Minute),
+				RedirectURI: "/callback" + string(rune('0'+i)),
+				Provider:    "test",
+			})
 		}
 
 		// All states should be valid
@@ -518,7 +532,10 @@ func TestOAuthHandler_StateStoreIntegration(t *testing.T) {
 		state, err := auth.GenerateState()
 		require.NoError(t, err)
 
-		handler.stateStore.Set(state, "")
+		handler.stateStore.Set(context.Background(), state, auth.StateMetadata{
+			Expiry:   time.Now().Add(10 * time.Minute),
+			Provider: "test",
+		})
 
 		metadata, valid := handler.GetAndValidateState(state)
 		assert.True(t, valid)
@@ -636,7 +653,11 @@ func BenchmarkGenerateAndValidateState(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		state, _ := auth.GenerateState()
-		handler.stateStore.Set(state, "/callback")
+		handler.stateStore.Set(context.Background(), state, auth.StateMetadata{
+			Expiry:      time.Now().Add(10 * time.Minute),
+			RedirectURI: "/callback",
+			Provider:    "test",
+		})
 		_, _ = handler.GetAndValidateState(state)
 	}
 }
@@ -912,7 +933,11 @@ func TestOAuthHandler_StateStoreIntegration_Concurrent(t *testing.T) {
 				state, err := auth.GenerateState()
 				require.NoError(t, err)
 				states[idx] = state
-				handler.stateStore.Set(state, "/callback")
+				handler.stateStore.Set(context.Background(), state, auth.StateMetadata{
+					Expiry:      time.Now().Add(10 * time.Minute),
+					RedirectURI: "/callback",
+					Provider:    "test",
+				})
 				done <- true
 			}(i)
 		}

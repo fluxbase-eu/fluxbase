@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
+	"github.com/fluxbase-eu/fluxbase/internal/logutil"
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -112,7 +113,8 @@ func (h *DDLHandler) CreateSchema(c fiber.Ctx) error {
 	// Create schema (using quoted identifier for safety)
 	// Use admin role to ensure full DDL access (superuser privileges)
 	query := fmt.Sprintf("CREATE SCHEMA %s", quoteIdentifier(req.Name))
-	log.Info().Str("schema", req.Name).Str("query", query).Msg("Creating schema")
+	queryMetadata := logutil.ExtractDDLMetadata(query)
+	log.Info().Str("schema", req.Name).Str("operation", queryMetadata).Msg("Creating schema")
 
 	err = h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
 		_, execErr := conn.Exec(ctx, query)
@@ -210,7 +212,7 @@ func (h *DDLHandler) CreateTable(c fiber.Ctx) error {
 
 	log.Info().
 		Str("table", req.Schema+"."+req.Name).
-		Str("query", query).
+		Str("operation", logutil.ExtractDDLMetadata(query)).
 		Int("columns", len(req.Columns)).
 		Msg("Creating table")
 
@@ -277,7 +279,7 @@ func (h *DDLHandler) DeleteTable(c fiber.Ctx) error {
 
 	// Build DROP TABLE statement
 	query := fmt.Sprintf("DROP TABLE %s.%s", quoteIdentifier(schema), quoteIdentifier(table))
-	log.Info().Str("table", schema+"."+table).Str("query", query).Msg("Dropping table")
+	log.Info().Str("table", schema+"."+table).Str("operation", logutil.ExtractDDLMetadata(query)).Msg("Dropping table")
 
 	// Execute DROP TABLE with admin role for full DDL access (superuser privileges)
 	err = h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
@@ -381,7 +383,7 @@ func (h *DDLHandler) AddColumn(c fiber.Ctx) error {
 	query := fmt.Sprintf("ALTER TABLE %s.%s ADD COLUMN %s",
 		quoteIdentifier(schema), quoteIdentifier(table), colDef)
 
-	log.Info().Str("table", schema+"."+table).Str("column", req.Name).Str("query", query).Msg("Adding column")
+	log.Info().Str("table", schema+"."+table).Str("column", req.Name).Str("operation", logutil.ExtractDDLMetadata(query)).Msg("Adding column")
 
 	err = h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
 		_, execErr := conn.Exec(ctx, query)
@@ -450,7 +452,7 @@ func (h *DDLHandler) DropColumn(c fiber.Ctx) error {
 	query := fmt.Sprintf("ALTER TABLE %s.%s DROP COLUMN %s",
 		quoteIdentifier(schema), quoteIdentifier(table), quoteIdentifier(column))
 
-	log.Info().Str("table", schema+"."+table).Str("column", column).Str("query", query).Msg("Dropping column")
+	log.Info().Str("table", schema+"."+table).Str("column", column).Str("operation", logutil.ExtractDDLMetadata(query)).Msg("Dropping column")
 
 	err = h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
 		_, execErr := conn.Exec(ctx, query)
@@ -528,7 +530,7 @@ func (h *DDLHandler) RenameTable(c fiber.Ctx) error {
 	query := fmt.Sprintf("ALTER TABLE %s.%s RENAME TO %s",
 		quoteIdentifier(schema), quoteIdentifier(table), quoteIdentifier(req.NewName))
 
-	log.Info().Str("table", schema+"."+table).Str("newName", req.NewName).Str("query", query).Msg("Renaming table")
+	log.Info().Str("table", schema+"."+table).Str("newName", req.NewName).Str("operation", logutil.ExtractDDLMetadata(query)).Msg("Renaming table")
 
 	err = h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
 		_, execErr := conn.Exec(ctx, query)

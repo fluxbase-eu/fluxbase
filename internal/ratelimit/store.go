@@ -24,6 +24,13 @@ type Store interface {
 	// Reset resets the counter for a key.
 	Reset(ctx context.Context, key string) error
 
+	// ResetAll removes all rate limit counters matching a key pattern.
+	// The pattern syntax depends on the backend:
+	// - PostgreSQL: Uses SQL LIKE syntax (e.g., "api:%")
+	// - Redis: Uses glob syntax (e.g., "api:*")
+	// This is primarily useful for testing.
+	ResetAll(ctx context.Context, pattern string) error
+
 	// Close closes the store and releases resources.
 	Close() error
 }

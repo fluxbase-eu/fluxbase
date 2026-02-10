@@ -645,7 +645,7 @@ func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error
 			// Parse array values: (1,2,3) or ["a","b","c"]
 			filterValue = qp.parseArrayValue(value)
 		case OpIs:
-			// Parse null/true/false
+			// Parse null/true/false - H-14: Validate boolean values
 			switch value {
 			case "null":
 				filterValue = nil
@@ -654,7 +654,7 @@ func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error
 			case "false":
 				filterValue = false
 			default:
-				filterValue = value
+				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", value)
 			}
 		default:
 			filterValue = value
@@ -688,7 +688,7 @@ func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error
 			// Parse array values: (1,2,3) or ["a","b","c"]
 			parsedValue = qp.parseArrayValue(filterValue)
 		case OpIs:
-			// Parse null/true/false
+			// Parse null/true/false - H-14: Validate boolean values
 			switch filterValue {
 			case "null":
 				parsedValue = nil
@@ -697,7 +697,7 @@ func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error
 			case "false":
 				parsedValue = false
 			default:
-				parsedValue = filterValue
+				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", filterValue)
 			}
 		default:
 			parsedValue = filterValue
@@ -779,7 +779,7 @@ func (qp *QueryParser) parseLogicalFilter(value string, params *QueryParams, isO
 			// Parse array values: (1,2,3) or ["a","b","c"]
 			parsedValue = qp.parseArrayValue(rawValue)
 		case OpIs:
-			// Parse null/true/false
+			// Parse null/true/false - H-14: Validate boolean values
 			switch rawValue {
 			case "null":
 				parsedValue = nil
@@ -788,7 +788,7 @@ func (qp *QueryParser) parseLogicalFilter(value string, params *QueryParams, isO
 			case "false":
 				parsedValue = false
 			default:
-				parsedValue = rawValue
+				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", rawValue)
 			}
 		default:
 			parsedValue = rawValue
@@ -840,7 +840,7 @@ func (qp *QueryParser) parseNestedOrGroup(value string, params *QueryParams) err
 			// Parse array values: (1,2,3) or ["a","b","c"]
 			parsedValue = qp.parseArrayValue(rawValue)
 		case OpIs:
-			// Parse null/true/false
+			// Parse null/true/false - H-14: Validate boolean values
 			switch rawValue {
 			case "null":
 				parsedValue = nil
@@ -849,7 +849,7 @@ func (qp *QueryParser) parseNestedOrGroup(value string, params *QueryParams) err
 			case "false":
 				parsedValue = false
 			default:
-				parsedValue = rawValue
+				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", rawValue)
 			}
 		default:
 			parsedValue = rawValue

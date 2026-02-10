@@ -17,7 +17,7 @@ import (
 
 func TestNewRESTHandler(t *testing.T) {
 	t.Run("creates handler with nil dependencies", func(t *testing.T) {
-		handler := NewRESTHandler(nil, nil, nil)
+		handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 		assert.NotNil(t, handler)
 		assert.Nil(t, handler.db)
 		assert.Nil(t, handler.parser)
@@ -26,7 +26,7 @@ func TestNewRESTHandler(t *testing.T) {
 
 	t.Run("creates handler with parser", func(t *testing.T) {
 		parser := NewQueryParser(&config.Config{})
-		handler := NewRESTHandler(nil, parser, nil)
+		handler := NewRESTHandler(nil, parser, nil, &config.Config{})
 		assert.NotNil(t, handler)
 		assert.Equal(t, parser, handler.parser)
 	})
@@ -34,7 +34,7 @@ func TestNewRESTHandler(t *testing.T) {
 
 func TestRESTHandler_SchemaCache(t *testing.T) {
 	t.Run("returns nil when not set", func(t *testing.T) {
-		handler := NewRESTHandler(nil, nil, nil)
+		handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 		assert.Nil(t, handler.SchemaCache())
 	})
 }
@@ -44,7 +44,7 @@ func TestRESTHandler_SchemaCache(t *testing.T) {
 // =============================================================================
 
 func TestParseTableFromPath(t *testing.T) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 
 	tests := []struct {
 		name           string
@@ -117,7 +117,7 @@ func TestParseTableFromPath(t *testing.T) {
 // =============================================================================
 
 func TestBuildTablePath(t *testing.T) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 
 	tests := []struct {
 		name     string
@@ -179,7 +179,7 @@ func TestBuildTablePath(t *testing.T) {
 // =============================================================================
 
 func TestBuildFullTablePath(t *testing.T) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 
 	tests := []struct {
 		name     string
@@ -225,7 +225,7 @@ func TestBuildFullTablePath(t *testing.T) {
 // =============================================================================
 
 func TestRESTHandler_columnExists(t *testing.T) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 
 	table := database.TableInfo{
 		Schema: "public",
@@ -283,7 +283,7 @@ func TestRESTHandler_columnExists(t *testing.T) {
 }
 
 func TestRESTHandler_columnExists_EmptyTable(t *testing.T) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 
 	table := database.TableInfo{
 		Schema:  "public",
@@ -393,7 +393,7 @@ func TestTableInfo_PrimaryKey(t *testing.T) {
 // =============================================================================
 
 func BenchmarkBuildTablePath_PublicSchema(b *testing.B) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 	table := database.TableInfo{
 		Schema: "public",
 		Name:   "users",
@@ -405,7 +405,7 @@ func BenchmarkBuildTablePath_PublicSchema(b *testing.B) {
 }
 
 func BenchmarkBuildTablePath_CustomSchema(b *testing.B) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 	table := database.TableInfo{
 		Schema: "auth",
 		Name:   "users",
@@ -417,7 +417,7 @@ func BenchmarkBuildTablePath_CustomSchema(b *testing.B) {
 }
 
 func BenchmarkBuildFullTablePath(b *testing.B) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 	table := database.TableInfo{
 		Schema: "public",
 		Name:   "posts",
@@ -429,7 +429,7 @@ func BenchmarkBuildFullTablePath(b *testing.B) {
 }
 
 func BenchmarkColumnExists(b *testing.B) {
-	handler := NewRESTHandler(nil, nil, nil)
+	handler := NewRESTHandler(nil, nil, nil, &config.Config{})
 	table := database.TableInfo{
 		Columns: []database.ColumnInfo{
 			{Name: "id"},

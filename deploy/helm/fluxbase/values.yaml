@@ -201,7 +201,8 @@ config:
   ## @param config.security.captcha.cap_api_key Cap API key (for cap provider only)
   ##
   security:
-    enable_global_rate_limit: false
+    enable_global_rate_limit: true
+    enable_per_user_rate_limit: true  # Enable per-user rate limiting for authenticated users
     setup_token: "" # Use existingSecret in production. Generate with: openssl rand -base64 32
     admin_setup_rate_limit: 5
     admin_setup_rate_window: "15m"
@@ -209,6 +210,11 @@ config:
     auth_login_rate_window: "1m"
     admin_login_rate_limit: 10
     admin_login_rate_window: "1m"
+    ## service_role rate limiting (disabled by default - set to 0 for unlimited)
+    ## @param config.security.service_role_rate_limit Max requests for service_role tokens (0 = unlimited)
+    ## @param config.security.service_role_rate_window Time window for service_role rate limit
+    service_role_rate_limit: 0  # 0 = unlimited (service_role bypasses rate limiting by default)
+    service_role_rate_window: "1m"
     ## CAPTCHA configuration for bot protection on auth endpoints
     ## Supported providers: hcaptcha, recaptcha_v3, turnstile, cap
     ## Cap is a self-hosted proof-of-work CAPTCHA (https://capjs.js.org/)
@@ -478,18 +484,23 @@ config:
     max_page_size: 1000
     max_total_results: 10000
     default_page_size: 1000
+    max_batch_size: 1000
 
   ## GraphQL configuration
   ## @param config.graphql.enabled Enable GraphQL API endpoint
   ## @param config.graphql.max_depth Maximum query depth (default: 10)
   ## @param config.graphql.max_complexity Maximum query complexity score (default: 1000)
   ## @param config.graphql.introspection Enable GraphQL introspection (disable in production)
+  ## @param config.graphql.allow_fragments Allow fragment spreads in queries (default: false for security)
+  ## @param config.graphql.max_fields_per_lvl Maximum unique fields per query level (default: 50)
   ##
   graphql:
     enabled: true
     max_depth: 10
     max_complexity: 1000
     introspection: false
+    allow_fragments: false
+    max_fields_per_lvl: 50
 
   ## Migrations configuration
   ## @param config.migrations.enabled Enable migrations API
@@ -699,6 +710,8 @@ config:
   ## @param config.branching.auto_delete_after Auto-delete branches after duration (0 = never)
   ## @param config.branching.database_prefix Prefix for branch database names
   ## @param config.branching.admin_database_url Admin database URL (uses main if empty)
+  ## @param config.branching.max_total_connections Global limit for total branch pool connections
+  ## @param config.branching.pool_eviction_age Age threshold for evicting idle branch pools
   ##
   branching:
     enabled: false
@@ -708,6 +721,8 @@ config:
     auto_delete_after: "0"
     database_prefix: "branch_"
     admin_database_url: ""
+    max_total_connections: 500
+    pool_eviction_age: "1h"
 
   ## Encryption configuration (REQUIRED)
   ## @param config.encryption_key REQUIRED: Encryption key for sensitive data at rest

@@ -141,3 +141,76 @@ func DeriveUserKey(masterKey string, userID uuid.UUID) (string, error) {
 
 	return string(derivedKey), nil
 }
+
+// EncryptWithBytesKey encrypts plaintext using AES-256-GCM with a []byte key.
+// This is the preferred method for encryption as it allows secure key zeroing after use.
+// The key must be exactly 32 bytes.
+// SECURITY: Callers should zero the key after use: for i := range key { key[i] = 0 }
+func EncryptWithBytesKey(plaintext string, key []byte) (string, error) {
+	if len(key) != 32 {
+		return "", ErrInvalidKey
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	// Create a nonce with the standard GCM nonce size (12 bytes)
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	// Seal encrypts and authenticates the plaintext
+	// The nonce is prepended to the ciphertext
+	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+
+	// Return base64-encoded result
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+// DecryptWithBytesKey decrypts a base64-encoded ciphertext using AES-256-GCM with a []byte key.
+// This is the preferred method for decryption as it allows secure key zeroing after use.
+// The key must be exactly 32 bytes.
+// SECURITY: Callers should zero the key after use: for i := range key { key[i] = 0 }
+func DecryptWithBytesKey(ciphertext string, key []byte) (string, error) {
+	if len(key) != 32 {
+		return "", ErrInvalidKey
+	}
+
+	// Decode base64
+	data, err := base64.StdEncoding.DecodeString(ciphertext)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode base64: %w", err)
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	// The nonce is prepended to the ciphertext
+	nonceSize := gcm.NonceSize()
+	if len(data) < nonceSize {
+		return "", ErrInvalidCiphertext
+	}
+
+	nonce, ciphertextBytes := data[:nonceSize], data[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertextBytes, nil)
+	if err != nil {
+		return "", ErrDecryptionFailed
+	}
+
+	return string(plaintext), nil
+}

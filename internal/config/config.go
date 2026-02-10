@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strings"
@@ -185,6 +186,12 @@ type AuthConfig struct {
 	// and existing user-created keys are blocked from authenticating.
 	// Default: true
 	AllowUserClientKeys bool `mapstructure:"allow_user_client_keys"`
+
+	// OAuthStateStorage configures how OAuth state tokens are stored.
+	// "memory" - In-memory storage (default, single-instance only)
+	// "database" - PostgreSQL storage (required for multi-instance deployments)
+	// Default: "memory"
+	OAuthStateStorage string `mapstructure:"oauth_state_storage"`
 }
 
 // SAMLProviderConfig represents a SAML 2.0 Identity Provider configuration
@@ -263,6 +270,13 @@ type SecurityConfig struct {
 	AuthRefreshRateWindow       time.Duration `mapstructure:"auth_refresh_rate_window"`        // Time window for token refresh rate limit
 	AuthMagicLinkRateLimit      int           `mapstructure:"auth_magic_link_rate_limit"`      // Max attempts for magic link
 	AuthMagicLinkRateWindow     time.Duration `mapstructure:"auth_magic_link_rate_window"`     // Time window for magic link rate limit
+
+	// Rate limiting for service_role tokens (bypassed by default, but can be enabled)
+	ServiceRoleRateLimit  int           `mapstructure:"service_role_rate_limit"`  // Max requests for service_role tokens (0 = unlimited)
+	ServiceRoleRateWindow time.Duration `mapstructure:"service_role_rate_window"` // Time window for service_role rate limit
+
+	// Per-user rate limiting (track by user ID instead of IP for authenticated users)
+	EnablePerUserRateLimit bool `mapstructure:"enable_per_user_rate_limit"` // Enable per-user rate limiting (instead of per-IP)
 
 	// CAPTCHA configuration for bot protection
 	Captcha CaptchaConfig `mapstructure:"captcha"`
@@ -439,6 +453,7 @@ type APIConfig struct {
 	MaxPageSize     int `mapstructure:"max_page_size"`     // Max rows per request (-1 = unlimited)
 	MaxTotalResults int `mapstructure:"max_total_results"` // Max total retrievable rows via offset+limit (-1 = unlimited)
 	DefaultPageSize int `mapstructure:"default_page_size"` // Auto-applied when no limit specified (-1 = no default)
+	MaxBatchSize    int `mapstructure:"max_batch_size"`    // Max records in batch insert/update (-1 = unlimited, default: 1000)
 }
 
 // JobsConfig contains long-running background jobs settings
@@ -704,14 +719,19 @@ func setDefaults() {
 	viper.SetDefault("auth.totp_issuer", "Fluxbase") // Default issuer name for 2FA TOTP (shown in authenticator apps)
 
 	// Security defaults
-	viper.SetDefault("security.enable_global_rate_limit", false) // Disabled by default, enable in production if needed
-	viper.SetDefault("security.setup_token", "")                 // Empty by default - required when admin.enabled=true
-	viper.SetDefault("security.admin_setup_rate_limit", 5)       // 5 attempts
-	viper.SetDefault("security.admin_setup_rate_window", "15m")  // per 15 minutes
-	viper.SetDefault("security.auth_login_rate_limit", 10)       // 10 attempts
-	viper.SetDefault("security.auth_login_rate_window", "1m")    // per minute
-	viper.SetDefault("security.admin_login_rate_limit", 10)      // 10 attempts
-	viper.SetDefault("security.admin_login_rate_window", "1m")   // per minute
+	viper.SetDefault("security.enable_global_rate_limit", true) // Enabled by default for security (can be disabled if needed)
+	viper.SetDefault("security.setup_token", "")                // Empty by default - required when admin.enabled=true
+	viper.SetDefault("security.admin_setup_rate_limit", 5)      // 5 attempts
+	viper.SetDefault("security.admin_setup_rate_window", "15m") // per 15 minutes
+	viper.SetDefault("security.auth_login_rate_limit", 10)      // 10 attempts
+	viper.SetDefault("security.auth_login_rate_window", "1m")   // per minute
+	viper.SetDefault("security.admin_login_rate_limit", 10)     // 10 attempts
+	viper.SetDefault("security.admin_login_rate_window", "1m")  // per minute
+
+	// service_role rate limiting defaults (H-2: enabled by default to prevent abuse)
+	viper.SetDefault("security.service_role_rate_limit", 10000)   // 10000 requests per minute for service_role tokens (H-2)
+	viper.SetDefault("security.service_role_rate_window", "1m")   // per minute
+	viper.SetDefault("security.enable_per_user_rate_limit", true) // Enable per-user rate limiting for authenticated users
 
 	// CAPTCHA defaults
 	viper.SetDefault("security.captcha.enabled", false)       // Disabled by default
@@ -849,6 +869,7 @@ func setDefaults() {
 	viper.SetDefault("api.max_page_size", 1000)      // Max 1000 rows per request
 	viper.SetDefault("api.max_total_results", 10000) // Max 10k total rows retrievable
 	viper.SetDefault("api.default_page_size", 1000)  // Default to 1000 rows if not specified
+	viper.SetDefault("api.max_batch_size", 1000)     // Max 1000 records in batch insert/update (H-4)
 
 	// Migrations defaults
 	viper.SetDefault("migrations.enabled", true) // Enabled by default for better DX (security still enforced via service key + IP allowlist)
@@ -955,10 +976,12 @@ func setDefaults() {
 	})
 
 	// GraphQL defaults
-	viper.SetDefault("graphql.enabled", true)        // Enabled by default
-	viper.SetDefault("graphql.max_depth", 10)        // Maximum query depth
-	viper.SetDefault("graphql.max_complexity", 1000) // Maximum query complexity
-	viper.SetDefault("graphql.introspection", true)  // Enable introspection (disable in production for security)
+	viper.SetDefault("graphql.enabled", true)          // Enabled by default
+	viper.SetDefault("graphql.max_depth", 10)          // Maximum query depth
+	viper.SetDefault("graphql.max_complexity", 1000)   // Maximum query complexity
+	viper.SetDefault("graphql.introspection", true)    // Enable introspection (disable in production for security)
+	viper.SetDefault("graphql.allow_fragments", false) // H-5: Fragment spreads disabled by default (security)
+	viper.SetDefault("graphql.max_fields_per_lvl", 50) // H-6: Max 50 unique fields per level (alias abuse protection)
 
 	// MCP defaults (Model Context Protocol server for AI assistants)
 	viper.SetDefault("mcp.enabled", true)                      // Enabled by default
@@ -1238,17 +1261,22 @@ func (dc *DatabaseConfig) Validate() error {
 	}
 
 	// Validate connection pool settings
-	if dc.MaxConnections <= 0 {
-		return fmt.Errorf("max_connections must be positive, got: %d", dc.MaxConnections)
+	// MaxConnections must be between 1 and 1000 to prevent resource exhaustion
+	if dc.MaxConnections < 1 {
+		return fmt.Errorf("max_connections must be at least 1, got: %d", dc.MaxConnections)
+	}
+	if dc.MaxConnections > 1000 {
+		return fmt.Errorf("max_connections must be at most 1000, got: %d", dc.MaxConnections)
 	}
 
+	// MinConnections must be non-negative and cannot exceed MaxConnections
 	if dc.MinConnections < 0 {
-		return fmt.Errorf("min_connections cannot be negative, got: %d", dc.MinConnections)
+		return fmt.Errorf("min_connections must be at least 0, got: %d", dc.MinConnections)
 	}
 
-	if dc.MaxConnections < dc.MinConnections {
-		return fmt.Errorf("max_connections (%d) must be greater than or equal to min_connections (%d)",
-			dc.MaxConnections, dc.MinConnections)
+	if dc.MinConnections > dc.MaxConnections {
+		return fmt.Errorf("min_connections (%d) cannot exceed max_connections (%d)",
+			dc.MinConnections, dc.MaxConnections)
 	}
 
 	// Validate timeouts are positive
@@ -1278,6 +1306,17 @@ func (ac *AuthConfig) Validate() error {
 	// Validate JWT secret length (should be at least 32 characters for security)
 	if len(ac.JWTSecret) < 32 {
 		log.Warn().Msg("JWT secret is shorter than 32 characters - consider using a longer secret for better security")
+	}
+
+	// SECURITY: Validate JWT secret entropy to prevent weak secrets
+	// Calculate Shannon entropy of the secret to ensure it has sufficient randomness
+	entropy := calculateEntropy(ac.JWTSecret)
+	// Minimum 4.5 bits per character Shannon entropy (catches repetitive patterns)
+	// For reference: random alphanumeric = ~6 bits/char, all same = 0 bits, alternating = ~1 bit
+	// 4.5 bits/char ensures good character variety without being overly strict
+	minEntropyPerChar := 4.5
+	if entropy < minEntropyPerChar {
+		return fmt.Errorf("jwt_secret has insufficient entropy (%.2f bits < %.2f bits per character minimum). Generate a secure random secret: openssl rand -base64 32 | head -c 32", entropy, minEntropyPerChar)
 	}
 
 	// Validate expiry durations are positive
@@ -1394,12 +1433,13 @@ func (dc *DatabaseConfig) ConnectionString() string {
 }
 
 // RuntimeConnectionString returns the PostgreSQL connection string for the runtime user
+// Uses url.URL for secure credential handling to prevent password injection
 func (dc *DatabaseConfig) RuntimeConnectionString() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		dc.User, dc.Password, dc.Host, dc.Port, dc.Database, dc.SSLMode)
+	return dc.buildSecureConnString(dc.User, dc.Password)
 }
 
 // AdminConnectionString returns the PostgreSQL connection string for the admin user
+// Uses url.URL for secure credential handling to prevent password injection
 func (dc *DatabaseConfig) AdminConnectionString() string {
 	user := dc.AdminUser
 	if user == "" {
@@ -1409,8 +1449,42 @@ func (dc *DatabaseConfig) AdminConnectionString() string {
 	if password == "" {
 		password = dc.Password
 	}
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		user, password, dc.Host, dc.Port, dc.Database, dc.SSLMode)
+	return dc.buildSecureConnString(user, password)
+}
+
+// buildSecureConnString creates a connection string using url.URL for secure credential handling
+// This prevents password injection via special characters in passwords
+func (dc *DatabaseConfig) buildSecureConnString(user, password string) string {
+	// Use url.URL to properly encode credentials and prevent injection
+	u := &url.URL{
+		Scheme:   "postgres",
+		Host:     fmt.Sprintf("%s:%d", dc.Host, dc.Port),
+		Path:     "/" + dc.Database,
+		RawQuery: fmt.Sprintf("sslmode=%s", dc.SSLMode),
+	}
+	u.User = url.UserPassword(user, password)
+	return u.String()
+}
+
+// RedactConnString returns a connection string with the password redacted for logging
+// Example: postgres://user:****@localhost:5432/db?sslmode=disable
+func (dc *DatabaseConfig) RedactConnString(connStr string) string {
+	// Parse the connection string
+	u, err := url.Parse(connStr)
+	if err != nil || u.Scheme == "" {
+		// If parsing fails or it's not a valid URL, return a fully redacted string
+		return "postgres://****@****:****/****?sslmode=****"
+	}
+
+	// Redact the password
+	if u.User != nil {
+		_, passwordSet := u.User.Password()
+		if passwordSet {
+			u.User = url.UserPassword(u.User.Username(), "****")
+		}
+	}
+
+	return u.String()
 }
 
 // Validate validates security configuration
@@ -1817,4 +1891,30 @@ func (lc *LoggingConfig) Validate() error {
 	}
 
 	return nil
+}
+
+// calculateEntropy calculates the Shannon entropy of a string in bits.
+// Higher entropy indicates more randomness and better security.
+// Formula: H = -Σ p(x) * log2(p(x)) where p(x) is the probability of character x
+func calculateEntropy(s string) float64 {
+	if len(s) == 0 {
+		return 0
+	}
+
+	// Count frequency of each character
+	freq := make(map[rune]int)
+	for _, char := range s {
+		freq[char]++
+	}
+
+	// Calculate Shannon entropy
+	length := float64(len(s))
+	entropy := 0.0
+
+	for _, count := range freq {
+		probability := float64(count) / length
+		entropy -= probability * math.Log2(probability)
+	}
+
+	return entropy
 }

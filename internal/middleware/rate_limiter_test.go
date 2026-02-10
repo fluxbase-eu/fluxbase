@@ -466,6 +466,64 @@ func TestMigrationAPILimiter_NonServiceRole(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 }
 
+// TestMigrationAPILimiter_ServiceRoleRateLimited tests H-2: service_role rate limiting
+func TestMigrationAPILimiter_ServiceRoleRateLimited(t *testing.T) {
+	app := fiber.New()
+
+	// Simulate service_role JWT authentication with a JWT ID
+	app.Use(func(c fiber.Ctx) error {
+		c.Locals("user_role", "service_role")
+		c.Locals("jti", "test-service-role-jti-123")
+		return c.Next()
+	})
+
+	// Use MigrationAPILimiterWithConfig with a low rate limit for testing
+	app.Use(MigrationAPILimiterWithConfig(5, 1*time.Minute))
+	app.Post("/migrations/up", func(c fiber.Ctx) error {
+		return c.SendString("Migration successful")
+	})
+
+	// First 5 requests should succeed
+	for i := 0; i < 5; i++ {
+		req := httptest.NewRequest("POST", "/migrations/up", nil)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode, "Request %d should succeed", i+1)
+	}
+
+	// 6th request should be rate limited
+	req := httptest.NewRequest("POST", "/migrations/up", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, 429, resp.StatusCode, "Request 6 should be rate limited")
+}
+
+// TestMigrationAPILimiter_ServiceRoleUnlimitedWhenZeroConfig tests backward compatibility
+func TestMigrationAPILimiter_ServiceRoleUnlimitedWhenZeroConfig(t *testing.T) {
+	app := fiber.New()
+
+	// Simulate service_role JWT authentication
+	app.Use(func(c fiber.Ctx) error {
+		c.Locals("user_role", "service_role")
+		c.Locals("jti", "test-service-role-jti-456")
+		return c.Next()
+	})
+
+	// Use MigrationAPILimiterWithConfig with 0 rate limit (unlimited, backward compatible)
+	app.Use(MigrationAPILimiterWithConfig(0, 0))
+	app.Post("/migrations/up", func(c fiber.Ctx) error {
+		return c.SendString("Migration successful")
+	})
+
+	// Many requests should succeed (no rate limiting)
+	for i := 0; i < 20; i++ {
+		req := httptest.NewRequest("POST", "/migrations/up", nil)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode, "Request %d should succeed with unlimited config", i+1)
+	}
+}
+
 // =============================================================================
 // Benchmark Tests
 // =============================================================================

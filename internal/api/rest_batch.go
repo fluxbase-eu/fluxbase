@@ -22,6 +22,13 @@ func (h *RESTHandler) batchInsert(ctx context.Context, c fiber.Ctx, table databa
 		})
 	}
 
+	// Validate batch size limit (H-4)
+	if h.config.API.MaxBatchSize > 0 && len(dataArray) > h.config.API.MaxBatchSize {
+		return c.Status(400).JSON(fiber.Map{
+			"error": fmt.Sprintf("Batch size %d exceeds maximum allowed batch size of %d", len(dataArray), h.config.API.MaxBatchSize),
+		})
+	}
+
 	// Get all unique columns from the first record
 	firstRecord := dataArray[0]
 	columns := make([]string, 0, len(firstRecord))     // Quoted column names for SQL

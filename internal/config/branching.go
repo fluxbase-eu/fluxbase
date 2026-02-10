@@ -15,6 +15,8 @@ type BranchingConfig struct {
 	DatabasePrefix       string        `mapstructure:"database_prefix"`         // Prefix for branch database names (default: "branch_")
 	SeedsPath            string        `mapstructure:"seeds_path"`              // Path to seed data files directory (default: "./seeds")
 	DefaultBranch        string        `mapstructure:"default_branch"`          // Default branch for all requests (default: "main")
+	MaxTotalConnections  int           `mapstructure:"max_total_connections"`   // Global limit for total branch pool connections (default: 500)
+	PoolEvictionAge      time.Duration `mapstructure:"pool_eviction_age"`       // Age threshold for evicting idle branch pools (default: 1h)
 }
 
 // DataCloneModes are the valid values for DefaultDataCloneMode
@@ -53,6 +55,15 @@ func (bc *BranchingConfig) Validate() error {
 
 	if bc.DatabasePrefix == "" {
 		return fmt.Errorf("branching database_prefix cannot be empty when enabled")
+	}
+
+	// Validate connection pool limits
+	if bc.MaxTotalConnections < 0 {
+		return fmt.Errorf("branching max_total_connections cannot be negative, got: %d", bc.MaxTotalConnections)
+	}
+
+	if bc.PoolEvictionAge < 0 {
+		return fmt.Errorf("branching pool_eviction_age cannot be negative, got: %v", bc.PoolEvictionAge)
 	}
 
 	// Set default seeds path if not specified

@@ -113,6 +113,44 @@ func (h *GraphQLHandler) HandleGraphQL(c fiber.Ctx) error {
 		}
 	}
 
+	// Validate fragment spreads (H-5)
+	if !h.config.AllowFragments {
+		hasFragments, err := hasFragmentSpreads(req.Query)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(GraphQLResponse{
+				Errors: []GraphQLError{{
+					Message: "Invalid query syntax",
+				}},
+			})
+		}
+		if hasFragments {
+			return c.Status(fiber.StatusBadRequest).JSON(GraphQLResponse{
+				Errors: []GraphQLError{{
+					Message: "Fragment spreads are not allowed for security reasons",
+				}},
+			})
+		}
+	}
+
+	// Validate fields per level (H-6)
+	if h.config.MaxFieldsPerLvl > 0 {
+		maxFields, err := calculateMaxFieldsPerLevel(req.Query)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(GraphQLResponse{
+				Errors: []GraphQLError{{
+					Message: "Invalid query syntax",
+				}},
+			})
+		}
+		if maxFields > h.config.MaxFieldsPerLvl {
+			return c.Status(fiber.StatusBadRequest).JSON(GraphQLResponse{
+				Errors: []GraphQLError{{
+					Message: fmt.Sprintf("query has %d unique fields at a level, maximum allowed is %d", maxFields, h.config.MaxFieldsPerLvl),
+				}},
+			})
+		}
+	}
+
 	// Validate query complexity
 	if h.config.MaxComplexity > 0 {
 		complexity := calculateQueryComplexity(req.Query)
@@ -549,5 +587,111 @@ fragment TypeRef on __Type {
   }
 }
 `
+
+// hasFragmentSpreads checks if a GraphQL query contains fragment spreads
+func hasFragmentSpreads(query string) (bool, error) {
+	if query == "" {
+		return false, fmt.Errorf("query cannot be empty")
+	}
+
+	doc, err := parser.Parse(parser.ParseParams{Source: query})
+	if err != nil {
+		return false, err
+	}
+
+	for _, def := range doc.Definitions {
+		if op, ok := def.(*ast.OperationDefinition); ok {
+			if hasFragmentInSelectionSet(op.SelectionSet) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// hasFragmentInSelectionSet recursively checks for fragment spreads
+func hasFragmentInSelectionSet(selSet *ast.SelectionSet) bool {
+	if selSet == nil {
+		return false
+	}
+
+	for _, sel := range selSet.Selections {
+		switch s := sel.(type) {
+		case *ast.FragmentSpread:
+			return true
+		case *ast.Field:
+			if hasFragmentInSelectionSet(s.SelectionSet) {
+				return true
+			}
+		case *ast.InlineFragment:
+			if hasFragmentInSelectionSet(s.SelectionSet) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// calculateMaxFieldsPerLevel calculates the maximum number of unique fields at any level
+// This counts unique field names per level, ignoring aliases (H-6)
+func calculateMaxFieldsPerLevel(query string) (int, error) {
+	if query == "" {
+		return 0, fmt.Errorf("query cannot be empty")
+	}
+
+	doc, err := parser.Parse(parser.ParseParams{Source: query})
+	if err != nil {
+		return 0, err
+	}
+
+	maxFields := 0
+	for _, def := range doc.Definitions {
+		if op, ok := def.(*ast.OperationDefinition); ok {
+			fields := countFieldsAtLevel(op.SelectionSet)
+			if fields > maxFields {
+				maxFields = fields
+			}
+		}
+	}
+	return maxFields, nil
+}
+
+// countFieldsAtLevel counts unique fields at a single level
+func countFieldsAtLevel(selSet *ast.SelectionSet) int {
+	if selSet == nil {
+		return 0
+	}
+
+	fieldNames := make(map[string]bool)
+	maxNested := 0
+
+	for _, sel := range selSet.Selections {
+		switch s := sel.(type) {
+		case *ast.Field:
+			// Use the field name (not alias) to track unique fields
+			fieldName := s.Name.Value
+			fieldNames[fieldName] = true
+
+			// Recursively check nested fields
+			nestedFields := countFieldsAtLevel(s.SelectionSet)
+			if nestedFields > maxNested {
+				maxNested = nestedFields
+			}
+
+		case *ast.InlineFragment:
+			// Count fields in inline fragment at this level
+			nestedFields := countFieldsAtLevel(s.SelectionSet)
+			if nestedFields > maxNested {
+				maxNested = nestedFields
+			}
+		}
+	}
+
+	// Return max of current level or nested levels
+	if len(fieldNames) > maxNested {
+		return len(fieldNames)
+	}
+	return maxNested
+}
 
 // fiber:context-methods migrated

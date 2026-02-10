@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
+	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -16,14 +17,16 @@ type RESTHandler struct {
 	db          *database.Connection
 	parser      *QueryParser
 	schemaCache *database.SchemaCache
+	config      *config.Config
 }
 
 // NewRESTHandler creates a new REST handler
-func NewRESTHandler(db *database.Connection, parser *QueryParser, schemaCache *database.SchemaCache) *RESTHandler {
+func NewRESTHandler(db *database.Connection, parser *QueryParser, schemaCache *database.SchemaCache, cfg *config.Config) *RESTHandler {
 	return &RESTHandler{
 		db:          db,
 		parser:      parser,
 		schemaCache: schemaCache,
+		config:      cfg,
 	}
 }
 

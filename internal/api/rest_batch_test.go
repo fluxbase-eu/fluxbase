@@ -148,7 +148,7 @@ func TestMakeBatchDeleteHandler_Validation(t *testing.T) {
 
 func TestBatchInsert_EmptyArray(t *testing.T) {
 	app := fiber.New()
-	handler := &RESTHandler{}
+	handler := &RESTHandler{config: &config.Config{}}
 
 	table := database.TableInfo{
 		Schema:     "public",
@@ -179,7 +179,8 @@ func TestBatchInsert_EmptyArray(t *testing.T) {
 
 func TestBatchInsert_UnknownColumn(t *testing.T) {
 	app := fiber.New()
-	handler := &RESTHandler{}
+	cfg := &config.Config{} // Provide config to avoid nil pointer dereference (H-4)
+	handler := &RESTHandler{config: cfg}
 
 	table := database.TableInfo{
 		Schema:     "public",
@@ -212,7 +213,7 @@ func TestBatchInsert_UnknownColumn(t *testing.T) {
 
 func TestBatchInsert_UpsertWithoutPrimaryKey(t *testing.T) {
 	app := fiber.New()
-	handler := &RESTHandler{}
+	handler := &RESTHandler{config: &config.Config{}}
 
 	table := database.TableInfo{
 		Schema:     "public",
@@ -246,7 +247,7 @@ func TestBatchInsert_UpsertWithoutPrimaryKey(t *testing.T) {
 
 func TestBatchInsert_UpsertWithUnknownConflictColumn(t *testing.T) {
 	app := fiber.New()
-	handler := &RESTHandler{}
+	handler := &RESTHandler{config: &config.Config{}}
 
 	table := database.TableInfo{
 		Schema:     "public",
@@ -519,7 +520,7 @@ func BenchmarkDefaultToNullClauseBuilding(b *testing.B) {
 
 // TestColumnExistsInBatch tests the columnExists method used in batch operations
 func TestColumnExistsInBatch(t *testing.T) {
-	handler := &RESTHandler{}
+	handler := &RESTHandler{config: &config.Config{}}
 
 	table := database.TableInfo{
 		Schema: "public",
@@ -546,7 +547,7 @@ func TestColumnExistsInBatch(t *testing.T) {
 
 // TestConflictTargetBuilding tests various conflict target scenarios
 func TestConflictTargetBuilding(t *testing.T) {
-	handler := &RESTHandler{}
+	handler := &RESTHandler{config: &config.Config{}}
 
 	t.Run("single column conflict target", func(t *testing.T) {
 		table := database.TableInfo{
@@ -614,7 +615,7 @@ func TestConflictTargetBuilding(t *testing.T) {
 
 // TestIsInConflictTargetExtended tests conflict target membership checking
 func TestIsInConflictTargetExtended(t *testing.T) {
-	handler := &RESTHandler{}
+	handler := &RESTHandler{config: &config.Config{}}
 
 	t.Run("single column conflict target", func(t *testing.T) {
 		conflictTarget := []string{"id"}

@@ -149,7 +149,18 @@ func NewService(
 	otpService := NewOTPService(otpRepo, userRepo, otpSender, otpExpiry)
 
 	// Identity linking service
-	stateStore := NewStateStore()
+	// SECURITY: Use database-backed state store for multi-instance deployments
+	// In-memory state store fails in multi-instance setups (OAuth callback may hit different instance)
+	var stateStore StateStorer
+	if cfg.OAuthStateStorage == "database" {
+		log.Info().Msg("Using database-backed OAuth state storage for multi-instance deployments")
+		stateStore = NewDBStateStore(db.Pool(), DefaultDBStateStoreConfig())
+	} else {
+		if cfg.OAuthStateStorage != "" && cfg.OAuthStateStorage != "memory" {
+			log.Warn().Str("storage", cfg.OAuthStateStorage).Msg("Unknown oauth_state_storage value, using default (memory)")
+		}
+		stateStore = NewStateStore()
+	}
 	identityRepo := NewIdentityRepository(db)
 	identityService := NewIdentityService(identityRepo, oauthManager, stateStore)
 
@@ -741,6 +752,97 @@ func (s *Service) IsTokenRevoked(ctx context.Context, jti string) (bool, error) 
 // RevokeAllUserTokens revokes all tokens for a specific user
 func (s *Service) RevokeAllUserTokens(ctx context.Context, userID, reason string) error {
 	return s.tokenBlacklistService.RevokeAllUserTokens(ctx, userID, reason)
+}
+
+// IsServiceRoleTokenRevoked checks if a service_role token has been emergency revoked
+// This provides a mechanism to revoke compromised service_role tokens immediately
+// without waiting for token expiry
+func (s *Service) IsServiceRoleTokenRevoked(ctx context.Context, jti string) (bool, error) {
+	// First check if there's a global revocation (all service_role tokens revoked)
+	var globalRevocation bool
+	err := s.userRepo.db.Pool().QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM auth.emergency_revocation
+			WHERE revokes_all = TRUE AND expires_at > NOW()
+		)
+	`).Scan(&globalRevocation)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to check global revocation status: %w", err)
+	}
+
+	if globalRevocation {
+		return true, nil
+	}
+
+	// Check if this specific token (JTI) has been revoked
+	var tokenRevoked bool
+	err = s.userRepo.db.Pool().QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM auth.emergency_revocation
+			WHERE revoked_jti = $1 AND expires_at > NOW()
+		)
+	`, jti).Scan(&tokenRevoked)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to check token revocation status: %w", err)
+	}
+
+	return tokenRevoked, nil
+}
+
+// EmergencyRevokeAllServiceRoleTokens revokes ALL service_role tokens globally
+// This should be used in security emergencies when service_role keys may be compromised
+// Returns the ID of the revocation record for audit purposes
+func (s *Service) EmergencyRevokeAllServiceRoleTokens(ctx context.Context, revokedBy, reason string) (int64, error) {
+	var id int64
+	err := s.userRepo.db.Pool().QueryRow(ctx, `
+		INSERT INTO auth.emergency_revocation (revokes_all, revoked_by, reason, expires_at)
+		VALUES (TRUE, $1, $2, NOW() + INTERVAL '7 days')
+		RETURNING id
+	`, revokedBy, reason).Scan(&id)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to create emergency revocation: %w", err)
+	}
+
+	// Log security event
+	LogSecurityWarning(ctx, SecurityEvent{
+		Type:   "emergency_revocation",
+		UserID: revokedBy,
+		Details: map[string]interface{}{
+			"revokes_all": true,
+			"reason":      reason,
+		},
+	})
+
+	return id, nil
+}
+
+// EmergencyRevokeServiceRoleToken revokes a specific service_role token by JTI
+// This allows selective revocation of individual compromised tokens
+func (s *Service) EmergencyRevokeServiceRoleToken(ctx context.Context, jti, revokedBy, reason string) error {
+	_, err := s.userRepo.db.Pool().Exec(ctx, `
+		INSERT INTO auth.emergency_revocation (revoked_jti, revoked_by, reason, expires_at)
+		VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')
+		ON CONFLICT (revoked_jti) DO NOTHING
+	`, jti, revokedBy, reason)
+
+	if err != nil {
+		return fmt.Errorf("failed to create emergency revocation: %w", err)
+	}
+
+	// Log security event
+	LogSecurityWarning(ctx, SecurityEvent{
+		Type:   "emergency_revocation",
+		UserID: revokedBy,
+		Details: map[string]interface{}{
+			"revoked_jti": jti,
+			"reason":      reason,
+		},
+	})
+
+	return nil
 }
 
 // SignInAnonymousResponse represents an anonymous user sign-in response

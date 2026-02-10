@@ -38,6 +38,8 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
 
@@ -134,6 +136,10 @@ type Server struct {
 	// Server-owned dependencies (instead of global singletons)
 	rateLimiter ratelimit.Store
 	pubSub      pubsub.PubSub
+
+	// Test transaction support (for HTTP API tests with transaction isolation)
+	// When set, HTTP requests use this transaction instead of the connection pool
+	testTx pgx.Tx
 }
 
 // NewServer creates a new HTTP server
@@ -631,7 +637,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		config:                 cfg,
 		db:                     db,
 		tracer:                 tracer,
-		rest:                   NewRESTHandler(db, NewQueryParser(cfg), schemaCache),
+		rest:                   NewRESTHandler(db, NewQueryParser(cfg), schemaCache, cfg),
 		authHandler:            authHandler,
 		adminAuthHandler:       adminAuthHandler,
 		dashboardAuthHandler:   dashboardAuthHandler,
@@ -989,6 +995,33 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	return server
 }
 
+// NewServerWithTx creates a test-mode server with transaction isolation.
+// This is specifically for HTTP API tests that need to use a transaction.
+//
+// Note: This function creates a minimal server with only the essential components
+// for HTTP API testing. It does NOT initialize all services (webhooks, realtime, jobs, etc.).
+func NewServerWithTx(cfg *config.Config, db *database.Connection, tx pgx.Tx, version string) *Server {
+	// Use the existing NewServer to create a full server
+	server := NewServer(cfg, db, version)
+
+	// Set the test transaction
+	server.testTx = tx
+
+	return server
+}
+
+// DB returns the database querier to use.
+// In test mode with a transaction, it returns the transaction (note: can't use tx as pool).
+// Otherwise, it returns the normal database connection pool.
+func (s *Server) DB() *pgxpool.Pool {
+	if s.testTx != nil {
+		// In test mode, we can't return the transaction as a pool
+		// Tests should use the transaction directly via BeginTx()
+		return s.db.Pool()
+	}
+	return s.db.Pool()
+}
+
 // createMCPAuthMiddleware creates authentication middleware for MCP that supports
 // JWT, client key, service key, AND MCP OAuth tokens
 func (s *Server) createMCPAuthMiddleware() fiber.Handler {
@@ -1018,7 +1051,7 @@ func (s *Server) createMCPAuthMiddleware() fiber.Handler {
 		return middleware.RequireAuthOrServiceKey(
 			s.authHandler.authService,
 			s.clientKeyService,
-			s.db.Pool(),
+			s.DB(),
 			s.dashboardAuthHandler.jwtManager,
 		)(c)
 	}
@@ -1345,7 +1378,7 @@ func (s *Server) setupMiddlewares() {
 	// Idempotency key support for safe request retries
 	// Stores responses in database to return cached results for duplicate POST/PUT/DELETE/PATCH requests
 	idempotencyConfig := middleware.DefaultIdempotencyConfig()
-	idempotencyConfig.DB = s.db.Pool()
+	idempotencyConfig.DB = s.DB()
 	s.idempotencyMiddleware = middleware.NewIdempotencyMiddleware(idempotencyConfig)
 	s.app.Use(s.idempotencyMiddleware.Middleware())
 	log.Info().
@@ -1385,7 +1418,7 @@ func (s *Server) setupRoutes() {
 	// Pass jwtManager to support dashboard admin tokens (maps to service_role for full access)
 	// BranchContext middleware enables queries against non-main branches via X-Fluxbase-Branch header
 	restMiddlewares := []any{
-		middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager),
 		middleware.RLSMiddleware(rlsConfig),
 	}
 	// Add branch context middleware if branching is enabled
@@ -1455,31 +1488,31 @@ func (s *Server) setupRoutes() {
 
 	// client keys routes - require authentication
 	// When 'allow_user_client_keys' setting is disabled, only admins can manage keys
-	s.clientKeyHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager, s.authHandler.authService.GetSettingsCache())
+	s.clientKeyHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager, s.authHandler.authService.GetSettingsCache())
 
 	// Secrets routes - require authentication
-	s.secretsHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager)
+	s.secretsHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager)
 
 	// Custom MCP tools/resources routes - require admin authentication
 	if s.customMCPHandler != nil && s.config.MCP.Enabled {
-		s.customMCPHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager)
+		s.customMCPHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager)
 	}
 
 	// Webhook routes - require authentication
-	s.webhookHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager)
+	s.webhookHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager)
 
 	// Monitoring routes - require authentication
-	s.monitoringHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager)
+	s.monitoringHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager)
 
 	// Edge functions routes - require authentication by default, but per-function config can override
 	// Protected by feature flag middleware
-	s.functionsHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager)
+	s.functionsHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager)
 
 	// Jobs routes - require authentication
 	// Protected by feature flag middleware
 	// Note: Admin routes are registered in setupAdminRoutes with proper auth middleware
 	if s.jobsHandler != nil {
-		s.jobsHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager)
+		s.jobsHandler.RegisterRoutes(s.app, s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager)
 	}
 
 	// Internal AI routes - for custom MCP tools, edge functions, and jobs
@@ -1489,7 +1522,7 @@ func (s *Server) setupRoutes() {
 	if s.internalAIHandler != nil && s.config.AI.Enabled {
 		internalAI := v1.Group("/internal/ai",
 			middleware.RequireInternal(), // Localhost only - prevents external access
-			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager),
 		)
 		internalAI.Post("/chat", s.internalAIHandler.HandleChat)
 		internalAI.Post("/embed", s.internalAIHandler.HandleEmbed)
@@ -1502,7 +1535,7 @@ func (s *Server) setupRoutes() {
 	// BranchContext middleware enables storage operations against non-main branches
 	storageMiddlewares := []any{
 		middleware.RequireStorageEnabled(s.authHandler.authService.GetSettingsCache()),
-		middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool()),
+		middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB()),
 	}
 	if s.branchRouter != nil {
 		storageMiddlewares = append(storageMiddlewares, middleware.BranchContextSimple(s.branchRouter))
@@ -1693,12 +1726,12 @@ func (s *Server) setupRoutes() {
 	if s.graphqlHandler != nil {
 		// GraphQL uses its own auth handling to set up RLS context
 		s.app.Post("/api/v1/graphql",
-			middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+			middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager),
 			s.graphqlHandler.HandleGraphQL,
 		)
 		// Introspection endpoint (GET)
 		s.app.Get("/api/v1/graphql",
-			middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+			middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager),
 			s.graphqlHandler.HandleIntrospection,
 		)
 		log.Info().Msg("GraphQL endpoint registered at /api/v1/graphql")
@@ -1932,10 +1965,12 @@ func (s *Server) setupStorageRoutes(router fiber.Router) {
 	router.Post("/:bucket/sign/*", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.GenerateSignedURL)
 
 	// Streaming upload (must come before /:bucket/*)
-	router.Post("/:bucket/stream/*", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.StreamUpload)
+	// Apply storage upload rate limiting before authentication to prevent abuse
+	router.Post("/:bucket/stream/*", middleware.StorageUploadLimiter(), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.StreamUpload)
 
 	// Chunked upload routes (for resumable large file uploads, must come before /:bucket/*)
-	router.Post("/:bucket/chunked/init", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.InitChunkedUpload)
+	// Apply storage upload rate limiting to chunked upload init
+	router.Post("/:bucket/chunked/init", middleware.StorageUploadLimiter(), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.InitChunkedUpload)
 	router.Put("/:bucket/chunked/:uploadId/:chunkIndex", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.UploadChunk)
 	router.Post("/:bucket/chunked/:uploadId/complete", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.CompleteChunkedUpload)
 	router.Get("/:bucket/chunked/:uploadId/status", middleware.RequireScope(auth.ScopeStorageRead), s.storageHandler.GetChunkedUploadStatus)
@@ -2251,14 +2286,14 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 		// Layer 2: IP allowlist (only allow app container)
 		// Layer 3: Service key authentication (no JWT/client keys)
 		// Layer 4: Scope validation (migrations:execute)
-		// Layer 5: Rate limiting (10 req/hour)
+		// Layer 5: Rate limiting (10 req/hour for service keys, service_role rate limit from config)
 		// Layer 6: Audit logging
 		migrationsAuth := []any{
 			middleware.RequireMigrationsEnabled(&s.config.Migrations),
 			middleware.RequireMigrationsIPAllowlist(&s.config.Migrations),
 			middleware.RequireServiceKeyOnly(s.db.Pool(), s.authHandler.authService),
 			middleware.RequireMigrationScope(),
-			middleware.MigrationAPILimiter(),
+			middleware.MigrationAPILimiterWithConfig(s.config.Security.ServiceRoleRateLimit, s.config.Security.ServiceRoleRateWindow),
 			middleware.MigrationsAuditLog(),
 		}
 
@@ -2322,7 +2357,14 @@ func (s *Server) handleHealth(c fiber.Ctx) error {
 }
 
 func (s *Server) handleGetTables(c fiber.Ctx) error {
-	ctx := c.RequestCtx()
+	ctx := context.Background()
+
+	// Add auth context for audit logging
+	if userID, ok := GetUserID(c); ok {
+		if userRole, ok := GetUserRole(c); ok {
+			ctx = database.ContextWithAuth(ctx, userID, userRole, userRole == "admin" || userRole == "service_role")
+		}
+	}
 
 	// Check if schema query parameter is provided
 	schemaParam := c.Query("schema")
@@ -2381,7 +2423,7 @@ func (s *Server) handleGetTables(c fiber.Ctx) error {
 }
 
 func (s *Server) handleGetTableSchema(c fiber.Ctx) error {
-	ctx := c.RequestCtx()
+	ctx := context.Background()
 	schema := c.Params("schema")
 	table := c.Params("table")
 
@@ -2403,7 +2445,15 @@ func (s *Server) handleGetTableSchema(c fiber.Ctx) error {
 }
 
 func (s *Server) handleGetSchemas(c fiber.Ctx) error {
-	ctx := c.RequestCtx()
+	ctx := context.Background()
+
+	// Add auth context for audit logging
+	if userID, ok := GetUserID(c); ok {
+		if userRole, ok := GetUserRole(c); ok {
+			ctx = database.ContextWithAuth(ctx, userID, userRole, userRole == "admin" || userRole == "service_role")
+		}
+	}
+
 	schemas, err := s.db.Inspector().GetSchemas(ctx)
 	if err != nil {
 		return SendOperationFailed(c, "list schemas")
@@ -2730,7 +2780,7 @@ func (s *Server) handleRealtimeStats(c fiber.Ctx) error {
 	userInfoMap := make(map[string]userInfo)
 	if len(userIDs) > 0 {
 		query := `SELECT id, email, raw_user_meta_data->>'display_name' as display_name FROM auth.users WHERE id = ANY($1)`
-		rows, err := s.db.Pool().Query(c.RequestCtx(), query, userIDs)
+		rows, err := s.db.Query(c.RequestCtx(), query, userIDs)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
