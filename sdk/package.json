@@ -68,7 +68,7 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^24.10.12",
+    "@types/node": "^24.10.13",
     "@vitest/coverage-v8": "^4.0.18",
     "docusaurus-plugin-typedoc": "^1.4.2",
     "esbuild": "^0.27.3",
@@ -80,6 +80,6 @@
     "vitest": "^4.0.18"
   },
   "engines": {
-    "node": ">=24.13.0"
+    "node": ">=24.13.1"
   }
 }
