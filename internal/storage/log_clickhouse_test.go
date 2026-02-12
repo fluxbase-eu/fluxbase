@@ -182,7 +182,7 @@ func TestClickHouseLogStorage_buildQuery(t *testing.T) {
 
 	t.Run("filters static assets when HideStaticAssets is enabled", func(t *testing.T) {
 		opts := LogQueryOptions{
-			Category:        LogCategoryHTTP,
+			Category:         LogCategoryHTTP,
 			HideStaticAssets: true,
 		}
 
@@ -260,10 +260,10 @@ func TestClickHouseLogStorage_toRow(t *testing.T) {
 			Level:    LogLevelWarn,
 			Message:  "Failed login attempt",
 			Fields: map[string]any{
-				"event":     "login_failed",
-				"ip":        "192.168.1.1",
-				"user":      "attacker",
-				"reason":    "invalid_password",
+				"event":  "login_failed",
+				"ip":     "192.168.1.1",
+				"user":   "attacker",
+				"reason": "invalid_password",
 			},
 		}
 
@@ -279,11 +279,11 @@ func TestClickHouseLogStorage_toRow(t *testing.T) {
 	t.Run("converts Execution category entry", func(t *testing.T) {
 		execID := uuid.New()
 		entry := &LogEntry{
-			Category:     LogCategoryExecution,
-			Level:        LogLevelInfo,
-			Message:      "Function execution started",
-			ExecutionID:  execID.String(),
-			LineNumber:   1,
+			Category:    LogCategoryExecution,
+			Level:       LogLevelInfo,
+			Message:     "Function execution started",
+			ExecutionID: execID.String(),
+			LineNumber:  1,
 			Fields: map[string]any{
 				"execution_type": "function",
 				"function_name":  "processData",
@@ -324,10 +324,10 @@ func TestClickHouseLogStorage_toRow(t *testing.T) {
 
 	t.Run("converts Custom category entry", func(t *testing.T) {
 		entry := &LogEntry{
-			Category:        LogCategoryCustom,
-			CustomCategory:  "my_custom_category",
-			Level:           LogLevelInfo,
-			Message:         "Custom log entry",
+			Category:       LogCategoryCustom,
+			CustomCategory: "my_custom_category",
+			Level:          LogLevelInfo,
+			Message:        "Custom log entry",
 			Fields: map[string]any{
 				"custom_field1": "value1",
 				"custom_field2": "value2",
@@ -378,11 +378,11 @@ func TestClickHouseLogStorage_toRow(t *testing.T) {
 
 	t.Run("handles invalid UUIDs gracefully", func(t *testing.T) {
 		entry := &LogEntry{
-			Category:     LogCategoryHTTP,
-			Level:        LogLevelInfo,
-			Message:      "Invalid UUID test",
-			UserID:       "not-a-uuid",
-			ExecutionID:  "also-not-a-uuid",
+			Category:    LogCategoryHTTP,
+			Level:       LogLevelInfo,
+			Message:     "Invalid UUID test",
+			UserID:      "not-a-uuid",
+			ExecutionID: "also-not-a-uuid",
 		}
 
 		row := storage.toRow(entry)
@@ -629,11 +629,11 @@ func TestClickHouseLogStorage_MapConversion(t *testing.T) {
 		entry := &LogEntry{
 			Category: LogCategoryHTTP,
 			Fields: map[string]any{
-				"string_val":  "hello",
-				"int_val":     42,
-				"float_val":   3.14,
-				"bool_val":    true,
-				"null_val":    nil,
+				"string_val": "hello",
+				"int_val":    42,
+				"float_val":  3.14,
+				"bool_val":   true,
+				"null_val":   nil,
 			},
 		}
 
