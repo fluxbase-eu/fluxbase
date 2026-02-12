@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -532,6 +533,7 @@ func (s *LokiLogStorage) labelSetToString(labels map[string]string) string {
 	for k := range labels {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 
 	var parts []string
 	for _, k := range keys {
