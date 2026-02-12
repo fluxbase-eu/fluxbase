@@ -7,6 +7,72 @@ Fluxbase provides comprehensive structured logging using [zerolog](https://githu
 
 ## Overview
 
+The logging system stores execution logs from edge functions, background jobs, and RPC procedures in a centralized `logging.entries` table with automatic retention policies.
+
+## Centralized Logging Backends
+
+Fluxbase supports multiple specialized logging backends optimized for different use cases:
+
+| Backend                      | Best For                                                            | Description                                                                |
+| ---------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **PostgreSQL**               | General purpose, queries, retention                                 | Default backend with native partitioning and TimescaleDB extension support |
+| **PostgreSQL + TimescaleDB** | Time-series optimization, automatic compression, retention policies | Enhanced PostgreSQL for high-volume time-series data                       |
+| **Elasticsearch**            | Full-text search, complex queries, K8s ecosystem                    | Industry standard for log analytics with Kibana integration                |
+| **OpenSearch**               | Elasticsearch-compatible, AWS OSS alternative                       | Same benefits as Elasticsearch for AWS deployments                         |
+| **ClickHouse**               | Columnar storage, excellent compression, SQL interface              | High-performance analytics database with exceptional compression ratio     |
+| **TimescaleDB** (standalone) | Dedicated time-series database, automatic partitioning              | Production-grade hypertables with built-in retention and compression       |
+| **Loki**                     | Label-based logging, Grafana ecosystem                              | Highly efficient for high-cardinality data, minimal storage cost           | Designed for cloud-native environments and horizontal scaling |
+| **S3**                       | Object storage, archival                                            | Cost-effective long-term log storage for compliance and audit trails       |
+| **Local**                    | File-based storage                                                  | Development and testing                                                    | Simple local filesystem storage for single-node setups        |
+
+### Backend Selection Guide
+
+Choose the logging backend based on your specific requirements:
+
+**Use PostgreSQL when:**
+
+- You need SQL queries and joins on your log data
+- Built-in database features work best for your workload
+- Native partitioning provides adequate performance for most applications
+- You want to leverage existing database infrastructure and expertise
+
+**Use PostgreSQL + TimescaleDB when:**
+
+- Your logs are inherently time-series data (timestamps, metrics)
+- You need automatic data partitioning and retention
+- Query performance is critical for time-series data
+- Compression saves disk space
+- Retention policies are managed automatically
+
+**Use Elasticsearch when:**
+
+- Full-text search is a primary requirement
+- Complex multi-field queries needed
+- Kibana integration for visualization
+- You're in Kubernetes ecosystem
+
+**Use ClickHouse when:**
+
+- You need high-volume log ingestion and analytics
+- Columnar storage provides excellent compression
+- SQL interface for easy integration
+- Best choice for analytics workloads
+
+**Use TimescaleDB when:**
+
+- You need time-series optimization without extra database
+- Want automatic partitioning and compression
+- Running dedicated TimescaleDB for best performance
+
+**Use Loki when:**
+
+- Cloud-native environment with Kubernetes
+- Label-based grouping is highly efficient
+- Minimal storage overhead
+- Best for horizontally scalable deployments
+
+### Architecture
+
 All Fluxbase logs are structured JSON messages that include:
 
 - **Timestamp**: ISO 8601 format with timezone
@@ -930,13 +996,13 @@ Authorization: Bearer <admin-token>
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `category` | string | Filter by log category (execution, ai, security, http) |
-| `level` | string | Filter by log level (debug, info, warn, error) |
-| `execution_id` | string | Filter by execution ID |
-| `limit` | integer | Max results (default: 100) |
-| `offset` | integer | Pagination offset |
+| Parameter      | Type    | Description                                            |
+| -------------- | ------- | ------------------------------------------------------ |
+| `category`     | string  | Filter by log category (execution, ai, security, http) |
+| `level`        | string  | Filter by log level (debug, info, warn, error)         |
+| `execution_id` | string  | Filter by execution ID                                 |
+| `limit`        | integer | Max results (default: 100)                             |
+| `offset`       | integer | Pagination offset                                      |
 
 **Example:**
 

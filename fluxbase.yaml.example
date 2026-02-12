@@ -590,7 +590,47 @@ logging:
   console_format: "console"             # FLUXBASE_LOGGING_CONSOLE_FORMAT - Console log format (json or console)
 
   # Backend settings
-  backend: "postgres"                   # FLUXBASE_LOGGING_BACKEND - Logging backend (postgres, s3, local)
+  # Available backends: postgres, postgres-timescaledb, timescaledb, elasticsearch, opensearch, clickhouse, loki, s3, local
+  backend: "postgres"                   # FLUXBASE_LOGGING_BACKEND - Logging backend selection
+
+  # Elasticsearch settings (when backend is "elasticsearch")
+  # elasticsearch_urls:                   # FLUXBASE_LOGGING_ELASTICSEARCH_URLS - Elasticsearch node URLs
+  #   - http://localhost:9200
+  # elasticsearch_username: ""             # FLUXBASE_LOGGING_ELASTICSEARCH_USERNAME - Basic auth username
+  # elasticsearch_password: ""             # FLUXBASE_LOGGING_ELASTICSEARCH_PASSWORD - Basic auth password
+  # elasticsearch_index: "fluxbase-logs"  # FLUXBASE_LOGGING_ELASTICSEARCH_INDEX - Index name
+  # elasticsearch_version: 9              # FLUXBASE_LOGGING_ELASTICSEARCH_VERSION - Elasticsearch major version (8 or 9)
+
+  # OpenSearch settings (when backend is "opensearch")
+  # opensearch_urls:                     # FLUXBASE_LOGGING_OPENSEARCH_URLS - OpenSearch node URLs
+  #   - http://localhost:9200
+  # opensearch_username: ""              # FLUXBASE_LOGGING_OPENSEARCH_USERNAME - Basic auth username
+  # opensearch_password: ""              # FLUXBASE_LOGGING_OPENSEARCH_PASSWORD - Basic auth password
+  # opensearch_index: "fluxbase-logs"   # FLUXBASE_LOGGING_OPENSEARCH_INDEX - Index name
+  # opensearch_version: 2               # FLUXBASE_LOGGING_OPENSEARCH_VERSION - OpenSearch major version
+
+  # ClickHouse settings (when backend is "clickhouse")
+  # clickhouse_addresses:                 # FLUXBASE_LOGGING_CLICKHOUSE_ADDRESSES - ClickHouse server addresses
+  #   - localhost:9000
+  # clickhouse_username: "default"      # FLUXBASE_LOGGING_CLICKHOUSE_USERNAME - ClickHouse username
+  # clickhouse_password: ""              # FLUXBASE_LOGGING_CLICKHOUSE_PASSWORD - ClickHouse password
+  # clickhouse_database: "fluxbase"     # FLUXBASE_LOGGING_CLICKHOUSE_DATABASE - Database name
+  # clickhouse_table: "logs"            # FLUXBASE_LOGGING_CLICKHOUSE_TABLE - Table name
+  # clickhouse_ttl_days: 30             # FLUXBASE_LOGGING_CLICKHOUSE_TTL_DAYS - Data retention TTL in days
+
+  # TimescaleDB settings (when backend is "timescaledb" or "postgres-timescaledb")
+  # timescaledb_enabled: false           # FLUXBASE_LOGGING_TIMESTCALEDB_ENABLED - Enable TimescaleDB features
+  # timescaledb_compress: true          # FLUXBASE_LOGGING_TIMESTCALEDB_COMPRESS - Enable compression
+  # timescaledb_compress_after: "168h"   # FLUXBASE_LOGGING_TIMESTCALEDB_COMPRESS_AFTER - Compress data older than
+
+  # Loki settings (when backend is "loki")
+  # loki_url: "http://localhost:3100"  # FLUXBASE_LOGGING_LOKI_URL - Loki push API URL (required)
+  # loki_username: ""                   # FLUXBASE_LOGGING_LOKI_USERNAME - Basic auth username
+  # loki_password: ""                   # FLUXBASE_LOGGING_LOKI_PASSWORD - Basic auth password
+  # loki_tenant_id: ""                # FLUXBASE_LOGGING_LOKI_TENANT_ID - Tenant ID for multi-tenancy
+  # loki_static_labels:                 # FLUXBASE_LOGGING_LOKI_STATIC_LABELS - Static labels to add to all logs
+  #   - app
+  #   - env
 
   # S3 backend settings (when backend is "s3")
   # s3_bucket: ""                       # FLUXBASE_LOGGING_S3_BUCKET - S3 bucket name (required when backend is s3)
