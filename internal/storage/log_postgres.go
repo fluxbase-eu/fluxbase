@@ -35,6 +35,28 @@ func NewPostgresLogStorage(db *database.Connection) *PostgresLogStorage {
 	return &PostgresLogStorage{db: db}
 }
 
+// newPostgresLogStorageWithConfig creates a new PostgreSQL-backed log storage with configuration.
+// This constructor accepts TimescaleDB configuration options for when the user wants
+// to use TimescaleDB features on the main database connection.
+func newPostgresLogStorageWithConfig(db *database.Connection, tsdbConfig TimescaleDBConfig) (*PostgresLogStorage, error) {
+	storage := &PostgresLogStorage{db: db}
+
+	// If TimescaleDB is enabled in config, we need to ensure the extension is available
+	// but don't convert to hypertable here - that's done by TimescaleDBLogStorage
+	if tsdbConfig.Enabled {
+		// Just ensure TimescaleDB extension exists, don't modify table structure
+		// This allows mixed mode where queries work but hypertable conversion is done separately
+		_, err := db.Pool().Exec(context.Background(), `
+			CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+		`)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create TimescaleDB extension: %w", err)
+		}
+	}
+
+	return storage, nil
+}
+
 // Name returns the backend identifier.
 func (s *PostgresLogStorage) Name() string {
 	return "postgres"
