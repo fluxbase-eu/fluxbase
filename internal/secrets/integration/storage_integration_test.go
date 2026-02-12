@@ -79,7 +79,7 @@ func TestSecretsStorage_CreateSecret_Integration(t *testing.T) {
 
 		// Insert dashboard user directly (bypassing auth)
 		_, err := tc.DB.Pool().Exec(ctx, `
-			INSERT INTO dashboard.users (id, email, name, role, created_at)
+			INSERT INTO dashboard.users (id, email, full_name, role, created_at)
 			VALUES ($1, $2, $3, $4, NOW())
 		`, userUUID, uniqueEmail, "Test User", "admin")
 		require.NoError(t, err, "Failed to create dashboard user")

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
+	"golang.org/x/crypto/bcrypt"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/secrets"
 	"github.com/fluxbase-eu/fluxbase/internal/testutil"
@@ -31,7 +32,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 
 	// Create test user and get auth token
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	t.Run("create global secret", func(t *testing.T) {
 		reqBody := map[string]interface{}{
@@ -182,7 +183,7 @@ func TestSecretsHandler_ListSecrets_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	// Setup: create test secrets via storage
 	encryptionKey := "12345678901234567890123456789012"
@@ -250,7 +251,7 @@ func TestSecretsHandler_GetSecret_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -294,7 +295,7 @@ func TestSecretsHandler_UpdateSecret_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -371,7 +372,7 @@ func TestSecretsHandler_UpdateSecret_Integration(t *testing.T) {
 
 		var errResp map[string]string
 		json.NewDecoder(resp.Body).Decode(&errResp)
-		assert.Contains(t, errResp["error"], "at least one field")
+		assert.Contains(t, errResp["error"], "At least one field")
 	})
 
 	t.Run("update non-existent secret returns 404", func(t *testing.T) {
@@ -390,7 +391,7 @@ func TestSecretsHandler_DeleteSecret_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -437,7 +438,7 @@ func TestSecretsHandler_GetVersions_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -482,7 +483,7 @@ func TestSecretsHandler_Rollback_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -532,7 +533,7 @@ func TestSecretsHandler_GetStats_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -590,7 +591,7 @@ func TestSecretsHandler_Expiration_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -686,4 +687,52 @@ func makeRequest(t *testing.T, app *fiber.App, method, path string, body interfa
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	return resp
+}
+// createTestUserWithToken creates a test user and returns a valid JWT token
+// The token is generated using the same JWT config as the test app
+func createTestUserWithToken(t *testing.T, tc *testutil.IntegrationTestContext, email, password string) (userID, token string) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	// Generate user ID
+	userID = uuid.New().String()
+
+	// Hash password using bcrypt
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	require.NoError(t, err, "Failed to hash password")
+
+	// Insert user into both auth.users (for auth/JWT) and dashboard.users (for FK constraint)
+	// The secrets table's created_by/updated_by fields reference dashboard.users
+	_, err = tc.DB.Pool().Exec(ctx,
+		"INSERT INTO auth.users (id, email, password_hash, email_verified, role, created_at) VALUES ($1, $2, $3, true, 'authenticated', NOW())",
+		userID, email, string(hashedPassword))
+	require.NoError(t, err, "Failed to create auth user")
+
+	// Create matching dashboard user for the FK constraint
+	// Dashboard users need a password hash (NOT NULL constraint)
+	dashboardPasswordHash, err := bcrypt.GenerateFromPassword([]byte("test-password"), bcrypt.DefaultCost)
+	require.NoError(t, err, "Failed to hash dashboard password")
+
+	_, err = tc.DB.Pool().Exec(ctx,
+		"INSERT INTO dashboard.users (id, email, password_hash, full_name, role, created_at) VALUES ($1, $2, $3, $4, 'dashboard_admin', NOW()) ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, password_hash = EXCLUDED.password_hash",
+		userID, email, string(dashboardPasswordHash), "Test User")
+	require.NoError(t, err, "Failed to create dashboard user")
+
+	// Generate JWT token using the same secret as the test app
+	jwtSecret := "test-jwt-secret-for-integration-tests-32-chars"
+	jwtManager := auth.NewJWTManager(jwtSecret, time.Hour, 24*time.Hour)
+
+	accessToken, _, err := jwtManager.GenerateAccessToken(userID, email, "authenticated", nil, nil)
+	require.NoError(t, err, "Failed to generate access token")
+
+	// Create a session record so the token is valid
+	sessionID := uuid.New().String()
+	tokenHash := uuid.New().String()
+	_, err = tc.DB.Pool().Exec(ctx, 
+		"INSERT INTO auth.sessions (id, user_id, access_token_hash, expires_at, created_at) VALUES ($1, $2, $3, NOW() + interval '1 hour', NOW())",
+		sessionID, userID, tokenHash)
+	require.NoError(t, err, "Failed to create session")
+
+	return userID, accessToken
 }

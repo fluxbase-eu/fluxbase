@@ -577,20 +577,27 @@ func (s *ClickHouseLogStorage) toRow(entry *LogEntry) logRow {
 
 	// Category-specific data
 	for k, v := range entry.Fields {
+		var strVal string
+		if v == nil {
+			strVal = ""
+		} else {
+			strVal = fmt.Sprintf("%v", v)
+		}
+
 		switch entry.Category {
 		case LogCategoryHTTP:
-			row.httpData[k] = fmt.Sprintf("%v", v)
+			row.httpData[k] = strVal
 		case LogCategorySecurity:
-			row.securityData[k] = fmt.Sprintf("%v", v)
+			row.securityData[k] = strVal
 		case LogCategoryExecution:
-			row.executionData[k] = fmt.Sprintf("%v", v)
+			row.executionData[k] = strVal
 		case LogCategoryAI:
-			row.aiData[k] = fmt.Sprintf("%v", v)
+			row.aiData[k] = strVal
 		case LogCategoryCustom:
-			row.customData[k] = fmt.Sprintf("%v", v)
+			row.customData[k] = strVal
 		default:
 			// System logs go to custom data
-			row.customData[k] = fmt.Sprintf("%v", v)
+			row.customData[k] = strVal
 		}
 	}
 

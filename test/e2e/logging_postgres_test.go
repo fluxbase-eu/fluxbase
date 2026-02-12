@@ -6,6 +6,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,7 +23,22 @@ import (
 // Integration Tests - PostgreSQL Logging Backend
 // =============================================================================
 
+// cleanupLoggingEntries truncates the logging.entries table before each test
+// to ensure test isolation.
+func cleanupLoggingEntries(t *testing.T) {
+	tc := test.NewTestContext(t)
+	defer tc.Close()
+
+	_, err := tc.DB.Exec(context.Background(), "TRUNCATE TABLE logging.entries CASCADE")
+
+	if err != nil && !strings.Contains(err.Error(), "schema") {
+		require.NoError(t, err)
+	}
+}
+
 func TestLogging_Postgres_Write_Single(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -55,6 +71,8 @@ func TestLogging_Postgres_Write_Single(t *testing.T) {
 }
 
 func TestLogging_Postgres_Write_Batch(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -85,6 +103,8 @@ func TestLogging_Postgres_Write_Batch(t *testing.T) {
 }
 
 func TestLogging_Postgres_AllCategories(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -251,6 +271,8 @@ func TestLogging_Postgres_AllCategories(t *testing.T) {
 }
 
 func TestLogging_Postgres_Filters(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -327,6 +349,8 @@ func TestLogging_Postgres_Filters(t *testing.T) {
 }
 
 func TestLogging_Postgres_Pagination(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -380,6 +404,8 @@ func TestLogging_Postgres_Pagination(t *testing.T) {
 }
 
 func TestLogging_Postgres_ExecutionLogs(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -428,6 +454,8 @@ func TestLogging_Postgres_ExecutionLogs(t *testing.T) {
 }
 
 func TestLogging_Postgres_Delete(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -478,6 +506,8 @@ func TestLogging_Postgres_Delete(t *testing.T) {
 }
 
 func TestLogging_Postgres_Stats(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -553,6 +583,8 @@ func TestLogging_Postgres_Stats(t *testing.T) {
 }
 
 func TestLogging_Postgres_Health(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()
@@ -564,6 +596,8 @@ func TestLogging_Postgres_Health(t *testing.T) {
 }
 
 func TestLogging_Postgres_ErrorHandling(t *testing.T) {
+	cleanupLoggingEntries(t)
+
 	tc := test.NewTestContext(t)
 	defer tc.Close()
 	ctx := context.Background()

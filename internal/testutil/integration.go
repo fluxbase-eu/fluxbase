@@ -157,4 +157,18 @@ func (tc *IntegrationTestContext) CleanupTestData() {
 	// Clean up magic links
 	tc.ExecuteSQL(`DELETE FROM auth.magic_links WHERE email LIKE 'test-%@example.com'`)
 	tc.ExecuteSQL(`DELETE FROM auth.magic_links WHERE email LIKE 'test-%@test.com'`)
+
+	// Clean up test settings
+	tc.ExecuteSQL(`DELETE FROM app.settings WHERE key LIKE 'custom.%' OR key LIKE 'test.%' OR key LIKE 'secret.%'`)
+
+	// Clean up test secrets - catch all common test patterns
+	tc.ExecuteSQL(`DELETE FROM functions.secrets WHERE name LIKE ANY(ARRAY[
+		'TEST_%', 'DUPLICATE_%', 'GLOBAL_%', 'NS_%',
+		'API_KEY_%', 'EXPIRED_%', 'GET_%', 'TEMP_%',
+		'SHARED_%', 'DB_PASSWORD_%', 'DUP_TEST_%',
+		'GET_BY_%', 'WRONG_NS_%', 'USER_TRACKED_%',
+		'UPDATE_%', 'DELETE_%', 'LIST_%', 'NO_%',
+		'WRONG_%', 'SHARED_NAME_%', 'CREATE_%',
+		'NEW_%', 'OLD_%', 'ANOTHER_%', 'SECOND_%'
+	])`)
 }

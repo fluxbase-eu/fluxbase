@@ -276,6 +276,15 @@ func (s *Service) EnableExtension(ctx context.Context, name string, userID *stri
 
 // DisableExtension disables a PostgreSQL extension
 func (s *Service) DisableExtension(ctx context.Context, name string, userID *string) (*DisableExtensionResponse, error) {
+	// Validate extension name is a safe identifier (defense in depth)
+	if !isValidIdentifier(name) {
+		return &DisableExtensionResponse{
+			Name:    name,
+			Success: false,
+			Message: "Invalid extension name: must contain only letters, digits, and underscores",
+		}, nil
+	}
+
 	// Validate extension exists in catalog
 	available, err := s.getAvailableExtension(ctx, name)
 	if err != nil {
@@ -308,15 +317,6 @@ func (s *Service) DisableExtension(ctx context.Context, name string, userID *str
 			Name:    name,
 			Success: true,
 			Message: "Extension is not currently enabled",
-		}, nil
-	}
-
-	// Validate extension name is a safe identifier (defense in depth)
-	if !isValidIdentifier(name) {
-		return &DisableExtensionResponse{
-			Name:    name,
-			Success: false,
-			Message: "Invalid extension name: must contain only letters, digits, and underscores",
 		}, nil
 	}
 
