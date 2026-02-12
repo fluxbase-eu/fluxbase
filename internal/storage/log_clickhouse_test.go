@@ -525,7 +525,7 @@ func TestJoinPlaceholders(t *testing.T) {
 
 		result := joinPlaceholders(placeholders)
 
-		assert.Equal(t, "? , ? , ?", result)
+		assert.Equal(t, "?, ?, ?", result)
 	})
 
 	t.Run("handles empty slice", func(t *testing.T) {

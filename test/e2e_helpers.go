@@ -68,6 +68,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -841,6 +842,14 @@ func (tc *TestContext) CleanDatabase() {
 	// Truncate each table
 	for _, table := range tables {
 		_, err := tc.DB.Exec(ctx, fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table.Name))
+		require.NoError(tc.T, err)
+	}
+
+	// Also truncate logging.entries table if it exists
+	// This cleans up log entries created during tests
+	_, err = tc.DB.Exec(ctx, "TRUNCATE TABLE logging.entries CASCADE")
+	// Don't fail if logging schema doesn't exist yet (e.g., during setup)
+	if err != nil && !strings.Contains(err.Error(), "schema") {
 		require.NoError(tc.T, err)
 	}
 }

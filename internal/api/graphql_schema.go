@@ -480,27 +480,46 @@ func (g *GraphQLSchemaGenerator) generateFilterType(table database.TableInfo) *g
 		}
 	}
 
-	// Add logical operators
-	// Note: We use lazy initialization to avoid circular reference issues
+	// Add logical operators using lazy initialization to avoid circular reference issues
 	filterTypeName := typeName + "Filter"
-	fields["_and"] = &graphql.InputObjectFieldConfig{
-		Type:        graphql.NewList(graphql.NewInputObject(graphql.InputObjectConfig{Name: filterTypeName + "And", Fields: fields})),
-		Description: "Logical AND",
-	}
-	fields["_or"] = &graphql.InputObjectFieldConfig{
-		Type:        graphql.NewList(graphql.NewInputObject(graphql.InputObjectConfig{Name: filterTypeName + "Or", Fields: fields})),
-		Description: "Logical OR",
-	}
-	fields["_not"] = &graphql.InputObjectFieldConfig{
-		Type:        graphql.NewInputObject(graphql.InputObjectConfig{Name: filterTypeName + "Not", Fields: fields}),
-		Description: "Logical NOT",
+
+	// Create the filter type with lazy field initialization for circular references
+	var filterType *graphql.InputObject
+
+	// Create a lazy fields function that can reference the filter type itself
+	lazyFields := func() graphql.InputObjectConfigFieldMap {
+		result := graphql.InputObjectConfigFieldMap{}
+
+		// Copy all the column fields we already created
+		for k, v := range fields {
+			result[k] = v
+		}
+
+		// Add logical operators that reference the filter type
+		result["_and"] = &graphql.InputObjectFieldConfig{
+			Type:        graphql.NewList(filterType),
+			Description: "Logical AND",
+		}
+		result["_or"] = &graphql.InputObjectFieldConfig{
+			Type:        graphql.NewList(filterType),
+			Description: "Logical OR",
+		}
+		result["_not"] = &graphql.InputObjectFieldConfig{
+			Type:        filterType,
+			Description: "Logical NOT",
+		}
+
+		return result
 	}
 
-	return graphql.NewInputObject(graphql.InputObjectConfig{
+	// Create the filter type with lazy initialization
+	filterType = graphql.NewInputObject(graphql.InputObjectConfig{
 		Name:        filterTypeName,
 		Description: fmt.Sprintf("Filter type for %s.%s", table.Schema, table.Name),
-		Fields:      fields,
+		Fields:      lazyFields,
 	})
+
+	return filterType
 }
 
 // generateOrderByType generates a GraphQL input type for ordering
