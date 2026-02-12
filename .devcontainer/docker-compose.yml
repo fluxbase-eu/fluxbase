@@ -102,7 +102,7 @@ services:
 
   # Elasticsearch Service (for logging backend testing)
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.9.0
+    image: elasticsearch:9.3.0
     container_name: fluxbase-elasticsearch-dev
     restart: unless-stopped
     environment:
@@ -124,7 +124,7 @@ services:
 
   # ClickHouse Service (for logging backend testing)
   clickhouse:
-    image: clickhouse/clickhouse-server:23.8
+    image: clickhouse:26.1
     container_name: fluxbase-clickhouse-dev
     restart: unless-stopped
     ports:
@@ -147,7 +147,7 @@ services:
 
   # Grafana Loki Service (for logging backend testing)
   loki:
-    image: grafana/loki:2.9.2
+    image: grafana/loki:3.5.10
     container_name: fluxbase-loki-dev
     restart: unless-stopped
     ports:
