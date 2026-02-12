@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	test "github.com/fluxbase-eu/fluxbase/test"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
+	test "github.com/fluxbase-eu/fluxbase/test"
 )
 
 // =============================================================================
@@ -51,7 +51,7 @@ func TestLogging_Postgres_Write_Single(t *testing.T) {
 		Category:  storage.LogCategorySystem,
 		Level:     storage.LogLevelInfo,
 		Message:   "Test log message",
-		Component:  "test-component",
+		Component: "test-component",
 		Fields:    map[string]any{"key": "value"},
 	}
 
@@ -119,7 +119,7 @@ func TestLogging_Postgres_AllCategories(t *testing.T) {
 			Category:  storage.LogCategorySystem,
 			Level:     storage.LogLevelError,
 			Message:   "System error occurred",
-			Component:  "auth",
+			Component: "auth",
 		}
 
 		err := logStorage.Write(ctx, []*storage.LogEntry{entry})
@@ -177,7 +177,7 @@ func TestLogging_Postgres_AllCategories(t *testing.T) {
 				"success":    false,
 				"email":      "test@example.com",
 			},
-			UserID:   testUserID.String(),
+			UserID:    testUserID.String(),
 			IPAddress: "10.0.0.1",
 		}
 
@@ -194,17 +194,17 @@ func TestLogging_Postgres_AllCategories(t *testing.T) {
 	t.Run("execution logs", func(t *testing.T) {
 		execID := uuid.New()
 		entry := &storage.LogEntry{
-			ID:           uuid.New(),
-			Timestamp:    time.Now().Truncate(time.Microsecond),
-			Category:     storage.LogCategoryExecution,
-			Level:        storage.LogLevelDebug,
-			Message:      "Starting function execution",
-			ExecutionID:  execID.String(),
-			LineNumber:   1,
+			ID:          uuid.New(),
+			Timestamp:   time.Now().Truncate(time.Microsecond),
+			Category:    storage.LogCategoryExecution,
+			Level:       storage.LogLevelDebug,
+			Message:     "Starting function execution",
+			ExecutionID: execID.String(),
+			LineNumber:  1,
 			Fields: map[string]any{
 				"execution_type": "function",
 				"function_name":  "my-function",
-				"namespace":     "default",
+				"namespace":      "default",
 			},
 		}
 
@@ -227,8 +227,8 @@ func TestLogging_Postgres_AllCategories(t *testing.T) {
 			Level:     storage.LogLevelInfo,
 			Message:   "AI query",
 			Fields: map[string]any{
-				"query":          "What is the weather?",
-				"model":          "gpt-4",
+				"query":           "What is the weather?",
+				"model":           "gpt-4",
 				"response_tokens": 150,
 				"prompt_tokens":   20,
 			},
@@ -247,13 +247,13 @@ func TestLogging_Postgres_AllCategories(t *testing.T) {
 
 	t.Run("custom category logs", func(t *testing.T) {
 		entry := &storage.LogEntry{
-			ID:              uuid.New(),
-			Timestamp:       time.Now().Truncate(time.Microsecond),
-			Category:        storage.LogCategoryCustom,
-			CustomCategory:  "billing",
-			Level:           storage.LogLevelInfo,
-			Message:         "Payment processed",
-			Fields:          map[string]any{"amount": 100},
+			ID:             uuid.New(),
+			Timestamp:      time.Now().Truncate(time.Microsecond),
+			Category:       storage.LogCategoryCustom,
+			CustomCategory: "billing",
+			Level:          storage.LogLevelInfo,
+			Message:        "Payment processed",
+			Fields:         map[string]any{"amount": 100},
 		}
 
 		err := logStorage.Write(ctx, []*storage.LogEntry{entry})
@@ -287,7 +287,7 @@ func TestLogging_Postgres_Filters(t *testing.T) {
 			Category:  storage.LogCategoryHTTP,
 			Level:     storage.LogLevelInfo,
 			Message:   "Info request",
-			Component:  "api",
+			Component: "api",
 		},
 		{
 			ID:        uuid.New(),
@@ -295,7 +295,7 @@ func TestLogging_Postgres_Filters(t *testing.T) {
 			Category:  storage.LogCategoryHTTP,
 			Level:     storage.LogLevelWarn,
 			Message:   "Warning request",
-			Component:  "api",
+			Component: "api",
 		},
 		{
 			ID:        uuid.New(),
@@ -303,7 +303,7 @@ func TestLogging_Postgres_Filters(t *testing.T) {
 			Category:  storage.LogCategoryHTTP,
 			Level:     storage.LogLevelError,
 			Message:   "Error request",
-			Component:  "api",
+			Component: "api",
 		},
 	}
 
