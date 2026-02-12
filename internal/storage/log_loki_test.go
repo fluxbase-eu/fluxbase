@@ -418,7 +418,7 @@ func TestLokiLogStorage_Query_NoResults(t *testing.T) {
 		ctx := context.Background()
 		opts := LogQueryOptions{
 			Category: LogCategoryHTTP,
-			Levels:    []LogLevel{LogLevelInfo},
+			Levels:   []LogLevel{LogLevelInfo},
 		}
 
 		result, err := storage.Query(ctx, opts)
@@ -987,14 +987,14 @@ func TestLokiLogStorage_GroupByLabels(t *testing.T) {
 
 		entries := []*LogEntry{
 			{
-				Category:       LogCategoryExecution,
-				Level:          LogLevelInfo,
-				ExecutionType:  "function",
+				Category:      LogCategoryExecution,
+				Level:         LogLevelInfo,
+				ExecutionType: "function",
 			},
 			{
-				Category:       LogCategoryExecution,
-				Level:          LogLevelInfo,
-				ExecutionType:  "job",
+				Category:      LogCategoryExecution,
+				Level:         LogLevelInfo,
+				ExecutionType: "job",
 			},
 		}
 
@@ -1173,8 +1173,8 @@ func TestNewLokiLogStorage(t *testing.T) {
 
 	t.Run("uses provided labels", func(t *testing.T) {
 		cfg := LogStorageConfig{
-			LokiURL:      "http://localhost:3100",
-			LokiLabels:   []string{"custom1", "custom2"},
+			LokiURL:    "http://localhost:3100",
+			LokiLabels: []string{"custom1", "custom2"},
 		}
 		storage, err := newLokiLogStorage(cfg)
 
@@ -1433,8 +1433,8 @@ func BenchmarkLokiLogStorage_groupByLabels(b *testing.B) {
 	entries := make([]*LogEntry, 100)
 	for i := 0; i < 100; i++ {
 		entries[i] = &LogEntry{
-			Category: LogCategoryHTTP,
-			Level:    []LogLevel{LogLevelInfo, LogLevelWarn, LogLevelError}[i%3],
+			Category:  LogCategoryHTTP,
+			Level:     []LogLevel{LogLevelInfo, LogLevelWarn, LogLevelError}[i%3],
 			Component: []string{"api", "auth", "storage"}[i%3],
 		}
 	}
@@ -1450,8 +1450,8 @@ func BenchmarkLokiLogStorage_buildLabels(b *testing.B) {
 	storage, _ := newLokiLogStorage(cfg)
 
 	entry := &LogEntry{
-		Category: LogCategoryHTTP,
-		Level:    LogLevelInfo,
+		Category:  LogCategoryHTTP,
+		Level:     LogLevelInfo,
 		Component: "api",
 		Fields: map[string]interface{}{
 			"status_code": 200.0,

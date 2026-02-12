@@ -392,7 +392,7 @@ func TestLocalLogStorage_ConcurrentWrites(t *testing.T) {
 				for j := 0; j < 20; j++ {
 					_, _ = storage.Query(context.Background(), LogQueryOptions{
 						Category: LogCategorySystem,
-						Limit:     10,
+						Limit:    10,
 					})
 					_, _ = storage.Stats(context.Background())
 				}

@@ -20,7 +20,7 @@ type ElasticsearchLogStorage struct {
 	index    string
 	username string
 	password string
-	version  int  // ES version (8 or 9) for potential version-specific handling
+	version  int // ES version (8 or 9) for potential version-specific handling
 }
 
 // newElasticsearchLogStorage creates a new Elasticsearch-backed log storage.
@@ -112,8 +112,8 @@ func (s *ElasticsearchLogStorage) Write(ctx context.Context, entries []*LogEntry
 		err = bi.Add(
 			ctx,
 			esutil.BulkIndexerItem{
-				Action:    "index",
-				Index:     s.index,
+				Action:     "index",
+				Index:      s.index,
 				DocumentID: entry.ID.String(),
 				Body:       bytes.NewReader(data),
 			},
@@ -352,14 +352,14 @@ func (s *ElasticsearchLogStorage) Stats(ctx context.Context) (*LogStats, error) 
 		Aggregations struct {
 			Categories struct {
 				Buckets []struct {
-					Key   string `json:"key"`
-					DocCount int64 `json:"doc_count"`
+					Key      string `json:"key"`
+					DocCount int64  `json:"doc_count"`
 				} `json:"buckets"`
 			} `json:"categories"`
 			Levels struct {
 				Buckets []struct {
-					Key   string `json:"key"`
-					DocCount int64 `json:"doc_count"`
+					Key      string `json:"key"`
+					DocCount int64  `json:"doc_count"`
 				} `json:"buckets"`
 			} `json:"levels"`
 			MinTimestamp struct {
@@ -429,7 +429,7 @@ func (s *ElasticsearchLogStorage) Close() error {
 // toDocument converts a LogEntry to Elasticsearch document format.
 func (s *ElasticsearchLogStorage) toDocument(entry *LogEntry) map[string]interface{} {
 	doc := map[string]interface{}{
-		"@timestamp":       entry.Timestamp.Format(time.RFC3339Nano),
+		"@timestamp":      entry.Timestamp.Format(time.RFC3339Nano),
 		"id":              entry.ID.String(),
 		"category":        string(entry.Category),
 		"level":           string(entry.Level),
@@ -570,8 +570,8 @@ func (s *ElasticsearchLogStorage) buildQuery(opts LogQueryOptions) map[string]in
 	if opts.Search != "" {
 		mustClauses = append(mustClauses, map[string]interface{}{
 			"query_string": map[string]interface{}{
-				"query":    "*" + opts.Search + "*",
-				"fields":   []string{"message^2", "fields.*"},
+				"query":            "*" + opts.Search + "*",
+				"fields":           []string{"message^2", "fields.*"},
 				"analyze_wildcard": true,
 			},
 		})
@@ -709,8 +709,8 @@ func newOpenSearchLogStorage(cfg LogStorageConfig) (*OpenSearchLogStorage, error
 	// Create ES-compatible config
 	esCfg := LogStorageConfig{
 		ElasticsearchURLs:     urls,
-		ElasticsearchUsername:  cfg.OpenSearchUsername,
-		ElasticsearchPassword:  cfg.OpenSearchPassword,
+		ElasticsearchUsername: cfg.OpenSearchUsername,
+		ElasticsearchPassword: cfg.OpenSearchPassword,
 		ElasticsearchIndex:    cfg.OpenSearchIndex,
 	}
 
