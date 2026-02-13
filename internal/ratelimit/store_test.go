@@ -12,7 +12,7 @@ import (
 
 func TestCheck(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -108,7 +108,7 @@ func TestResult(t *testing.T) {
 
 func TestCheckWithExpiration(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	key := "check-expiration"
@@ -140,7 +140,7 @@ func TestCheckWithExpiration(t *testing.T) {
 
 func TestCheck_ZeroLimit(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -153,7 +153,7 @@ func TestCheck_ZeroLimit(t *testing.T) {
 
 func TestCheck_LargeLimit(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -166,7 +166,7 @@ func TestCheck_LargeLimit(t *testing.T) {
 
 func TestCheck_VaryingWindowSizes(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -189,7 +189,7 @@ func TestCheck_VaryingWindowSizes(t *testing.T) {
 
 func TestStore_EmptyKey(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -203,7 +203,7 @@ func TestStore_EmptyKey(t *testing.T) {
 
 func TestIncrement_UpdatesExpiration(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	key := "update-expiration"
@@ -230,7 +230,7 @@ func TestIncrement_UpdatesExpiration(t *testing.T) {
 
 func TestStore_SpecialKeyCharacters(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -378,7 +378,7 @@ func TestCheck_ErrorHandling(t *testing.T) {
 
 func TestCheck_NegativeLimit(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -393,7 +393,7 @@ func TestCheck_NegativeLimit(t *testing.T) {
 
 func TestCheck_ExactlyAtLimit(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	key := "exactly-at-limit"
@@ -422,7 +422,7 @@ func TestCheck_ExactlyAtLimit(t *testing.T) {
 
 func TestCheck_ConcurrentRequests(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	key := "concurrent-requests"
@@ -459,7 +459,7 @@ func TestCheck_ConcurrentRequests(t *testing.T) {
 
 func TestCheck_ResetTimeAccuracy(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -494,7 +494,7 @@ func TestCheck_ResetTimeAccuracy(t *testing.T) {
 
 func TestCheck_VeryShortWindow(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -515,7 +515,7 @@ func TestCheck_VeryShortWindow(t *testing.T) {
 
 func TestCheck_VeryLongWindow(t *testing.T) {
 	store := NewMemoryStore(time.Hour)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -531,7 +531,7 @@ func TestCheck_VeryLongWindow(t *testing.T) {
 
 func TestCheck_LimitOfOne(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	key := "limit-of-one"

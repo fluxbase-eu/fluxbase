@@ -210,7 +210,7 @@ func TestCreateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -236,7 +236,7 @@ func TestCreateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -262,7 +262,7 @@ func TestCreateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -288,7 +288,7 @@ func TestCreateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail at service call due to nil service
 		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
@@ -312,7 +312,7 @@ func TestCreateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Fails at service call, but body parsing and user_id extraction work
 		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
@@ -334,7 +334,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Fails at service call
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -358,7 +358,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Parameter parsing works, fails at service call
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -374,7 +374,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -408,7 +408,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
 
@@ -441,7 +441,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Parameter parsing works, only fails at service call (no forbidden)
 		assert.NotEqual(t, fiber.StatusForbidden, resp.StatusCode)
@@ -464,7 +464,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Not forbidden
 		assert.NotEqual(t, fiber.StatusForbidden, resp.StatusCode)
@@ -487,7 +487,7 @@ func TestListClientKeys_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Not forbidden
 		assert.NotEqual(t, fiber.StatusForbidden, resp.StatusCode)
@@ -509,7 +509,7 @@ func TestGetClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -534,7 +534,7 @@ func TestGetClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// ID is valid, fails at service call
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -558,7 +558,7 @@ func TestUpdateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -584,7 +584,7 @@ func TestUpdateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -611,7 +611,7 @@ func TestUpdateClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Fails at service call, but validation passes
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -633,7 +633,7 @@ func TestRevokeClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -658,7 +658,7 @@ func TestRevokeClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// ID valid, fails at service call
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -680,7 +680,7 @@ func TestDeleteClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -705,7 +705,7 @@ func TestDeleteClientKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// ID valid, fails at service call
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -819,7 +819,7 @@ func TestAdminRoleVerification(t *testing.T) {
 
 				resp, err := app.Test(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 
 				// Should not return forbidden for admin roles
 				assert.NotEqual(t, fiber.StatusForbidden, resp.StatusCode)
@@ -847,7 +847,7 @@ func TestAdminRoleVerification(t *testing.T) {
 
 				resp, err := app.Test(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 
 				// Should return forbidden for non-admin roles
 				assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)

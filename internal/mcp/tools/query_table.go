@@ -481,26 +481,29 @@ func parseOrder(orderStr string) ([]query.OrderBy, error) {
 		desc := false
 
 		// Try dot-separated format first (e.g., "column.desc")
-		if strings.HasSuffix(part, ".desc") {
-			column = strings.TrimSuffix(part, ".desc")
-			desc = true
-		} else if strings.HasSuffix(part, ".asc") {
-			column = strings.TrimSuffix(part, ".asc")
-		} else {
-			// Try space-separated format (e.g., "column desc" or "column DESC")
-			parts := strings.Fields(part)
-			if len(parts) == 2 {
-				column = parts[0]
-				direction := strings.ToLower(parts[1])
-				if direction == "desc" {
-					desc = true
-				}
-				// "asc" or anything else defaults to ascending
-			} else if len(parts) == 1 {
-				column = parts[0]
+
+	// Try dot-separated format first (e.g., "column.desc")
+	switch {
+	case strings.HasSuffix(part, ".desc"):
+		column = strings.TrimSuffix(part, ".desc")
+		desc = true
+	case strings.HasSuffix(part, ".asc"):
+		column = strings.TrimSuffix(part, ".asc")
+	default:
+		// Try space-separated format (e.g., "column desc" or "column DESC")
+		parts := strings.Fields(part)
+		if len(parts) == 2 {
+			column = parts[0]
+			direction := strings.ToLower(parts[1])
+			if direction == "desc" {
+				desc = true
 			}
-			// If more than 2 parts, use the whole thing as column name (will likely fail, but let DB report error)
+			// "asc" or anything else defaults to ascending
+		} else if len(parts) == 1 {
+			column = parts[0]
 		}
+		// If more than 2 parts, use the whole thing as column name (will likely fail, but let DB report error)
+	}
 
 		result = append(result, query.OrderBy{
 			Column: column,

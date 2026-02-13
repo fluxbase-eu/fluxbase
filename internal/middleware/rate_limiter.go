@@ -581,6 +581,7 @@ func GitHubWebhookLimiter() fiber.Handler {
 // Should be applied AFTER service key authentication middleware
 // NOTE: service_role JWT tokens bypass rate limiting entirely (trusted keys)
 // Service keys (sk_*) use per-key configurable rate limits from the database
+//
 // Deprecated: Use MigrationAPILimiterWithConfig for H-2 security fix
 func MigrationAPILimiter() fiber.Handler {
 	return MigrationAPILimiterWithConfig(0, 0)

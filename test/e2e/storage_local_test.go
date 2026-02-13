@@ -249,7 +249,7 @@ func TestStorageLocalListFiles(t *testing.T) {
 		writer := multipart.NewWriter(body)
 		part, err := writer.CreateFormFile("file", fileName)
 		require.NoError(t, err)
-		_, err = part.Write([]byte(fmt.Sprintf("Content %d", i)))
+		_, err = fmt.Fprintf(part, "Content %d", i)
 		require.NoError(t, err)
 		err = writer.Close()
 		require.NoError(t, err)

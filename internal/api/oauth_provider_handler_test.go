@@ -499,13 +499,13 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+			_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -527,13 +527,13 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Provider name must start with a letter")
 	})
 
@@ -552,13 +552,13 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Missing required fields")
 	})
 
@@ -581,13 +581,13 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Custom providers require")
 	})
 }
@@ -607,13 +607,13 @@ func TestGetOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+			_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Invalid provider ID", result["error"])
 	})
 
@@ -627,7 +627,7 @@ func TestGetOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should not be 400 (validation passed)
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -651,7 +651,7 @@ func TestUpdateOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -667,7 +667,7 @@ func TestUpdateOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -684,13 +684,13 @@ func TestUpdateOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "No fields to update", result["error"])
 	})
 }
@@ -710,7 +710,7 @@ func TestDeleteOAuthProvider_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -732,13 +732,13 @@ func TestUpdateAuthSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+			_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 }
@@ -962,7 +962,7 @@ func TestGetUserIDFromContext(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		app.Test(req)
+		_, _ = app.Test(req)
 
 		assert.Nil(t, result)
 	})
@@ -979,7 +979,7 @@ func TestGetUserIDFromContext(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		app.Test(req)
+		_, _ = app.Test(req)
 
 		assert.NotNil(t, result)
 		assert.Equal(t, expectedID, result.String())
@@ -996,7 +996,7 @@ func TestGetUserIDFromContext(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		app.Test(req)
+		_, _ = app.Test(req)
 
 		assert.Nil(t, result)
 	})

@@ -589,7 +589,7 @@ func TestRateLimiter_ConcurrentRequests(t *testing.T) {
 				req := httptest.NewRequest("GET", "/test", nil)
 				resp, err := app.Test(req)
 				if err == nil {
-					resp.Body.Close()
+					_ = resp.Body.Close()
 				}
 			}
 			done <- true

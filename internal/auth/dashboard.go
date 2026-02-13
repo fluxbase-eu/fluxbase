@@ -586,13 +586,13 @@ func (s *DashboardAuthService) VerifyTOTP(ctx context.Context, userID uuid.UUID,
 		err := bcrypt.CompareHashAndPassword([]byte(hashedCode), []byte(code))
 		if err == nil {
 			// Remove used backup code
-			newBackupCodes := append(backupCodes[:i], backupCodes[i+1:]...)
+			backupCodes = append(backupCodes[:i], backupCodes[i+1:]...)
 			err = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 				_, err := tx.Exec(ctx, `
 					UPDATE dashboard.users
 					SET backup_codes = $1, updated_at = NOW()
 					WHERE id = $2
-				`, newBackupCodes, userID)
+				`, backupCodes, userID)
 				return err
 			})
 			if err != nil {

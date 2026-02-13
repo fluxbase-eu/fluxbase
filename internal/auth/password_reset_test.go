@@ -303,7 +303,7 @@ func TestPasswordResetService_RequestPasswordReset_NoSMTP(t *testing.T) {
 	t.Run("returns error when email sender is nil", func(t *testing.T) {
 		svc := NewPasswordResetService(nil, nil, nil, time.Hour, "https://example.com")
 
-		err := svc.RequestPasswordReset(nil, "test@example.com", "")
+		err := svc.RequestPasswordReset(context.TODO(), "test@example.com", "")
 		assert.ErrorIs(t, err, ErrSMTPNotConfigured)
 	})
 }
@@ -330,7 +330,7 @@ func TestPasswordResetService_RequestPasswordReset_InvalidRedirectURL(t *testing
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := svc.RequestPasswordReset(nil, "test@example.com", tc.redirectTo)
+			err := svc.RequestPasswordReset(context.TODO(), "test@example.com", tc.redirectTo)
 			assert.ErrorIs(t, err, ErrInvalidRedirectURL)
 		})
 	}
@@ -359,7 +359,7 @@ func TestPasswordResetEmailSenderInterface(t *testing.T) {
 
 	t.Run("mock captures sent values", func(t *testing.T) {
 		mock := &mockPasswordResetEmailSender{}
-		err := mock.SendPasswordReset(nil, "user@test.com", "token123", "https://link.com")
+		err := mock.SendPasswordReset(context.TODO(), "user@test.com", "token123", "https://link.com")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "user@test.com", mock.sentTo)
@@ -371,7 +371,7 @@ func TestPasswordResetEmailSenderInterface(t *testing.T) {
 		expectedErr := errors.New("send failed")
 		mock := &mockPasswordResetEmailSender{sendError: expectedErr}
 
-		err := mock.SendPasswordReset(nil, "user@test.com", "token", "link")
+		err := mock.SendPasswordReset(context.TODO(), "user@test.com", "token", "link")
 		assert.Equal(t, expectedErr, err)
 	})
 }

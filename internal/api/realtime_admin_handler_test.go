@@ -228,7 +228,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -254,7 +254,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -280,7 +280,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -306,7 +306,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -332,7 +332,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -349,7 +349,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -366,7 +366,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -395,7 +395,7 @@ func TestHandleEnableRealtime_Validation(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 
 			// Should not fail on event validation (will fail at DB operation)
 			assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode, "Events %v should be valid", events)
@@ -418,7 +418,7 @@ func TestHandleDisableRealtime_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Parameters are valid, fails at DB check
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -434,7 +434,7 @@ func TestHandleDisableRealtime_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Parameters are valid
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -456,7 +456,7 @@ func TestHandleListRealtimeTables_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Handler reached, fails at DB
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -472,7 +472,7 @@ func TestHandleListRealtimeTables_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -487,7 +487,7 @@ func TestHandleListRealtimeTables_ParameterParsing(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -508,7 +508,7 @@ func TestHandleGetRealtimeStatus_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Parameters valid, fails at DB
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -531,7 +531,7 @@ func TestHandleUpdateRealtimeConfig_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -548,7 +548,7 @@ func TestHandleUpdateRealtimeConfig_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -574,7 +574,7 @@ func TestHandleUpdateRealtimeConfig_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -600,7 +600,7 @@ func TestHandleUpdateRealtimeConfig_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Validation passes, fails at DB
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -618,7 +618,7 @@ func TestHandleUpdateRealtimeConfig_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Validation passes, fails at DB
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -679,7 +679,7 @@ func TestSystemSchemaProtection(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 
 			assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "Schema %q should be blocked", schema)
 		}
@@ -698,7 +698,7 @@ func TestSystemSchemaProtection(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 
 			// Should not fail with system schema error (will fail at DB check)
 			assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode, "Schema %q should pass validation", schema)

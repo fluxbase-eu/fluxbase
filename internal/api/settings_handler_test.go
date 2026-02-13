@@ -261,7 +261,7 @@ func TestGetSetting_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Fiber treats empty param as route not found
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
@@ -277,7 +277,7 @@ func TestGetSetting_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Handler was reached, fails at DB operation
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -293,7 +293,7 @@ func TestGetSetting_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Dots in key should be valid
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -309,7 +309,7 @@ func TestGetSetting_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -324,7 +324,7 @@ func TestGetSetting_ParameterValidation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -346,7 +346,7 @@ func TestGetSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -372,7 +372,7 @@ func TestGetSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -398,7 +398,7 @@ func TestGetSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -433,7 +433,7 @@ func TestGetSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -468,7 +468,7 @@ func TestGetSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should not be bad request (100 is exactly the limit)
 		// Will fail at DB operation, but validation passes
@@ -487,7 +487,7 @@ func TestGetSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Validation passes, fails at DB operation
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -505,7 +505,7 @@ func TestGetSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Validation passes, fails at DB operation
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)

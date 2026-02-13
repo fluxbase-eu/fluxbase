@@ -183,7 +183,7 @@ func TestCSRF_RejectsInvalidToken(t *testing.T) {
 
 	// Set up a valid token in storage
 	validToken := "valid-token-12345678901234567890"
-	storage.Set(validToken, []byte("1"), time.Hour)
+	_ = storage.Set(validToken, []byte("1"), time.Hour)
 
 	// Request with cookie but wrong header token
 	req := httptest.NewRequest("POST", "/test", nil)
@@ -210,7 +210,7 @@ func TestCSRF_AcceptsValidToken(t *testing.T) {
 
 	// Set up a valid token in storage
 	validToken := "valid-token-12345678901234567890"
-	storage.Set(validToken, []byte("1"), time.Hour)
+	_ = storage.Set(validToken, []byte("1"), time.Hour)
 
 	// Request with matching cookie and header token
 	req := httptest.NewRequest("POST", "/test", nil)
@@ -332,7 +332,7 @@ func TestCSRF_RejectsMismatchedToken(t *testing.T) {
 
 	// Store a valid token
 	validToken := "valid-token-123456789012345678901"
-	storage.Set(validToken, []byte("1"), time.Hour)
+	_ = storage.Set(validToken, []byte("1"), time.Hour)
 
 	// Send a different token in header (cookie and header don't match)
 	req := httptest.NewRequest("POST", "/test", nil)
@@ -358,7 +358,7 @@ func TestCSRF_RejectsEmptyHeaderToken(t *testing.T) {
 	})
 
 	validToken := "valid-token-12345678901234567890"
-	storage.Set(validToken, []byte("1"), time.Hour)
+	_ = storage.Set(validToken, []byte("1"), time.Hour)
 
 	// Request with cookie but empty header token
 	req := httptest.NewRequest("POST", "/test", nil)
@@ -384,7 +384,7 @@ func TestCSRF_FormTokenLookup(t *testing.T) {
 	})
 
 	validToken := "valid-token-form-12345678901234567890"
-	storage.Set(validToken, []byte("1"), time.Hour)
+	_ = storage.Set(validToken, []byte("1"), time.Hour)
 
 	// Request with form data
 	req := httptest.NewRequest("POST", "/test", strings.NewReader("_csrf="+validToken))

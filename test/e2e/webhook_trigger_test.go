@@ -358,7 +358,7 @@ func TestWebhookTriggerMultipleWebhooks(t *testing.T) {
 	var payload1 map[string]interface{}
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var p map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&p)
+		_ = json.NewDecoder(r.Body).Decode(&p)
 		mu1.Lock()
 		payload1 = p
 		mu1.Unlock()
@@ -370,7 +370,7 @@ func TestWebhookTriggerMultipleWebhooks(t *testing.T) {
 	var payload2 map[string]interface{}
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var p map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&p)
+		_ = json.NewDecoder(r.Body).Decode(&p)
 		mu2.Lock()
 		payload2 = p
 		mu2.Unlock()
@@ -473,7 +473,7 @@ func TestWebhookTriggerInactiveWebhook(t *testing.T) {
 	var receivedPayload map[string]interface{}
 	webhookServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&payload)
+		_ = json.NewDecoder(r.Body).Decode(&payload)
 		mu.Lock()
 		receivedPayload = payload
 		mu.Unlock()
@@ -643,7 +643,7 @@ func TestWebhookScopingUserScope(t *testing.T) {
 	// Webhook server for user 1
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var p map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&p)
+		_ = json.NewDecoder(r.Body).Decode(&p)
 		mu1.Lock()
 		user1Payloads = append(user1Payloads, p)
 		mu1.Unlock()
@@ -654,7 +654,7 @@ func TestWebhookScopingUserScope(t *testing.T) {
 	// Webhook server for user 2
 	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var p map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&p)
+		_ = json.NewDecoder(r.Body).Decode(&p)
 		mu2.Lock()
 		user2Payloads = append(user2Payloads, p)
 		mu2.Unlock()
@@ -805,7 +805,7 @@ func TestWebhookScopingGlobalScope(t *testing.T) {
 
 	webhookServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var p map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&p)
+		_ = json.NewDecoder(r.Body).Decode(&p)
 		mu.Lock()
 		receivedPayloads = append(receivedPayloads, p)
 		mu.Unlock()

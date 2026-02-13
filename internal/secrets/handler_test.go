@@ -259,10 +259,8 @@ func TestParseExpiresAt(t *testing.T) {
 					// Check if it's in the past
 					t.Skip("Skipping test for past time")
 				}
-			} else {
-				if err == nil && !result.IsZero() {
-					t.Error("expected error or zero time")
-				}
+			} else if err == nil && !result.IsZero() {
+				t.Error("expected error or zero time")
 			}
 		})
 	}

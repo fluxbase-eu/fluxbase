@@ -509,10 +509,7 @@ func TestContentRangeHeaderQuery(t *testing.T) {
 		resultsLen := 25
 		totalCount := 100
 
-		start := 0
-		if &offset != nil {
-			start = offset
-		}
+		start := offset
 		end := start + resultsLen - 1
 		if end < start {
 			end = start

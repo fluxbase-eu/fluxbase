@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -430,7 +431,7 @@ func TestServer_GetLoggingService(t *testing.T) {
 func TestServer_LoadFunctionsFromFilesystem(t *testing.T) {
 	t.Run("returns error when functions handler is nil", func(t *testing.T) {
 		s := &Server{functionsHandler: nil}
-		err := s.LoadFunctionsFromFilesystem(nil)
+		err := s.LoadFunctionsFromFilesystem(context.TODO())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "functions handler not initialized")
 	})
@@ -439,7 +440,7 @@ func TestServer_LoadFunctionsFromFilesystem(t *testing.T) {
 func TestServer_LoadJobsFromFilesystem(t *testing.T) {
 	t.Run("returns error when jobs handler is nil", func(t *testing.T) {
 		s := &Server{jobsHandler: nil}
-		err := s.LoadJobsFromFilesystem(nil)
+		err := s.LoadJobsFromFilesystem(context.TODO())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "jobs handler not initialized")
 	})
@@ -448,7 +449,7 @@ func TestServer_LoadJobsFromFilesystem(t *testing.T) {
 func TestServer_LoadAIChatbotsFromFilesystem(t *testing.T) {
 	t.Run("returns error when ai handler is nil", func(t *testing.T) {
 		s := &Server{aiHandler: nil}
-		err := s.LoadAIChatbotsFromFilesystem(nil)
+		err := s.LoadAIChatbotsFromFilesystem(context.TODO())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "AI handler not initialized")
 	})

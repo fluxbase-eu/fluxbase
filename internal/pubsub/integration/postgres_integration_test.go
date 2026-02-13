@@ -31,7 +31,7 @@ func TestPostgresPubSub_Start(t *testing.T) {
 	err = ps.Start()
 	assert.NoError(t, err)
 
-	ps.Close()
+	_ = ps.Close()
 }
 
 // TestPostgresPubSub_Subscribe creates subscriptions and verifies they work.
@@ -44,7 +44,7 @@ func TestPostgresPubSub_Subscribe(t *testing.T) {
 
 	ps := pubsub.NewPostgresPubSub(tc.DB.Pool())
 	require.NoError(t, ps.Start())
-	defer ps.Close()
+	defer func() { _ = ps.Close() }()
 
 	// Create a subscription
 	sub, err := ps.Subscribe(ctx, "test-channel")
@@ -70,7 +70,7 @@ func TestPostgresPubSub_MultipleSubscribers(t *testing.T) {
 
 	ps := pubsub.NewPostgresPubSub(tc.DB.Pool())
 	require.NoError(t, ps.Start())
-	defer ps.Close()
+	defer func() { _ = ps.Close() }()
 
 	// Create multiple subscribers
 	subs := make([]<-chan pubsub.Message, 3)
@@ -100,7 +100,7 @@ func TestPostgresPubSub_PublishBasic(t *testing.T) {
 
 	ps := pubsub.NewPostgresPubSub(tc.DB.Pool())
 	require.NoError(t, ps.Start())
-	defer ps.Close()
+	defer func() { _ = ps.Close() }()
 
 	// Publish a message
 	err := ps.Publish(ctx, "test-channel", []byte("test"))
@@ -116,7 +116,7 @@ func TestPostgresPubSub_PayloadSizeLimit(t *testing.T) {
 
 	ps := pubsub.NewPostgresPubSub(tc.DB.Pool())
 	require.NoError(t, ps.Start())
-	defer ps.Close()
+	defer func() { _ = ps.Close() }()
 
 	// Payload under limit should succeed
 	payloadOk := make([]byte, 1000)
@@ -145,7 +145,7 @@ func TestPostgresPubSub_BuiltinChannels(t *testing.T) {
 
 	ps := pubsub.NewPostgresPubSub(tc.DB.Pool())
 	require.NoError(t, ps.Start())
-	defer ps.Close()
+	defer func() { _ = ps.Close() }()
 
 	// Test publishing to built-in channels
 	channels := []string{
@@ -168,7 +168,7 @@ func TestPostgresPubSub_UnsubscribeOnContextCancel(t *testing.T) {
 
 	ps := pubsub.NewPostgresPubSub(tc.DB.Pool())
 	require.NoError(t, ps.Start())
-	defer ps.Close()
+	defer func() { _ = ps.Close() }()
 
 	// Create subscriber with cancelable context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -218,7 +218,7 @@ func TestPostgresPubSub_CloseClosesAllChannels(t *testing.T) {
 	}
 
 	// Close pubsub
-	ps.Close()
+	_ = ps.Close()
 
 	// All channels should be closed
 	for i, ch := range channels {
@@ -236,7 +236,7 @@ func TestPostgresPubSub_EmptyPayload(t *testing.T) {
 
 	ps := pubsub.NewPostgresPubSub(tc.DB.Pool())
 	require.NoError(t, ps.Start())
-	defer ps.Close()
+	defer func() { _ = ps.Close() }()
 
 	err := ps.Publish(ctx, "test-channel", []byte{})
 	require.NoError(t, err, "empty payload should be accepted")

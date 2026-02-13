@@ -168,7 +168,7 @@ func (s *LokiLogStorage) Write(ctx context.Context, entries []*LogEntry) error {
 	if err != nil {
 		return fmt.Errorf("failed to send logs to loki: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("loki returned status %d", resp.StatusCode)
@@ -243,7 +243,7 @@ func (s *LokiLogStorage) Query(ctx context.Context, opts LogQueryOptions) (*LogQ
 	if err != nil {
 		return nil, fmt.Errorf("failed to query loki: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("loki query returned status %d", resp.StatusCode)
@@ -376,7 +376,7 @@ func (s *LokiLogStorage) Health(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("loki health check failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("loki not ready: status %d", resp.StatusCode)

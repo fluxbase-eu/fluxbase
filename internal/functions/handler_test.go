@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -1079,7 +1080,7 @@ func TestHandler_loadSettingsSecrets(t *testing.T) {
 	t.Run("returns nil when service is nil", func(t *testing.T) {
 		handler := NewHandler(nil, "/tmp/functions", config.CORSConfig{}, "secret", "http://localhost", "", "", nil, nil, nil)
 
-		result := handler.loadSettingsSecrets(nil, nil)
+		result := handler.loadSettingsSecrets(context.TODO(), nil)
 		assert.Nil(t, result)
 	})
 
@@ -1087,7 +1088,7 @@ func TestHandler_loadSettingsSecrets(t *testing.T) {
 		handler := NewHandler(nil, "/tmp/functions", config.CORSConfig{}, "secret", "http://localhost", "", "", nil, nil, nil)
 
 		userID := uuid.New()
-		result := handler.loadSettingsSecrets(nil, &userID)
+		result := handler.loadSettingsSecrets(context.TODO(), &userID)
 		assert.Nil(t, result)
 	})
 }

@@ -396,6 +396,7 @@ func (h *StorageHandler) DownloadFile(c fiber.Ctx) error {
 		result, err := h.transformer.Transform(reader, object.ContentType, transformOpts)
 		_ = reader.Close() // Close original reader since we read all data
 
+		//nolint:gocritic // Error handling flow, not switch-compatible
 		if err != nil {
 			// Log the error but return the original if transform fails
 			log.Warn().Err(err).Str("bucket", bucket).Str("key", key).Msg("Image transform failed, returning original")

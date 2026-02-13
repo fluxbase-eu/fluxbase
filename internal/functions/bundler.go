@@ -475,7 +475,8 @@ func (b *Bundler) BundleWithFiles(ctx context.Context, mainCode string, supporti
 	}
 
 	// Write shared modules under _shared/ (if not already inlined)
-	if len(sharedModules) > 0 {
+	switch {
+	case len(sharedModules) > 0:
 		sharedDir := filepath.Join(tmpDir, "_shared")
 		if err := os.MkdirAll(sharedDir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create _shared directory: %w", err)
@@ -512,14 +513,14 @@ func (b *Bundler) BundleWithFiles(ctx context.Context, mainCode string, supporti
 		if err := os.WriteFile(denoConfigPath, []byte(mergedConfig), 0644); err != nil {
 			return nil, fmt.Errorf("failed to write deno.json: %w", err)
 		}
-	} else if functionDenoJSON != "" {
+	case functionDenoJSON != "":
 		// No shared modules, but function has deno.json - write it as-is
 		denoConfigPath := fmt.Sprintf("%s/deno.json", tmpDir)
 		if err := os.WriteFile(denoConfigPath, []byte(functionDenoJSON), 0644); err != nil {
 			return nil, fmt.Errorf("failed to write deno.json: %w", err)
 		}
 		log.Debug().Str("path", denoConfigPath).Msg("Wrote function deno.json to temp directory")
-	} else {
+	default:
 		log.Debug().Msg("No deno.json found for function")
 	}
 

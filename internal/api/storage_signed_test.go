@@ -22,7 +22,7 @@ func TestStorageAPI_GenerateSignedURL_NotSupported(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/storage/signed-bucket/signed.txt/signed-url", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Signed URL route returns 400 (bad request) or 501 (not implemented) depending on validation
 	// Both are acceptable error responses

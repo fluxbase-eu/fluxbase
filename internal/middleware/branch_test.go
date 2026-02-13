@@ -69,7 +69,7 @@ func TestGetBranchSlug(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, "feature-123", result)
 	})
@@ -86,7 +86,7 @@ func TestGetBranchSlug(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, "main", result)
 	})
@@ -104,7 +104,7 @@ func TestGetBranchSlug(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, "main", result)
 	})
@@ -127,7 +127,7 @@ func TestGetBranchPool(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Nil(t, result)
 	})
@@ -145,7 +145,7 @@ func TestGetBranchPool(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Nil(t, result)
 	})
@@ -183,7 +183,7 @@ func TestIsUsingBranch(t *testing.T) {
 			req := httptest.NewRequest("GET", "/test", nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.expected, result)
 		})
@@ -212,7 +212,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.Equal(t, "main", branchSlug)
@@ -236,7 +236,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Without router, non-main branch returns error
 		assert.Equal(t, 503, resp.StatusCode)
@@ -257,7 +257,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test?branch=feature-query", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Without router, non-main branch returns error
 		assert.Equal(t, 503, resp.StatusCode)
@@ -285,7 +285,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Both are non-main, so will fail without router
 		assert.Equal(t, 503, resp.StatusCode)
@@ -308,7 +308,7 @@ func TestBranchContext_NoRouter(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 503, resp.StatusCode)
 	})
@@ -338,7 +338,7 @@ func TestBranchContext_AccessControl(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should be 503 first (no router), but if router existed, would be 401
 		assert.Equal(t, 503, resp.StatusCode)
@@ -365,7 +365,7 @@ func TestBranchContext_AccessControl(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.Equal(t, "main", branchSlug)
@@ -396,7 +396,7 @@ func TestBranchContextSimple(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -423,7 +423,7 @@ func TestRequireBranchAccess(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -491,7 +491,7 @@ func TestBranchExtraction(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			if tt.expectSuccess {
 				assert.Equal(t, 200, resp.StatusCode)
@@ -518,7 +518,7 @@ func BenchmarkGetBranchSlug_Set(b *testing.B) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, _ := app.Test(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func BenchmarkGetBranchSlug_NotSet(b *testing.B) {
@@ -533,7 +533,7 @@ func BenchmarkGetBranchSlug_NotSet(b *testing.B) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, _ := app.Test(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func BenchmarkIsUsingBranch_Main(b *testing.B) {
@@ -549,7 +549,7 @@ func BenchmarkIsUsingBranch_Main(b *testing.B) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, _ := app.Test(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func BenchmarkIsUsingBranch_Feature(b *testing.B) {
@@ -565,7 +565,7 @@ func BenchmarkIsUsingBranch_Feature(b *testing.B) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, _ := app.Test(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func BenchmarkBranchContext_MainBranch(b *testing.B) {
@@ -582,6 +582,6 @@ func BenchmarkBranchContext_MainBranch(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }

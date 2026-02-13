@@ -42,13 +42,13 @@ func TestGetTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+			_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Invalid tool ID", result["error"])
 	})
 
@@ -62,7 +62,7 @@ func TestGetTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should pass validation (not 400), will fail at storage level
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -81,13 +81,13 @@ func TestCreateTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+			_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -103,13 +103,13 @@ func TestCreateTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Name is required", result["error"])
 	})
 
@@ -125,13 +125,13 @@ func TestCreateTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Code is required", result["error"])
 	})
 }
@@ -149,7 +149,7 @@ func TestUpdateTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -165,7 +165,7 @@ func TestUpdateTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -182,7 +182,7 @@ func TestDeleteTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -200,7 +200,7 @@ func TestSyncTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -217,13 +217,13 @@ func TestSyncTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Name is required", result["error"])
 	})
 
@@ -239,7 +239,7 @@ func TestSyncTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -258,7 +258,7 @@ func TestTestTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -274,7 +274,7 @@ func TestTestTool_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -295,13 +295,13 @@ func TestGetResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+			_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Invalid resource ID", result["error"])
 	})
 }
@@ -318,7 +318,7 @@ func TestCreateResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -335,13 +335,13 @@ func TestCreateResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "URI is required", result["error"])
 	})
 
@@ -357,13 +357,13 @@ func TestCreateResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Name is required", result["error"])
 	})
 
@@ -379,13 +379,13 @@ func TestCreateResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+			_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Code is required", result["error"])
 	})
 }
@@ -403,7 +403,7 @@ func TestUpdateResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -420,7 +420,7 @@ func TestDeleteResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -438,7 +438,7 @@ func TestSyncResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -455,7 +455,7 @@ func TestSyncResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -474,7 +474,7 @@ func TestTestResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -490,7 +490,7 @@ func TestTestResource_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})

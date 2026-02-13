@@ -680,8 +680,8 @@ func (ls *LocalStorage) GenerateSignedURL(ctx context.Context, bucket, key strin
 	signature := mac.Sum(nil)
 
 	// Combine token and signature, then base64 encode
-	combined := append(tokenJSON, signature...)
-	encodedToken := base64.URLEncoding.EncodeToString(combined)
+	tokenJSON = append(tokenJSON, signature...)
+	encodedToken := base64.URLEncoding.EncodeToString(tokenJSON)
 
 	// Build the signed URL
 	signedURL := fmt.Sprintf("%s/api/v1/storage/object?token=%s", ls.baseURL, url.QueryEscape(encodedToken))

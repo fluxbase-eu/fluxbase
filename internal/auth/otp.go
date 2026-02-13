@@ -124,7 +124,8 @@ func (r *OTPRepository) GetByCode(ctx context.Context, email *string, phone *str
 	var query string
 	var args []interface{}
 
-	if email != nil {
+	switch {
+	case email != nil:
 		query = `
 			SELECT id, email, phone, code, type, purpose, expires_at, used, used_at, attempts, max_attempts, ip_address, user_agent, created_at
 			FROM auth.otp_codes
@@ -133,7 +134,7 @@ func (r *OTPRepository) GetByCode(ctx context.Context, email *string, phone *str
 			LIMIT 1
 		`
 		args = []interface{}{*email, code}
-	} else if phone != nil {
+	case phone != nil:
 		query = `
 			SELECT id, email, phone, code, type, purpose, expires_at, used, used_at, attempts, max_attempts, ip_address, user_agent, created_at
 			FROM auth.otp_codes
@@ -142,7 +143,7 @@ func (r *OTPRepository) GetByCode(ctx context.Context, email *string, phone *str
 			LIMIT 1
 		`
 		args = []interface{}{*phone, code}
-	} else {
+	default:
 		return nil, errors.New("either email or phone must be provided")
 	}
 

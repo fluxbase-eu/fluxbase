@@ -103,11 +103,12 @@ func NewTracer(ctx context.Context, cfg TracerConfig) (*Tracer, error) {
 
 	// Create sampler based on configuration
 	var sampler sdktrace.Sampler
-	if cfg.SampleRate >= 1.0 {
+	switch {
+	case cfg.SampleRate >= 1.0:
 		sampler = sdktrace.AlwaysSample()
-	} else if cfg.SampleRate <= 0 {
+	case cfg.SampleRate <= 0:
 		sampler = sdktrace.NeverSample()
-	} else {
+	default:
 		sampler = sdktrace.ParentBased(
 			sdktrace.TraceIDRatioBased(cfg.SampleRate),
 		)
@@ -332,12 +333,13 @@ func SetFunctionResult(ctx context.Context, statusCode int, duration time.Durati
 			attribute.Int("http.status_code", statusCode),
 			attribute.Int64("function.duration_ms", duration.Milliseconds()),
 		)
-		if err != nil {
+		switch {
+		case err != nil:
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-		} else if statusCode >= 400 {
+		case statusCode >= 400:
 			span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", statusCode))
-		} else {
+		default:
 			span.SetStatus(codes.Ok, "")
 		}
 	}
@@ -416,12 +418,13 @@ func SetJobResult(ctx context.Context, status string, duration time.Duration, er
 			attribute.String("job.status", status),
 			attribute.Int64("job.duration_ms", duration.Milliseconds()),
 		)
-		if err != nil {
+		switch {
+		case err != nil:
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-		} else if status == "failed" || status == "cancelled" {
+		case status == "failed" || status == "cancelled":
 			span.SetStatus(codes.Error, status)
-		} else {
+		default:
 			span.SetStatus(codes.Ok, "")
 		}
 	}

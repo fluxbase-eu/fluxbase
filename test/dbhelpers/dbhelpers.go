@@ -231,7 +231,7 @@ func getEnv(key, defaultVal string) string {
 
 func parseInt(s string) int {
 	var val int
-	fmt.Sscanf(s, "%d", &val)
+	_, _ = fmt.Sscanf(s, "%d", &val)
 	return val
 }
 

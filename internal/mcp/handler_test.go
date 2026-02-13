@@ -206,7 +206,7 @@ func TestHandler_handleHealth(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/health", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -231,7 +231,7 @@ func TestHandler_handlePost(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusUnsupportedMediaType, resp.StatusCode)
 	})
@@ -250,7 +250,7 @@ func TestHandler_handlePost(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should not return UnsupportedMediaType
 		assert.NotEqual(t, http.StatusUnsupportedMediaType, resp.StatusCode)
@@ -270,7 +270,7 @@ func TestHandler_handlePost(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, http.StatusUnsupportedMediaType, resp.StatusCode)
 	})
@@ -292,7 +292,7 @@ func TestHandler_handlePost(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
 	})
@@ -312,7 +312,7 @@ func TestHandler_handlePost(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
 	})
@@ -332,7 +332,7 @@ func TestHandler_handlePost(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			assert.NotEqual(t, http.StatusTooManyRequests, resp.StatusCode, "Request %d should be allowed", i+1)
 		}
 
@@ -341,7 +341,7 @@ func TestHandler_handlePost(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 	})
@@ -364,7 +364,7 @@ func TestHandler_handleGet(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
 	})
@@ -381,7 +381,7 @@ func TestHandler_handleGet(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
 	})
@@ -402,7 +402,7 @@ func TestHandler_RegisterPublicRoutes(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/health", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -427,7 +427,7 @@ func TestHandler_RegisterRoutes(t *testing.T) {
 		postReq.Header.Set("Content-Type", "application/json")
 		postResp, err := app.Test(postReq)
 		require.NoError(t, err)
-		postResp.Body.Close()
+		_ = postResp.Body.Close()
 		assert.NotEqual(t, http.StatusNotFound, postResp.StatusCode)
 
 		// Test GET route exists
@@ -435,7 +435,7 @@ func TestHandler_RegisterRoutes(t *testing.T) {
 		getReq.Header.Set("Accept", "application/json")
 		getResp, err := app.Test(getReq)
 		require.NoError(t, err)
-		getResp.Body.Close()
+		_ = getResp.Body.Close()
 		assert.NotEqual(t, http.StatusNotFound, getResp.StatusCode)
 	})
 }

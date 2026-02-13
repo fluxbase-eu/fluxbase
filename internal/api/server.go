@@ -451,6 +451,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	// Embedding can be enabled explicitly (EmbeddingEnabled=true) or via fallback from AI provider
 	var vectorHandler *VectorHandler
 	vectorHandler, err = NewVectorHandler(vectorManager, db.Inspector(), db)
+	//nolint:gocritic // Initialization state checks, not switch-compatible
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to initialize vector handler")
 	} else if vectorHandler.IsEmbeddingConfigured() {

@@ -17,7 +17,7 @@ func TestNewStore(t *testing.T) {
 		store, err := NewStore(cfg, nil)
 		require.NoError(t, err)
 		require.NotNil(t, store)
-		defer store.Close()
+		defer func() { _ = store.Close() }()
 
 		// Verify it's a memory store
 		_, ok := store.(*MemoryStore)
@@ -32,7 +32,7 @@ func TestNewStore(t *testing.T) {
 		store, err := NewStore(cfg, nil)
 		require.NoError(t, err)
 		require.NotNil(t, store)
-		defer store.Close()
+		defer func() { _ = store.Close() }()
 
 		_, ok := store.(*MemoryStore)
 		assert.True(t, ok, "should be MemoryStore")

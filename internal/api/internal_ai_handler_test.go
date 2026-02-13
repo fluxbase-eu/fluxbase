@@ -35,7 +35,7 @@ func TestInternalAIHandler_HandleChat_NoAIService(t *testing.T) {
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var result map[string]any
-	json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 	assert.Contains(t, result["error"], "AI service not configured")
 }
 
@@ -81,7 +81,7 @@ func TestInternalAIHandler_HandleEmbed_NoService(t *testing.T) {
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var result map[string]any
-	json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 	assert.Contains(t, result["error"], "Embedding service not configured")
 }
 
@@ -121,7 +121,7 @@ func TestInternalAIHandler_HandleListProviders_NoService(t *testing.T) {
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var result map[string]any
-	json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 	assert.Contains(t, result["error"], "AI service not configured")
 }
 

@@ -345,7 +345,7 @@ func TestService_Download(t *testing.T) {
 		assert.NotNil(t, reader)
 		assert.NotNil(t, obj)
 		assert.True(t, provider.downloadCalled)
-		reader.Close()
+		_ = reader.Close()
 	})
 }
 

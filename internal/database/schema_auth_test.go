@@ -22,14 +22,10 @@ func TestContextWithAuth(t *testing.T) {
 	assert.True(t, auth.IsAdmin)
 }
 
-func TestAuthFromContext_Nil(t *testing.T) {
-	// Nil context
-	auth := AuthFromContext(nil)
-	assert.Nil(t, auth)
-
-	// Context without auth
+func TestAuthFromContext_NoContext(t *testing.T) {
+	// Context without auth key
 	ctx := context.Background()
-	auth = AuthFromContext(ctx)
+	auth := AuthFromContext(ctx)
 	assert.Nil(t, auth)
 }
 

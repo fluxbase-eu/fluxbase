@@ -60,14 +60,13 @@ func TestMain(m *testing.M) {
 	// Initialize shared test context for connection pooling
 	// This reduces connection pool exhaustion across tests
 	test.InitSharedTestContext()
-	defer test.CleanupSharedTestContext()
 
 	// NOTE: RLS shared context is initialized lazily on first use by NewRLSTestContext()
 	// This avoids having two shared contexts competing for resources
 
 	// Setup: Create test tables before running tests
 	if !setupTestTables() {
-		log.Fatal().Msg("Failed to setup test tables - cannot run tests")
+		log.Error().Msg("Failed to setup test tables - cannot run tests")
 		os.Exit(1)
 	}
 
@@ -89,6 +88,10 @@ func TestMain(m *testing.M) {
 	} else {
 		log.Info().Msg("Parallel test mode detected - skipping test table teardown")
 	}
+
+	// Clean up shared test context before exit
+	// (Must be called explicitly since os.Exit will not run defers)
+	test.CleanupSharedTestContext()
 
 	// Exit with the test result code
 	os.Exit(code)
@@ -354,10 +357,10 @@ func setupTestTables() bool {
 	}
 
 	// Drop existing RLS policies if they exist (to avoid conflicts)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_select_own ON public.tasks`)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_insert_own ON public.tasks`)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_update_own ON public.tasks`)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_delete_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_select_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_insert_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_update_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_delete_own ON public.tasks`)
 
 	// Create RLS policies for tasks
 	_, err = db.Exec(ctx, `
