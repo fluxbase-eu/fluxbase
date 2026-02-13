@@ -1,6 +1,6 @@
 module github.com/fluxbase-eu/fluxbase
 
-go 1.25.7
+go 1.26.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1
@@ -22,7 +22,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/kapmahc/epub v0.1.1
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
-	github.com/mailgun/mailgun-go/v5 v5.13.0
+	github.com/mailgun/mailgun-go/v5 v5.13.1
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/nguyenthenguyen/docx v0.0.0-20230621112118-9c8e795a11db
 	github.com/olekukonko/tablewriter v1.1.3
@@ -51,7 +51,7 @@ require (
 	golang.org/x/oauth2 v0.35.0
 	golang.org/x/term v0.40.0
 	golang.org/x/time v0.14.0
-	google.golang.org/grpc v1.78.0
+	google.golang.org/grpc v1.79.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
