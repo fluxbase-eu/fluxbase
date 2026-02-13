@@ -90,7 +90,7 @@ func deleteAllMailHogMessages(t *testing.T) {
 		t.Logf("Warning: Could not delete MailHog messages: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 }
 
 // isMailHogAvailable checks if MailHog is accessible
@@ -99,7 +99,7 @@ func isMailHogAvailable(t *testing.T) bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return resp.StatusCode == http.StatusOK
 }
 
@@ -116,7 +116,7 @@ func getMailHogMessages(t *testing.T) []MailHogMessage {
 	if err != nil {
 		t.Fatalf("Failed to fetch MailHog messages: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var messages MailHogMessages
 	if err := json.NewDecoder(resp.Body).Decode(&messages); err != nil {

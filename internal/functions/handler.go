@@ -185,11 +185,12 @@ func (h *Handler) applyCorsHeaders(c fiber.Ctx, fn *EdgeFunction) {
 	}
 
 	var allowedOrigin string
-	if hasWildcard {
+	switch {
+	case hasWildcard:
 		allowedOrigin = "*"
-	} else if len(origins) == 1 {
+	case len(origins) == 1:
 		allowedOrigin = origins[0]
-	} else {
+	default:
 		requestOrigin := c.Get("Origin")
 		if requestOrigin != "" {
 			// Check if request origin is in the allowed list

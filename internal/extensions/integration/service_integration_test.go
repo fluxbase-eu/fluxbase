@@ -666,11 +666,12 @@ func TestExtensionsService_Categories_AreCategorized(t *testing.T) {
 
 	// Verify extensions are in correct categories
 	for _, ext := range response.Extensions {
-		if ext.Name == "test_ai_ext" {
+		switch ext.Name {
+		case "test_ai_ext":
 			assert.Equal(t, "ai_ml", ext.Category)
-		} else if ext.Name == "test_geo_ext" {
+		case "test_geo_ext":
 			assert.Equal(t, "geospatial", ext.Category)
-		} else if ext.Name == "test_util_ext" {
+		case "test_util_ext":
 			assert.Equal(t, "utilities", ext.Category)
 		}
 	}

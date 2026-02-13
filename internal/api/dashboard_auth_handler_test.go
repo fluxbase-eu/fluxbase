@@ -10,13 +10,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// testUUID is a fixed UUID for testing
-var testUUID = uuid.MustParse("12345678-1234-1234-1234-123456789abc")
 
 // =============================================================================
 // Helper Function Tests

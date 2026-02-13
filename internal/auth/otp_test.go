@@ -408,6 +408,7 @@ func TestOTPCode_ValidationLogic(t *testing.T) {
 			var err error
 
 			// Check if max attempts exceeded
+			//nolint:gocritic // Conditions check different fields, not switch-compatible
 			if tt.otp.Attempts >= tt.otp.MaxAttempts {
 				err = ErrOTPMaxAttemptsExceeded
 			} else if tt.otp.Used {

@@ -12,7 +12,7 @@ func TestLoadFunctionCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a test function file
 	testCode := "async function handler(req) { return { status: 200 }; }"
@@ -71,7 +71,7 @@ func TestSaveFunctionCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	testCode := "async function handler(req) { return { status: 200 }; }"
 
@@ -140,7 +140,7 @@ func TestDeleteFunctionCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a test function file to delete
 	testFunctionName := "test-function"
@@ -199,7 +199,7 @@ func TestListFunctionFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create test function files
 	testFunctions := []string{"function1", "function2", "function-3"}
@@ -226,7 +226,7 @@ func TestListFunctionFiles(t *testing.T) {
 	invalidFile := filepath.Join(tmpDir, "../invalid.ts")
 	if err := os.WriteFile(invalidFile, []byte("test"), 0644); err == nil {
 		// Only if we successfully created it (might fail due to path issues)
-		defer os.Remove(invalidFile)
+		defer func() { _ = os.Remove(invalidFile) }()
 	}
 
 	tests := []struct {
@@ -286,7 +286,7 @@ func TestFunctionExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a test function file
 	testFunctionName := "test-function"
@@ -619,7 +619,7 @@ func TestSaveAndLoadFunctionCodeIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	testCode := `async function handler(req) {
 	const data = JSON.parse(req.body || "{}");

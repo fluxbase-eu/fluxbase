@@ -717,7 +717,9 @@ func (s *WebhookService) sendWebhookSync(ctx context.Context, webhook *Webhook, 
 	return nil
 }
 
-// sendWebhook sends the actual HTTP request (runs asynchronously)
+// sendWebhook sends the actual HTTP request (runs asynchronously).
+// Note: Currently unused but kept for potential future async webhook delivery implementation.
+/*
 func (s *WebhookService) sendWebhook(ctx context.Context, deliveryID uuid.UUID, webhook *Webhook, payloadJSON []byte) {
 	// SECURITY FIX: Validate webhook URL at request time to prevent DNS rebinding attacks
 	if !s.AllowPrivateIPs {
@@ -777,6 +779,7 @@ func (s *WebhookService) sendWebhook(ctx context.Context, deliveryID uuid.UUID, 
 		s.markDeliveryFailed(ctx, deliveryID, resp.StatusCode, &bodyStr, fmt.Sprintf("HTTP %d", resp.StatusCode))
 	}
 }
+*/
 
 // generateSignature generates HMAC SHA256 signature (legacy, without timestamp)
 func (s *WebhookService) generateSignature(payload []byte, secret string) string {

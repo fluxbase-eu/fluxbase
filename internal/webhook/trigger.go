@@ -306,7 +306,7 @@ func (s *TriggerService) listen(ctx context.Context) {
 				Dur("retry_delay", retryDelay).
 				Msg("Failed to acquire connection for webhook listener, retrying")
 			time.Sleep(retryDelay)
-			retryDelay = retryDelay * 2
+			retryDelay *= 2
 			if retryDelay > 2*time.Second {
 				retryDelay = 2 * time.Second
 			}
@@ -324,7 +324,7 @@ func (s *TriggerService) listen(ctx context.Context) {
 				Int("max_retries", maxRetries).
 				Msg("Failed to LISTEN on webhook_event channel, retrying with new connection")
 			time.Sleep(retryDelay)
-			retryDelay = retryDelay * 2
+			retryDelay *= 2
 			if retryDelay > 2*time.Second {
 				retryDelay = 2 * time.Second
 			}

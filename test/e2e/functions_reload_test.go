@@ -20,11 +20,11 @@ func setupFunctionsTest(t *testing.T) (*test.TestContext, string, string) {
 
 	// Set the functions directory in the environment before creating the test context
 	// This ensures the server uses our temp directory
-	os.Setenv("FLUXBASE_FUNCTIONS_FUNCTIONS_DIR", tmpDir)
+	_ = os.Setenv("FLUXBASE_FUNCTIONS_FUNCTIONS_DIR", tmpDir)
 
 	// Clean up environment variable when test is done
 	t.Cleanup(func() {
-		os.Unsetenv("FLUXBASE_FUNCTIONS_FUNCTIONS_DIR")
+		_ = os.Unsetenv("FLUXBASE_FUNCTIONS_FUNCTIONS_DIR")
 	})
 
 	// Create a new test context (not shared) with the updated config
@@ -45,7 +45,7 @@ func setupFunctionsTest(t *testing.T) (*test.TestContext, string, string) {
 func TestFunctionsReloadEndpoint(t *testing.T) {
 	tc, token, functionsDir := setupFunctionsTest(t)
 	defer tc.Close()
-	defer os.RemoveAll(functionsDir)
+	defer func() { _ = os.RemoveAll(functionsDir) }()
 
 	// Create test function files in the temporary directory
 	testFunctions := map[string]string{
@@ -135,7 +135,7 @@ func TestFunctionsReloadWithRegularUser(t *testing.T) {
 func TestFunctionsReloadUpdatesExistingFunctions(t *testing.T) {
 	tc, token, functionsDir := setupFunctionsTest(t)
 	defer tc.Close()
-	defer os.RemoveAll(functionsDir)
+	defer func() { _ = os.RemoveAll(functionsDir) }()
 
 	// Create initial function file
 	functionName := "update-test"
@@ -181,7 +181,7 @@ func TestFunctionsReloadUpdatesExistingFunctions(t *testing.T) {
 func TestFunctionsReloadWithInvalidFiles(t *testing.T) {
 	tc, token, functionsDir := setupFunctionsTest(t)
 	defer tc.Close()
-	defer os.RemoveAll(functionsDir)
+	defer func() { _ = os.RemoveAll(functionsDir) }()
 
 	// Create files with invalid names (should be skipped with warnings)
 	invalidFiles := map[string]string{
@@ -216,7 +216,7 @@ func TestFunctionsReloadWithInvalidFiles(t *testing.T) {
 func TestFunctionsReloadEmptyDirectory(t *testing.T) {
 	tc, token, functionsDir := setupFunctionsTest(t)
 	defer tc.Close()
-	defer os.RemoveAll(functionsDir)
+	defer func() { _ = os.RemoveAll(functionsDir) }()
 
 	// Don't create any function files
 
@@ -239,7 +239,7 @@ func TestFunctionsReloadEmptyDirectory(t *testing.T) {
 func TestFunctionsReloadConcurrent(t *testing.T) {
 	tc, token, functionsDir := setupFunctionsTest(t)
 	defer tc.Close()
-	defer os.RemoveAll(functionsDir)
+	defer func() { _ = os.RemoveAll(functionsDir) }()
 
 	// Create a test function file
 	filePath := filepath.Join(functionsDir, "concurrent-test.ts")
@@ -272,7 +272,7 @@ func TestFunctionsReloadConcurrent(t *testing.T) {
 func TestFunctionsDirectoryBasedPattern(t *testing.T) {
 	tc, token, functionsDir := setupFunctionsTest(t)
 	defer tc.Close()
-	defer os.RemoveAll(functionsDir)
+	defer func() { _ = os.RemoveAll(functionsDir) }()
 
 	// Test 1: Create a directory-based function
 	dirFunctionName := "complex-function"
@@ -321,7 +321,7 @@ func TestFunctionsDirectoryBasedPattern(t *testing.T) {
 func TestFunctionsPriorityPattern(t *testing.T) {
 	tc, token, functionsDir := setupFunctionsTest(t)
 	defer tc.Close()
-	defer os.RemoveAll(functionsDir)
+	defer func() { _ = os.RemoveAll(functionsDir) }()
 
 	functionName := "priority-test"
 

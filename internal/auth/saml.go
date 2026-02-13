@@ -245,7 +245,8 @@ func (s *SAMLService) AddProviderFromConfig(cfg config.SAMLProviderConfig) error
 	var metadataXML []byte
 	var err error
 
-	if cfg.IdPMetadataURL != "" {
+	switch {
+	case cfg.IdPMetadataURL != "":
 		// Validate HTTPS requirement for metadata URL
 		if err := validateMetadataURL(cfg.IdPMetadataURL, cfg.AllowInsecureMetadataURL); err != nil {
 			return err
@@ -254,9 +255,9 @@ func (s *SAMLService) AddProviderFromConfig(cfg config.SAMLProviderConfig) error
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrSAMLMetadataFetchFailed, err)
 		}
-	} else if cfg.IdPMetadataXML != "" {
+	case cfg.IdPMetadataXML != "":
 		metadataXML = []byte(cfg.IdPMetadataXML)
-	} else {
+	default:
 		return errors.New("either idp_metadata_url or idp_metadata_xml must be provided")
 	}
 
@@ -1308,6 +1309,7 @@ func (s *SAMLService) LoadProvidersFromDB(ctx context.Context) error {
 
 		// Determine which metadata to use
 		var metadataToUse string
+		//nolint:gocritic // Conditions check different variables, not switch-compatible
 		if metadataCached != nil && *metadataCached != "" {
 			metadataToUse = *metadataCached
 		} else if metadataXML != nil && *metadataXML != "" {

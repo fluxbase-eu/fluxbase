@@ -238,7 +238,7 @@ func TestCreateBranch_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
 
@@ -265,7 +265,7 @@ func TestCreateBranch_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -293,7 +293,7 @@ func TestCreateBranch_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -322,7 +322,7 @@ func TestCreateBranch_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -355,7 +355,7 @@ func TestListBranches_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail due to nil manager, but verifies handler is reachable
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -370,7 +370,7 @@ func TestListBranches_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches?limit=50&offset=10", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -384,7 +384,7 @@ func TestListBranches_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches?status=active", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -398,7 +398,7 @@ func TestListBranches_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches?type=preview", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -412,7 +412,7 @@ func TestListBranches_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches?github_repo=owner/repo", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -432,7 +432,7 @@ func TestListBranches_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches?mine=true", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -452,7 +452,7 @@ func TestGetBranch_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/550e8400-e29b-41d4-a716-446655440000", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail due to nil manager, but verifies handler is reachable
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -467,7 +467,7 @@ func TestGetBranch_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/feature-branch-123", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -487,7 +487,7 @@ func TestDeleteBranch_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/branches/550e8400-e29b-41d4-a716-446655440000", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -501,7 +501,7 @@ func TestDeleteBranch_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/branches/feature-branch", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -521,7 +521,7 @@ func TestResetBranch_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/branches/550e8400-e29b-41d4-a716-446655440000/reset", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -535,7 +535,7 @@ func TestResetBranch_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/branches/my-branch/reset", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -555,7 +555,7 @@ func TestGetBranchActivity_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/test-branch/activity", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -569,7 +569,7 @@ func TestGetBranchActivity_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/test-branch/activity?limit=25", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -583,7 +583,7 @@ func TestGetBranchActivity_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/test-branch/activity?limit=500", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -603,7 +603,7 @@ func TestGetPoolStats_Handler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/stats/pools", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will panic due to nil router, but this tests the route registration
 		// In a real test with mocked router, this would work
@@ -625,7 +625,7 @@ func TestGetActiveBranch_Handler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/active", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -650,7 +650,7 @@ func TestSetActiveBranch_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
 
@@ -677,7 +677,7 @@ func TestSetActiveBranch_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -696,7 +696,7 @@ func TestSetActiveBranch_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -726,7 +726,7 @@ func TestResetActiveBranch_Handler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/branches/active", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -746,7 +746,7 @@ func TestListGitHubConfigs_Handler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/github/configs", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -768,7 +768,7 @@ func TestUpsertGitHubConfig_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -794,7 +794,7 @@ func TestUpsertGitHubConfig_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -824,7 +824,7 @@ func TestDeleteGitHubConfig_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/github/configs/owner-repo", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -844,7 +844,7 @@ func TestListBranchAccess_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/550e8400-e29b-41d4-a716-446655440000/access", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -858,7 +858,7 @@ func TestListBranchAccess_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/branches/feature-branch/access", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -880,7 +880,7 @@ func TestGrantBranchAccess_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail due to nil manager, but body parsing happens first
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -898,7 +898,7 @@ func TestGrantBranchAccess_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail at branch lookup before user_id validation
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -916,7 +916,7 @@ func TestGrantBranchAccess_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -936,7 +936,7 @@ func TestRevokeBranchAccess_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/branches/test-branch/access/not-a-uuid", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail at branch lookup before user_id validation
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -951,7 +951,7 @@ func TestRevokeBranchAccess_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/branches/550e8400-e29b-41d4-a716-446655440000/access/123e4567-e89b-12d3-a456-426614174000", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})

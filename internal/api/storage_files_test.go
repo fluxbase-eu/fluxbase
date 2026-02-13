@@ -39,7 +39,7 @@ func TestStorageAPI_UploadFile(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -76,7 +76,7 @@ func TestStorageAPI_UploadFileWithPath(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -120,7 +120,7 @@ func TestStorageAPI_UploadWithMetadata(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -157,7 +157,7 @@ func TestStorageAPI_MissingFile(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -185,7 +185,7 @@ func TestStorageAPI_DownloadNonExistentFile(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/storage/notfound-bucket/nonexistent.txt", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
@@ -202,7 +202,7 @@ func TestStorageAPI_DeleteFile(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/delete-bucket/todelete.txt", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
@@ -210,7 +210,7 @@ func TestStorageAPI_DeleteFile(t *testing.T) {
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/storage/delete-bucket/todelete.txt", nil)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
@@ -236,7 +236,7 @@ func TestStorageAPI_ListFiles(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/storage/list-bucket", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		// Debug: read error message
@@ -275,7 +275,7 @@ func TestStorageAPI_ListFilesWithPrefix(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/storage/prefix-bucket?prefix=images/", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -362,7 +362,7 @@ func TestGetUserIDStorage(t *testing.T) {
 			req := httptest.NewRequest("GET", "/test", nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.expected, result)
 		})
@@ -439,11 +439,6 @@ func TestSafeContentTypes(t *testing.T) {
 			assert.Equal(t, tt.isSafe, safeTypes[tt.contentType])
 		})
 	}
-}
-
-// testFiberApp is a helper that creates a minimal Fiber app for testing
-func testFiberApp(handler func(c any) error) *http.Client {
-	return &http.Client{}
 }
 
 // =============================================================================

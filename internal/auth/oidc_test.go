@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"testing"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -222,7 +223,7 @@ func TestOIDCVerifier_Verify_Errors(t *testing.T) {
 			verifiers: make(map[string]*oidc.IDTokenVerifier),
 		}
 
-		claims, err := v.Verify(nil, "unknown", "token", "")
+		claims, err := v.Verify(context.TODO(), "unknown", "token", "")
 		assert.Nil(t, claims)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not configured")
@@ -234,9 +235,9 @@ func TestOIDCVerifier_Verify_Errors(t *testing.T) {
 		}
 
 		// All of these should return "not configured" error (case-normalized)
-		_, err1 := v.Verify(nil, "Google", "token", "")
-		_, err2 := v.Verify(nil, "GOOGLE", "token", "")
-		_, err3 := v.Verify(nil, "google", "token", "")
+		_, err1 := v.Verify(context.TODO(), "Google", "token", "")
+		_, err2 := v.Verify(context.TODO(), "GOOGLE", "token", "")
+		_, err3 := v.Verify(context.TODO(), "google", "token", "")
 
 		assert.Contains(t, err1.Error(), "not configured")
 		assert.Contains(t, err2.Error(), "not configured")

@@ -333,7 +333,7 @@ func setupMockOAuthServer(t *testing.T) *httptest.Server {
 	// Mock token endpoint
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"access_token":  "mock_access_token",
 			"refresh_token": "mock_refresh_token",
 			"token_type":    "Bearer",
@@ -344,7 +344,7 @@ func setupMockOAuthServer(t *testing.T) *httptest.Server {
 	// Mock userinfo endpoint
 	mux.HandleFunc("/userinfo", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"id":    "mock_user_123",
 			"email": "test@example.com",
 			"name":  "Test User",

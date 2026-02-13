@@ -106,7 +106,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Name")
 	})
 
@@ -120,7 +120,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Value")
 	})
 
@@ -146,7 +146,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Namespace")
 	})
 
@@ -283,7 +283,7 @@ func TestSecretsHandler_GetSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Invalid")
 	})
 }
@@ -371,7 +371,7 @@ func TestSecretsHandler_UpdateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "At least one field")
 	})
 
@@ -450,10 +450,10 @@ func TestSecretsHandler_GetVersions_Integration(t *testing.T) {
 
 		// Create more versions
 		v2 := "v2"
-		storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
 
 		v3 := "v3"
-		storage.UpdateSecret(context.Background(), secret.ID, &v3, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v3, nil, nil, nil)
 
 		resp := makeRequest(t, app, "GET", "/api/v1/secrets/"+secret.ID.String()+"/versions", nil, token)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -495,7 +495,7 @@ func TestSecretsHandler_Rollback_Integration(t *testing.T) {
 
 		// Update to v2
 		v2 := "updated"
-		storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
 
 		// Rollback to v1
 		resp := makeRequest(t, app, "POST", "/api/v1/secrets/"+secret.ID.String()+"/rollback/1", nil, token)
@@ -545,18 +545,18 @@ func TestSecretsHandler_GetStats_Integration(t *testing.T) {
 		// Create test secrets
 		for i := 0; i < 3; i++ {
 			secret := &secrets.Secret{Name: uuid.New().String(), Scope: "global"}
-			storage.CreateSecret(context.Background(), secret, "value", nil)
+			_ = storage.CreateSecret(context.Background(), secret, "value", nil)
 		}
 
 		// Create expiring soon
 		expiringSoon := time.Now().Add(3 * 24 * time.Hour)
 		secret := &secrets.Secret{Name: "EXPIRING_SOON_STATS", Scope: "global", ExpiresAt: &expiringSoon}
-		storage.CreateSecret(context.Background(), secret, "value", nil)
+		_ = storage.CreateSecret(context.Background(), secret, "value", nil)
 
 		// Create expired
 		expired := time.Now().Add(-1 * time.Hour)
 		secret = &secrets.Secret{Name: "EXPIRED_STATS", Scope: "global", ExpiresAt: &expired}
-		storage.CreateSecret(context.Background(), secret, "value", nil)
+		_ = storage.CreateSecret(context.Background(), secret, "value", nil)
 
 		resp := makeRequest(t, app, "GET", "/api/v1/secrets/stats", nil, token)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

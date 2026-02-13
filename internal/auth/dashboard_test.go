@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base32"
 	"encoding/base64"
@@ -634,7 +635,7 @@ func TestDashboardAuthService_CreateUser_Validation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := NewDashboardAuthService(nil, nil, "fluxbase")
-			_, err := svc.CreateUser(nil, tt.email, tt.password, tt.fullName)
+			_, err := svc.CreateUser(context.TODO(), tt.email, tt.password, tt.fullName)
 
 			assert.Error(t, err)
 			if tt.errMsg != "" {
@@ -723,7 +724,7 @@ func TestDashboardAuthService_UpdateProfile_Validation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := NewDashboardAuthService(nil, nil, "fluxbase")
-			err := svc.UpdateProfile(nil, tt.userID, tt.fullName, tt.avatarURL)
+			err := svc.UpdateProfile(context.TODO(), tt.userID, tt.fullName, tt.avatarURL)
 
 			assert.Error(t, err)
 			if tt.errMsg != "" {

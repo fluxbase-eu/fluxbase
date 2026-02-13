@@ -1046,11 +1046,12 @@ func (h *KnowledgeBaseHandler) DebugSearch(c fiber.Ctx) error {
 		response.ChunksWithoutEmbedding = stats.ChunksWithoutEmbedding
 
 		// Check for problematic state
-		if stats.TotalChunks == 0 {
+		switch {
+		case stats.TotalChunks == 0:
 			response.ErrorMessage = "No chunks in knowledge base"
-		} else if stats.ChunksWithEmbedding == 0 {
+		case stats.ChunksWithEmbedding == 0:
 			response.ErrorMessage = "All chunks have NULL embeddings - document processing may have failed"
-		} else if stats.ChunksWithoutEmbedding > 0 {
+		case stats.ChunksWithoutEmbedding > 0:
 			response.ErrorMessage = fmt.Sprintf("%d chunks have NULL embeddings", stats.ChunksWithoutEmbedding)
 		}
 	}

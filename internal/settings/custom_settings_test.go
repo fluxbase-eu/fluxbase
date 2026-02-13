@@ -481,14 +481,14 @@ func BenchmarkCanEditSetting_AdminBypass(b *testing.B) {
 func BenchmarkValidateKey(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ValidateKey("custom.settings.my.key.name")
+		_ = ValidateKey("custom.settings.my.key.name")
 	}
 }
 
 func BenchmarkValidateKey_Empty(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ValidateKey("")
+		_ = ValidateKey("")
 	}
 }
 
@@ -545,10 +545,9 @@ func TestCanEditSetting_EdgeCases(t *testing.T) {
 
 	t.Run("case-sensitive role matching", func(t *testing.T) {
 		editableBy := []string{"Admin", "Moderator"}
-		result := CanEditSetting(editableBy, "admin")
 		// "admin" is a special role that bypasses the check, so it returns true
 		// Use a non-special role to test case-sensitivity
-		result = CanEditSetting(editableBy, "moderator") // lowercase, but list has "Moderator"
+		result := CanEditSetting(editableBy, "moderator") // lowercase, but list has "Moderator"
 		assert.False(t, result, "role matching is case-sensitive")
 	})
 

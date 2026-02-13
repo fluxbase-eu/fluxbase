@@ -3,6 +3,7 @@ package functions
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -110,7 +111,7 @@ func TestValidateFunctionPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tests := []struct {
 		name         string
@@ -156,7 +157,7 @@ func TestValidateFunctionPath(t *testing.T) {
 			if !tt.wantError {
 				// Verify path is within functions directory
 				absDir, _ := filepath.Abs(tt.functionsDir)
-				if !filepath.HasPrefix(path, absDir) {
+				if !strings.HasPrefix(path, absDir) {
 					t.Errorf("ValidateFunctionPath() returned path outside functions directory: %s", path)
 				}
 			}
@@ -203,7 +204,7 @@ func TestValidateFunctionPathTraversal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	functionsDir := filepath.Join(tmpDir, "functions")
 	if err := os.MkdirAll(functionsDir, 0755); err != nil {
@@ -230,7 +231,7 @@ func TestResolveFunctionPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	functionsDir := filepath.Join(tmpDir, "functions")
 	if err := os.MkdirAll(functionsDir, 0755); err != nil {
@@ -335,7 +336,7 @@ func TestResolveFunctionPath(t *testing.T) {
 			}
 
 			// Verify path contains expected substring
-			if tt.wantContains != "" && !filepath.HasPrefix(path, filepath.Join(functionsDir, "")) {
+			if tt.wantContains != "" && !strings.HasPrefix(path, filepath.Join(functionsDir, "")) {
 				t.Errorf("ResolveFunctionPath(%q) path %s not within functions dir", tt.functionName, path)
 			}
 
@@ -353,7 +354,7 @@ func TestResolveFunctionPath_PathTraversal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	functionsDir := filepath.Join(tmpDir, "functions")
 	if err := os.MkdirAll(functionsDir, 0755); err != nil {

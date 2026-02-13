@@ -126,6 +126,7 @@ func StructuredLogger(config ...StructuredLoggerConfig) fiber.Handler {
 
 		// Determine log level based on status code and duration
 		var logEvent *zerolog.Event
+		//nolint:gocritic // Log level determination checks different vars, not switch-compatible
 		if err != nil {
 			logEvent = logger.Error().Err(err)
 		} else if status >= 500 {

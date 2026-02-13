@@ -384,7 +384,8 @@ func (qp *QueryParser) parseSelectFields(value string) ([]string, map[string][]s
 
 		case ')':
 			depth--
-			if depth == 0 && inRelation && !isAggregation {
+			switch {
+			case depth == 0 && inRelation && !isAggregation:
 				// End of relation fields
 				subFields := strings.Split(current.String(), ",")
 				for j := range subFields {
@@ -393,11 +394,11 @@ func (qp *QueryParser) parseSelectFields(value string) ([]string, map[string][]s
 				embedded[relationName] = subFields
 				current.Reset()
 				inRelation = false
-			} else if depth == 0 && isAggregation {
+			case depth == 0 && isAggregation:
 				// End of aggregation function
 				current.WriteByte(ch)
 				isAggregation = false
-			} else if depth > 0 {
+			case depth > 0:
 				current.WriteByte(ch)
 			}
 
@@ -1109,14 +1110,15 @@ func (params *QueryParams) buildWhereClause(argCounter *int) (string, []interfac
 	lastWasLegacyOr := false
 
 	for _, fs := range filterSQLs {
-		if fs.filter.OrGroupID > 0 {
+		switch {
+		case fs.filter.OrGroupID > 0:
 			// New-style OR group with explicit ID
 			orGroups[fs.filter.OrGroupID] = append(orGroups[fs.filter.OrGroupID], fs.condition)
-		} else if fs.filter.IsOr {
+		case fs.filter.IsOr:
 			// Legacy OR (consecutive grouping for backward compatibility)
 			legacyOrGroup = append(legacyOrGroup, fs.condition)
 			lastWasLegacyOr = true
-		} else {
+		default:
 			// AND condition - flush any pending legacy OR group first
 			if lastWasLegacyOr && len(legacyOrGroup) > 0 {
 				finalConditions = append(finalConditions, "("+strings.Join(legacyOrGroup, " OR ")+")")
@@ -1239,6 +1241,7 @@ func parseJSONBPath(column string) string {
 		var opLen int
 		var op string
 
+		//nolint:gocritic // Conditions check different indices, not switch-compatible
 		if textOpIdx >= 0 && (jsonOpIdx < 0 || textOpIdx <= jsonOpIdx) {
 			opIdx = textOpIdx
 			opLen = 3
@@ -1651,7 +1654,7 @@ func formatVectorValue(value interface{}) string {
 			s = "[" + s
 		}
 		if !strings.HasSuffix(s, "]") {
-			s = s + "]"
+			s += "]"
 		}
 		return s
 

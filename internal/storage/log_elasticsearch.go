@@ -85,7 +85,7 @@ func (s *ElasticsearchLogStorage) Write(ctx context.Context, entries []*LogEntry
 	if err != nil {
 		return fmt.Errorf("failed to create bulk indexer: %w", err)
 	}
-	defer bi.Close(ctx)
+	defer func() { _ = bi.Close(ctx) }()
 
 	// Index each entry
 	for _, entry := range entries {
@@ -172,7 +172,7 @@ func (s *ElasticsearchLogStorage) Query(ctx context.Context, opts LogQueryOption
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute search: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.IsError() {
 		return nil, fmt.Errorf("elasticsearch search error: %s", res.String())
@@ -269,7 +269,7 @@ func (s *ElasticsearchLogStorage) Delete(ctx context.Context, opts LogQueryOptio
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute delete: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.IsError() {
 		return 0, fmt.Errorf("elasticsearch delete error: %s", res.String())
@@ -336,7 +336,7 @@ func (s *ElasticsearchLogStorage) Stats(ctx context.Context) (*LogStats, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute stats query: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.IsError() {
 		return nil, fmt.Errorf("elasticsearch stats error: %s", res.String())
@@ -411,7 +411,7 @@ func (s *ElasticsearchLogStorage) Health(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("elasticsearch ping failed: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.IsError() {
 		return fmt.Errorf("elasticsearch health check failed: %s", res.String())
@@ -659,7 +659,7 @@ func (s *ElasticsearchLogStorage) executeSearch(ctx context.Context, query map[s
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute search: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.IsError() {
 		return nil, fmt.Errorf("elasticsearch search error: %s", res.String())

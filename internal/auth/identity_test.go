@@ -699,8 +699,8 @@ func (suite *IdentityServiceTestSuite) TearDownTest() {
 func (suite *IdentityServiceTestSuite) TestListIdentities() {
 	// Test listing identities for a user with multiple providers
 	email := "user@example.com"
-	suite.repo.Create(suite.ctx, "user-123", "google", "google-1", &email, map[string]interface{}{})
-	suite.repo.Create(suite.ctx, "user-123", "github", "github-1", &email, map[string]interface{}{})
+	_, _ = suite.repo.Create(suite.ctx, "user-123", "google", "google-1", &email, map[string]interface{}{})
+	_, _ = suite.repo.Create(suite.ctx, "user-123", "github", "github-1", &email, map[string]interface{}{})
 
 	identities, err := suite.svc.GetUserIdentities(suite.ctx, "user-123")
 
@@ -729,9 +729,9 @@ func (suite *IdentityServiceTestSuite) TestLinkUnlinkIdentity() {
 func (suite *IdentityServiceTestSuite) TestLinkMultipleProviders() {
 	// Test linking multiple providers to same user
 	email := "user@example.com"
-	suite.svc.LinkIdentity(suite.ctx, "user-123", "google", "google-1", &email, map[string]interface{}{})
-	suite.svc.LinkIdentity(suite.ctx, "user-123", "github", "github-1", &email, map[string]interface{}{})
-	suite.svc.LinkIdentity(suite.ctx, "user-123", "microsoft", "ms-1", &email, map[string]interface{}{})
+	_, _ = suite.svc.LinkIdentity(suite.ctx, "user-123", "google", "google-1", &email, map[string]interface{}{})
+	_, _ = suite.svc.LinkIdentity(suite.ctx, "user-123", "github", "github-1", &email, map[string]interface{}{})
+	_, _ = suite.svc.LinkIdentity(suite.ctx, "user-123", "microsoft", "ms-1", &email, map[string]interface{}{})
 
 	identities, _ := suite.svc.GetUserIdentities(suite.ctx, "user-123")
 	suite.Len(identities, 3)
@@ -947,7 +947,7 @@ func TestIdentityService_LinkIdentityProvider_UnregisteredProvider(t *testing.T)
 	svc := NewTestableIdentityService(mockRepo, stateStore)
 
 	// Try to use an unregistered provider - should return error
-	_, _, err := svc.LinkIdentityProvider(nil, "user-123", "google")
+	_, _, err := svc.LinkIdentityProvider(context.TODO(), "user-123", "google")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid OAuth provider")
@@ -968,7 +968,7 @@ func TestIdentityService_LinkIdentityProvider_WithOAuthManager(t *testing.T) {
 	require.NoError(t, err)
 
 	// This should work now
-	authURL, state, err := svc.LinkIdentityProvider(nil, "user-123", "google")
+	authURL, state, err := svc.LinkIdentityProvider(context.TODO(), "user-123", "google")
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, authURL)
@@ -982,7 +982,7 @@ func TestIdentityService_LinkIdentityCallback_InvalidState(t *testing.T) {
 	svc := NewTestableIdentityService(mockRepo, stateStore)
 
 	// Try to callback with invalid state
-	_, _, err := svc.LinkIdentityProvider(nil, "user-123", "google")
+	_, _, err := svc.LinkIdentityProvider(context.TODO(), "user-123", "google")
 
 	// We expect this to fail because provider isn't registered
 	assert.Error(t, err)
@@ -1002,7 +1002,7 @@ func TestIdentityService_StateStoreIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate state via service
-	_, state, err := svc.LinkIdentityProvider(nil, "user-123", "google")
+	_, state, err := svc.LinkIdentityProvider(context.TODO(), "user-123", "google")
 	require.NoError(t, err)
 
 	// State should be stored in state store

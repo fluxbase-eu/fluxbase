@@ -391,12 +391,13 @@ func (qb *QueryBuilder) buildWhereClause() (string, []interface{}) {
 	var finalConditions []string
 
 	for _, fs := range filterSQLs {
-		if fs.filter.OrGroupID > 0 {
+		switch {
+		case fs.filter.OrGroupID > 0:
 			orGroups[fs.filter.OrGroupID] = append(orGroups[fs.filter.OrGroupID], fs.condition)
-		} else if fs.filter.IsOr {
+		case fs.filter.IsOr:
 			// Legacy OR support - treat as single OR group
 			orGroups[-1] = append(orGroups[-1], fs.condition)
-		} else {
+		default:
 			finalConditions = append(finalConditions, fs.condition)
 		}
 	}

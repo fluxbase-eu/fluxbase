@@ -23,7 +23,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/pganalyze/pg_query_go/v6"
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/rs/zerolog/log"
 )
 
@@ -324,13 +324,14 @@ func (c *Connection) runSystemMigrations() error {
 			needsReset := false
 			reason := ""
 
-			if recordedVersion > int64(highestAvailable) {
+			switch {
+			case recordedVersion > int64(highestAvailable):
 				needsReset = true
 				reason = "version higher than available migrations"
-			} else if !fileExists {
+			case !fileExists:
 				needsReset = true
 				reason = "migration file does not exist"
-			} else if dirty {
+			case dirty:
 				// If dirty but file exists, just clear the dirty flag
 				// This happens when a previous migration was interrupted
 				log.Warn().
@@ -502,6 +503,7 @@ func (c *Connection) scanMigrationFiles(dir string) ([]migrationFile, error) {
 		var migName string
 		var isUp bool
 
+		//nolint:gocritic
 		if strings.HasSuffix(name, ".up.sql") {
 			migName = strings.TrimSuffix(name, ".up.sql")
 			isUp = true

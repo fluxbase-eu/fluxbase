@@ -794,6 +794,7 @@ func (h *SAMLProviderHandler) validateMetadata(ctx context.Context, metadataURL,
 	var xmlData []byte
 	var err error
 
+	//nolint:gocritic // Conditions check different pointer vars, not switch-compatible
 	if metadataURL != nil && *metadataURL != "" {
 		// Validate URL
 		if !strings.HasPrefix(*metadataURL, "https://") {

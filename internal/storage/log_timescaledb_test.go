@@ -26,7 +26,7 @@ func TestNewTimescaleDBLogStorage_WithNilDB(t *testing.T) {
 		require.NotNil(t, storage)
 		assert.Equal(t, "timescaledb", storage.Name())
 		assert.NotNil(t, storage.PostgresLogStorage)
-		assert.Nil(t, storage.PostgresLogStorage.db)
+		assert.Nil(t, storage.db)
 	})
 }
 
@@ -43,7 +43,7 @@ func TestNewPostgresTimescaleDBStorage_WithNilDB(t *testing.T) {
 		require.NotNil(t, storage)
 		assert.Equal(t, "postgres-timescaledb", storage.Name())
 		assert.NotNil(t, storage.PostgresLogStorage)
-		assert.Nil(t, storage.PostgresLogStorage.db)
+		assert.Nil(t, storage.db)
 	})
 }
 

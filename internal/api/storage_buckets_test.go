@@ -24,14 +24,14 @@ func TestStorageAPI_CreateBucket(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err := app.Test(req)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	// Create bucket
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Accept both 201 (created) and 409 (already exists)
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusConflict {
@@ -58,14 +58,14 @@ func TestStorageAPI_CreateBucketAlreadyExists(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err := app.Test(req)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	// Create bucket first time
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusConflict {
 		t.Fatalf("First create: Expected status 201 or 409, got %d", resp.StatusCode)
 	}
@@ -74,7 +74,7 @@ func TestStorageAPI_CreateBucketAlreadyExists(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should return 409 Conflict
 	assert.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -91,14 +91,14 @@ func TestStorageAPI_ListBuckets(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/buckets/"+bucket, nil)
 		resp, err := app.Test(req)
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 
 		// Create bucket
 		req = httptest.NewRequest(http.MethodPost, "/api/v1/storage/buckets/"+bucket, nil)
 		resp, err = app.Test(req)
 		require.NoError(t, err)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		// Accept both 201 and 409 (already exists)
 		if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusConflict {
 			t.Fatalf("Create bucket %s: Expected status 201 or 409, got %d", bucket, resp.StatusCode)
@@ -109,7 +109,7 @@ func TestStorageAPI_ListBuckets(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/storage/buckets", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -142,18 +142,18 @@ func TestStorageAPI_DeleteBucket(t *testing.T) {
 		}
 		// If bucket was not empty (409), we can't continue
 		if resp.StatusCode == http.StatusConflict {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			// Bucket has files, try to list and delete them first
 			listReq := httptest.NewRequest(http.MethodGet, "/api/v1/storage/"+bucketName, nil)
 			listResp, _ := app.Test(listReq)
 			if listResp != nil {
-				listResp.Body.Close()
+				_ = listResp.Body.Close()
 				// Try deleting files (we won't know filenames without parsing response)
 				// For this test, we'll just skip trying to cleanup existing buckets
 			}
 			break
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		// If deleted successfully (204) or not found (404), we're done
 		if resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusNotFound {
 			break
@@ -164,7 +164,7 @@ func TestStorageAPI_DeleteBucket(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusConflict {
 		t.Skipf("Bucket '%s' already exists and couldn't be cleaned up - skipping test", bucketName)
@@ -176,7 +176,7 @@ func TestStorageAPI_DeleteBucket(t *testing.T) {
 	req = httptest.NewRequest(http.MethodDelete, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
@@ -195,7 +195,7 @@ func TestStorageAPI_DeleteBucketNotEmpty(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/buckets/nonempty-bucket", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusConflict, resp.StatusCode)
 
@@ -216,14 +216,14 @@ func TestStorageAPI_InvalidBucketName(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err := app.Test(req)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	// Try to create bucket with invalid name
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should succeed (validation is provider-specific)
 	// Local storage is more lenient than S3
@@ -247,7 +247,7 @@ func TestStorageHandler_CreateBucket_MissingBucketName(t *testing.T) {
 	req := httptest.NewRequest("POST", "/storage/buckets/", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -266,7 +266,7 @@ func TestStorageHandler_UpdateBucketSettings_MissingBucketName(t *testing.T) {
 	req := httptest.NewRequest("PUT", "/storage/buckets/", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -285,7 +285,7 @@ func TestStorageHandler_DeleteBucket_MissingBucketName(t *testing.T) {
 	req := httptest.NewRequest("DELETE", "/storage/buckets/", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -325,7 +325,7 @@ func TestStorageHandler_ListBuckets_RoleChecking(t *testing.T) {
 			req := httptest.NewRequest("GET", "/storage/buckets", nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
@@ -348,7 +348,7 @@ func TestStorageHandler_UpdateBucketSettings_InvalidBody(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -451,7 +451,7 @@ func TestStorageHandler_UpdateBucketSettings_AllFields(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should fail with nil DB, but after parsing validation
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -497,7 +497,7 @@ func TestStorageHandler_UpdateBucketSettings_PartialUpdate(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
@@ -549,7 +549,7 @@ func TestStorageHandler_CreateBucket_WithOptions(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
@@ -570,7 +570,7 @@ func TestStorageHandler_DeleteBucket_NotFound(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should fail (nil storage provider)
 	assert.NotEqual(t, http.StatusNoContent, resp.StatusCode)
@@ -606,7 +606,7 @@ func TestStorageHandler_DeleteBucket_Permissions(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// Should fail (nil storage provider)
 			assert.NotEqual(t, http.StatusNoContent, resp.StatusCode)
@@ -628,7 +628,7 @@ func TestStorageHandler_ListBuckets_ResponseStructure(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should fail (nil DB) but after role check
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)

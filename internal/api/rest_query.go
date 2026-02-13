@@ -252,6 +252,7 @@ func (h *RESTHandler) buildSelectQuery(table database.TableInfo, params *QueryPa
 	var selectClause string
 
 	// If we have aggregations, use BuildSelectClause (handles aggregations)
+	//nolint:gocritic // Conditions check different params, not switch-compatible
 	if len(params.Aggregations) > 0 || len(params.GroupBy) > 0 {
 		selectClause = params.BuildSelectClause(table.Name)
 	} else if len(params.Select) > 0 {

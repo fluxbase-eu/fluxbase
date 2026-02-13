@@ -111,7 +111,7 @@ func TestS3Storage_UploadAndDownload(t *testing.T) {
 	// Download file
 	reader, downloadObj, err := s3.Download(ctx, bucket, key, &DownloadOptions{})
 	require.NoError(t, err)
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	assert.Equal(t, key, downloadObj.Key)
 	assert.Equal(t, bucket, downloadObj.Bucket)
@@ -468,7 +468,7 @@ func TestS3Storage_CopyObject(t *testing.T) {
 	// Verify content
 	reader, _, err := s3.Download(ctx, destBucket, destKey, &DownloadOptions{})
 	require.NoError(t, err)
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	downloadedContent, err := io.ReadAll(reader)
 	require.NoError(t, err)
@@ -559,7 +559,7 @@ func TestS3Storage_DownloadWithRange(t *testing.T) {
 	}
 	reader, _, err := s3.Download(ctx, bucket, key, opts)
 	require.NoError(t, err)
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Note: The size in obj might be the full size, not the range size
 	// This depends on S3 implementation

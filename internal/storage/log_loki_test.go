@@ -161,7 +161,7 @@ func TestLokiLogStorage_Write_AutoGenerateID(t *testing.T) {
 		receivedEntry := false
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var pushReq LokiPushRequest
-			json.NewDecoder(r.Body).Decode(&pushReq)
+			_ = json.NewDecoder(r.Body).Decode(&pushReq)
 
 			// Parse the log line
 			var entry LogEntry
@@ -200,7 +200,7 @@ func TestLokiLogStorage_Write_AutoGenerateTimestamp(t *testing.T) {
 		receivedEntry := false
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var pushReq LokiPushRequest
-			json.NewDecoder(r.Body).Decode(&pushReq)
+			_ = json.NewDecoder(r.Body).Decode(&pushReq)
 
 			// Verify nanosecond timestamp format
 			timestamp := pushReq.Streams[0].Values[0][0]
@@ -245,7 +245,7 @@ func TestLokiLogStorage_Write_NanosecondTimestamps(t *testing.T) {
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var pushReq LokiPushRequest
-			json.NewDecoder(r.Body).Decode(&pushReq)
+			_ = json.NewDecoder(r.Body).Decode(&pushReq)
 
 			// Verify nanosecond timestamp
 			timestamp := pushReq.Streams[0].Values[0][0]
@@ -407,7 +407,7 @@ func TestLokiLogStorage_Query_NoResults(t *testing.T) {
 					Result:     []LokiResult{},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -447,7 +447,7 @@ func TestLokiLogStorage_Query_WithFilters(t *testing.T) {
 					Result:     []LokiResult{},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -495,7 +495,7 @@ func TestLokiLogStorage_Query_Pagination(t *testing.T) {
 					},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -543,7 +543,7 @@ func TestLokiLogStorage_Query_ParseResults(t *testing.T) {
 					},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -582,7 +582,7 @@ func TestLokiLogStorage_Query_TimeRange(t *testing.T) {
 					Result:     []LokiResult{},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -615,7 +615,7 @@ func TestLokiLogStorage_Query_SortDirection(t *testing.T) {
 					Result:     []LokiResult{},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -692,7 +692,7 @@ func TestLokiLogStorage_Stats(t *testing.T) {
 					},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -756,7 +756,7 @@ func TestLokiLogStorage_Stats_TimeRange(t *testing.T) {
 					},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -862,7 +862,7 @@ func TestLokiLogStorage_AllLogCategories(t *testing.T) {
 				Status: "success",
 				Data:   LokiData{ResultType: "streams", Result: []LokiResult{}},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -1330,7 +1330,7 @@ func TestLokiLogStorage_GetExecutionLogs(t *testing.T) {
 				Status: "success",
 				Data:   LokiData{ResultType: "streams", Result: []LokiResult{}},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -1370,7 +1370,7 @@ func TestLokiLogStorage_GetExecutionLogs(t *testing.T) {
 					},
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 

@@ -664,7 +664,7 @@ func TestSession_Workflow_CompleteLifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Step 6: Verify new tokens work
-	found, err = repo.GetByAccessToken(ctx, newAccessToken)
+	_, err = repo.GetByAccessToken(ctx, newAccessToken)
 	require.NoError(t, err)
 
 	// Step 7: Revoke session

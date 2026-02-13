@@ -329,7 +329,10 @@ func TestWrapCode_CancellationCheck(t *testing.T) {
 	})
 }
 
-// Helper function
+// stringPtr is a helper function for creating string pointers.
+// Note: Currently unused but kept for potential future use.
+/*
 func stringPtr(s string) *string {
 	return &s
 }
+*/

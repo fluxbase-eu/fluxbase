@@ -412,10 +412,10 @@ func TestSecretsStorage_Versions_Integration(t *testing.T) {
 
 		// Create more versions
 		v2 := "v2"
-		storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
 
 		v3 := "v3"
-		storage.UpdateSecret(context.Background(), secret.ID, &v3, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v3, nil, nil, nil)
 
 		versions, err := storage.GetVersions(context.Background(), secret.ID)
 		require.NoError(t, err)
@@ -737,7 +737,7 @@ func TestSecretsStorage_VersionEncryption_Integration(t *testing.T) {
 		for rows.Next() {
 			var v int
 			var encrypted string
-			rows.Scan(&v, &encrypted)
+			_ = rows.Scan(&v, &encrypted)
 
 			decrypted, err := crypto.Decrypt(encrypted, encryptionKey)
 			require.NoError(t, err)

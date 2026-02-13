@@ -348,7 +348,7 @@ func TestListServiceKeys_Handler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/service-keys", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail due to nil db, but verifies handler is reached
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -369,7 +369,7 @@ func TestGetServiceKey_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/service-keys/not-a-uuid", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -392,7 +392,7 @@ func TestGetServiceKey_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/service-keys/550e8400-e29b-41d4-a716-446655440000", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail at DB query, not at validation
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -415,7 +415,7 @@ func TestCreateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -441,7 +441,7 @@ func TestCreateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -467,7 +467,7 @@ func TestCreateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -484,7 +484,7 @@ func TestCreateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail at scope validation
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -508,7 +508,7 @@ func TestUpdateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -524,7 +524,7 @@ func TestUpdateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -541,7 +541,7 @@ func TestUpdateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -567,7 +567,7 @@ func TestUpdateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Scope validation happens before DB query
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -588,7 +588,7 @@ func TestDeleteServiceKey_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/service-keys/invalid", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -602,7 +602,7 @@ func TestDeleteServiceKey_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/service-keys/550e8400-e29b-41d4-a716-446655440000", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail at DB query, not at validation
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -623,7 +623,7 @@ func TestDisableServiceKey_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/service-keys/bad-id/disable", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -643,7 +643,7 @@ func TestEnableServiceKey_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/service-keys/bad-id/enable", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -666,7 +666,7 @@ func TestRevokeServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -682,7 +682,7 @@ func TestRevokeServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -699,7 +699,7 @@ func TestRevokeServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -716,7 +716,7 @@ func TestRevokeServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail due to missing user context
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
@@ -740,7 +740,7 @@ func TestRevokeServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 	})
@@ -763,7 +763,7 @@ func TestDeprecateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -779,7 +779,7 @@ func TestDeprecateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -802,7 +802,7 @@ func TestRotateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -818,7 +818,7 @@ func TestRotateServiceKey_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -838,7 +838,7 @@ func TestGetRevocationHistory_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/service-keys/bad-id/revocations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})

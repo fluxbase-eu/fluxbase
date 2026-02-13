@@ -1,4 +1,4 @@
-package logging
+package storage
 
 import (
 	"context"
@@ -6,17 +6,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/storage"
 	"github.com/rs/zerolog/log"
 )
 
 // BatchWriteFunc is the function called to write a batch of entries.
-type BatchWriteFunc func(ctx context.Context, entries []*storage.LogEntry) error
+type BatchWriteFunc func(ctx context.Context, entries []*LogEntry) error
 
 // Batcher buffers log entries and writes them in batches for efficiency.
 // It flushes either when the batch size is reached or when the flush interval expires.
 type Batcher struct {
-	entries       chan *storage.LogEntry
+	entries       chan *LogEntry
 	batchSize     int
 	flushInterval time.Duration
 	writeFunc     BatchWriteFunc
@@ -45,23 +44,21 @@ func NewBatcher(batchSize int, flushInterval time.Duration, bufferSize int, writ
 	}
 
 	b := &Batcher{
-		entries:       make(chan *storage.LogEntry, bufferSize),
+		entries:       make(chan *LogEntry, bufferSize),
 		batchSize:     batchSize,
 		flushInterval: flushInterval,
 		writeFunc:     writeFunc,
 		done:          make(chan struct{}),
 		flushReq:      make(chan chan error),
 	}
-
 	b.wg.Add(1)
 	go b.run()
-
 	return b
 }
 
 // Add adds a log entry to the batch buffer.
-// If the buffer is full, the entry is dropped and a warning is logged periodically.
-func (b *Batcher) Add(entry *storage.LogEntry) {
+// If the buffer is full, entry is dropped and a warning is logged periodically.
+func (b *Batcher) Add(entry *LogEntry) {
 	b.mu.Lock()
 	if b.closed {
 		b.mu.Unlock()
@@ -73,7 +70,7 @@ func (b *Batcher) Add(entry *storage.LogEntry) {
 	case b.entries <- entry:
 		// Entry added successfully
 	default:
-		// Buffer is full, drop the entry and track metrics
+		// Buffer is full, drop entry and track metrics
 		dropped := b.droppedCount.Add(1)
 
 		// Log warning periodically (not for every dropped entry to avoid log spam)
@@ -100,7 +97,6 @@ func (b *Batcher) Flush(ctx context.Context) error {
 
 	// Send flush request to run loop and wait for response
 	resultCh := make(chan error, 1)
-
 	select {
 	case b.flushReq <- resultCh:
 		// Request sent, wait for result
@@ -131,18 +127,16 @@ func (b *Batcher) Close(ctx context.Context) error {
 	// Signal shutdown - run loop will drain and flush remaining entries
 	close(b.done)
 	b.wg.Wait()
-
 	return nil
 }
 
 // run is the main loop that collects and writes batches.
 func (b *Batcher) run() {
 	defer b.wg.Done()
-
 	ticker := time.NewTicker(b.flushInterval)
 	defer ticker.Stop()
 
-	var batch []*storage.LogEntry
+	var batch []*LogEntry
 
 	// Helper to flush current batch
 	flushBatch := func() error {
@@ -182,9 +176,10 @@ func (b *Batcher) run() {
 			for draining {
 				select {
 				case entry := <-b.entries:
-					if entry != nil {
-						batch = append(batch, entry)
+					if entry == nil {
+						continue
 					}
+					batch = append(batch, entry)
 				default:
 					draining = false
 				}
@@ -223,6 +218,7 @@ type BatcherStats struct {
 func (b *Batcher) Stats() BatcherStats {
 	used := len(b.entries)
 	cap := cap(b.entries)
+
 	return BatcherStats{
 		BufferSize:    cap,
 		BufferUsed:    used,

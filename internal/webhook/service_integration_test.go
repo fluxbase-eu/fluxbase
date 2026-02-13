@@ -149,7 +149,7 @@ func TestWebhookService_Deliver(t *testing.T) {
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal Server Error"))
+			_, _ = w.Write([]byte("Internal Server Error"))
 		}))
 		defer server.Close()
 
@@ -651,7 +651,7 @@ func BenchmarkWebhookService_Deliver(b *testing.B) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var payload WebhookPayload
-		json.NewDecoder(r.Body).Decode(&payload)
+		_ = json.NewDecoder(r.Body).Decode(&payload)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -674,7 +674,7 @@ func BenchmarkWebhookService_Deliver(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		service.Deliver(context.Background(), webhook, payload)
+		_ = service.Deliver(context.Background(), webhook, payload)
 	}
 }
 
@@ -709,6 +709,6 @@ func BenchmarkValidateWebhookHeaders(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		validateWebhookHeaders(headers)
+		_ = validateWebhookHeaders(headers)
 	}
 }

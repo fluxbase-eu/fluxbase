@@ -892,9 +892,8 @@ func TestHandler_CreateProvider(t *testing.T) {
 				// For invalid requests, we expect unmarshaling to succeed
 				// but validation to fail
 				require.NoError(t, err, "Request should be valid JSON")
-			} else {
-				require.NoError(t, err, "Request should be valid JSON")
 			}
+			require.NoError(t, err, "Request should be valid JSON")
 		})
 	}
 }

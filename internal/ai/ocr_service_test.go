@@ -475,10 +475,8 @@ func TestOCRService_ErrorHandling(t *testing.T) {
 		mock := newMockOCRProvider(true)
 		mock.extractPDFFunc = func(ctx context.Context, data []byte, languages []string) (*OCRResult, error) {
 			// Simulate timeout by checking context
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			}
+			<-ctx.Done()
+			return nil, ctx.Err()
 		}
 
 		service := &OCRService{

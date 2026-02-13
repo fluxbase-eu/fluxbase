@@ -186,7 +186,7 @@ func (s *ClickHouseLogStorage) Query(ctx context.Context, opts LogQueryOptions) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to query log entries: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	entries := make([]*LogEntry, 0, limit)
 	for rows.Next() {
@@ -291,7 +291,7 @@ func (s *ClickHouseLogStorage) GetExecutionLogs(ctx context.Context, executionID
 	if err != nil {
 		return nil, fmt.Errorf("failed to query execution logs: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []*LogEntry
 	for rows.Next() {
@@ -428,7 +428,7 @@ func (s *ClickHouseLogStorage) Stats(ctx context.Context) (*LogStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category counts: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var category string
@@ -447,7 +447,7 @@ func (s *ClickHouseLogStorage) Stats(ctx context.Context) (*LogStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get level counts: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var level string

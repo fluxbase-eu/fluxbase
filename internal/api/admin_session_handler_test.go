@@ -392,7 +392,7 @@ func TestHTTPMethods(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/sessions", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 	})
@@ -406,7 +406,7 @@ func TestHTTPMethods(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/sessions/test-id", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 	})
@@ -420,7 +420,7 @@ func TestHTTPMethods(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/users/test-user/sessions", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 	})

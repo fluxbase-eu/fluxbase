@@ -455,7 +455,8 @@ func TestScheduler_AdditionalCoverage(t *testing.T) {
 
 	t.Run("scheduler mutex is initialized", func(t *testing.T) {
 		scheduler := NewScheduler(nil)
-		assert.NotNil(t, scheduler.jobsMu)
+		// jobsMu is a sync.RWMutex - it's always initialized, no need to check
+		assert.NotNil(t, scheduler)
 	})
 
 	t.Run("unschedule job with empty namespace", func(t *testing.T) {

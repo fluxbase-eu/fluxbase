@@ -395,13 +395,13 @@ func TestVerifyBackupCode_AlreadyUsed(t *testing.T) {
 	require.Equal(t, 0, usedIndex)
 
 	// Simulate removal (as would happen in real implementation)
-	newPlainCodes := append(plainCodes[:usedIndex], plainCodes[usedIndex+1:]...)
-	newHashedCodes := append(hashedCodes[:usedIndex], hashedCodes[usedIndex+1:]...)
+	plainCodes = append(plainCodes[:usedIndex], plainCodes[usedIndex+1:]...)
+	hashedCodes = append(hashedCodes[:usedIndex], hashedCodes[usedIndex+1:]...)
 
 	// Verify used code is not in remaining codes
-	assert.NotContains(t, newPlainCodes, usedCode)
-	assert.Len(t, newPlainCodes, 2)
-	assert.Len(t, newHashedCodes, 2)
+	assert.NotContains(t, plainCodes, usedCode)
+	assert.Len(t, plainCodes, 2)
+	assert.Len(t, hashedCodes, 2)
 }
 
 // TestVerifyBackupCode_InvalidCode tests invalid backup codes

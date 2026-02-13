@@ -227,13 +227,11 @@ func (l *Listener) processNotification(notification *pgconn.Notification) {
 				Int("subscribers", len(filteredEvents)).
 				Msg("Filtered and sent RLS-aware change event")
 		}
-	} else {
-		if !isWorkerHeartbeat {
-			log.Debug().
-				Str("table", fmt.Sprintf("%s.%s", event.Schema, event.Table)).
-				Str("type", event.Type).
-				Msg("No subscription manager - change event not processed")
-		}
+	} else if !isWorkerHeartbeat {
+		log.Debug().
+			Str("table", fmt.Sprintf("%s.%s", event.Schema, event.Table)).
+			Str("type", event.Type).
+			Msg("No subscription manager - change event not processed")
 	}
 }
 

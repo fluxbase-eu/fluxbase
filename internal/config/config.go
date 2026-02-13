@@ -1427,6 +1427,7 @@ func (sc *StorageConfig) Validate() error {
 }
 
 // ConnectionString returns the PostgreSQL connection string using the runtime user
+//
 // Deprecated: Use RuntimeConnectionString() or AdminConnectionString() instead
 func (dc *DatabaseConfig) ConnectionString() string {
 	return dc.RuntimeConnectionString()
