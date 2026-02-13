@@ -142,11 +142,11 @@ server:
 
 func TestLoad_EnvVarOverride_Success(t *testing.T) {
 	// Set environment variable
-		_ = os.Setenv("FLUXBASE_SERVER_ADDRESS", ":9090")
-		_ = os.Setenv("FLUXBASE_SERVER_READ_TIMEOUT", "60s")
+	_ = os.Setenv("FLUXBASE_SERVER_ADDRESS", ":9090")
+	_ = os.Setenv("FLUXBASE_SERVER_READ_TIMEOUT", "60s")
 	defer func() {
-			_ = os.Unsetenv("FLUXBASE_SERVER_ADDRESS")
-			_ = os.Unsetenv("FLUXBASE_SERVER_READ_TIMEOUT")
+		_ = os.Unsetenv("FLUXBASE_SERVER_ADDRESS")
+		_ = os.Unsetenv("FLUXBASE_SERVER_READ_TIMEOUT")
 	}()
 
 	// In actual implementation, env vars would override config file values

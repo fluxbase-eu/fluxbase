@@ -16,21 +16,21 @@ func TestNewMemoryStore(t *testing.T) {
 		require.NotNil(t, store)
 		assert.NotNil(t, store.data)
 		assert.Equal(t, 10*time.Minute, store.gcInterval)
-			_ = store.Close()
+		_ = store.Close()
 	})
 
 	t.Run("creates store with custom gc interval", func(t *testing.T) {
 		store := NewMemoryStore(5 * time.Minute)
 		require.NotNil(t, store)
 		assert.Equal(t, 5*time.Minute, store.gcInterval)
-			_ = store.Close()
+		_ = store.Close()
 	})
 
 	t.Run("creates store with negative gc interval uses default", func(t *testing.T) {
 		store := NewMemoryStore(-1 * time.Minute)
 		require.NotNil(t, store)
 		assert.Equal(t, 10*time.Minute, store.gcInterval)
-			_ = store.Close()
+		_ = store.Close()
 	})
 }
 

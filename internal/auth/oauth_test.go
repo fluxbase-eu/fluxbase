@@ -821,7 +821,7 @@ func TestStateStore_ValidateWithContext(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("validates existing state", func(t *testing.T) {
-_ = store.Set(ctx, "context-validate-state", StateMetadata{
+		_ = store.Set(ctx, "context-validate-state", StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 
@@ -837,7 +837,7 @@ _ = store.Set(ctx, "context-validate-state", StateMetadata{
 	})
 
 	t.Run("removes state after validation", func(t *testing.T) {
-_ = store.Set(ctx, "remove-after-validate", StateMetadata{
+		_ = store.Set(ctx, "remove-after-validate", StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 
@@ -856,7 +856,7 @@ func TestStateStore_GetAndValidateWithContext(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("returns metadata for valid state", func(t *testing.T) {
-_ = store.Set(ctx, "get-validate-state", StateMetadata{
+		_ = store.Set(ctx, "get-validate-state", StateMetadata{
 			Expiry:      time.Now().Add(10 * time.Minute),
 			RedirectURI: "https://example.com/redirect",
 		})
@@ -876,7 +876,7 @@ _ = store.Set(ctx, "get-validate-state", StateMetadata{
 	})
 
 	t.Run("removes state after retrieval", func(t *testing.T) {
-_ = store.Set(ctx, "remove-after-get", StateMetadata{
+		_ = store.Set(ctx, "remove-after-get", StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 

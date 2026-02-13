@@ -226,7 +226,7 @@ func TestGetSetting_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 }
@@ -254,7 +254,7 @@ func TestUpdateSetting_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 
@@ -275,7 +275,7 @@ func TestUpdateSetting_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -297,7 +297,7 @@ func TestUpdateSetting_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Invalid setting key", result["error"])
 		assert.Equal(t, "INVALID_SETTING_KEY", result["code"])
 	})
@@ -323,7 +323,7 @@ func TestDeleteSetting_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 }
@@ -404,7 +404,7 @@ func TestSystemSettingsInternalErrors(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Settings service not initialized", result["error"])
 	})
 
@@ -422,7 +422,7 @@ func TestSystemSettingsInternalErrors(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Settings service not initialized", result["error"])
 	})
 }

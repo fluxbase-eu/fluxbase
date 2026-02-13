@@ -301,7 +301,7 @@ func TestConnection_SendMessage_ToClosedConnection(t *testing.T) {
 	connection := NewConnection("conn1", conn, nil, "anon", nil)
 
 	// Close the connection first
-		_ = connection.Close()
+	_ = connection.Close()
 
 	// Sending should return error
 	err := connection.SendMessage(ServerMessage{Type: "test"})

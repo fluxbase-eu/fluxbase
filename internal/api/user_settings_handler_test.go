@@ -55,7 +55,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Authentication required", result["error"])
 	})
 
@@ -80,7 +80,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Invalid user ID", result["error"])
 	})
 
@@ -104,7 +104,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Invalid request body", result["error"])
 	})
 
@@ -129,7 +129,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 
@@ -154,7 +154,7 @@ func TestCreateSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting value is required", result["error"])
 	})
 }
@@ -180,7 +180,7 @@ func TestGetSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 
@@ -241,7 +241,7 @@ func TestUpdateSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 
@@ -303,7 +303,7 @@ func TestDeleteSecret_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 
@@ -386,7 +386,7 @@ func TestGetUserSecretValue_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "This operation requires service_role", result["error"])
 	})
 
@@ -424,7 +424,7 @@ func TestGetUserSecretValue_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Secrets service not configured", result["error"])
 	})
 
@@ -618,7 +618,7 @@ func TestSetSetting_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting value is required", result["error"])
 	})
 }

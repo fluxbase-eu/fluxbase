@@ -112,7 +112,7 @@ func TestTOTPSetupResponse_SupabaseCompatibility(t *testing.T) {
 	// }
 
 	var result map[string]interface{}
-		_ = json.Unmarshal(jsonData, &result)
+	_ = json.Unmarshal(jsonData, &result)
 
 	// Verify exact field names (Supabase uses snake_case in JSON)
 	if result["type"] != "totp" {

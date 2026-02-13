@@ -247,6 +247,24 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 				Int("batch_size", cfg.Logging.BatchSize).
 				Msg("Central logging service initialized")
 
+			// Log diagnostic info about log streaming capability
+			log.Info().
+				Bool("pubsub_enabled", cfg.Logging.PubSubEnabled).
+				Bool("pubsub_available", ps != nil).
+				Msg("Logging service streaming capability")
+
+			// Test PubSub by publishing a test log (diagnostic)
+			if cfg.Logging.PubSubEnabled && ps != nil {
+				testLog := &storage.LogEntry{
+					Category: storage.LogCategorySystem,
+					Level:     storage.LogLevelInfo,
+					Message:   "Log streaming test - system initialized",
+					Fields:    map[string]any{"test": true, "component": "logging_diagnostic"},
+				}
+				loggingService.Log(context.Background(), testLog)
+				log.Info().Msg("Published test log to verify streaming - check /admin/logs page")
+			}
+
 			// Create logging handler for API routes
 			loggingHandler = NewLoggingHandler(loggingService)
 
@@ -2315,6 +2333,7 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 		router.Get("/logs/stats", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.GetLogStats)
 		router.Get("/logs/executions/:execution_id", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.GetExecutionLogs)
 		router.Post("/logs/flush", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.FlushLogs)
+		router.Post("/logs/test", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.GenerateTestLogs)
 	}
 
 	// Schema refresh endpoint (require admin, dashboard_admin, or service_role)

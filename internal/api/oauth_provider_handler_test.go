@@ -505,7 +505,7 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -533,7 +533,7 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Provider name must start with a letter")
 	})
 
@@ -558,7 +558,7 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Missing required fields")
 	})
 
@@ -587,7 +587,7 @@ func TestCreateOAuthProvider_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Custom providers require")
 	})
 }
@@ -613,7 +613,7 @@ func TestGetOAuthProvider_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Invalid provider ID", result["error"])
 	})
 
@@ -690,7 +690,7 @@ func TestUpdateOAuthProvider_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "No fields to update", result["error"])
 	})
 }
@@ -738,7 +738,7 @@ func TestUpdateAuthSettings_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 }

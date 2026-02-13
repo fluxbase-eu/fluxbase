@@ -514,7 +514,7 @@ func TestCreateSAMLProvider_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -536,7 +536,7 @@ func TestCreateSAMLProvider_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Provider name must start with a letter")
 	})
 
@@ -575,7 +575,7 @@ func TestCreateSAMLProvider_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Either idp_metadata_url or idp_metadata_xml must be provided")
 	})
 
@@ -618,7 +618,7 @@ func TestGetSAMLProvider_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Invalid provider ID", result["error"])
 	})
 
@@ -663,7 +663,7 @@ func TestUpdateSAMLProvider_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Invalid provider ID", result["error"])
 	})
 }
@@ -689,7 +689,7 @@ func TestDeleteSAMLProvider_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Invalid provider ID", result["error"])
 	})
 }
@@ -716,7 +716,7 @@ func TestValidateMetadata_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -738,7 +738,7 @@ func TestValidateMetadata_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Either metadata_url or metadata_xml must be provided")
 	})
 
@@ -781,7 +781,7 @@ func TestGetSPMetadata_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-			_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "SAML service not available", result["error"])
 	})
 }

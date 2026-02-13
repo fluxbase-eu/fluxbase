@@ -28,12 +28,12 @@ func TestBuildEnvForFunction(t *testing.T) {
 
 	// Set environment variables
 	for key, value := range testVars {
-			_ = os.Setenv(key, value)
+		_ = os.Setenv(key, value)
 	}
 	defer func() {
 		// Clean up
 		for key := range testVars {
-				_ = os.Unsetenv(key)
+			_ = os.Unsetenv(key)
 		}
 	}()
 
@@ -88,13 +88,13 @@ func TestBuildEnvForFunction(t *testing.T) {
 	}
 
 	// Test system variables behavior
-		_ = os.Setenv("PATH", "/usr/bin")
-		_ = os.Setenv("HOME", "/home/user")
-		_ = os.Setenv("RANDOM_VAR", "should-be-excluded")
+	_ = os.Setenv("PATH", "/usr/bin")
+	_ = os.Setenv("HOME", "/home/user")
+	_ = os.Setenv("RANDOM_VAR", "should-be-excluded")
 	defer func() {
-			_ = os.Unsetenv("PATH")
-			_ = os.Unsetenv("HOME")
-			_ = os.Unsetenv("RANDOM_VAR")
+		_ = os.Unsetenv("PATH")
+		_ = os.Unsetenv("HOME")
+		_ = os.Unsetenv("RANDOM_VAR")
 	}()
 
 	env = buildEnv(req, RuntimeTypeFunction, "http://localhost:8080", "user-token", "service-token", nil, nil)
