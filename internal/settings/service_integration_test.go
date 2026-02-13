@@ -907,7 +907,7 @@ func TestCustomSettingsService_CreateSecretSettingWithTx_Success(t *testing.T) {
 	// Begin transaction
 	tx, err := tc.DB.BeginTx(ctx)
 	require.NoError(t, err)
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	req := settings.CreateSecretSettingRequest{
 		Key:         "secret.tx.test",
@@ -940,7 +940,7 @@ func TestCustomSettingsService_GetSecretSettingMetadataWithTx_Success(t *testing
 	// Begin transaction
 	tx, err := tc.DB.BeginTx(ctx)
 	require.NoError(t, err)
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Get with transaction
 	metadata, err := svc.GetSecretSettingMetadataWithTx(ctx, tx, "secret.tx.get", nil)
@@ -968,7 +968,7 @@ func TestCustomSettingsService_UpdateSecretSettingWithTx_Success(t *testing.T) {
 	// Begin transaction
 	tx, err := tc.DB.BeginTx(ctx)
 	require.NoError(t, err)
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Update with transaction
 	newDesc := "Updated via transaction"
@@ -1006,7 +1006,7 @@ func TestCustomSettingsService_DeleteSecretSettingWithTx_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	// Rollback to verify deletion was within transaction
-	tx.Rollback(ctx)
+	_ = tx.Rollback(ctx)
 
 	// Setting should still exist (transaction was rolled back)
 	_, err = svc.GetSecretSettingMetadata(ctx, "secret.tx.delete", nil)
@@ -1034,7 +1034,7 @@ func TestCustomSettingsService_ListSecretSettingsWithTx_Success(t *testing.T) {
 	// Begin transaction
 	tx, err := tc.DB.BeginTx(ctx)
 	require.NoError(t, err)
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// List with transaction
 	list, err := svc.ListSecretSettingsWithTx(ctx, tx, nil)
@@ -1053,7 +1053,7 @@ func TestCustomSettingsService_UpsertUserSettingWithTx_Create(t *testing.T) {
 	// Begin transaction
 	tx, err := tc.DB.BeginTx(ctx)
 	require.NoError(t, err)
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	req := settings.CreateUserSettingRequest{
 		Key:   "user.tx.upsert",
@@ -1084,7 +1084,7 @@ func TestCustomSettingsService_GetUserSettingWithFallbackWithTx_UserSource(t *te
 	// Begin transaction
 	tx, err := tc.DB.BeginTx(ctx)
 	require.NoError(t, err)
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Get with fallback using transaction
 	setting, err := svc.GetUserSettingWithFallbackWithTx(ctx, tx, userID, "user.tx.fallback")

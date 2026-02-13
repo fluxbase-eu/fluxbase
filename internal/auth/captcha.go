@@ -224,30 +224,28 @@ func (s *CaptchaService) ReloadFromSettings(ctx context.Context, settingsCache *
 	if envConfig != nil && envConfig.Captcha.Provider != "" {
 		// Config takes precedence, use it directly
 		newConfig = &envConfig.Captcha
-	} else {
+	} else if settingsCache != nil {
 		// No config settings, load from database
-		if settingsCache != nil {
-			newConfig.Enabled = settingsCache.GetBool(ctx, "app.security.captcha.enabled", false)
-			newConfig.Provider = settingsCache.GetString(ctx, "app.security.captcha.provider", "hcaptcha")
-			newConfig.SiteKey = settingsCache.GetString(ctx, "app.security.captcha.site_key", "")
-			newConfig.SecretKey = settingsCache.GetString(ctx, "app.security.captcha.secret_key", "")
-			newConfig.CapServerURL = settingsCache.GetString(ctx, "app.security.captcha.cap_server_url", "")
-			newConfig.CapAPIKey = settingsCache.GetString(ctx, "app.security.captcha.cap_api_key", "")
+		newConfig.Enabled = settingsCache.GetBool(ctx, "app.security.captcha.enabled", false)
+		newConfig.Provider = settingsCache.GetString(ctx, "app.security.captcha.provider", "hcaptcha")
+		newConfig.SiteKey = settingsCache.GetString(ctx, "app.security.captcha.site_key", "")
+		newConfig.SecretKey = settingsCache.GetString(ctx, "app.security.captcha.secret_key", "")
+		newConfig.CapServerURL = settingsCache.GetString(ctx, "app.security.captcha.cap_server_url", "")
+		newConfig.CapAPIKey = settingsCache.GetString(ctx, "app.security.captcha.cap_api_key", "")
 
-			// Load complex types using GetJSON
-			var scoreThreshold float64
-			if err := settingsCache.GetJSON(ctx, "app.security.captcha.score_threshold", &scoreThreshold); err == nil {
-				newConfig.ScoreThreshold = scoreThreshold
-			} else {
-				newConfig.ScoreThreshold = 0.5 // default
-			}
+		// Load complex types using GetJSON
+		var scoreThreshold float64
+		if err := settingsCache.GetJSON(ctx, "app.security.captcha.score_threshold", &scoreThreshold); err == nil {
+			newConfig.ScoreThreshold = scoreThreshold
+		} else {
+			newConfig.ScoreThreshold = 0.5 // default
+		}
 
-			var endpoints []string
-			if err := settingsCache.GetJSON(ctx, "app.security.captcha.endpoints", &endpoints); err == nil {
-				newConfig.Endpoints = endpoints
-			} else {
-				newConfig.Endpoints = []string{"signup", "login", "password_reset", "magic_link"} // defaults
-			}
+		var endpoints []string
+		if err := settingsCache.GetJSON(ctx, "app.security.captcha.endpoints", &endpoints); err == nil {
+			newConfig.Endpoints = endpoints
+		} else {
+			newConfig.Endpoints = []string{"signup", "login", "password_reset", "magic_link"} // defaults
 		}
 	}
 

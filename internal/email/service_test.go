@@ -394,9 +394,11 @@ func TestAllServicesImplementInterface(t *testing.T) {
 func TestNoOpService_ContextHandling(t *testing.T) {
 	service := NewNoOpService("test")
 
-	t.Run("handles nil context", func(t *testing.T) {
-		// Should not panic
-		err := service.SendMagicLink(nil, "user@example.com", "token", "link")
+	t.Run("handles context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		err := service.SendMagicLink(ctx, "user@example.com", "token", "link")
 		assert.Error(t, err)
 	})
 
@@ -412,9 +414,9 @@ func TestNoOpService_ContextHandling(t *testing.T) {
 func TestTestEmailService_ContextHandling(t *testing.T) {
 	service := NewTestEmailService()
 
-	t.Run("handles nil context gracefully", func(t *testing.T) {
-		// Should not panic
-		err := service.Send(nil, "user@example.com", "Subject", "Body")
+	t.Run("handles context.Background() correctly", func(t *testing.T) {
+		// Should work correctly
+		err := service.Send(context.Background(), "user@example.com", "Subject", "Body")
 		assert.NoError(t, err)
 	})
 

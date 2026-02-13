@@ -30,7 +30,7 @@ func TestRequireGlobalIPAllowlist_AllowsAllWhenEmpty(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -110,7 +110,7 @@ func TestRequireGlobalIPAllowlist_AllowsIPInRange(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			if tt.shouldAllow {
 				assert.Equal(t, 200, resp.StatusCode)
@@ -147,7 +147,7 @@ func TestRequireGlobalIPAllowlist_MultipleRanges(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, 200, resp.StatusCode)
 		})
@@ -162,7 +162,7 @@ func TestRequireGlobalIPAllowlist_MultipleRanges(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, 403, resp.StatusCode)
 		})
@@ -186,7 +186,7 @@ func TestRequireGlobalIPAllowlist_ErrorResponse(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 403, resp.StatusCode)
 
@@ -216,7 +216,7 @@ func TestRequireGlobalIPAllowlist_InvalidCIDR(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -242,7 +242,7 @@ func TestRequireGlobalIPAllowlist_AllInvalidCIDRs(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -265,7 +265,7 @@ func TestRequireGlobalIPAllowlist_XRealIP(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -288,7 +288,7 @@ func TestRequireGlobalIPAllowlist_ProxyChain(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -311,7 +311,7 @@ func TestRequireGlobalIPAllowlist_ProxyChain_DeniedClient(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should deny based on original client IP
 	assert.Equal(t, 403, resp.StatusCode)
@@ -334,7 +334,7 @@ func TestRequireGlobalIPAllowlist_LocalhostIPv6(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -360,7 +360,7 @@ func TestRequireGlobalIPAllowlist_MixedIPv4IPv6(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -371,7 +371,7 @@ func TestRequireGlobalIPAllowlist_MixedIPv4IPv6(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -382,7 +382,7 @@ func TestRequireGlobalIPAllowlist_MixedIPv4IPv6(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -393,7 +393,7 @@ func TestRequireGlobalIPAllowlist_MixedIPv4IPv6(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -420,7 +420,7 @@ func TestRequireGlobalIPAllowlist_LargeNetwork(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, 200, resp.StatusCode)
 		})
@@ -448,7 +448,7 @@ func BenchmarkRequireGlobalIPAllowlist_EmptyConfig(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -470,7 +470,7 @@ func BenchmarkRequireGlobalIPAllowlist_SingleRange(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -498,7 +498,7 @@ func BenchmarkRequireGlobalIPAllowlist_MultipleRanges(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -520,6 +520,6 @@ func BenchmarkRequireGlobalIPAllowlist_Denied(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }

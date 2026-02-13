@@ -378,7 +378,7 @@ func TestNewStateStore(t *testing.T) {
 func TestStateStore_Set(t *testing.T) {
 	store := NewStateStore()
 
-	store.Set(context.Background(), "test-state", StateMetadata{
+	_ = store.Set(context.Background(), "test-state", StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
@@ -395,7 +395,7 @@ func TestStateStore_Set(t *testing.T) {
 func TestStateStore_Set_WithRedirectURI(t *testing.T) {
 	store := NewStateStore()
 
-	store.Set(context.Background(), "test-state", StateMetadata{
+	_ = store.Set(context.Background(), "test-state", StateMetadata{
 		Expiry:      time.Now().Add(10 * time.Minute),
 		RedirectURI: "https://example.com/custom-redirect",
 	})
@@ -412,7 +412,7 @@ func TestStateStore_Set_WithRedirectURI(t *testing.T) {
 func TestStateStore_Set_EmptyRedirectURI(t *testing.T) {
 	store := NewStateStore()
 
-	store.Set(context.Background(), "test-state", StateMetadata{
+	_ = store.Set(context.Background(), "test-state", StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
@@ -426,7 +426,7 @@ func TestStateStore_Set_EmptyRedirectURI(t *testing.T) {
 
 func TestStateStore_Validate_ValidState(t *testing.T) {
 	store := NewStateStore()
-	store.Set(context.Background(), "test-state", StateMetadata{
+	_ = store.Set(context.Background(), "test-state", StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
@@ -474,7 +474,7 @@ func TestStateStore_Validate_ExpiredState(t *testing.T) {
 
 func TestStateStore_GetAndValidate_ValidState(t *testing.T) {
 	store := NewStateStore()
-	store.Set(context.Background(), "test-state", StateMetadata{
+	_ = store.Set(context.Background(), "test-state", StateMetadata{
 		Expiry:      time.Now().Add(10 * time.Minute),
 		RedirectURI: "https://example.com/redirect",
 	})
@@ -530,7 +530,7 @@ func TestStateStore_Cleanup(t *testing.T) {
 	store.states["valid-2"] = &StateMetadata{Expiry: time.Now().Add(10 * time.Minute)}
 	store.mu.Unlock()
 
-	store.Cleanup(context.Background())
+	_ = store.Cleanup(context.Background())
 
 	store.mu.RLock()
 	_, expired1Exists := store.states["expired-1"]
@@ -556,7 +556,7 @@ func TestStateStore_Cleanup_AllExpired(t *testing.T) {
 	}
 	store.mu.Unlock()
 
-	store.Cleanup(context.Background())
+	_ = store.Cleanup(context.Background())
 
 	store.mu.RLock()
 	assert.Empty(t, store.states)
@@ -574,7 +574,7 @@ func TestStateStore_Cleanup_AllValid(t *testing.T) {
 	}
 	store.mu.Unlock()
 
-	store.Cleanup(context.Background())
+	_ = store.Cleanup(context.Background())
 
 	store.mu.RLock()
 	assert.Len(t, store.states, 10)
@@ -619,7 +619,7 @@ func TestStateStore_ConcurrentSetValidate(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < 100; j++ {
 				state := "state-" + string(rune('0'+id)) + "-" + string(rune('0'+j%10))
-				store.Set(context.Background(), state, StateMetadata{
+				_ = store.Set(context.Background(), state, StateMetadata{
 					Expiry: time.Now().Add(10 * time.Minute),
 				})
 			}
@@ -651,7 +651,7 @@ func TestStateStore_ConcurrentCleanup(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 100; i++ {
-			store.Set(context.Background(), "state-"+string(rune('0'+i%10)), StateMetadata{
+			_ = store.Set(context.Background(), "state-"+string(rune('0'+i%10)), StateMetadata{
 				Expiry: time.Now().Add(10 * time.Minute),
 			})
 		}
@@ -663,7 +663,7 @@ func TestStateStore_ConcurrentCleanup(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 20; j++ {
-				store.Cleanup(context.Background())
+				_ = store.Cleanup(context.Background())
 				time.Sleep(time.Millisecond)
 			}
 		}()
@@ -688,7 +688,7 @@ func BenchmarkStateStore_Set(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store.Set(context.Background(), "state-"+string(rune(i%256)), StateMetadata{
+		_ = store.Set(context.Background(), "state-"+string(rune(i%256)), StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 	}
@@ -699,7 +699,7 @@ func BenchmarkStateStore_Validate(b *testing.B) {
 
 	// Pre-populate
 	for i := 0; i < 1000; i++ {
-		store.Set(context.Background(), "state-"+string(rune(i)), StateMetadata{
+		_ = store.Set(context.Background(), "state-"+string(rune(i)), StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 	}
@@ -729,7 +729,7 @@ func BenchmarkStateStore_Cleanup(b *testing.B) {
 		}
 		store.mu.Unlock()
 
-		store.Cleanup(context.Background())
+		_ = store.Cleanup(context.Background())
 	}
 }
 
@@ -766,7 +766,7 @@ func TestStateStore_SetWithMetadata(t *testing.T) {
 			RedirectURI: "https://example.com/callback",
 		}
 
-		store.Set(ctx, "test-state-1", metadata)
+		_ = store.Set(ctx, "test-state-1", metadata)
 
 		store.mu.RLock()
 		stored, exists := store.states["test-state-1"]
@@ -782,7 +782,7 @@ func TestStateStore_SetWithMetadata(t *testing.T) {
 			RedirectURI: "https://example.com/default-expiry",
 		}
 
-		store.Set(ctx, "test-state-2", metadata)
+		_ = store.Set(ctx, "test-state-2", metadata)
 
 		store.mu.RLock()
 		stored, exists := store.states["test-state-2"]
@@ -804,8 +804,8 @@ func TestStateStore_SetWithMetadata(t *testing.T) {
 			RedirectURI: "https://example.com/second",
 		}
 
-		store.Set(ctx, "overwrite-state", metadata1)
-		store.Set(ctx, "overwrite-state", metadata2)
+		_ = store.Set(ctx, "overwrite-state", metadata1)
+		_ = store.Set(ctx, "overwrite-state", metadata2)
 
 		store.mu.RLock()
 		stored, exists := store.states["overwrite-state"]
@@ -821,7 +821,7 @@ func TestStateStore_ValidateWithContext(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("validates existing state", func(t *testing.T) {
-		store.Set(ctx, "context-validate-state", StateMetadata{
+_ = store.Set(ctx, "context-validate-state", StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 
@@ -837,7 +837,7 @@ func TestStateStore_ValidateWithContext(t *testing.T) {
 	})
 
 	t.Run("removes state after validation", func(t *testing.T) {
-		store.Set(ctx, "remove-after-validate", StateMetadata{
+_ = store.Set(ctx, "remove-after-validate", StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 
@@ -856,7 +856,7 @@ func TestStateStore_GetAndValidateWithContext(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("returns metadata for valid state", func(t *testing.T) {
-		store.Set(ctx, "get-validate-state", StateMetadata{
+_ = store.Set(ctx, "get-validate-state", StateMetadata{
 			Expiry:      time.Now().Add(10 * time.Minute),
 			RedirectURI: "https://example.com/redirect",
 		})
@@ -876,7 +876,7 @@ func TestStateStore_GetAndValidateWithContext(t *testing.T) {
 	})
 
 	t.Run("removes state after retrieval", func(t *testing.T) {
-		store.Set(ctx, "remove-after-get", StateMetadata{
+_ = store.Set(ctx, "remove-after-get", StateMetadata{
 			Expiry: time.Now().Add(10 * time.Minute),
 		})
 
@@ -900,7 +900,7 @@ func TestStateStore_CleanupWithContext(t *testing.T) {
 		store.states["valid-ctx"] = &StateMetadata{Expiry: time.Now().Add(5 * time.Minute)}
 		store.mu.Unlock()
 
-		store.Cleanup(ctx)
+		_ = store.Cleanup(ctx)
 
 		store.mu.RLock()
 		_, expiredExists := store.states["expired-ctx"]
@@ -914,7 +914,7 @@ func TestStateStore_CleanupWithContext(t *testing.T) {
 	t.Run("returns no error on empty store", func(t *testing.T) {
 		emptyStore := NewStateStore()
 
-		emptyStore.Cleanup(ctx)
+		_ = emptyStore.Cleanup(ctx)
 
 		// Should not panic
 	})

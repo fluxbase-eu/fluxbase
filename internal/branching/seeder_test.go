@@ -91,7 +91,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_empty_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		seeder := NewSeeder(tempDir)
 		ctx := context.Background()
@@ -106,7 +106,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory with seed files
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create seed files
 		file1 := filepath.Join(tempDir, "001_initial.sql")
@@ -131,7 +131,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create mixed files
 		sqlFile := filepath.Join(tempDir, "001_seed.sql")
@@ -158,7 +158,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create file and subdirectory
 		sqlFile := filepath.Join(tempDir, "001_seed.sql")
@@ -181,7 +181,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create files in non-sorted order
 		files := []string{"003_third.sql", "001_first.sql", "002_second.sql"}
@@ -207,7 +207,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		expectedContent := "-- Seed file\nINSERT INTO users (id, name) VALUES (1, 'test');\nINSERT INTO users (id, name) VALUES (2, 'admin');"
 		sqlFile := filepath.Join(tempDir, "001_users.sql")
@@ -229,7 +229,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create file named just ".sql"
 		sqlFile := filepath.Join(tempDir, ".sql")
@@ -251,7 +251,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		sqlFile := filepath.Join(tempDir, "001_empty.sql")
 		err = os.WriteFile(sqlFile, []byte(""), 0644)
@@ -271,7 +271,7 @@ func TestSeeder_DiscoverSeedFiles(t *testing.T) {
 		// Create temp directory
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		sqlFile := filepath.Join(tempDir, "001_users-roles_mapping.sql")
 		err = os.WriteFile(sqlFile, []byte("SELECT 1;"), 0644)
@@ -304,7 +304,7 @@ func TestSeeder_SeedFileSorting(t *testing.T) {
 		// Verify the sort logic matches DiscoverSeedFiles
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		for _, seed := range seeds {
 			path := filepath.Join(tempDir, seed.Name+".sql")
@@ -348,7 +348,7 @@ func TestSeeder_ExecuteSeeds_EmptyDirectory(t *testing.T) {
 	t.Run("handles empty seeds directory", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		seeder := NewSeeder(tempDir)
 		ctx := context.Background()
@@ -368,7 +368,7 @@ func TestSeeder_EdgeCases(t *testing.T) {
 	t.Run("handles context cancellation", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		seeder := NewSeeder(tempDir)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -385,7 +385,7 @@ func TestSeeder_EdgeCases(t *testing.T) {
 	t.Run("handles very long file names", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		longName := "001_" + string(make([]byte, 200)) // Very long name
 		for i := range longName[4:] {
@@ -408,7 +408,7 @@ func TestSeeder_EdgeCases(t *testing.T) {
 	t.Run("handles unicode in file content", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		unicodeContent := "INSERT INTO messages (text) VALUES ('Hello, 世界! 🚀');"
 		sqlFile := filepath.Join(tempDir, "001_unicode.sql")
@@ -426,7 +426,7 @@ func TestSeeder_EdgeCases(t *testing.T) {
 	t.Run("handles large file content", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create a large SQL file (1MB)
 		largeContent := make([]byte, 1024*1024)
@@ -454,7 +454,7 @@ func TestSeeder_Validation(t *testing.T) {
 	t.Run("preserves file path in SeedFile", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		sqlFile := filepath.Join(tempDir, "001_test.sql")
 		err = os.WriteFile(sqlFile, []byte("SELECT 1;"), 0644)
@@ -477,7 +477,7 @@ func TestSeeder_Concurrency(t *testing.T) {
 	t.Run("concurrent DiscoverSeedFiles calls are safe", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "seeds_*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() { _ = os.RemoveAll(tempDir) }()
 
 		// Create some seed files
 		for i := 1; i <= 5; i++ {
@@ -540,16 +540,17 @@ func BenchmarkSeeder_DiscoverSeedFiles(b *testing.B) {
 	// Create temp directory with seed files
 	tempDir, err := os.MkdirTemp("", "seeds_bench_*")
 	require.NoError(b, err)
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Create 100 seed files
 	for i := 1; i <= 100; i++ {
 		name := "seed.sql"
-		if i < 10 {
+		switch {
+		case i < 10:
 			name = "00" + string(rune('0'+i)) + "_" + name
-		} else if i < 100 {
+		case i < 100:
 			name = "0" + string(rune('0'+i/10)) + string(rune('0'+i%10)) + "_" + name
-		} else {
+		default:
 			name = "100_" + name
 		}
 		path := filepath.Join(tempDir, name)

@@ -65,7 +65,7 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 		// Try to open the file from the embedded filesystem
 		file, err := httpFS.Open(path)
 		if err == nil {
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 
 			// Get file info for headers
 			stat, err := file.Stat()
@@ -90,7 +90,7 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("Not Found")
 		}
-		defer indexFile.Close()
+		defer func() { _ = indexFile.Close() }()
 
 		c.Set("Content-Type", "text/html")
 		c.Set("Cache-Control", "no-cache")

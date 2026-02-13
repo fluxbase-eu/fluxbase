@@ -28,13 +28,6 @@ func createTestHandlerWithCaptcha(endpoints []string) *AuthHandler {
 	return NewAuthHandler(nil, authService, captchaService, "https://example.com")
 }
 
-// createTestHandlerWithDisabledCaptcha creates an AuthHandler with captcha disabled
-func createTestHandlerWithDisabledCaptcha() *AuthHandler {
-	authService := auth.NewTestAuthServiceWithSettings(true, true)
-	captchaService := auth.NewDisabledCaptchaService()
-	return NewAuthHandler(nil, authService, captchaService, "https://example.com")
-}
-
 // parseErrorResponse parses the JSON error response
 func parseErrorResponse(t *testing.T, body []byte) map[string]interface{} {
 	var result map[string]interface{}

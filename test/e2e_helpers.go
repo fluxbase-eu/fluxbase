@@ -1465,7 +1465,7 @@ func (tc *TestContext) ExecuteSQLAsSuperuser(sql string, args ...interface{}) {
 
 	conn, err := pgx.Connect(ctx, connStr)
 	require.NoError(tc.T, err, "Failed to connect as superuser")
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	_, err = conn.Exec(ctx, sql, args...)
 	require.NoError(tc.T, err, "Failed to execute SQL as superuser")
@@ -1690,7 +1690,7 @@ func (tc *TestContext) QuerySQLAsSuperuser(sql string, args ...interface{}) []ma
 
 	conn, err := pgx.Connect(ctx, connStr)
 	require.NoError(tc.T, err, "Failed to connect as superuser")
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	rows, err := conn.Query(ctx, sql, args...)
 	require.NoError(tc.T, err, "Failed to query as superuser")
@@ -1742,7 +1742,7 @@ func (tc *TestContext) QuerySQLAsRLSUser(sql string, userID string, args ...inte
 
 	conn, err := pgx.Connect(ctx, connStr)
 	require.NoError(tc.T, err, "Failed to connect as RLS test user")
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	// Begin a transaction to set RLS context
 	tx, err := conn.Begin(ctx)
@@ -1965,7 +1965,7 @@ func (tc *TestContext) CreateDashboardAdminUser(email, password string) (userID,
 
 	conn, err := pgx.Connect(ctx, connStr)
 	require.NoError(tc.T, err, "Failed to connect as superuser for dashboard admin creation")
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	err = conn.QueryRow(ctx,
 		`INSERT INTO dashboard.users (email, password_hash, full_name, role, email_verified)
@@ -2291,7 +2291,7 @@ func (tc *TestContext) EnsureRLSTestTables() {
 
 	conn, err := pgx.Connect(ctx, connStr)
 	require.NoError(tc.T, err, "Failed to connect as superuser for table creation")
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	for _, query := range queries {
 		_, err := conn.Exec(ctx, query)
@@ -2335,7 +2335,7 @@ func (tc *TestContext) GetMailHogEmails() ([]MailHogMessage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query MailHog: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("MailHog returned status %d", resp.StatusCode)
@@ -2363,7 +2363,7 @@ func (tc *TestContext) ClearMailHogEmails() error {
 	if err != nil {
 		return fmt.Errorf("failed to delete MailHog messages: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("MailHog delete returned status %d", resp.StatusCode)
@@ -2378,7 +2378,7 @@ func (tc *TestContext) CleanupStorageFiles() {
 	if tc.Config.Storage.Provider == "local" || tc.Config.Storage.LocalPath != "" {
 		localPath := tc.Config.Storage.LocalPath
 		if localPath != "" && localPath != "/" {
-			os.RemoveAll(localPath)
+			_ = os.RemoveAll(localPath)
 		}
 	}
 

@@ -477,6 +477,7 @@ func BenchmarkBuildSetClauses(b *testing.B) {
 		for col := range data {
 			setClauses = append(setClauses, col+" = $N")
 		}
+		_ = setClauses // Use result to avoid linter warning
 	}
 }
 
@@ -511,6 +512,7 @@ func BenchmarkDefaultToNullClauseBuilding(b *testing.B) {
 				updateClauses = append(updateClauses, tableCol+" = NULL")
 			}
 		}
+		_ = updateClauses // Use result to avoid linter warning
 	}
 }
 

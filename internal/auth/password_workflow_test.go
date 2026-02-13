@@ -517,7 +517,7 @@ func TestPasswordWorkflow_OldTokenInvalidation(t *testing.T) {
 
 	// For testing, bypass the rate limit by manually clearing the tokens
 	// This simulates waiting 60+ seconds for the rate limit to expire
-	mockResetRepo.DeleteByUserID(ctx, user.ID)
+	_ = mockResetRepo.DeleteByUserID(ctx, user.ID)
 
 	// Request second password reset (should invalidate first)
 	err = service.RequestPasswordReset(ctx, "test@example.com", "")
@@ -594,6 +594,7 @@ func TestPasswordWorkflow_ConcurrentRequests(t *testing.T) {
 	var successCount, failCount int
 	for i := 0; i < 5; i++ {
 		err := <-done
+		//nolint:gocritic // Error type checking, not switch-compatible
 		if err == nil {
 			successCount++
 		} else if errors.Is(err, ErrPasswordResetTooSoon) {

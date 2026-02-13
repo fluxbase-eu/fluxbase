@@ -312,7 +312,7 @@ func TestSecretNameValidation(t *testing.T) {
 			}
 			if isValid {
 				for _, c := range tt.input {
-					if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+					if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
 						isValid = false
 						break
 					}

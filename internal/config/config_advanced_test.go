@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -169,7 +170,8 @@ func TestConfigBooleanParsing_InvalidValues(t *testing.T) {
 		t.Run(value, func(t *testing.T) {
 			// Invalid boolean values should be rejected or default to false
 			if value != "" {
-				isInvalid := !strings.Contains("true false 1 0 yes no on off", strings.ToLower(value))
+				validBooleans := []string{"true", "false", "1", "0", "yes", "no", "on", "off"}
+				isInvalid := !slices.Contains(validBooleans, strings.ToLower(value))
 				assert.True(t, isInvalid)
 			}
 		})
@@ -227,7 +229,7 @@ func TestConfigNumericParsing_InvalidNumbers(t *testing.T) {
 				// Check for non-numeric characters (excluding decimal point)
 				hasInvalidChars := false
 				for _, c := range numStr {
-					if !((c >= '0' && c <= '9') || c == '.') {
+					if (c < '0' || c > '9') && c != '.' {
 						hasInvalidChars = true
 						break
 					}

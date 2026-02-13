@@ -143,7 +143,7 @@ func TestHandleOAuthCallback_StateMismatch(t *testing.T) {
 	// Generate and store valid state
 	validState, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(context.Background(), validState, StateMetadata{
+	_ = stateStore.Set(context.Background(), validState, StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
@@ -193,7 +193,7 @@ func TestLinkOAuthIdentity_Success(t *testing.T) {
 	// Initiate OAuth flow
 	state, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(context.Background(), state, StateMetadata{
+	_ = stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
@@ -282,7 +282,7 @@ func TestOAuthState_StoreAndValidate(t *testing.T) {
 	require.NoError(t, err)
 
 	customRedirectURI := "https://custom.example.com/callback"
-	stateStore.Set(context.Background(), state, StateMetadata{
+	_ = stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry:      time.Now().Add(10 * time.Minute),
 		RedirectURI: customRedirectURI,
 		Provider:    "google",
@@ -309,7 +309,7 @@ func TestOAuthState_Expiration(t *testing.T) {
 	state, err := GenerateState()
 	require.NoError(t, err)
 
-	stateStore.Set(context.Background(), state, StateMetadata{
+	_ = stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry:   time.Now().Add(-1 * time.Hour), // Expired
 		Provider: "github",
 	})
@@ -334,7 +334,7 @@ func TestOAuthState_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func(idx int) {
 			state, _ := GenerateState()
-			stateStore.Set(context.Background(), state, StateMetadata{
+			_ = stateStore.Set(context.Background(), state, StateMetadata{
 				Expiry: time.Now().Add(10 * time.Minute),
 			})
 			done <- true
@@ -344,7 +344,7 @@ func TestOAuthState_ConcurrentAccess(t *testing.T) {
 	// Concurrent reads
 	for i := 0; i < 5; i++ {
 		go func() {
-			stateStore.Cleanup(context.Background())
+			_ = stateStore.Cleanup(context.Background())
 			done <- true
 		}()
 	}
@@ -462,7 +462,7 @@ func TestOAuthWorkflow_CompleteFlow(t *testing.T) {
 	// Step 1: Initiate OAuth flow
 	state, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(context.Background(), state, StateMetadata{
+	_ = stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
@@ -518,21 +518,21 @@ func TestOAuthState_Cleanup(t *testing.T) {
 	validState, _ := GenerateState()
 
 	// Store expired states
-	stateStore.Set(context.Background(), expiredState1, StateMetadata{
+	_ = stateStore.Set(context.Background(), expiredState1, StateMetadata{
 		Expiry: time.Now().Add(-1 * time.Hour),
 	})
 
-	stateStore.Set(context.Background(), expiredState2, StateMetadata{
+	_ = stateStore.Set(context.Background(), expiredState2, StateMetadata{
 		Expiry: time.Now().Add(-30 * time.Minute),
 	})
 
 	// Store valid state
-	stateStore.Set(context.Background(), validState, StateMetadata{
+	_ = stateStore.Set(context.Background(), validState, StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
 	// Run cleanup
-	stateStore.Cleanup(context.Background())
+	_ = stateStore.Cleanup(context.Background())
 
 	// Expired states should no longer be valid
 	_, valid1 := stateStore.GetAndValidate(context.Background(), expiredState1)
@@ -553,7 +553,7 @@ func TestOAuthSecurity_CSRFProtection(t *testing.T) {
 	// Generate and store state
 	state, err := GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(context.Background(), state, StateMetadata{
+	_ = stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 
@@ -564,7 +564,7 @@ func TestOAuthSecurity_CSRFProtection(t *testing.T) {
 	// Generate new state for subsequent tests (state was consumed)
 	state, err = GenerateState()
 	require.NoError(t, err)
-	stateStore.Set(context.Background(), state, StateMetadata{
+	_ = stateStore.Set(context.Background(), state, StateMetadata{
 		Expiry: time.Now().Add(10 * time.Minute),
 	})
 

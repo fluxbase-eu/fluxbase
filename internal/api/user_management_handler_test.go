@@ -44,7 +44,7 @@ func TestListUsers_DefaultParameters(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Without service, will return internal server error
 		// But we verify the handler was reached
@@ -60,7 +60,7 @@ func TestListUsers_DefaultParameters(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users?limit=50&offset=10", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Handler should accept these parameters
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -75,7 +75,7 @@ func TestListUsers_DefaultParameters(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users?exclude_admins=true", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -89,7 +89,7 @@ func TestListUsers_DefaultParameters(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users?search=john@example.com", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -103,7 +103,7 @@ func TestListUsers_DefaultParameters(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users?type=app", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -117,7 +117,7 @@ func TestListUsers_DefaultParameters(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users?type=dashboard", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -137,7 +137,7 @@ func TestGetUserByID_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users/550e8400-e29b-41d4-a716-446655440000", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -151,7 +151,7 @@ func TestGetUserByID_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users/123?type=dashboard", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -173,7 +173,7 @@ func TestInviteUser_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -198,7 +198,7 @@ func TestInviteUser_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Empty body should be handled
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -219,7 +219,7 @@ func TestDeleteUser_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/users/550e8400-e29b-41d4-a716-446655440000", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -233,7 +233,7 @@ func TestDeleteUser_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/users/123?type=dashboard", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -255,7 +255,7 @@ func TestUpdateUserRole_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -272,7 +272,7 @@ func TestUpdateUserRole_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Will fail due to nil service, but body parsing should work
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -295,7 +295,7 @@ func TestUpdateUser_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -312,7 +312,7 @@ func TestUpdateUser_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Body parsing should succeed
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -330,7 +330,7 @@ func TestUpdateUser_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -350,7 +350,7 @@ func TestResetUserPassword_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/users/550e8400-e29b-41d4-a716-446655440000/reset-password", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -364,7 +364,7 @@ func TestResetUserPassword_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/users/123/reset-password?type=dashboard", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -384,7 +384,7 @@ func TestLockUser_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/users/123/lock", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -398,7 +398,7 @@ func TestLockUser_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/users/123/lock?type=app", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -418,7 +418,7 @@ func TestUnlockUser_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/users/123/unlock", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})

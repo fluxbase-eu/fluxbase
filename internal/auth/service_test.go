@@ -1303,7 +1303,6 @@ type MockPasswordResetService struct {
 	tokens               map[string]*PasswordResetTokenWithPlaintext // token -> token data
 	resetTokens          map[string]string                           // user -> reset token
 	passwordChangeErrors map[string]error                            // user -> error to return
-	requirePasswordCheck bool
 }
 
 func NewMockPasswordResetService() *MockPasswordResetService {

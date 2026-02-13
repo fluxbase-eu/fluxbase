@@ -120,17 +120,18 @@ func (f *Filter) getNestedValue(record map[string]interface{}) (interface{}, boo
 
 		var key string
 
-		if textOpIdx >= 0 && (jsonOpIdx < 0 || textOpIdx <= jsonOpIdx) {
+		switch {
+		case textOpIdx >= 0 && (jsonOpIdx < 0 || textOpIdx <= jsonOpIdx):
 			// ->> operator (text extraction)
 			key = remaining[:textOpIdx]
 			remaining = remaining[textOpIdx+3:]
 			lastOpWasText = true
-		} else if jsonOpIdx >= 0 {
+		case jsonOpIdx >= 0:
 			// -> operator (JSON access)
 			key = remaining[:jsonOpIdx]
 			remaining = remaining[jsonOpIdx+2:]
 			lastOpWasText = false
-		} else {
+		default:
 			// No more operators - this is the last key
 			key = remaining
 			remaining = ""

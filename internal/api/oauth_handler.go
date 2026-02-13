@@ -611,11 +611,14 @@ func (h *OAuthHandler) createOrLinkOAuthUser(
 				return nil, false, fmt.Errorf("failed to create user: %w", err)
 			}
 			isNewUser = true
-		} else if err != nil {
-			return nil, false, fmt.Errorf("failed to check existing user: %w", err)
 		} else {
-			// Link to existing user
-			userID = existingUserID
+			switch {
+			case err != nil:
+				return nil, false, fmt.Errorf("failed to check existing user: %w", err)
+			default:
+				// Link to existing user
+				userID = existingUserID
+			}
 		}
 
 		// Create OAuth link

@@ -103,13 +103,14 @@ func main() {
 	}
 
 	// Initialize image transformation library (vips) if enabled
+	var cleanupVips func()
 	if cfg.Storage.Transforms.Enabled {
 		log.Info().Msg("Initializing image transformation library (libvips)...")
 		storage.InitVips()
-		defer func() {
+		cleanupVips = func() {
 			log.Debug().Msg("Shutting down image transformation library...")
 			storage.ShutdownVips()
-		}()
+		}
 		log.Info().
 			Int("max_width", cfg.Storage.Transforms.MaxWidth).
 			Int("max_height", cfg.Storage.Transforms.MaxHeight).
@@ -125,26 +126,48 @@ func main() {
 		log.Info().Msg("Testing database connection...")
 		db, err := connectDatabaseWithRetry(cfg.Database, 1)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Database connection test failed")
+			db.Close()
+			if cleanupVips != nil {
+				cleanupVips()
+			}
+			log.Error().Err(err).Msg("Database connection test failed")
+			os.Exit(1)
 		}
-		db.Close()
 		log.Info().Msg("Database connection test successful")
 
 		log.Info().Msg("All validation checks passed")
+		if cleanupVips != nil {
+			cleanupVips()
+		}
 		os.Exit(0)
 	}
 
 	// Initialize database connection with retry logic
 	db, err := connectDatabaseWithRetry(cfg.Database, maxRetryAttempts)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to database after multiple attempts")
+		if cleanupVips != nil {
+			cleanupVips()
+		}
+		log.Error().Err(err).Msg("Failed to connect to database after multiple attempts")
+		os.Exit(1)
 	}
-	defer db.Close()
+
+	// Defer database close - must be after db is created and before any os.Exit calls
+	// This ensures database is closed on shutdown
+	defer func() {
+		log.Debug().Msg("Closing database connection...")
+		db.Close()
+	}()
 
 	// Run migrations
 	log.Info().Msg("Running database migrations...")
 	if err := db.Migrate(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to run migrations")
+		if cleanupVips != nil {
+			cleanupVips()
+		}
+		db.Close() // Explicitly close since defer won't run with os.Exit
+		log.Error().Err(err).Msg("Failed to run migrations")
+		os.Exit(1) //nolint:gocritic // cleanup handled explicitly above
 	}
 	log.Info().Msg("Database migrations completed successfully")
 
@@ -212,7 +235,12 @@ func main() {
 	// Validate storage provider health
 	log.Info().Msg("Validating storage provider...")
 	if err := validateStorageHealth(server); err != nil {
-		log.Fatal().Err(err).Msg("Storage validation failed")
+		if cleanupVips != nil {
+			cleanupVips()
+		}
+		db.Close() // Explicitly close since defer won't run with os.Exit
+		log.Error().Err(err).Msg("Storage validation failed")
+		os.Exit(1)
 	}
 	log.Info().Str("provider", cfg.Storage.Provider).Msg("Storage provider validated successfully")
 

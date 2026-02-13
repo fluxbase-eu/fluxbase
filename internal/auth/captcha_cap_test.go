@@ -98,7 +98,7 @@ func TestCapProvider_Verify_Success(t *testing.T) {
 			Success: true,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -123,7 +123,7 @@ func TestCapProvider_Verify_WithoutAPIKey(t *testing.T) {
 			Success: true,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -183,7 +183,7 @@ func TestCapProvider_Verify_Failure(t *testing.T) {
 					Error:   tt.errorCode,
 				}
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(response)
+				_ = json.NewEncoder(w).Encode(response)
 			}))
 			defer server.Close()
 
@@ -260,7 +260,7 @@ func TestCapProvider_Verify_HTTPError(t *testing.T) {
 func TestCapProvider_Verify_InvalidJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("invalid json"))
+		_, _ = w.Write([]byte("invalid json"))
 	}))
 	defer server.Close()
 
@@ -282,7 +282,7 @@ func TestCapProvider_Verify_FailureWithoutErrorCode(t *testing.T) {
 			Error:   "", // Empty error code
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -311,7 +311,7 @@ func TestCapProvider_Verify_RemoteIPIgnored(t *testing.T) {
 			Success: true,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 

@@ -230,12 +230,10 @@ func (v *Validator) ValidateSQL(sql string, allowedTables, allowedSchemas []stri
 					result.Errors = append(result.Errors, fmt.Sprintf("Table not allowed: %s", table))
 				}
 			}
-		} else {
+		} else if len(tablesMap) > 0 && !tablesMap[tableLower] {
 			// No schema prefix - check against allowed tables
-			if len(tablesMap) > 0 && !tablesMap[tableLower] {
-				result.Valid = false
-				result.Errors = append(result.Errors, fmt.Sprintf("Table not allowed: %s", table))
-			}
+			result.Valid = false
+			result.Errors = append(result.Errors, fmt.Sprintf("Table not allowed: %s", table))
 		}
 	}
 

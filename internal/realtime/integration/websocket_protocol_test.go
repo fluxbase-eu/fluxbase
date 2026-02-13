@@ -275,7 +275,7 @@ func TestRealtimeWebSocketProtocol_Integration_Subscription(t *testing.T) {
 		assert.Equal(t, subID, subs[0].ID)
 
 		// Cleanup
-		subManager.RemoveSubscription(subID)
+		_ = subManager.RemoveSubscription(subID)
 		manager.RemoveConnection(connID)
 	})
 
@@ -310,7 +310,7 @@ func TestRealtimeWebSocketProtocol_Integration_Subscription(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "INSERT", sub.Event)
 
-		subManager.RemoveSubscription(subID)
+		_ = subManager.RemoveSubscription(subID)
 		manager.RemoveConnection(connID)
 	})
 
@@ -347,7 +347,7 @@ func TestRealtimeWebSocketProtocol_Integration_Subscription(t *testing.T) {
 		assert.Equal(t, "id", sub.Filter.Column)
 		assert.Equal(t, "eq", sub.Filter.Operator)
 
-		subManager.RemoveSubscription(subID)
+		_ = subManager.RemoveSubscription(subID)
 		manager.RemoveConnection(connID)
 	})
 
@@ -568,8 +568,8 @@ func TestRealtimeWebSocketProtocol_Integration_DatabaseChanges(t *testing.T) {
 		assert.Contains(t, filteredEvents, connID2)
 
 		// Cleanup
-		subManager.RemoveSubscription(subID1)
-		subManager.RemoveSubscription(subID2)
+		_ = subManager.RemoveSubscription(subID1)
+		_ = subManager.RemoveSubscription(subID2)
 		manager.RemoveConnection(connID1)
 		manager.RemoveConnection(connID2)
 	})
@@ -626,7 +626,7 @@ func TestRealtimeWebSocketProtocol_Integration_DatabaseChanges(t *testing.T) {
 		assert.Len(t, filteredEvents, 1)
 		assert.Contains(t, filteredEvents, connID)
 
-		subManager.RemoveSubscription(subID)
+		_ = subManager.RemoveSubscription(subID)
 		manager.RemoveConnection(connID)
 	})
 }
@@ -793,7 +793,7 @@ func TestRealtimeWebSocketProtocol_Integration_Filters(t *testing.T) {
 		filteredEvents = subManager.FilterEventForSubscribers(context.Background(), event2)
 		assert.Len(t, filteredEvents, 0)
 
-		subManager.RemoveSubscription(subID)
+		_ = subManager.RemoveSubscription(subID)
 		manager.RemoveConnection(connID)
 	})
 
@@ -846,7 +846,7 @@ func TestRealtimeWebSocketProtocol_Integration_Filters(t *testing.T) {
 		filteredEvents = subManager.FilterEventForSubscribers(context.Background(), event2)
 		assert.Len(t, filteredEvents, 0)
 
-		subManager.RemoveSubscription(subID)
+		_ = subManager.RemoveSubscription(subID)
 		manager.RemoveConnection(connID)
 	})
 
@@ -922,8 +922,8 @@ func TestRealtimeWebSocketProtocol_Integration_Filters(t *testing.T) {
 		assert.NotContains(t, filteredEvents, connID1)
 		assert.Contains(t, filteredEvents, connID2)
 
-		subManager.RemoveSubscription(subID1)
-		subManager.RemoveSubscription(subID2)
+		_ = subManager.RemoveSubscription(subID1)
+		_ = subManager.RemoveSubscription(subID2)
 		manager.RemoveConnection(connID1)
 		manager.RemoveConnection(connID2)
 	})
@@ -979,7 +979,7 @@ func TestRealtimeWebSocketProtocol_Integration_SubscriptionStats(t *testing.T) {
 		assert.Equal(t, 1, stats["tables_with_subs"])
 
 		// Cleanup
-		subManager.RemoveSubscription(subID)
+		_ = subManager.RemoveSubscription(subID)
 		manager.RemoveConnection(connID)
 	})
 }

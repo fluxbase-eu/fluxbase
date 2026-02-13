@@ -219,7 +219,7 @@ func TestConnection_ConcurrentIsSubscribed(t *testing.T) {
 func TestConnection_MixedConcurrentOperations(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnection("conn1", conn, nil, "anon", nil)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	var wg sync.WaitGroup
 	numGoroutines := 50
@@ -254,7 +254,8 @@ func TestConnection_MixedConcurrentOperations(t *testing.T) {
 
 	// Should not panic - exact count may vary due to race conditions,
 	// but that's expected behavior
-	assert.True(t, len(connection.Subscriptions) >= 0)
+	// (len() is always non-negative for slices/maps in Go)
+	assert.NotNil(t, connection.Subscriptions)
 }
 
 // =============================================================================
@@ -264,7 +265,7 @@ func TestConnection_MixedConcurrentOperations(t *testing.T) {
 func TestNewConnectionWithQueueSize(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnectionWithQueueSize("conn1", conn, nil, "anon", nil, 128)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	assert.NotNil(t, connection)
 	assert.Equal(t, 128, cap(connection.sendCh))
@@ -273,7 +274,7 @@ func TestNewConnectionWithQueueSize(t *testing.T) {
 func TestNewConnectionWithQueueSize_DefaultOnZero(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnectionWithQueueSize("conn1", conn, nil, "anon", nil, 0)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	assert.Equal(t, DefaultMessageQueueSize, cap(connection.sendCh))
 }
@@ -281,7 +282,7 @@ func TestNewConnectionWithQueueSize_DefaultOnZero(t *testing.T) {
 func TestNewConnectionWithQueueSize_DefaultOnNegative(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnectionWithQueueSize("conn1", conn, nil, "anon", nil, -10)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	assert.Equal(t, DefaultMessageQueueSize, cap(connection.sendCh))
 }
@@ -300,7 +301,7 @@ func TestConnection_SendMessage_ToClosedConnection(t *testing.T) {
 	connection := NewConnection("conn1", conn, nil, "anon", nil)
 
 	// Close the connection first
-	connection.Close()
+		_ = connection.Close()
 
 	// Sending should return error
 	err := connection.SendMessage(ServerMessage{Type: "test"})
@@ -310,7 +311,7 @@ func TestConnection_SendMessage_ToClosedConnection(t *testing.T) {
 func TestConnection_GetQueueStats(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnectionWithQueueSize("conn1", conn, nil, "anon", nil, 100)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	stats := connection.GetQueueStats()
 
@@ -337,7 +338,7 @@ func TestConnection_Close_MultipleTimes(t *testing.T) {
 func TestConnection_IsSlowClient_Initial(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnection("conn1", conn, nil, "anon", nil)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	assert.False(t, connection.IsSlowClient())
 }
@@ -345,7 +346,7 @@ func TestConnection_IsSlowClient_Initial(t *testing.T) {
 func TestConnection_IsSlowClient_AfterWarnings(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnection("conn1", conn, nil, "anon", nil)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	// Manually increment slow client count
 	for i := 0; i < MaxSlowClientWarnings; i++ {
@@ -376,7 +377,7 @@ func TestConnectionQueueStats_Struct(t *testing.T) {
 func TestConnection_SendMessage_WithSlowClientMarked(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnection("conn1", conn, nil, "anon", nil)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	// Mark as slow client
 	for i := 0; i < MaxSlowClientWarnings; i++ {
@@ -415,7 +416,7 @@ func BenchmarkConnection_IsSubscribed(b *testing.B) {
 func BenchmarkConnection_GetQueueStats(b *testing.B) {
 	var conn *websocket.Conn // nil connection for testing
 	connection := NewConnectionWithQueueSize("conn1", conn, nil, "anon", nil, 256)
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

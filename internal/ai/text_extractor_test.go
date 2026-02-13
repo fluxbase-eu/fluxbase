@@ -151,9 +151,6 @@ func TestGetExtensionFromMimeType(t *testing.T) {
 func TestNewTextExtractor(t *testing.T) {
 	t.Run("without OCR", func(t *testing.T) {
 		extractor := NewTextExtractor()
-		if extractor == nil {
-			t.Error("NewTextExtractor() returned nil")
-		}
 		if extractor.ocrService != nil {
 			t.Error("Expected ocrService to be nil")
 		}
@@ -162,9 +159,6 @@ func TestNewTextExtractor(t *testing.T) {
 	t.Run("with OCR service", func(t *testing.T) {
 		ocrService := &OCRService{}
 		extractor := NewTextExtractorWithOCR(ocrService)
-		if extractor == nil {
-			t.Error("NewTextExtractorWithOCR() returned nil")
-		}
 		if extractor.ocrService != ocrService {
 			t.Error("Expected ocrService to be set")
 		}

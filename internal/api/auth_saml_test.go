@@ -73,7 +73,7 @@ func TestSAMLHandler_NoServiceConfigured(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
@@ -96,7 +96,7 @@ func TestListSAMLProviders_ReturnsEmptyArray(t *testing.T) {
 	req := httptest.NewRequest("GET", "/auth/saml/providers", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
@@ -144,7 +144,7 @@ func TestInitiateSAMLLogin_AcceptHeader(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// Since SAML is not configured, should always return 404
 			// But this tests that the Accept header logic runs before the auth logic
@@ -171,7 +171,7 @@ func TestHandleSAMLAssertion_MissingSAMLResponse(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Since SAML service is nil, it will return 404 first
 	// This is expected behavior - service check comes before parameter validation
@@ -501,7 +501,7 @@ func TestHandleSAMLLogout_NilService_POST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
@@ -520,7 +520,7 @@ func TestHandleSAMLLogout_NilService_GET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/auth/saml/slo", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 }
@@ -538,7 +538,7 @@ func TestInitiateSAMLLogout_NilService(t *testing.T) {
 	req := httptest.NewRequest("GET", "/auth/saml/logout/okta", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
@@ -577,7 +577,7 @@ func TestSAMLHandler_RegisterRoutes(t *testing.T) {
 			req := httptest.NewRequest(route.method, route.path, nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// Routes should be registered (not a router-level 404)
 			// Handler may return 404 due to nil service, but the route exists

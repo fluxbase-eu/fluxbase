@@ -351,6 +351,7 @@ func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
 	var queryVector []float64
 	var embeddingModel string
 
+	//nolint:gocritic // Conditions check different request fields, not switch-compatible
 	if req.Query != "" {
 		// Auto-embed the query text
 		embeddingService := h.vectorManager.GetEmbeddingService()

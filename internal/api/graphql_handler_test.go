@@ -389,7 +389,7 @@ func TestHandleGraphQL_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -424,7 +424,7 @@ func TestHandleGraphQL_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -461,7 +461,7 @@ func TestHandleGraphQL_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -498,7 +498,7 @@ func TestHandleGraphQL_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -534,7 +534,7 @@ func TestHandleGraphQL_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -572,7 +572,7 @@ func TestHandleIntrospection_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
 
