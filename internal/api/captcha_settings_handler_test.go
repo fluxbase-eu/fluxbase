@@ -350,7 +350,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-	_ = json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -372,7 +372,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-	_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Invalid provider")
 		assert.Equal(t, "INVALID_PROVIDER", result["code"])
 	})
@@ -412,7 +412,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-	_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Invalid endpoint")
 		assert.Equal(t, "INVALID_ENDPOINT", result["code"])
 	})
@@ -435,7 +435,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-	_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Score threshold must be between 0.0 and 1.0")
 		assert.Equal(t, "INVALID_SCORE_THRESHOLD", result["code"])
 	})
@@ -458,7 +458,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-	_ = json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Score threshold must be between 0.0 and 1.0")
 	})
 

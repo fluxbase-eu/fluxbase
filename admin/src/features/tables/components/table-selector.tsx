@@ -42,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { EmptyState } from '@/components/empty-state'
 import {
   Sheet,
   SheetContent,
@@ -396,83 +397,114 @@ export function TableSelector({
           </Button>
           <div className='space-y-1'>
             <TooltipProvider delayDuration={300}>
-              {filteredTables.map(({ full, name, type }) => (
-                <div key={full} className='group relative flex items-center'>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={selectedTable === full ? 'secondary' : 'ghost'}
-                        className={cn(
-                          'flex-1 justify-start overflow-hidden pr-8 font-normal',
-                          selectedTable === full && 'bg-secondary'
-                        )}
-                        onClick={() => onTableSelect(full)}
-                      >
-                        {getTypeIcon(type as TableInfo['type'])}
-                        <span className='truncate'>{name}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side='right'>
-                      <p>{name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        className='absolute right-1 h-7 w-7 p-0 opacity-0 group-hover:opacity-100'
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className='h-4 w-4' />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end'>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const tableInfo = tables?.find(
-                            (t) => `${t.schema}.${t.name}` === full
-                          )
-                          if (tableInfo) {
-                            setEditingTable(tableInfo)
-                            setEditTableName(tableInfo.name)
-                            setShowEditTable(true)
-                          }
-                        }}
-                      >
-                        <Pencil className='mr-2 h-4 w-4' />
-                        Edit Table
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const [schema, tableName] = full.split('.')
-                          navigate({
-                            to: '/policies',
-                            search: { schema, table: tableName },
-                          })
-                        }}
-                      >
-                        <Shield className='mr-2 h-4 w-4' />
-                        Manage RLS Policies
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className='text-destructive'
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeletingTableFull(full)
-                          setShowDeleteTableConfirm(true)
-                        }}
-                      >
-                        <Trash2 className='mr-2 h-4 w-4' />
-                        Delete Table
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              {filteredTables.length === 0 ? (
+                <div className='px-2'>
+                  <EmptyState
+                    icon={Table2}
+                    title='No tables yet'
+                    description='Create your first table to start storing data'
+                    actions={[
+                      {
+                        label: 'Create Table',
+                        onClick: () => {
+                          setNewTableSchema(selectedSchema)
+                          setShowCreateTable(true)
+                        },
+                        icon: <Plus className='h-4 w-4' />,
+                      },
+                      {
+                        label: 'Import SQL',
+                        onClick: () => {
+                          // TODO: Implement SQL import
+                          toast.info('SQL import feature coming soon')
+                        },
+                        variant: 'outline',
+                        icon: null,
+                      },
+                    ]}
+                  />
                 </div>
-              ))}
+              ) : (
+                <>
+                  {filteredTables.map(({ full, name, type }) => (
+                    <div key={full} className='group relative flex items-center'>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={selectedTable === full ? 'secondary' : 'ghost'}
+                            className={cn(
+                              'flex-1 justify-start overflow-hidden pr-8 font-normal',
+                              selectedTable === full && 'bg-secondary'
+                            )}
+                            onClick={() => onTableSelect(full)}
+                          >
+                            {getTypeIcon(type as TableInfo['type'])}
+                            <span className='truncate'>{name}</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side='right'>
+                          <p>{name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='absolute right-1 h-7 w-7 p-0 opacity-0 group-hover:opacity-100'
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end'>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const tableInfo = tables?.find(
+                                (t) => `${t.schema}.${t.name}` === full
+                              )
+                              if (tableInfo) {
+                                setEditingTable(tableInfo)
+                                setEditTableName(tableInfo.name)
+                                setShowEditTable(true)
+                              }
+                            }}
+                          >
+                            <Pencil className='mr-2 h-4 w-4' />
+                            Edit Table
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const [schema, tableName] = full.split('.')
+                              navigate({
+                                to: '/policies',
+                                search: { schema, table: tableName },
+                              })
+                            }}
+                          >
+                            <Shield className='mr-2 h-4 w-4' />
+                            Manage RLS Policies
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className='text-destructive'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeletingTableFull(full)
+                              setShowDeleteTableConfirm(true)
+                            }}
+                          >
+                            <Trash2 className='mr-2 h-4 w-4' />
+                            Delete Table
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))}
+                </>
+              )}
             </TooltipProvider>
           </div>
         </div>

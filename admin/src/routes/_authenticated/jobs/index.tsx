@@ -980,7 +980,7 @@ function JobsPage() {
 
       <div className='flex-1 overflow-auto p-6'>
       {/* Stats (Past 24 hours) */}
-      <Card className='!gap-0 !py-0'>
+      <Card className='!gap-0 !py-0 mb-6'>
         <CardContent className='px-4 py-2'>
           <div className='flex items-center gap-4'>
             <span className='text-muted-foreground text-xs'>

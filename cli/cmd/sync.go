@@ -224,19 +224,19 @@ func syncMigrationsFromDir(ctx context.Context, dir, namespace string, dryRun, _
 			continue
 		}
 
-	var migName string
-	var sqlType string
+		var migName string
+		var sqlType string
 
-	switch {
-	case strings.HasSuffix(name, ".up.sql"):
-		migName = strings.TrimSuffix(name, ".up.sql")
-		sqlType = "up"
-	case strings.HasSuffix(name, ".down.sql"):
-		migName = strings.TrimSuffix(name, ".down.sql")
-		sqlType = "down"
-	default:
-		continue
-	}
+		switch {
+		case strings.HasSuffix(name, ".up.sql"):
+			migName = strings.TrimSuffix(name, ".up.sql")
+			sqlType = "up"
+		case strings.HasSuffix(name, ".down.sql"):
+			migName = strings.TrimSuffix(name, ".down.sql")
+			sqlType = "down"
+		default:
+			continue
+		}
 
 		content, err := os.ReadFile(filepath.Join(dir, name)) //nolint:gosec
 		if err != nil {
