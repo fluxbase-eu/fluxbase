@@ -92,6 +92,9 @@ type Server struct {
 	aiConversations        *ai.ConversationManager
 	aiMetrics              *observability.Metrics
 	knowledgeBaseHandler   *ai.KnowledgeBaseHandler
+	kbStorage              *ai.KnowledgeBaseStorage
+	collectionStorage      *ai.CollectionStorage
+	collectionHandler      *ai.CollectionHandler
 	rpcHandler             *rpc.Handler
 	rpcScheduler           *rpc.Scheduler
 	graphqlHandler         *GraphQLHandler
@@ -152,7 +155,8 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		StreamRequestBody: true, // Required for chunked upload streaming
 		ReadTimeout:       cfg.Server.ReadTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
-		IdleTimeout:       cfg.Server.IdleTimeout, ErrorHandler: customErrorHandler,
+		IdleTimeout:       cfg.Server.IdleTimeout,
+		ErrorHandler:      customErrorHandler,
 	})
 
 	// In debug mode, add no-cache headers to prevent browser from caching
@@ -257,9 +261,9 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			if cfg.Logging.PubSubEnabled && ps != nil {
 				testLog := &storage.LogEntry{
 					Category: storage.LogCategorySystem,
-					Level:     storage.LogLevelInfo,
-					Message:   "Log streaming test - system initialized",
-					Fields:    map[string]any{"test": true, "component": "logging_diagnostic"},
+					Level:    storage.LogLevelInfo,
+					Message:  "Log streaming test - system initialized",
+					Fields:   map[string]any{"test": true, "component": "logging_diagnostic"},
 				}
 				loggingService.Log(context.Background(), testLog)
 				log.Info().Msg("Published test log to verify streaming - check /admin/logs page")
@@ -535,7 +539,10 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 
 	// Create knowledge base handler for RAG management
 	var knowledgeBaseHandler *ai.KnowledgeBaseHandler
+	var kbStorage *ai.KnowledgeBaseStorage
+	var collectionStorage *ai.CollectionStorage = nil
 	var ocrService *ai.OCRService
+	var collectionHandler *ai.CollectionHandler = nil
 	if cfg.AI.Enabled {
 		// Initialize OCR service for image-based PDF extraction
 		if cfg.AI.OCREnabled {
@@ -555,7 +562,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			}
 		}
 
-		kbStorage := ai.NewKnowledgeBaseStorage(db)
+		kbStorage = ai.NewKnowledgeBaseStorage(db)
 		var docProcessor *ai.DocumentProcessor
 		if vectorHandler != nil && vectorHandler.GetEmbeddingService() != nil {
 			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService())
@@ -572,6 +579,11 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			Bool("processing_enabled", docProcessor != nil).
 			Bool("ocr_enabled", ocrService != nil && ocrService.IsEnabled()).
 			Msg("Knowledge base handler initialized")
+
+		// Initialize collection storage and handler for KB collections
+		collectionStorage = ai.NewCollectionStorage(db)
+		collectionHandler = ai.NewCollectionHandler(collectionStorage)
+		log.Info().Msg("Collection handler initialized")
 	}
 
 	// Create internal AI handler for custom MCP tools, edge functions, and jobs
@@ -699,6 +711,9 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		aiConversations:        aiConversations,
 		aiMetrics:              aiMetrics,
 		knowledgeBaseHandler:   knowledgeBaseHandler,
+		kbStorage:              kbStorage,
+		collectionStorage:      collectionStorage,
+		collectionHandler:      collectionHandler,
 		rpcHandler:             rpcHandler,
 		rpcScheduler:           rpcScheduler,
 		extensionsHandler:      extensions.NewHandler(extensions.NewService(db)),
@@ -1581,25 +1596,15 @@ func (s *Server) setupRoutes() {
 		log.Debug().Str("base_path", s.config.MCP.BasePath).Msg("MCP routes registered")
 	}
 
-	// Database Branching routes
-	// Admin endpoints require service key or dashboard admin
-	if s.config.Branching.Enabled && s.branchHandler != nil {
-		// Create API group with auth for branch management
-		// RequireAdmin ensures only dashboard_admins and service_role can access
-		branchAPI := s.app.Group("/api/v1",
-			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-			middleware.RequireAdmin(),
-		)
-		s.branchHandler.RegisterRoutes(branchAPI)
-
+	// Database Branching routes - GitHub webhook only
+	// Branch management routes are registered later after admin group is created
+	if s.config.Branching.Enabled && s.githubWebhook != nil {
 		// GitHub webhook endpoint (no auth, uses signature verification)
 		// Rate limited to prevent abuse - use specific path to avoid affecting other /api/v1 routes
 		s.app.Post("/api/v1/webhooks/github",
 			middleware.GitHubWebhookLimiter(),
 			s.githubWebhook.HandleWebhook,
 		)
-
-		log.Debug().Msg("Database Branching routes registered")
 	}
 
 	// Realtime WebSocket endpoint (not versioned as it's WebSocket)
@@ -1683,6 +1688,26 @@ func (s *Server) setupRoutes() {
 			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
 			s.aiHandler.UpdateUserConversation,
 		)
+
+		// Collection management routes (require authentication)
+		if s.collectionHandler != nil {
+			collectionRouter := s.app.Group("/api/v1/ai",
+				middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
+				middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+			)
+			s.collectionHandler.RegisterRoutes(collectionRouter)
+		}
+
+		// User-facing Knowledge Base routes (require authentication)
+		// These routes enforce permission-based KB creation within collections
+		if s.kbStorage != nil && s.collectionStorage != nil {
+			userKBRouter := s.app.Group("/api/v1/ai",
+				middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
+				middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+			)
+			ai.RegisterUserKnowledgeBaseRoutes(userKBRouter, s.kbStorage, s.collectionStorage)
+			log.Info().Msg("User-facing knowledge base routes registered")
+		}
 	}
 
 	// Public RPC endpoints (only if RPC is enabled) with scope enforcement
@@ -1833,6 +1858,18 @@ func (s *Server) setupRoutes() {
 			RequireRole("admin", "dashboard_admin", "service_role"),
 			s.rpcHandler.SyncProcedures,
 		)
+	}
+
+	// Database Branching routes (require authentication)
+	// Registered under /api/v1 with auth middleware
+	if s.config.Branching.Enabled && s.branchHandler != nil {
+		// Create a group at /api/v1 for branch routes with auth middleware
+		// Routes will be at /api/v1/admin/branches (from branch handler's RegisterRoutes)
+		branchAuthGroup := v1.Group("/",
+			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		)
+		s.branchHandler.RegisterRoutes(branchAuthGroup)
+		log.Debug().Msg("Database Branching routes registered")
 	}
 
 	// OpenAPI specification
@@ -2005,6 +2042,8 @@ func (s *Server) setupStorageRoutes(router fiber.Router) {
 // setupDashboardAuthRoutes sets up dashboard authentication routes
 // These are only available when admin UI is enabled
 func (s *Server) setupDashboardAuthRoutes(router fiber.Router) {
+	log.Debug().Msg("setupDashboardAuthRoutes called - registering public routes")
+
 	// Public dashboard auth routes (no authentication required)
 	router.Get("/setup/status", s.adminAuthHandler.GetSetupStatus)
 	router.Post("/setup", middleware.AdminSetupLimiterWithConfig(
@@ -2016,6 +2055,8 @@ func (s *Server) setupDashboardAuthRoutes(router fiber.Router) {
 		s.config.Security.AdminLoginRateWindow,
 	), s.adminAuthHandler.AdminLogin)
 	router.Post("/refresh", s.adminAuthHandler.AdminRefreshToken)
+
+	log.Debug().Msg("Dashboard auth routes registered: GET /setup/status, POST /setup, POST /login, POST /refresh")
 
 	// Protected dashboard auth routes
 	unifiedAuth := UnifiedAuthMiddleware(s.authHandler.authService, s.dashboardAuthHandler.jwtManager, s.db.Pool())
@@ -2492,6 +2533,22 @@ func (s *Server) handleGetSchemas(c fiber.Ctx) error {
 
 func (s *Server) handleExecuteQuery(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Execute query endpoint - to be implemented"})
+}
+
+// InvalidateSchemaCache invalidates the REST API schema cache.
+// This should be called after schema changes (e.g., migrations, DDL operations)
+// to ensure the cached metadata is refreshed.
+func (s *Server) InvalidateSchemaCache(ctx context.Context) error {
+	schemaCache := s.rest.SchemaCache()
+	if schemaCache == nil {
+		return fmt.Errorf("schema cache not initialized")
+	}
+
+	// Invalidate and refresh the schema cache
+	schemaCache.InvalidateAll(ctx)
+	log.Debug().Msg("Schema cache invalidated and refresh triggered")
+
+	return nil
 }
 
 // handleRefreshSchema refreshes the REST API schema cache without requiring a server restart

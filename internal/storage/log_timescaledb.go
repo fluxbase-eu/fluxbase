@@ -70,11 +70,25 @@ func (s *TimescaleDBLogStorage) enableTimescaleDB(ctx context.Context, cfg Times
 		return nil
 	}
 
+	// First check if TimescaleDB extension is installed
+	var extensionExists bool
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM pg_extension WHERE extname = 'timescaledb'
+		)
+	`).Scan(&extensionExists)
+	if err != nil {
+		return fmt.Errorf("failed to check for TimescaleDB extension: %w", err)
+	}
+	if !extensionExists {
+		return fmt.Errorf("TimescaleDB extension is not installed in PostgreSQL")
+	}
+
 	// Convert to hypertable (if not already)
 	// Note: TimescaleDB hypertables are incompatible with PostgreSQL declarative partitioning
 	// We need to check if the table is already a hypertable first
 	var isHypertable bool
-	err := s.db.Pool().QueryRow(ctx, `
+	err = s.db.Pool().QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM timescaledb_information.hypertables
 			WHERE hypertable_schema = 'logging' AND hypertable_name = 'entries'

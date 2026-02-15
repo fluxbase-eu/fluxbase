@@ -682,6 +682,7 @@ jobs:
           # Update package-lock.json files
           cd sdk && npm install --package-lock-only && cd ..
           cd sdk-react && npm install --package-lock-only && cd ..
+          cd admin && npm install --package-lock-only && cd ..
 
       - name: Commit version updates
         run: |
@@ -694,6 +695,7 @@ jobs:
           git add deploy/.env.example
           git add sdk/package.json sdk/package-lock.json
           git add sdk-react/package.json sdk-react/package-lock.json
+          git add admin/package-lock.json
           git add docs/src/content/docs/cli/installation.md
 
           if git diff --staged --quiet; then

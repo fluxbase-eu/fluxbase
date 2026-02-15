@@ -27,10 +27,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        > /etc/apt/sources.list.d/pgdg.list \
     && rm -rf /var/lib/apt/lists/*
 
+# Add TimescaleDB repository
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    && curl -fsSL https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --dearmor -o /usr/share/keyrings/timescaledb.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/timescaledb.gpg] https://packagecloud.io/timescale/timescaledb/debian/ bookworm main" \
+       > /etc/apt/sources.list.d/timescaledb.list \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install extension packages (version-specific)
 # These extensions require external packages to be installed
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # PostGIS - Geospatial support (includes raster, topology, tiger geocoder, address_standardizer)
+    # TimescaleDB - Time-series database extension
+    timescaledb-2-postgresql-${POSTGRES_MAJOR} \
+    # PostGIS - Geospatial support (includes raster, topology, tiger geocoder, address standardizer)
     postgresql-${POSTGRES_MAJOR}-postgis-3 \
     postgresql-${POSTGRES_MAJOR}-postgis-3-scripts \
     # pgvector - Vector similarity search for AI/ML

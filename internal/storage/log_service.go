@@ -33,7 +33,7 @@ func NewLogService(cfg LogStorageConfig, db *database.Connection, fileStorage Pr
 		if db == nil {
 			return nil, fmt.Errorf("database connection required for postgres log backend")
 		}
-		// Auto-enable TimescaleDB for postgres backend
+		// Try TimescaleDB first, fall back to regular PostgreSQL if not available
 		tsdbCfg := TimescaleDBConfig{
 			Enabled:       true,
 			Compressed:    true,
@@ -41,7 +41,8 @@ func NewLogService(cfg LogStorageConfig, db *database.Connection, fileStorage Pr
 		}
 		storage, err = newTimescaleDBLogStorage(tsdbCfg, db)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize postgres log storage with TimescaleDB: %w", err)
+			// TimescaleDB not available, fall back to regular PostgreSQL
+			storage = NewPostgresLogStorage(db)
 		}
 
 	case "s3":

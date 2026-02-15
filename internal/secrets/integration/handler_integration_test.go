@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/secrets"
 	"github.com/fluxbase-eu/fluxbase/internal/testutil"
@@ -21,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // TestSecretsHandler_CreateSecret_Integration tests POST /secrets endpoint
@@ -688,6 +688,7 @@ func makeRequest(t *testing.T, app *fiber.App, method, path string, body interfa
 	require.NoError(t, err)
 	return resp
 }
+
 // createTestUserWithToken creates a test user and returns a valid JWT token
 // The token is generated using the same JWT config as the test app
 func createTestUserWithToken(t *testing.T, tc *testutil.IntegrationTestContext, email, password string) (userID, token string) {
@@ -729,7 +730,7 @@ func createTestUserWithToken(t *testing.T, tc *testutil.IntegrationTestContext, 
 	// Create a session record so the token is valid
 	sessionID := uuid.New().String()
 	tokenHash := uuid.New().String()
-	_, err = tc.DB.Pool().Exec(ctx, 
+	_, err = tc.DB.Pool().Exec(ctx,
 		"INSERT INTO auth.sessions (id, user_id, access_token_hash, expires_at, created_at) VALUES ($1, $2, $3, NOW() + interval '1 hour', NOW())",
 		sessionID, userID, tokenHash)
 	require.NoError(t, err, "Failed to create session")

@@ -12,8 +12,11 @@ import {
 import { toast } from 'sonner'
 import {
   knowledgeBasesApi,
+  userKnowledgeBasesApi,
+  collectionsApi,
   type KnowledgeBaseSummary,
   type CreateKnowledgeBaseRequest,
+  type CollectionSummary,
 } from '@/lib/api'
 import {
   AlertDialog,
@@ -63,16 +66,31 @@ function KnowledgeBasesPage() {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseSummary[]>(
     []
   )
+  const [collections, setCollections] = useState<CollectionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newKB, setNewKB] = useState<CreateKnowledgeBaseRequest>({
     name: '',
+    collection_id: '', // Required - must be set before creation
     description: '',
     chunk_size: 512,
     chunk_overlap: 50,
     chunk_strategy: 'recursive',
   })
+
+  const fetchCollections = async () => {
+    try {
+      const data = await collectionsApi.list()
+      // Filter to collections where user has editor or owner role
+      const editableCollections = data.filter(
+        (c) => c.current_user_role === 'editor' || c.current_user_role === 'owner'
+      )
+      setCollections(editableCollections)
+    } catch {
+      toast.error('Failed to fetch collections')
+    }
+  }
 
   const fetchKnowledgeBases = async () => {
     setLoading(true)
@@ -92,20 +110,27 @@ function KnowledgeBasesPage() {
       return
     }
 
+    if (!newKB.collection_id) {
+      toast.error('Please select a collection')
+      return
+    }
+
     try {
-      await knowledgeBasesApi.create(newKB)
+      await userKnowledgeBasesApi.create(newKB)
       toast.success('Knowledge base created')
       setCreateDialogOpen(false)
       setNewKB({
         name: '',
+        collection_id: '',
         description: '',
         chunk_size: 512,
         chunk_overlap: 50,
         chunk_strategy: 'recursive',
       })
       await fetchKnowledgeBases()
-    } catch {
-      toast.error('Failed to create knowledge base')
+    } catch (error) {
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to create knowledge base'
+      toast.error(message)
     }
   }
 
@@ -133,6 +158,7 @@ function KnowledgeBasesPage() {
 
   useEffect(() => {
     fetchKnowledgeBases()
+    fetchCollections()
   }, [])
 
   if (loading) {
@@ -207,11 +233,48 @@ function KnowledgeBasesPage() {
               <DialogHeader>
                 <DialogTitle>Create Knowledge Base</DialogTitle>
                 <DialogDescription>
-                  Create a new knowledge base for storing documents and
-                  providing context to AI chatbots.
+                  Create a new knowledge base in a collection. You can only create
+                  knowledge bases in collections where you have editor or owner role.
                 </DialogDescription>
               </DialogHeader>
-              <div className='grid gap-4 py-4'>
+              {collections.length === 0 ? (
+                <div className='py-8 text-center'>
+                  <p className='text-muted-foreground mb-4'>
+                    No collections available. You need editor or owner role in a
+                    collection to create knowledge bases.
+                  </p>
+                  <Button
+                    variant='outline'
+                    onClick={() => navigate({ to: '/collections' })}
+                  >
+                    Go to Collections
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className='grid gap-4 py-4'>
+                    <div className='grid gap-2'>
+                      <Label htmlFor='collection'>Collection *</Label>
+                      <select
+                        id='collection'
+                        value={newKB.collection_id}
+                        onChange={(e) =>
+                          setNewKB({ ...newKB, collection_id: e.target.value })
+                        }
+                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
+                      >
+                        <option value=''>Select a collection...</option>
+                        {collections.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.current_user_role})
+                          </option>
+                        ))}
+                      </select>
+                      <p className='text-muted-foreground text-xs'>
+                        You can only create KBs in collections where you have
+                        editor or owner role
+                      </p>
+                    </div>
                 <div className='grid gap-2'>
                   <Label htmlFor='name'>Name</Label>
                   <Input
@@ -278,8 +341,15 @@ function KnowledgeBasesPage() {
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleCreate}>Create</Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={!newKB.collection_id}
+                >
+                  Create
+                </Button>
               </DialogFooter>
+                </>
+              )}
             </DialogContent>
           </Dialog>
         </div>

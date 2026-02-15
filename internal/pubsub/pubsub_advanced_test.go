@@ -309,7 +309,8 @@ func TestLocalPubSub_ContextAlreadyCancelled(t *testing.T) {
 	cancel() // Cancel immediately
 
 	_, err := pubsub.Subscribe(ctx, "test-channel")
-	assert.NoError(t, err) // Should succeed, but channel will close immediately
+	assert.Error(t, err) // Should return error for already-cancelled context
+	assert.Equal(t, context.Canceled, err)
 }
 
 func TestLocalPubSub_OrderedDelivery(t *testing.T) {

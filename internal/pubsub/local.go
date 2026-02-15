@@ -80,7 +80,7 @@ func (l *LocalPubSub) Publish(ctx context.Context, channel string, payload []byt
 
 // Subscribe returns a channel that receives messages published to the given channel.
 func (l *LocalPubSub) Subscribe(ctx context.Context, channel string) (<-chan Message, error) {
-// Check if context is already canceled
+	// Check if context is already canceled
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}

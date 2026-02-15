@@ -31,37 +31,55 @@ export function HealthIndicators() {
     },
     {
       name: 'Database',
-      status: health?.services.database ? 'healthy' : 'down',
-      details: health?.services.database ? 'Connected' : 'Connection failed',
+      status: health?.services.database?.status === 'healthy' ? 'healthy' : 'down',
+      details: health?.services.database?.status === 'healthy'
+        ? `Connected (${health.services.database.latency_ms}ms)`
+        : health?.services.database?.message || 'Connection failed',
     },
     {
       name: 'Realtime',
-      status: health?.services.realtime ? 'healthy' : 'degraded',
-      details: health?.services.realtime ? 'WebSocket connected' : 'WebSocket disabled',
+      status: health?.services.realtime?.status === 'healthy' ? 'healthy' : 'degraded',
+      details: health?.services.realtime?.message || 'WebSocket server running',
     },
     {
       name: 'Jobs',
-      status: 'healthy', // TODO: Get actual job processor status
-      details: 'Processing queue',
+      status: (health?.services.jobs?.status === 'healthy' || health?.services.jobs?.status === 'degraded')
+        ? (health.services.jobs.status as 'healthy' | 'degraded')
+        : 'down',
+      details: health?.services.jobs?.message || 'Job system unavailable',
     },
   ]
 
-  const allHealthy = services.every((s) => s.status === 'healthy')
+  // Determine overall system health
+  const getOverallStatus = () => {
+    if (isLoading) return { icon: 'loading', text: 'Checking...' }
+    if (!health) return { icon: 'warning', text: 'Unable to check status' }
+
+    // Use backend's overall status
+    const status = health.status
+    if (status === 'healthy') return { icon: 'success', text: 'All systems operational' }
+    if (status === 'degraded') return { icon: 'warning', text: 'Some systems degraded' }
+    return { icon: 'error', text: 'Systems unavailable' }
+  }
+
+  const overallStatus = getOverallStatus()
 
   return (
     <Card>
-      <CardContent className='px-4 py-2'>
+      <CardContent className='px-4 py-1'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
-            {isLoading ? (
+            {overallStatus.icon === 'loading' ? (
               <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' />
-            ) : allHealthy ? (
+            ) : overallStatus.icon === 'success' ? (
               <CheckCircle2 className='h-4 w-4 text-green-500' />
-            ) : (
+            ) : overallStatus.icon === 'warning' ? (
               <AlertTriangle className='h-4 w-4 text-yellow-500' />
+            ) : (
+              <XCircle className='h-4 w-4 text-red-500' />
             )}
             <span className='text-sm font-medium'>
-              {isLoading ? 'Checking...' : allHealthy ? 'All systems operational' : 'Some systems degraded'}
+              {overallStatus.text}
             </span>
           </div>
           <div className='flex gap-3'>

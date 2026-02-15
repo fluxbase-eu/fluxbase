@@ -2297,6 +2297,15 @@ func (tc *TestContext) EnsureRLSTestTables() {
 		_, err := conn.Exec(ctx, query)
 		require.NoError(tc.T, err, "Failed to create RLS test tables: %v", err)
 	}
+
+	// Invalidate the schema cache to ensure the new table schema is picked up
+	// This is critical when tests run in parallel and the tasks table is dropped/recreated
+	if tc.Server != nil {
+		schemaCache := tc.Server.SchemaCache()
+		if schemaCache != nil {
+			schemaCache.Invalidate()
+		}
+	}
 }
 
 // MailHogMessage represents an email message from MailHog

@@ -46,6 +46,7 @@ import { Route as AuthenticatedFeaturesIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedExtensionsIndexRouteImport } from './routes/_authenticated/extensions/index'
 import { Route as AuthenticatedEmailSettingsIndexRouteImport } from './routes/_authenticated/email-settings/index'
 import { Route as AuthenticatedDatabaseConfigIndexRouteImport } from './routes/_authenticated/database-config/index'
+import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections/index'
 import { Route as AuthenticatedClientKeysIndexRouteImport } from './routes/_authenticated/client-keys/index'
 import { Route as AuthenticatedChatbotsIndexRouteImport } from './routes/_authenticated/chatbots/index'
 import { Route as AuthenticatedAuthenticationIndexRouteImport } from './routes/_authenticated/authentication/index'
@@ -54,6 +55,7 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedApiRestRouteImport } from './routes/_authenticated/api/rest'
 import { Route as AuthenticatedKnowledgeBasesIdIndexRouteImport } from './routes/_authenticated/knowledge-bases/$id/index'
+import { Route as AuthenticatedAiKnowledgeBasesIndexRouteImport } from './routes/_authenticated/ai/knowledge-bases/index'
 import { Route as AuthenticatedKnowledgeBasesIdSettingsRouteImport } from './routes/_authenticated/knowledge-bases/$id/settings'
 import { Route as AuthenticatedKnowledgeBasesIdSearchRouteImport } from './routes/_authenticated/knowledge-bases/$id/search'
 
@@ -261,6 +263,12 @@ const AuthenticatedDatabaseConfigIndexRoute =
     path: '/database-config/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCollectionsIndexRoute =
+  AuthenticatedCollectionsIndexRouteImport.update({
+    id: '/collections/',
+    path: '/collections/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedClientKeysIndexRoute =
   AuthenticatedClientKeysIndexRouteImport.update({
     id: '/client-keys/',
@@ -308,6 +316,12 @@ const AuthenticatedKnowledgeBasesIdIndexRoute =
     path: '/knowledge-bases/$id/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAiKnowledgeBasesIndexRoute =
+  AuthenticatedAiKnowledgeBasesIndexRouteImport.update({
+    id: '/ai/knowledge-bases/',
+    path: '/ai/knowledge-bases/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKnowledgeBasesIdSettingsRoute =
   AuthenticatedKnowledgeBasesIdSettingsRouteImport.update({
     id: '/knowledge-bases/$id/settings',
@@ -341,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/authentication/': typeof AuthenticatedAuthenticationIndexRoute
   '/chatbots/': typeof AuthenticatedChatbotsIndexRoute
   '/client-keys/': typeof AuthenticatedClientKeysIndexRoute
+  '/collections/': typeof AuthenticatedCollectionsIndexRoute
   '/database-config/': typeof AuthenticatedDatabaseConfigIndexRoute
   '/email-settings/': typeof AuthenticatedEmailSettingsIndexRoute
   '/extensions/': typeof AuthenticatedExtensionsIndexRoute
@@ -367,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/webhooks/': typeof AuthenticatedWebhooksIndexRoute
   '/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  '/ai/knowledge-bases/': typeof AuthenticatedAiKnowledgeBasesIndexRoute
   '/knowledge-bases/$id/': typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -389,6 +405,7 @@ export interface FileRoutesByTo {
   '/authentication': typeof AuthenticatedAuthenticationIndexRoute
   '/chatbots': typeof AuthenticatedChatbotsIndexRoute
   '/client-keys': typeof AuthenticatedClientKeysIndexRoute
+  '/collections': typeof AuthenticatedCollectionsIndexRoute
   '/database-config': typeof AuthenticatedDatabaseConfigIndexRoute
   '/email-settings': typeof AuthenticatedEmailSettingsIndexRoute
   '/extensions': typeof AuthenticatedExtensionsIndexRoute
@@ -415,6 +432,7 @@ export interface FileRoutesByTo {
   '/webhooks': typeof AuthenticatedWebhooksIndexRoute
   '/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  '/ai/knowledge-bases': typeof AuthenticatedAiKnowledgeBasesIndexRoute
   '/knowledge-bases/$id': typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 export interface FileRoutesById {
@@ -439,6 +457,7 @@ export interface FileRoutesById {
   '/_authenticated/authentication/': typeof AuthenticatedAuthenticationIndexRoute
   '/_authenticated/chatbots/': typeof AuthenticatedChatbotsIndexRoute
   '/_authenticated/client-keys/': typeof AuthenticatedClientKeysIndexRoute
+  '/_authenticated/collections/': typeof AuthenticatedCollectionsIndexRoute
   '/_authenticated/database-config/': typeof AuthenticatedDatabaseConfigIndexRoute
   '/_authenticated/email-settings/': typeof AuthenticatedEmailSettingsIndexRoute
   '/_authenticated/extensions/': typeof AuthenticatedExtensionsIndexRoute
@@ -465,6 +484,7 @@ export interface FileRoutesById {
   '/_authenticated/webhooks/': typeof AuthenticatedWebhooksIndexRoute
   '/_authenticated/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/_authenticated/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  '/_authenticated/ai/knowledge-bases/': typeof AuthenticatedAiKnowledgeBasesIndexRoute
   '/_authenticated/knowledge-bases/$id/': typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -489,6 +509,7 @@ export interface FileRouteTypes {
     | '/authentication/'
     | '/chatbots/'
     | '/client-keys/'
+    | '/collections/'
     | '/database-config/'
     | '/email-settings/'
     | '/extensions/'
@@ -515,6 +536,7 @@ export interface FileRouteTypes {
     | '/webhooks/'
     | '/knowledge-bases/$id/search'
     | '/knowledge-bases/$id/settings'
+    | '/ai/knowledge-bases/'
     | '/knowledge-bases/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -537,6 +559,7 @@ export interface FileRouteTypes {
     | '/authentication'
     | '/chatbots'
     | '/client-keys'
+    | '/collections'
     | '/database-config'
     | '/email-settings'
     | '/extensions'
@@ -563,6 +586,7 @@ export interface FileRouteTypes {
     | '/webhooks'
     | '/knowledge-bases/$id/search'
     | '/knowledge-bases/$id/settings'
+    | '/ai/knowledge-bases'
     | '/knowledge-bases/$id'
   id:
     | '__root__'
@@ -586,6 +610,7 @@ export interface FileRouteTypes {
     | '/_authenticated/authentication/'
     | '/_authenticated/chatbots/'
     | '/_authenticated/client-keys/'
+    | '/_authenticated/collections/'
     | '/_authenticated/database-config/'
     | '/_authenticated/email-settings/'
     | '/_authenticated/extensions/'
@@ -612,6 +637,7 @@ export interface FileRouteTypes {
     | '/_authenticated/webhooks/'
     | '/_authenticated/knowledge-bases/$id/search'
     | '/_authenticated/knowledge-bases/$id/settings'
+    | '/_authenticated/ai/knowledge-bases/'
     | '/_authenticated/knowledge-bases/$id/'
   fileRoutesById: FileRoutesById
 }
@@ -891,6 +917,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDatabaseConfigIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/collections/': {
+      id: '/_authenticated/collections/'
+      path: '/collections'
+      fullPath: '/collections/'
+      preLoaderRoute: typeof AuthenticatedCollectionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/client-keys/': {
       id: '/_authenticated/client-keys/'
       path: '/client-keys'
@@ -947,6 +980,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKnowledgeBasesIdIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ai/knowledge-bases/': {
+      id: '/_authenticated/ai/knowledge-bases/'
+      path: '/ai/knowledge-bases'
+      fullPath: '/ai/knowledge-bases/'
+      preLoaderRoute: typeof AuthenticatedAiKnowledgeBasesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/knowledge-bases/$id/settings': {
       id: '/_authenticated/knowledge-bases/$id/settings'
       path: '/knowledge-bases/$id/settings'
@@ -973,6 +1013,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuthenticationIndexRoute: typeof AuthenticatedAuthenticationIndexRoute
   AuthenticatedChatbotsIndexRoute: typeof AuthenticatedChatbotsIndexRoute
   AuthenticatedClientKeysIndexRoute: typeof AuthenticatedClientKeysIndexRoute
+  AuthenticatedCollectionsIndexRoute: typeof AuthenticatedCollectionsIndexRoute
   AuthenticatedDatabaseConfigIndexRoute: typeof AuthenticatedDatabaseConfigIndexRoute
   AuthenticatedEmailSettingsIndexRoute: typeof AuthenticatedEmailSettingsIndexRoute
   AuthenticatedExtensionsIndexRoute: typeof AuthenticatedExtensionsIndexRoute
@@ -999,6 +1040,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedWebhooksIndexRoute: typeof AuthenticatedWebhooksIndexRoute
   AuthenticatedKnowledgeBasesIdSearchRoute: typeof AuthenticatedKnowledgeBasesIdSearchRoute
   AuthenticatedKnowledgeBasesIdSettingsRoute: typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  AuthenticatedAiKnowledgeBasesIndexRoute: typeof AuthenticatedAiKnowledgeBasesIndexRoute
   AuthenticatedKnowledgeBasesIdIndexRoute: typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 
@@ -1011,6 +1053,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuthenticationIndexRoute: AuthenticatedAuthenticationIndexRoute,
   AuthenticatedChatbotsIndexRoute: AuthenticatedChatbotsIndexRoute,
   AuthenticatedClientKeysIndexRoute: AuthenticatedClientKeysIndexRoute,
+  AuthenticatedCollectionsIndexRoute: AuthenticatedCollectionsIndexRoute,
   AuthenticatedDatabaseConfigIndexRoute: AuthenticatedDatabaseConfigIndexRoute,
   AuthenticatedEmailSettingsIndexRoute: AuthenticatedEmailSettingsIndexRoute,
   AuthenticatedExtensionsIndexRoute: AuthenticatedExtensionsIndexRoute,
@@ -1040,6 +1083,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedKnowledgeBasesIdSearchRoute,
   AuthenticatedKnowledgeBasesIdSettingsRoute:
     AuthenticatedKnowledgeBasesIdSettingsRoute,
+  AuthenticatedAiKnowledgeBasesIndexRoute:
+    AuthenticatedAiKnowledgeBasesIndexRoute,
   AuthenticatedKnowledgeBasesIdIndexRoute:
     AuthenticatedKnowledgeBasesIdIndexRoute,
 }
