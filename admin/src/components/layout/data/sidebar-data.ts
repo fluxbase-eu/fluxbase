@@ -58,6 +58,7 @@ export const sidebarData: SidebarData = {
     },
     {
       title: 'Database',
+      collapsible: true,
       items: [
         {
           title: 'Tables',
@@ -77,22 +78,8 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
-      title: 'Monitoring',
-      items: [
-        {
-          title: 'Log Stream',
-          url: '/logs',
-          icon: ScrollText,
-        },
-        {
-          title: 'Monitoring',
-          url: '/monitoring',
-          icon: Activity,
-        },
-      ],
-    },
-    {
       title: 'Users & Authentication',
+      collapsible: true,
       items: [
         {
           title: 'Users',
@@ -107,7 +94,34 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
+      title: 'AI',
+      collapsible: true,
+      items: [
+        {
+          title: 'Collections',
+          url: '/collections',
+          icon: FolderOpen,
+        },
+        {
+          title: 'Knowledge Bases',
+          url: '/knowledge-bases',
+          icon: BookOpen,
+        },
+        {
+          title: 'AI Chatbots',
+          url: '/chatbots',
+          icon: Bot,
+        },
+        {
+          title: 'MCP Tools',
+          url: '/mcp-tools',
+          icon: Wrench,
+        },
+      ],
+    },
+    {
       title: 'API & Services',
+      collapsible: true,
       items: [
         {
           title: 'API Explorer',
@@ -140,24 +154,40 @@ export const sidebarData: SidebarData = {
           icon: Terminal,
         },
         {
-          title: 'AI Chatbots',
-          url: '/chatbots',
+          title: 'Configuration',
+          url: '/features',
+          icon: Zap,
+        },
+        {
+          title: 'Extensions',
+          url: '/extensions',
+          icon: Puzzle,
+        },
+        {
+          title: 'Email',
+          url: '/email-settings',
+          icon: Mail,
+        },
+        {
+          title: 'Storage Config',
+          url: '/storage-config',
+          icon: HardDrive,
+        },
+        {
+          title: 'AI Providers',
+          url: '/ai-providers',
           icon: Bot,
         },
         {
-          title: 'Knowledge Bases',
-          url: '/knowledge-bases',
-          icon: BookOpen,
-        },
-        {
-          title: 'MCP Tools',
-          url: '/mcp-tools',
-          icon: Wrench,
+          title: 'Database Config',
+          url: '/database-config',
+          icon: Database,
         },
       ],
     },
     {
       title: 'Security',
+      collapsible: true,
       items: [
         {
           title: 'RLS Policies',
@@ -192,42 +222,24 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
-      title: 'Configuration',
+      title: 'Monitoring',
+      collapsible: true,
       items: [
         {
-          title: 'Features',
-          url: '/features',
-          icon: Zap,
+          title: 'Log Stream',
+          url: '/logs',
+          icon: ScrollText,
         },
         {
-          title: 'Extensions',
-          url: '/extensions',
-          icon: Puzzle,
-        },
-        {
-          title: 'Email',
-          url: '/email-settings',
-          icon: Mail,
-        },
-        {
-          title: 'Storage',
-          url: '/storage-config',
-          icon: HardDrive,
-        },
-        {
-          title: 'AI Providers',
-          url: '/ai-providers',
-          icon: Bot,
-        },
-        {
-          title: 'Database',
-          url: '/database-config',
-          icon: Database,
+          title: 'Monitoring',
+          url: '/monitoring',
+          icon: Activity,
         },
       ],
     },
     {
       title: 'Account settings',
+      collapsible: true,
       items: [
         {
           title: 'Account',

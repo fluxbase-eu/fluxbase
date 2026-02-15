@@ -378,6 +378,16 @@ func (g *GraphQLSchemaGenerator) generateInputType(table database.TableInfo) *gr
 		}
 	}
 
+	// If all columns are auto-generated, add a placeholder field to make the type valid
+	// This is needed because graphql-go doesn't accept empty input objects
+	if len(fields) == 0 {
+		// Add a dummy field that users shouldn't use
+		fields["_placeholder"] = &graphql.InputObjectFieldConfig{
+			Type:        graphql.String,
+			Description: "Placeholder - this table has only auto-generated columns",
+		}
+	}
+
 	return graphql.NewInputObject(graphql.InputObjectConfig{
 		Name:        typeName + "Input",
 		Description: fmt.Sprintf("Input type for %s.%s", table.Schema, table.Name),
@@ -480,44 +490,21 @@ func (g *GraphQLSchemaGenerator) generateFilterType(table database.TableInfo) *g
 		}
 	}
 
-	// Add logical operators using lazy initialization to avoid circular reference issues
+	// Add logical operators to the filter type
 	filterTypeName := typeName + "Filter"
 
-	// Create the filter type with lazy field initialization for circular references
-	var filterType *graphql.InputObject
+	// NOTE: Self-referencing filter operators (_and, _or, _not) are not supported
+	// in graphql-go v0.8.1 due to limitations in input object type resolution.
+	// Users can still filter on individual columns using the column-specific operators
+	// (eq, neq, gt, gte, lt, lte, like, ilike, in, is_null, contains, contained_by).
 
-	// Create a lazy fields function that can reference the filter type itself
-	lazyFields := func() graphql.InputObjectConfigFieldMap {
-		result := graphql.InputObjectConfigFieldMap{}
-
-		// Copy all the column fields we already created
-		for k, v := range fields {
-			result[k] = v
-		}
-
-		// Add logical operators that reference the filter type
-		result["_and"] = &graphql.InputObjectFieldConfig{
-			Type:        graphql.NewList(filterType),
-			Description: "Logical AND",
-		}
-		result["_or"] = &graphql.InputObjectFieldConfig{
-			Type:        graphql.NewList(filterType),
-			Description: "Logical OR",
-		}
-		result["_not"] = &graphql.InputObjectFieldConfig{
-			Type:        filterType,
-			Description: "Logical NOT",
-		}
-
-		return result
-	}
-
-	// Create the filter type with lazy initialization
-	filterType = graphql.NewInputObject(graphql.InputObjectConfig{
+	// Create the filter type with column-based filters only
+	filterType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name:        filterTypeName,
 		Description: fmt.Sprintf("Filter type for %s.%s", table.Schema, table.Name),
-		Fields:      lazyFields,
+		Fields:      fields,
 	})
+	g.filterTypes[filterTypeName] = filterType
 
 	return filterType
 }

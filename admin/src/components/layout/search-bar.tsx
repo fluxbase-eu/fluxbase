@@ -3,10 +3,20 @@ import { Search, Menu, User } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
+interface SearchResult {
+  id: string
+  type: string
+  name: string
+  email?: string
+  path?: string
+  count?: number | string
+  method?: string
+}
+
 export function SearchBar() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isOpen, setIsOpen] = useState(false)
-  const [results, setResults] = useState<any[]>([])
+  const [results, setResults] = useState<SearchResult[]>([])
 
   const handleSearch = (value: string) => {
     setSearchTerm(value)

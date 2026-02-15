@@ -1474,6 +1474,107 @@ export const clientKeysApi = {
   },
 }
 
+// Bulk Operations API
+export interface BulkActionRequest {
+  action: 'delete' | 'export'
+  targets: string[]
+  table: string
+}
+
+export interface BulkActionResponse {
+  success: boolean
+  message?: string
+  rows_affected?: number
+  count?: number
+  records?: Array<Record<string, unknown>>
+}
+
+export const bulkOperationsApi = {
+  // Execute bulk action (delete or export)
+  execute: async (request: BulkActionRequest): Promise<BulkActionResponse> => {
+    const response = await api.post<BulkActionResponse>('/api/v1/bulk', request)
+    return response.data
+  },
+
+  // Bulk delete selected items
+  delete: async (table: string, targetIds: string[]): Promise<BulkActionResponse> => {
+    return bulkOperationsApi.execute({ action: 'delete', targets: targetIds, table })
+  },
+
+  // Bulk export selected items
+  export: async (table: string, targetIds: string[]): Promise<BulkActionResponse> => {
+    return bulkOperationsApi.execute({ action: 'export', targets: targetIds, table })
+  },
+}
+
+// Data Export API
+export const dataExportApi = {
+  // Export selected items as CSV or JSON
+  export: async (
+    table: string,
+    targetIds: string[],
+    format: 'csv' | 'json' = 'csv'
+  ): Promise<BulkActionResponse | string> => {
+    const items = JSON.stringify(targetIds)
+    const url = `/api/v1/export?table=${table}&items=${encodeURIComponent(items)}&format=${format}`
+
+    if (format === 'json') {
+      const response = await api.get(url)
+      return response.data as BulkActionResponse
+    }
+
+    // For CSV, download as file
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      headers: {
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error('Export failed')
+    }
+
+    const blob = await response.blob()
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = `export_${Date.now()}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    return 'Download started'
+  },
+}
+
+// SQL Execution API
+export interface SQLExecuteRequest {
+  query: string
+}
+
+export interface SQLResult {
+  columns?: string[]
+  rows?: Array<Record<string, unknown>>
+  row_count: number
+  affected_rows?: number
+  execution_time_ms: number
+  error?: string
+  statement: string
+}
+
+export interface SQLExecuteResponse {
+  results: SQLResult[]
+}
+
+export const sqlApi = {
+  // Execute SQL query
+  execute: async (query: string): Promise<SQLExecuteResponse> => {
+    const response = await api.post<SQLExecuteResponse>('/admin/api/sql/execute', { query })
+    return response.data
+  },
+}
+
 // Backwards compatibility aliases (deprecated)
 /** @deprecated Use ClientKey instead */
 export type APIKey = ClientKey
@@ -1574,10 +1675,34 @@ export const adminAuthAPI = {
     refresh_token: string
     expires_in: number
   }> => {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/v1/admin/setup`,
-      data
+    // Create a fresh axios instance without any interceptors for setup
+    const setupAxios = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    })
+
+    // Add request interceptor to debug what's being sent
+    setupAxios.interceptors.request.use((config) => {
+      // Debug: Request config for ${config.url}
+      return config
+    })
+
+    // Add response interceptor to debug responses
+    setupAxios.interceptors.response.use(
+      (response) => {
+        // Debug: Response status ${response.status}
+        return response
+      },
+      (error) => {
+        // Debug: Request error for ${error.config?.url}
+        return Promise.reject(error)
+      }
     )
+
+    const response = await setupAxios.post('/api/v1/admin/setup', data)
     return response.data
   },
 
@@ -2601,6 +2726,9 @@ export interface KnowledgeBaseSummary {
   embedding_model: string
   created_at: string
   updated_at: string
+  visibility?: string
+  user_permission?: string
+  owner_id?: string
 }
 
 export interface KnowledgeBase extends KnowledgeBaseSummary {
@@ -2614,6 +2742,7 @@ export interface KnowledgeBase extends KnowledgeBaseSummary {
 
 export interface CreateKnowledgeBaseRequest {
   name: string
+  collection_id: string // Required - collection to create KB in
   namespace?: string
   description?: string
   embedding_model?: string
@@ -2951,6 +3080,170 @@ export const knowledgeBasesApi = {
     await api.delete(
       `/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases/${kbId}`
     )
+  },
+}
+
+// =============================================================================
+// User-facing Knowledge Base API
+// Uses /api/v1/ai/knowledge-bases endpoints with permission-based checks
+// =============================================================================
+
+export const userKnowledgeBasesApi = {
+  // Create a knowledge base (requires collection_id and collection edit permission)
+  create: async (data: CreateKnowledgeBaseRequest): Promise<KnowledgeBase> => {
+    const response = await api.post<KnowledgeBase>(
+      '/api/v1/ai/knowledge-bases',
+      data
+    )
+    return response.data
+  },
+
+  // List user's knowledge bases (those they own or have access to)
+  list: async (): Promise<KnowledgeBaseSummary[]> => {
+    const response = await api.get<{
+      knowledge_bases: KnowledgeBaseSummary[]
+      count: number
+    }>('/api/v1/ai/knowledge-bases')
+    return response.data.knowledge_bases || []
+  },
+
+  // Get knowledge base details (if user has access)
+  get: async (id: string): Promise<KnowledgeBase> => {
+    const response = await api.get<KnowledgeBase>(
+      `/api/v1/ai/knowledge-bases/${id}`
+    )
+    return response.data
+  },
+}
+
+// =============================================================================
+// Collections API
+// =============================================================================
+
+export type CollectionMemberRole = 'viewer' | 'editor' | 'owner'
+
+export interface Collection {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // Derived fields
+  kb_count?: number
+  member_count?: number
+  current_user_role?: CollectionMemberRole | null
+}
+
+export interface CollectionSummary {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  kb_count?: number
+  member_count?: number
+  current_user_role?: CollectionMemberRole | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CollectionMember {
+  user_id: string
+  email?: string
+  name?: string
+  role: CollectionMemberRole
+  added_by: string
+  added_at: string
+}
+
+export interface CreateCollectionRequest {
+  name: string
+  slug?: string
+  description?: string
+}
+
+export interface UpdateCollectionRequest {
+  name?: string
+  description?: string
+}
+
+export const collectionsApi = {
+  // List all collections for current user
+  list: async (): Promise<CollectionSummary[]> => {
+    const response = await api.get<{ collections: CollectionSummary[] }>(
+      '/api/v1/ai/collections'
+    )
+    return response.data.collections || []
+  },
+
+  // Get collection details
+  get: async (id: string): Promise<Collection> => {
+    const response = await api.get<Collection>(`/api/v1/ai/collections/${id}`)
+    return response.data
+  },
+
+  // Create a new collection
+  create: async (data: CreateCollectionRequest): Promise<Collection> => {
+    const response = await api.post<Collection>('/api/v1/ai/collections', data)
+    return response.data
+  },
+
+  // Update collection
+  update: async (id: string, data: UpdateCollectionRequest): Promise<Collection> => {
+    const response = await api.put<Collection>(`/api/v1/ai/collections/${id}`, data)
+    return response.data
+  },
+
+  // Delete collection
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/api/v1/ai/collections/${id}`)
+  },
+
+  // List knowledge bases in collection
+  listKnowledgeBases: async (collectionId: string): Promise<KnowledgeBaseSummary[]> => {
+    const response = await api.get<{ knowledge_bases: KnowledgeBaseSummary[] }>(
+      `/api/v1/ai/collections/${collectionId}/knowledge-bases`
+    )
+    return response.data.knowledge_bases || []
+  },
+
+  // Add knowledge base to collection
+  addKnowledgeBase: async (collectionId: string, kbId: string): Promise<void> => {
+    await api.post(`/api/v1/ai/collections/${collectionId}/knowledge-bases/${kbId}`, {})
+  },
+
+  // Remove knowledge base from collection
+  removeKnowledgeBase: async (collectionId: string, kbId: string): Promise<void> => {
+    await api.delete(`/api/v1/ai/collections/${collectionId}/knowledge-bases/${kbId}`)
+  },
+
+  // List collection members
+  listMembers: async (collectionId: string): Promise<CollectionMember[]> => {
+    const response = await api.get<{ members: CollectionMember[] }>(
+      `/api/v1/ai/collections/${collectionId}/members`
+    )
+    return response.data.members || []
+  },
+
+  // Add member to collection
+  addMember: async (collectionId: string, userId: string, role: CollectionMemberRole): Promise<void> => {
+    await api.post(`/api/v1/ai/collections/${collectionId}/members`, {
+      user_id: userId,
+      role,
+    })
+  },
+
+  // Remove member from collection
+  removeMember: async (collectionId: string, userId: string): Promise<void> => {
+    await api.delete(`/api/v1/ai/collections/${collectionId}/members/${userId}`)
+  },
+
+  // Update member role
+  updateMemberRole: async (collectionId: string, userId: string, role: CollectionMemberRole): Promise<void> => {
+    await api.put(`/api/v1/ai/collections/${collectionId}/members/${userId}`, {
+      role,
+    })
   },
 }
 

@@ -7,34 +7,41 @@ import (
 
 // KnowledgeBase represents a collection of documents for RAG retrieval
 type KnowledgeBase struct {
-	ID                  string    `json:"id"`
-	Name                string    `json:"name"`
-	Namespace           string    `json:"namespace"`
-	Description         string    `json:"description,omitempty"`
-	EmbeddingModel      string    `json:"embedding_model"`
-	EmbeddingDimensions int       `json:"embedding_dimensions"`
-	ChunkSize           int       `json:"chunk_size"`
-	ChunkOverlap        int       `json:"chunk_overlap"`
-	ChunkStrategy       string    `json:"chunk_strategy"`
-	Enabled             bool      `json:"enabled"`
-	DocumentCount       int       `json:"document_count"`
-	TotalChunks         int       `json:"total_chunks"`
-	Source              string    `json:"source"`
-	CreatedBy           *string   `json:"created_by,omitempty"`
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at"`
+	ID                  string  `json:"id"`
+	Name                string  `json:"name"`
+	CollectionID        *string `json:"collection_id,omitempty"` // Collection this KB belongs to
+	Namespace           string  `json:"namespace"`
+	Description         string  `json:"description,omitempty"`
+	EmbeddingModel      string  `json:"embedding_model"`
+	EmbeddingDimensions int     `json:"embedding_dimensions"`
+	ChunkSize           int     `json:"chunk_size"`
+	ChunkOverlap        int     `json:"chunk_overlap"`
+	ChunkStrategy       string  `json:"chunk_strategy"`
+	Enabled             bool    `json:"enabled"`
+	DocumentCount       int     `json:"document_count"`
+	TotalChunks         int     `json:"total_chunks"`
+	Source              string  `json:"source"`
+	CreatedBy           *string `json:"created_by,omitempty"`
+	// Access control
+	OwnerID    *string      `json:"owner_id,omitempty"`
+	Visibility KBVisibility `json:"visibility"`
+	CreatedAt  time.Time    `json:"created_at"`
+	UpdatedAt  time.Time    `json:"updated_at"`
 }
 
 // KnowledgeBaseSummary is a lightweight version for listing
 type KnowledgeBaseSummary struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Namespace     string `json:"namespace"`
-	Description   string `json:"description,omitempty"`
-	Enabled       bool   `json:"enabled"`
-	DocumentCount int    `json:"document_count"`
-	TotalChunks   int    `json:"total_chunks"`
-	UpdatedAt     string `json:"updated_at"`
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	Namespace      string  `json:"namespace"`
+	Description    string  `json:"description,omitempty"`
+	Enabled        bool    `json:"enabled"`
+	DocumentCount  int     `json:"document_count"`
+	TotalChunks    int     `json:"total_chunks"`
+	UpdatedAt      string  `json:"updated_at"`
+	Visibility     string  `json:"visibility,omitempty"`
+	UserPermission string  `json:"user_permission,omitempty"`
+	OwnerID        *string `json:"owner_id,omitempty"`
 }
 
 // ToSummary converts a KnowledgeBase to a summary
@@ -48,6 +55,14 @@ func (kb *KnowledgeBase) ToSummary() KnowledgeBaseSummary {
 		DocumentCount: kb.DocumentCount,
 		TotalChunks:   kb.TotalChunks,
 		UpdatedAt:     kb.UpdatedAt.Format(time.RFC3339),
+		Visibility:    string(kb.Visibility),
+		OwnerID: func() *string {
+			if kb.OwnerID != nil {
+				id := *kb.OwnerID
+				return &id
+			}
+			return nil
+		}(),
 	}
 }
 
@@ -197,6 +212,7 @@ type RetrievalLog struct {
 // CreateKnowledgeBaseRequest is the request to create a knowledge base
 type CreateKnowledgeBaseRequest struct {
 	Name                string `json:"name"`
+	CollectionID        string `json:"collection_id"` // Collection to create KB in (required for permission check)
 	Namespace           string `json:"namespace,omitempty"`
 	Description         string `json:"description,omitempty"`
 	EmbeddingModel      string `json:"embedding_model,omitempty"`
@@ -258,4 +274,32 @@ func DefaultKnowledgeBaseConfig() CreateKnowledgeBaseRequest {
 		ChunkOverlap:        50,
 		ChunkStrategy:       string(ChunkingStrategyRecursive),
 	}
+}
+
+// KBVisibility defines who can access the KB
+type KBVisibility string
+
+const (
+	KBVisibilityPrivate KBVisibility = "private" // Owner only
+	KBVisibilityShared  KBVisibility = "shared"  // Explicit permissions
+	KBVisibilityPublic  KBVisibility = "public"  // All authenticated users
+)
+
+// KBPermission defines access level
+type KBPermission string
+
+const (
+	KBPermissionViewer KBPermission = "viewer" // Read only
+	KBPermissionEditor KBPermission = "editor" // Read + write
+	KBPermissionOwner  KBPermission = "owner"  // Full control
+)
+
+// KBPermissionGrant represents a permission grant
+type KBPermissionGrant struct {
+	ID              string       `json:"id"`
+	KnowledgeBaseID string       `json:"knowledge_base_id"`
+	UserID          string       `json:"user_id"`
+	Permission      KBPermission `json:"permission"`
+	GrantedBy       *string      `json:"granted_by,omitempty"`
+	GrantedAt       time.Time    `json:"granted_at"`
 }

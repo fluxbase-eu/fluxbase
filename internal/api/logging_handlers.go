@@ -253,28 +253,28 @@ func (h *LoggingHandler) GenerateTestLogs(c fiber.Ctx) error {
 	testLogs := []*storage.LogEntry{
 		{
 			Category: storage.LogCategorySystem,
-			Level:     storage.LogLevelInfo,
-			Message:   "Test info log from admin endpoint",
-			Fields:    map[string]any{"test": true, "component": "admin_test"},
+			Level:    storage.LogLevelInfo,
+			Message:  "Test info log from admin endpoint",
+			Fields:   map[string]any{"test": true, "component": "admin_test"},
 		},
 		{
 			Category: storage.LogCategorySystem,
-			Level:     storage.LogLevelWarn,
-			Message:   "Test warn log from admin endpoint",
-			Fields:    map[string]any{"test": true, "component": "admin_test"},
+			Level:    storage.LogLevelWarn,
+			Message:  "Test warn log from admin endpoint",
+			Fields:   map[string]any{"test": true, "component": "admin_test"},
 		},
 		{
 			Category: storage.LogCategorySystem,
-			Level:     storage.LogLevelError,
-			Message:   "Test error log from admin endpoint",
-			Fields:    map[string]any{"test": true, "component": "admin_test"},
+			Level:    storage.LogLevelError,
+			Message:  "Test error log from admin endpoint",
+			Fields:   map[string]any{"test": true, "component": "admin_test"},
 		},
 		{
 			Category: storage.LogCategoryHTTP,
-			Level:     storage.LogLevelInfo,
-			Message:   "Test HTTP log - page navigation simulation",
+			Level:    storage.LogLevelInfo,
+			Message:  "Test HTTP log - page navigation simulation",
 			Fields: map[string]any{
-				"test":       true,
+				"test":        true,
 				"method":      "GET",
 				"path":        "/admin/logs/test",
 				"status_code": 200,
@@ -294,7 +294,7 @@ func (h *LoggingHandler) GenerateTestLogs(c fiber.Ctx) error {
 		"count":        len(testLogs),
 		"check_page":   "/admin/logs",
 		"check_db":     "Query logging.logs table directly",
-		"check_stream":  "Look for WebSocket log_entry messages",
+		"check_stream": "Look for WebSocket log_entry messages",
 	})
 }
 

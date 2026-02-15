@@ -10,6 +10,7 @@ import {
   Shield,
   ArrowRight,
   ArrowLeft,
+  Loader2,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Main } from '@/components/layout/main'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { clientKeysApi, type ClientKey } from '@/lib/api'
 
 type Step = 'welcome' | 'features' | 'api-keys'
 
@@ -52,6 +54,47 @@ export function OnboardingWizard() {
 
   const [currentStep, setCurrentStep] = useState<Step>('welcome')
   const [state, setState] = useState<OnboardingState>(defaultState)
+  const [anonKey, setAnonKey] = useState<string | null>(null)
+  const [isLoadingAnonKey, setIsLoadingAnonKey] = useState(false)
+
+  // Fetch anon key when component mounts or step changes to api-keys
+  useEffect(() => {
+    const fetchAnonKey = async () => {
+      if (currentStep !== 'api-keys') return
+
+      setIsLoadingAnonKey(true)
+      try {
+        const keys = await clientKeysApi.list()
+
+        // Look for an existing anon/public key
+        const existingAnonKey = keys.find(
+          (k: ClientKey) =>
+            k.name.toLowerCase().includes('anon') ||
+            k.name.toLowerCase().includes('public')
+        )
+
+        if (existingAnonKey) {
+          // For existing keys, just show the prefix since the full key isn't returned
+          setAnonKey(existingAnonKey.key_prefix + '...')
+        } else {
+          // Create a new anon key if none exists
+          const created = await clientKeysApi.create({
+            name: 'Default Anonymous Key',
+            scopes: ['read:*', 'write:*'],
+            rate_limit_per_minute: 100,
+          })
+          setAnonKey(created.key)
+        }
+      } catch {
+        // Failed to fetch anon key, set a placeholder key on error
+        setAnonKey(null)
+      } finally {
+        setIsLoadingAnonKey(false)
+      }
+    }
+
+    fetchAnonKey()
+  }, [currentStep])
 
   // Check if onboarding was already completed
   useEffect(() => {
@@ -379,17 +422,26 @@ export function OnboardingWizard() {
                     <Label>Anonymous Key (Public)</Label>
                     <div className='mt-1.5 flex items-center gap-2'>
                       <code className='bg-background flex-1 break-all rounded border px-3 py-2 text-sm font-mono'>
-                        {/* TODO: Get actual anon key from API */}
-                        eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                        {isLoadingAnonKey ? (
+                          <span className='flex items-center gap-2'>
+                            <Loader2 className='h-3 w-3 animate-spin' />
+                            Loading key...
+                          </span>
+                        ) : anonKey ? (
+                          anonKey
+                        ) : (
+                          'No anon key available. Create one in the dashboard.'
+                        )}
                       </code>
                       <Button
                         variant='outline'
                         size='sm'
+                        disabled={!anonKey || isLoadingAnonKey}
                         onClick={() => {
-                          navigator.clipboard.writeText(
-                            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-                          )
-                          toast.success('Key copied to clipboard')
+                          if (anonKey) {
+                            navigator.clipboard.writeText(anonKey)
+                            toast.success('Key copied to clipboard')
+                          }
                         }}
                       >
                         Copy

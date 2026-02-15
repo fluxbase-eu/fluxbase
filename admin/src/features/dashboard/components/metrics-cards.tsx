@@ -1,9 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowUpRight, ArrowDownRight, Minus, Users, Activity, HardDrive, Zap } from 'lucide-react'
+import { useFluxbaseClient } from '@fluxbase/sdk-react'
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  Users,
+  Activity,
+  HardDrive,
+  Zap,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { useFluxbaseClient } from '@fluxbase/sdk-react'
 
 interface MetricCardProps {
   title: string
@@ -15,7 +23,15 @@ interface MetricCardProps {
   isLoading?: boolean
 }
 
-function MetricCard({ title, value, unit, trend, trendLabel, icon, isLoading }: MetricCardProps) {
+function MetricCard({
+  title,
+  value,
+  unit,
+  trend,
+  trendLabel,
+  icon,
+  isLoading,
+}: MetricCardProps) {
   return (
     <Card>
       <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -29,7 +45,11 @@ function MetricCard({ title, value, unit, trend, trendLabel, icon, isLoading }: 
           <>
             <div className='text-2xl font-bold'>
               {typeof value === 'number' ? value.toLocaleString() : value}
-              {unit && <span className='text-sm font-normal text-muted-foreground ml-1'>{unit}</span>}
+              {unit && (
+                <span className='text-muted-foreground ml-1 text-sm font-normal'>
+                  {unit}
+                </span>
+              )}
             </div>
             {typeof trend === 'number' && (
               <div className='flex items-center gap-1 text-xs'>
@@ -38,12 +58,16 @@ function MetricCard({ title, value, unit, trend, trendLabel, icon, isLoading }: 
                 ) : trend < 0 ? (
                   <ArrowDownRight className='h-3 w-3 text-red-500' />
                 ) : (
-                  <Minus className='h-3 w-3 text-muted-foreground' />
+                  <Minus className='text-muted-foreground h-3 w-3' />
                 )}
                 <span
                   className={cn(
                     'font-medium',
-                    trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-500' : 'text-muted-foreground'
+                    trend > 0
+                      ? 'text-green-500'
+                      : trend < 0
+                        ? 'text-red-500'
+                        : 'text-muted-foreground'
                   )}
                 >
                   {Math.abs(trend)}%
@@ -70,15 +94,18 @@ export function MetricsCards() {
         if (error) return 0
 
         const today = new Date()
-        return data?.users.filter((u: any) => {
-          if (!u.last_sign_in) return false
-          const lastSignIn = new Date(u.last_sign_in)
-          return (
-            lastSignIn.getDate() === today.getDate() &&
-            lastSignIn.getMonth() === today.getMonth() &&
-            lastSignIn.getFullYear() === today.getFullYear()
-          )
-        }).length ?? 0
+        return (
+          data?.users.filter((u) => {
+            const lastLogin = u.last_login_at
+            if (!lastLogin) return false
+            const lastLoginDate = new Date(lastLogin)
+            return (
+              lastLoginDate.getDate() === today.getDate() &&
+              lastLoginDate.getMonth() === today.getMonth() &&
+              lastLoginDate.getFullYear() === today.getFullYear()
+            )
+          }).length ?? 0
+        )
       } catch {
         return 0
       }

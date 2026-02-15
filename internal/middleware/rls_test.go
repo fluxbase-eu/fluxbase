@@ -334,8 +334,8 @@ func TestRLSMiddleware_WithUserRole(t *testing.T) {
 
 	app.Get("/test", func(c fiber.Ctx) error {
 		rlsCtx := GetRLSContext(c)
-		// user_role should override default "authenticated"
-		assert.Equal(t, "admin", rlsCtx.Role)
+		// Application role "admin" is mapped to database role "authenticated"
+		assert.Equal(t, "authenticated", rlsCtx.Role)
 		assert.Equal(t, "admin-123", rlsCtx.UserID)
 		return c.SendString("OK")
 	})

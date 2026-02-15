@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { driver } from 'driver.js'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { driver, type Config, type Driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
-import type { Config } from 'driver.js'
 import { tours } from '@/lib/tours'
 
 interface UseTourOptions {
@@ -12,7 +11,7 @@ interface UseTourOptions {
 }
 
 export function useTour({ tourId, autoStart = false, onComplete, onSkip }: UseTourOptions) {
-  const driverObj = useRef<any>(null)
+  const driverObj = useRef<Driver | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   const [isCompleted, setIsCompleted] = useState(() => {
     const completedTours = localStorage.getItem('fluxbase_completed_tours') || ''
@@ -22,13 +21,13 @@ export function useTour({ tourId, autoStart = false, onComplete, onSkip }: UseTo
   const tour = tours[tourId]
   const storageKey = 'fluxbase_completed_tours'
 
-  const startTour = () => {
+  const startTour = useCallback(() => {
     if (!tour || isRunning) return
-
-    setIsRunning(true)
 
     // Small delay to ensure DOM is ready
     setTimeout(() => {
+      setIsRunning(true)
+
       driverObj.current = driver({
         showProgress: true,
         steps: tour.steps,
@@ -65,27 +64,28 @@ export function useTour({ tourId, autoStart = false, onComplete, onSkip }: UseTo
             font-weight: 500;
           }
         `,
+        onDestroyed: (_element, _step, { driver: drv }) => {
+          setIsRunning(false)
+          const state = drv.getState()
+          const wasCompleted = state.activeIndex === tour.steps.length - 1
+
+          if (wasCompleted) {
+            // Tour was completed
+            const completedTours = localStorage.getItem(storageKey) || ''
+            const newCompleted = [...completedTours.split(','), tourId].filter(Boolean).join(',')
+            localStorage.setItem(storageKey, newCompleted)
+            setIsCompleted(true)
+            onComplete?.()
+          } else {
+            // Tour was skipped
+            onSkip?.()
+          }
+        },
       } as Config)
 
-      driverObj.current.drive()
-
-      driverObj.current.on('destroyed', (cancelled: boolean) => {
-        setIsRunning(false)
-
-        if (!cancelled) {
-          // Tour was completed
-          const completedTours = localStorage.getItem(storageKey) || ''
-          const newCompleted = [...completedTours.split(','), tourId].filter(Boolean).join(',')
-          localStorage.setItem(storageKey, newCompleted)
-          setIsCompleted(true)
-          onComplete?.()
-        } else {
-          // Tour was skipped
-          onSkip?.()
-        }
-      })
+      driverObj.current?.drive()
     }, 300)
-  }
+  }, [tour, isRunning, tourId, storageKey, onComplete, onSkip])
 
   const skipTour = () => {
     driverObj.current?.destroy()
@@ -97,7 +97,7 @@ export function useTour({ tourId, autoStart = false, onComplete, onSkip }: UseTo
     if (autoStart && !isCompleted && tour) {
       startTour()
     }
-  }, [autoStart, isCompleted, tourId])
+  }, [autoStart, isCompleted, tour, startTour])
 
   // Cleanup on unmount
   useEffect(() => {

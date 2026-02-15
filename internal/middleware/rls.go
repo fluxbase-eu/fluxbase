@@ -72,15 +72,18 @@ func RLSMiddleware(config RLSConfig) fiber.Handler {
 
 		// Store RLS context for use in query execution
 		c.Locals("rls_user_id", userID)
-		c.Locals("rls_role", "authenticated")
 
-		// Also check for admin/superuser role if present
+		// Map application role to database role (handles dashboard_admin -> service_role)
 		// Important: Check for both non-nil AND non-empty string to avoid
 		// overwriting "authenticated" default with empty string (which maps to "anon")
 		if role := c.Locals("user_role"); role != nil {
 			if roleStr, ok := role.(string); ok && roleStr != "" {
-				c.Locals("rls_role", roleStr)
+				c.Locals("rls_role", mapAppRoleToDatabaseRole(roleStr))
+			} else {
+				c.Locals("rls_role", "authenticated")
 			}
+		} else {
+			c.Locals("rls_role", "authenticated")
 		}
 
 		log.Debug().

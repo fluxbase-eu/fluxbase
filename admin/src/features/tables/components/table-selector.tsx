@@ -11,9 +11,10 @@ import {
   Eye,
   Layers,
   Shield,
+  Upload,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { databaseApi, type TableInfo } from '@/lib/api'
+import { databaseApi, sqlApi, type TableInfo } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -116,6 +117,12 @@ export function TableSelector({
     table: string
     column: string
   } | null>(null)
+
+  // SQL Import state
+  const [showImportSQL, setShowImportSQL] = useState(false)
+  const [_, setSqlFile] = useState<File | null>(null)
+  const [sqlContent, setSqlContent] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
 
   const { data: schemas, isLoading: schemasLoading } = useQuery({
     queryKey: ['schemas'],
@@ -415,11 +422,10 @@ export function TableSelector({
                       {
                         label: 'Import SQL',
                         onClick: () => {
-                          // TODO: Implement SQL import
-                          toast.info('SQL import feature coming soon')
+                          setShowImportSQL(true)
                         },
                         variant: 'outline',
-                        icon: null,
+                        icon: <Upload className='h-4 w-4' />,
                       },
                     ]}
                   />
@@ -1115,6 +1121,92 @@ export function TableSelector({
           }
         }}
       />
+
+      {/* SQL Import Dialog */}
+      <Dialog open={showImportSQL} onOpenChange={setShowImportSQL}>
+        <DialogContent className='sm:max-w-[600px]'>
+          <DialogHeader>
+            <DialogTitle>Import SQL</DialogTitle>
+            <DialogDescription>
+              Import a SQL file to create tables and schema. This will execute the SQL commands directly on the database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='sql-file'>SQL File</Label>
+              <Input
+                id='sql-file'
+                type='file'
+                accept='.sql,text/plain'
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setSqlFile(file)
+                    // Read file content
+                    const reader = new FileReader()
+                    reader.onload = (ev) => {
+                      setSqlContent(ev.target?.result as string || '')
+                    }
+                    reader.readAsText(file)
+                  }
+                }}
+              />
+            </div>
+            {sqlContent && (
+              <div className='space-y-2'>
+                <Label>SQL Content Preview</Label>
+                <div className='max-h-40 overflow-y-auto rounded-md border p-3'>
+                  <pre className='text-xs text-muted-foreground'>{sqlContent.slice(0, 1000)}{sqlContent.length > 1000 ? '...' : ''}</pre>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setShowImportSQL(false)
+                setSqlFile(null)
+                setSqlContent('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!sqlContent || isImporting}
+              onClick={async () => {
+                if (!sqlContent) return
+
+                setIsImporting(true)
+                try {
+                  const result = await sqlApi.execute(sqlContent)
+                  const successCount = result.results.filter(r => !r.error).length
+                  const errorCount = result.results.filter(r => r.error).length
+
+                  if (errorCount > 0) {
+                    toast.warning(`SQL executed with ${successCount} successful statements and ${errorCount} errors`)
+                  } else {
+                    toast.success(`SQL imported successfully (${successCount} statements executed)`)
+                  }
+
+                  setShowImportSQL(false)
+                  setSqlFile(null)
+                  setSqlContent('')
+
+                  // Refresh tables list
+                  queryClient.invalidateQueries({ queryKey: ['tables', selectedSchema] })
+                } catch (error) {
+                  toast.error(`Failed to import SQL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                } finally {
+                  setIsImporting(false)
+                }
+              }}
+            >
+              {isImporting ? 'Importing...' : 'Import SQL'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

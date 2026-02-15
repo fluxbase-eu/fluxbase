@@ -40,8 +40,8 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 			id, name, namespace, description,
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
-			enabled, source, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			enabled, source, created_by, visibility
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING created_at, updated_at
 	`
 
@@ -49,7 +49,7 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Namespace, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Source, kb.CreatedBy,
+		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility,
 	).Scan(&kb.CreatedAt, &kb.UpdatedAt)
 }
 
@@ -71,7 +71,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 		&kb.EmbeddingModel, &kb.EmbeddingDimensions,
 		&kb.ChunkSize, &kb.ChunkOverlap, &kb.ChunkStrategy,
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
-		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
+		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt, &kb.Visibility,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -89,7 +89,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBaseByName(ctx context.Context, name,
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
 			enabled, document_count, total_chunks,
-			source, created_by, created_at, updated_at
+			source, created_by, created_at, updated_at, visibility
 		FROM ai.knowledge_bases
 		WHERE name = $1 AND namespace = $2
 	`
@@ -100,7 +100,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBaseByName(ctx context.Context, name,
 		&kb.EmbeddingModel, &kb.EmbeddingDimensions,
 		&kb.ChunkSize, &kb.ChunkOverlap, &kb.ChunkStrategy,
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
-		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
+		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt, &kb.Visibility,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -157,7 +157,7 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 			name = $2, description = $3,
 			embedding_model = $4, embedding_dimensions = $5,
 			chunk_size = $6, chunk_overlap = $7, chunk_strategy = $8,
-			enabled = $9, updated_at = NOW()
+			enabled = $9, updated_at = NOW(), visibility = COALESCE($12, visibility)
 		WHERE id = $1
 		RETURNING updated_at
 	`
@@ -166,7 +166,7 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled,
+		kb.Enabled, kb.Visibility,
 	).Scan(&kb.UpdatedAt)
 }
 
@@ -1283,4 +1283,136 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBaseSimple(ctx context.Contex
 	}
 
 	return link, nil
+}
+
+// ============================================================================
+// Knowledge Base Ownership and Permissions
+// ============================================================================
+
+// ListUserKnowledgeBases returns KBs accessible to user
+func (s *KnowledgeBaseStorage) ListUserKnowledgeBases(ctx context.Context, userID string) ([]KnowledgeBaseSummary, error) {
+	query := `
+		SELECT kb.id, kb.name, kb.namespace, kb.description, kb.enabled,
+			   kb.document_count, kb.total_chunks, kb.visibility,
+			   kb.updated_at,
+			   CASE
+				   WHEN kbp.permission IS NOT NULL THEN kbp.permission
+				   WHEN kb.visibility = 'public' THEN 'viewer'
+				   ELSE NULL
+			   END as user_permission
+		FROM ai.knowledge_bases kb
+		LEFT JOIN ai.knowledge_base_permissions kbp
+			   ON kbp.knowledge_base_id = kb.id AND kbp.user_id = $1
+		WHERE kb.enabled = true
+		  AND (kbp.user_id = $1 OR kb.visibility = 'public')
+		ORDER BY kb.name
+	`
+
+	rows, err := s.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list user knowledge bases: %w", err)
+	}
+	defer rows.Close()
+
+	var kbs []KnowledgeBaseSummary
+	for rows.Next() {
+		var kb KnowledgeBase
+		var userPermission string
+		if err := rows.Scan(
+			&kb.ID, &kb.Name, &kb.Namespace, &kb.Description,
+			&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
+			&kb.UpdatedAt,
+			&userPermission,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan knowledge base row")
+			continue
+		}
+		summary := kb.ToSummary()
+		summary.UserPermission = userPermission
+		if kb.Visibility != "" {
+			summary.Visibility = string(kb.Visibility)
+		}
+		kbs = append(kbs, summary)
+	}
+
+	return kbs, nil
+}
+
+// CanUserAccessKB checks if user has access
+func (s *KnowledgeBaseStorage) CanUserAccessKB(ctx context.Context, kbID, userID string) bool {
+	var hasAccess bool
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM ai.knowledge_bases kb
+			LEFT JOIN ai.knowledge_base_permissions kbp
+				   ON kbp.knowledge_base_id = kb.id AND kbp.user_id = $2
+			WHERE kb.id = $1
+			  AND kb.enabled = true
+			  AND (kbp.user_id = $2 OR kb.visibility = 'public')
+		)
+	`
+	err := s.db.QueryRow(ctx, query, kbID, userID).Scan(&hasAccess)
+	return err == nil && hasAccess
+}
+
+// GrantKBPermission grants permission to user
+func (s *KnowledgeBaseStorage) GrantKBPermission(ctx context.Context, kbID, userID, permission string, grantedBy *string) (*KBPermissionGrant, error) {
+	// Upsert permission
+	query := `
+		INSERT INTO ai.knowledge_base_permissions (knowledge_base_id, user_id, permission, granted_by)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (knowledge_base_id, user_id)
+		DO UPDATE SET permission = $3, granted_by = $4, granted_at = NOW()
+		RETURNING id, knowledge_base_id, user_id, permission, granted_by, granted_at
+	`
+
+	var grant KBPermissionGrant
+	err := s.db.QueryRow(ctx, query, kbID, userID, permission, grantedBy).Scan(
+		&grant.ID, &grant.KnowledgeBaseID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to grant permission: %w", err)
+	}
+
+	return &grant, nil
+}
+
+// ListKBPermissions lists all permissions for a KB
+func (s *KnowledgeBaseStorage) ListKBPermissions(ctx context.Context, kbID string) ([]KBPermissionGrant, error) {
+	query := `
+		SELECT id, knowledge_base_id, user_id, permission, granted_by, granted_at
+		FROM ai.knowledge_base_permissions
+		WHERE knowledge_base_id = $1
+		ORDER BY granted_at DESC
+	`
+
+	rows, err := s.db.Query(ctx, query, kbID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list permissions: %w", err)
+	}
+	defer rows.Close()
+
+	var grants []KBPermissionGrant
+	for rows.Next() {
+		var grant KBPermissionGrant
+		if err := rows.Scan(
+			&grant.ID, &grant.KnowledgeBaseID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan permission row")
+			continue
+		}
+		grants = append(grants, grant)
+	}
+
+	return grants, nil
+}
+
+// RevokeKBPermission revokes permission from user
+func (s *KnowledgeBaseStorage) RevokeKBPermission(ctx context.Context, kbID, userID string) error {
+	query := `DELETE FROM ai.knowledge_base_permissions WHERE knowledge_base_id = $1 AND user_id = $2`
+	_, err := s.db.Exec(ctx, query, kbID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke permission: %w", err)
+	}
+	return nil
 }

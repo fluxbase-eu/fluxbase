@@ -27,7 +27,7 @@ func (t *SearchVectorsTool) Name() string {
 }
 
 func (t *SearchVectorsTool) Description() string {
-	return "Search for semantically similar content using vector embeddings. Requires a chatbot with linked knowledge bases."
+	return "Search for semantically similar content using vector embeddings"
 }
 
 func (t *SearchVectorsTool) InputSchema() map[string]any {
@@ -40,7 +40,7 @@ func (t *SearchVectorsTool) InputSchema() map[string]any {
 			},
 			"chatbot_id": map[string]any{
 				"type":        "string",
-				"description": "The chatbot ID (optional when called via chatbot context)",
+				"description": "The chatbot ID (optional, read from context if not provided)",
 			},
 			"knowledge_bases": map[string]any{
 				"type":        "array",
@@ -68,7 +68,7 @@ func (t *SearchVectorsTool) InputSchema() map[string]any {
 				},
 			},
 		},
-		"required": []string{"query"}, // chatbot_id is optional - will be read from context metadata if not provided
+		"required": []string{"query"}, // All other parameters are optional - project_id, knowledge_bases, chatbot_id will use context if not provided
 	}
 }
 
@@ -84,34 +84,14 @@ func (t *SearchVectorsTool) Execute(ctx context.Context, args map[string]any, au
 		}, nil
 	}
 
-	// Parse arguments
+	// Parse query
 	query, ok := args["query"].(string)
 	if !ok || query == "" {
 		return nil, fmt.Errorf("query is required")
 	}
 
-	// Try to get chatbot_id from args first, then fall back to metadata
+	// Parse chatbot_id (optional)
 	chatbotID, _ := args["chatbot_id"].(string)
-	if chatbotID == "" {
-		// Fall back to metadata (set by ChatbotAuthContext)
-		chatbotID = authCtx.GetMetadataString(mcp.MetadataKeyChatbotID)
-	}
-	if chatbotID == "" {
-		return nil, fmt.Errorf("chatbot_id is required (provide in args or context)")
-	}
-
-	limit := 5
-	if l, ok := args["limit"].(float64); ok {
-		limit = int(l)
-		if limit > 20 {
-			limit = 20
-		}
-	}
-
-	threshold := 0.7
-	if th, ok := args["threshold"].(float64); ok {
-		threshold = th
-	}
 
 	// Parse knowledge bases
 	var knowledgeBases []string
@@ -121,6 +101,21 @@ func (t *SearchVectorsTool) Execute(ctx context.Context, args map[string]any, au
 				knowledgeBases = append(knowledgeBases, kbStr)
 			}
 		}
+	}
+
+	// Parse limit
+	limit := 5
+	if l, ok := args["limit"].(float64); ok {
+		limit = int(l)
+		if limit > 20 {
+			limit = 20
+		}
+	}
+
+	// Parse threshold
+	threshold := 0.7
+	if th, ok := args["threshold"].(float64); ok {
+		threshold = th
 	}
 
 	// Parse tags
@@ -133,9 +128,22 @@ func (t *SearchVectorsTool) Execute(ctx context.Context, args map[string]any, au
 		}
 	}
 
+	// Determine which chatbot to use
+	// Priority: chatbot_id > context
+	var effectiveChatbotID string
+	if chatbotID != "" {
+		effectiveChatbotID = chatbotID
+	} else {
+		// Fall back to context (set by ChatbotAuthContext)
+		effectiveChatbotID = authCtx.GetMetadataString(mcp.MetadataKeyChatbotID)
+		if effectiveChatbotID == "" {
+			return nil, fmt.Errorf("chatbot_id must be specified when not using context")
+		}
+	}
+
 	log.Debug().
 		Str("query", query).
-		Str("chatbot_id", chatbotID).
+		Str("chatbot_id", effectiveChatbotID).
 		Int("limit", limit).
 		Float64("threshold", threshold).
 		Msg("MCP: Searching vectors")
@@ -143,7 +151,7 @@ func (t *SearchVectorsTool) Execute(ctx context.Context, args map[string]any, au
 	// Build search options
 	opts := ai.VectorSearchOptions{
 		Query:          query,
-		ChatbotID:      chatbotID,
+		ChatbotID:      effectiveChatbotID,
 		KnowledgeBases: knowledgeBases,
 		Limit:          limit,
 		Threshold:      threshold,

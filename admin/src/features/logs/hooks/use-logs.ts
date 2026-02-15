@@ -34,8 +34,25 @@ export function useLogs(
 export function useLogStats() {
   return useQuery<LogStatsAPI>({
     queryKey: ['log-stats'],
-    queryFn: logsApi.getStats,
+    queryFn: async () => {
+      try {
+        return await logsApi.getStats()
+      } catch (err) {
+        // If logging API is not available (404), return default stats
+        // instead of throwing an error
+        const error = err as { response?: { status?: number } }
+        if (error.response?.status === 404) {
+          return {
+            total_entries: 0,
+            entries_by_category: {},
+            entries_by_level: {},
+          }
+        }
+        throw err
+      }
+    },
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,
+    retry: 1, // Only retry once on failure
   })
 }
