@@ -707,7 +707,7 @@ jobs:
 
   publish-binaries:
     name: Publish Binaries
-    needs: get-version
+    needs: [get-version, create-release]
     if: github.event_name != 'workflow_dispatch' || inputs.publish_binaries
     strategy:
       matrix:
@@ -815,7 +815,7 @@ jobs:
 
   publish-cli-cross-platform:
     name: Publish CLI (Cross-Platform)
-    needs: get-version
+    needs: [get-version, create-release]
     if: github.event_name != 'workflow_dispatch' || inputs.publish_binaries
     strategy:
       matrix:
