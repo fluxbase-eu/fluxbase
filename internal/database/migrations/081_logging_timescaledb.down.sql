@@ -1,6 +1,12 @@
--- Rollback TimescaleDB extension
--- Warning: This will fail if the logging.entries table has been converted to a hypertable
--- The table must be converted back to a regular table before dropping TimescaleDB
-
--- Drop the TimescaleDB extension ( CASCADE removes dependent objects )
-DROP EXTENSION IF EXISTS timescaledb CASCADE;
+-- TimescaleDB Support - Rollback
+--
+-- This migration was purely documentation (no schema changes).
+-- To remove TimescaleDB support:
+--
+-- 1. The application will handle cleanup if configured to do so
+-- 2. Manual removal requires:
+--    a. Convert hypertable back to regular table (if applicable)
+--    b. Drop the extension: DROP EXTENSION IF EXISTS timescaledb CASCADE;
+--
+-- Note: Dropping TimescaleDB extension will CASCADE and remove dependent objects.
+-- Ensure logging.entries is converted back to a regular table first if needed.

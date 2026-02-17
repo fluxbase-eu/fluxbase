@@ -1,41 +1,35 @@
--- Enable TimescaleDB extension for the logging system
--- This migration enables TimescaleDB features for improved time-series data handling
--- including automatic partitioning, compression, and retention policies
+-- TimescaleDB Support for Logging System
 --
--- Note: This migration is optional - if TimescaleDB is not available,
--- the logging system will fall back to regular PostgreSQL storage
-
-DO $$
-BEGIN
-    -- Try to create TimescaleDB extension (if not already installed)
-    -- This will fail gracefully if TimescaleDB is not available in the PostgreSQL instance
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-        RAISE NOTICE 'TimescaleDB extension enabled successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'TimescaleDB extension not available, logging will use regular PostgreSQL';
-    END;
-END $$;
-
--- Note: The actual conversion to hypertable is handled at application runtime
--- by the TimescaleDBLogStorage initializer. This is necessary because:
+-- This migration documents TimescaleDB support for the logging system.
+-- TimescaleDB provides enhanced features for time-series log data including:
+-- - Automatic time-based partitioning (hypertables)
+-- - Compression of old data
+-- - Automated retention policies
+-- - Improved query performance for time-series data
 --
--- 1. TimescaleDB hypertables are incompatible with PostgreSQL's declarative partitioning
--- 2. We need to drop existing partitions before converting to hypertable
--- 3. The application determines when/how to enable TimescaleDB based on configuration
+-- PREREQUISITES:
+-- To use TimescaleDB features, the PostgreSQL server must have the TimescaleDB
+-- extension installed. See: https://docs.timescale.com/self-hosted/latest/install/
 --
--- To enable TimescaleDB features, the application will:
--- 1. Drop existing partition tables (entries_system, entries_http, etc.)
--- 2. Remove partitioning constraint from parent table
--- 3. Execute: SELECT create_hypertable('logging.entries', 'timestamp', if_not_exists => TRUE);
--- 4. Optionally enable compression: ALTER TABLE logging.entries SET (timescaledb.compress = TRUE);
--- 5. Add compression/retention policies as needed
-
--- Create comments for documentation (only if extension exists)
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
-        COMMENT ON EXTENSION timescaledb IS 'TimescaleDB for time-series optimization of log data';
-    END IF;
-END $$;
+-- FOR DEVELOPERS:
+-- The application runtime code (internal/storage/log_timescaledb.go) handles
+-- TimescaleDB initialization automatically when configured with:
+--   logging.backend: timescaledb or postgres-timescaledb
+--
+-- The application will:
+-- 1. Create the TimescaleDB extension if not present
+-- 2. Convert logging.entries to a hypertable
+-- 3. Enable compression and retention policies (if configured)
+--
+-- OPTIONAL MIGRATION:
+-- If TimescaleDB is available and you want to enable it manually before running
+-- the application, execute the following SQL:
+--
+--   CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+--
+-- Note: This is optional - the application will create the extension if needed.
+--
+-- WITHOUT TIMESCALEDB:
+-- If TimescaleDB is not installed, the logging system will fall back to
+-- regular PostgreSQL storage using native table partitioning. All logging
+-- features will work correctly, just without TimescaleDB optimizations.
