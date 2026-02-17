@@ -8,15 +8,21 @@ import {
   Settings,
   Search,
   FileText,
+  Users,
+  Lock,
+  Globe,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   knowledgeBasesApi,
   userKnowledgeBasesApi,
-  collectionsApi,
+  userManagementApi,
   type KnowledgeBaseSummary,
   type CreateKnowledgeBaseRequest,
-  type CollectionSummary,
+  type KBVisibility,
+  type KBPermission,
+  type EnrichedUser,
 } from '@/lib/api'
 import {
   AlertDialog,
@@ -66,31 +72,25 @@ function KnowledgeBasesPage() {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseSummary[]>(
     []
   )
-  const [collections, setCollections] = useState<CollectionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [users, setUsers] = useState<EnrichedUser[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
   const [newKB, setNewKB] = useState<CreateKnowledgeBaseRequest>({
     name: '',
-    collection_id: '', // Required - must be set before creation
     description: '',
+    visibility: 'private',
+    default_user_permission: 'viewer',
     chunk_size: 512,
     chunk_overlap: 50,
     chunk_strategy: 'recursive',
+    initial_permissions: [],
   })
-
-  const fetchCollections = async () => {
-    try {
-      const data = await collectionsApi.list()
-      // Filter to collections where user has editor or owner role
-      const editableCollections = data.filter(
-        (c) => c.current_user_role === 'editor' || c.current_user_role === 'owner'
-      )
-      setCollections(editableCollections)
-    } catch {
-      toast.error('Failed to fetch collections')
-    }
-  }
+  const [newPermission, setNewPermission] = useState<{
+    user_id: string
+    permission: KBPermission
+  }>({ user_id: '', permission: 'viewer' })
 
   const fetchKnowledgeBases = async () => {
     setLoading(true)
@@ -104,14 +104,48 @@ function KnowledgeBasesPage() {
     }
   }
 
+  const fetchUsers = async () => {
+    if (users.length > 0) return // Already loaded
+    setUsersLoading(true)
+    try {
+      const { users: data } = await userManagementApi.listUsers('app')
+      setUsers(data || [])
+    } catch {
+      toast.error('Failed to fetch users')
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  const addPermission = () => {
+    if (!newPermission.user_id) {
+      toast.error('Please select a user')
+      return
+    }
+    if (newKB.initial_permissions?.some(p => p.user_id === newPermission.user_id)) {
+      toast.error('User already has permission')
+      return
+    }
+    setNewKB({
+      ...newKB,
+      initial_permissions: [
+        ...(newKB.initial_permissions || []),
+        { user_id: newPermission.user_id, permission: newPermission.permission },
+      ],
+    })
+    setNewPermission({ user_id: '', permission: 'viewer' })
+  }
+
+  const removePermission = (userId: string) => {
+    setNewKB({
+      ...newKB,
+      initial_permissions: newKB.initial_permissions?.filter(p => p.user_id !== userId) || [],
+    })
+  }
+
   const handleCreate = async () => {
     if (!newKB.name.trim()) {
       toast.error('Name is required')
-      return
-    }
-
-    if (!newKB.collection_id) {
-      toast.error('Please select a collection')
       return
     }
 
@@ -121,12 +155,15 @@ function KnowledgeBasesPage() {
       setCreateDialogOpen(false)
       setNewKB({
         name: '',
-        collection_id: '',
         description: '',
+        visibility: 'private',
+        default_user_permission: 'viewer',
         chunk_size: 512,
         chunk_overlap: 50,
         chunk_strategy: 'recursive',
+        initial_permissions: [],
       })
+      setNewPermission({ user_id: '', permission: 'viewer' })
       await fetchKnowledgeBases()
     } catch (error) {
       const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to create knowledge base'
@@ -158,8 +195,13 @@ function KnowledgeBasesPage() {
 
   useEffect(() => {
     fetchKnowledgeBases()
-    fetchCollections()
   }, [])
+
+  useEffect(() => {
+    if (createDialogOpen) {
+      fetchUsers()
+    }
+  }, [createDialogOpen])
 
   if (loading) {
     return (
@@ -233,48 +275,11 @@ function KnowledgeBasesPage() {
               <DialogHeader>
                 <DialogTitle>Create Knowledge Base</DialogTitle>
                 <DialogDescription>
-                  Create a new knowledge base in a collection. You can only create
-                  knowledge bases in collections where you have editor or owner role.
+                  Create a new knowledge base to store documents for RAG-powered AI
+                  chatbots.
                 </DialogDescription>
               </DialogHeader>
-              {collections.length === 0 ? (
-                <div className='py-8 text-center'>
-                  <p className='text-muted-foreground mb-4'>
-                    No collections available. You need editor or owner role in a
-                    collection to create knowledge bases.
-                  </p>
-                  <Button
-                    variant='outline'
-                    onClick={() => navigate({ to: '/collections' })}
-                  >
-                    Go to Collections
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className='grid gap-4 py-4'>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='collection'>Collection *</Label>
-                      <select
-                        id='collection'
-                        value={newKB.collection_id}
-                        onChange={(e) =>
-                          setNewKB({ ...newKB, collection_id: e.target.value })
-                        }
-                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
-                      >
-                        <option value=''>Select a collection...</option>
-                        {collections.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} ({c.current_user_role})
-                          </option>
-                        ))}
-                      </select>
-                      <p className='text-muted-foreground text-xs'>
-                        You can only create KBs in collections where you have
-                        editor or owner role
-                      </p>
-                    </div>
+              <div className='grid gap-4 py-4 max-h-[60vh] overflow-y-auto'>
                 <div className='grid gap-2'>
                   <Label htmlFor='name'>Name</Label>
                   <Input
@@ -285,6 +290,54 @@ function KnowledgeBasesPage() {
                     }
                     placeholder='e.g., product-docs'
                   />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='description'>Description</Label>
+                  <Textarea
+                    id='description'
+                    value={newKB.description || ''}
+                    onChange={(e) =>
+                      setNewKB({ ...newKB, description: e.target.value })
+                    }
+                    placeholder='What kind of documents will this knowledge base contain?'
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='visibility'>Visibility</Label>
+                  <select
+                    id='visibility'
+                    value={newKB.visibility}
+                    onChange={(e) =>
+                      setNewKB({ ...newKB, visibility: e.target.value as KBVisibility })
+                    }
+                    className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+                  >
+                    <option value='private'>Private - Only you can access</option>
+                    <option value='shared'>Shared - Specific users you grant access</option>
+                    <option value='public'>Public - All authenticated users can contribute</option>
+                  </select>
+                  <p className='text-muted-foreground text-xs'>
+                    {newKB.visibility === 'private' && 'Only you will be able to access this knowledge base.'}
+                    {newKB.visibility === 'shared' && 'Grant access to specific users below.'}
+                    {newKB.visibility === 'public' && 'All authenticated users can add documents. Each user can only see their own documents unless explicitly shared.'}
+                  </p>
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='default_user_permission'>Default User Permission</Label>
+                  <select
+                    id='default_user_permission'
+                    value={newKB.default_user_permission}
+                    onChange={(e) =>
+                      setNewKB({ ...newKB, default_user_permission: e.target.value as KBPermission })
+                    }
+                    className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+                  >
+                    <option value='viewer'>Viewer - Users can add and view their own documents</option>
+                    <option value='editor'>Editor - Users can add and edit their own documents</option>
+                  </select>
+                  <p className='text-muted-foreground text-xs'>
+                    Default permission level for all authenticated users. Users can always see their own documents plus documents shared with them.
+                  </p>
                 </div>
                 <div className='grid gap-2'>
                   <Label htmlFor='description'>Description</Label>
@@ -333,6 +386,65 @@ function KnowledgeBasesPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Permissions Section */}
+                {newKB.visibility === 'shared' && (
+                  <div className='grid gap-3 border-t pt-4'>
+                    <Label className='flex items-center gap-2'>
+                      <Users className='h-4 w-4' />
+                      Share with Users
+                    </Label>
+                    <div className='flex gap-2'>
+                      <select
+                        value={newPermission.user_id}
+                        onChange={(e) =>
+                          setNewPermission({ ...newPermission, user_id: e.target.value })
+                        }
+                        className='flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+                        disabled={usersLoading}
+                      >
+                        <option value=''>Select a user...</option>
+                        {users.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.email || u.id}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={newPermission.permission}
+                        onChange={(e) =>
+                          setNewPermission({ ...newPermission, permission: e.target.value as KBPermission })
+                        }
+                        className='flex h-9 w-32 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+                      >
+                        <option value='viewer'>Viewer</option>
+                        <option value='editor'>Editor</option>
+                      </select>
+                      <Button onClick={addPermission} size='sm' variant='outline'>
+                        <Plus className='h-4 w-4' />
+                      </Button>
+                    </div>
+                    {newKB.initial_permissions && newKB.initial_permissions.length > 0 && (
+                      <div className='flex flex-wrap gap-2'>
+                        {newKB.initial_permissions.map((perm) => {
+                          const user = users.find((u) => u.id === perm.user_id)
+                          return (
+                            <Badge key={perm.user_id} variant='secondary' className='gap-1 pr-1'>
+                              <span>{user?.email || perm.user_id}</span>
+                              <span className='text-muted-foreground'>({perm.permission})</span>
+                              <button
+                                onClick={() => removePermission(perm.user_id)}
+                                className='ml-1 hover:text-destructive'
+                              >
+                                <X className='h-3 w-3' />
+                              </button>
+                            </Badge>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button
@@ -343,13 +455,10 @@ function KnowledgeBasesPage() {
                 </Button>
                 <Button
                   onClick={handleCreate}
-                  disabled={!newKB.collection_id}
                 >
                   Create
                 </Button>
               </DialogFooter>
-                </>
-              )}
             </DialogContent>
           </Dialog>
         </div>
@@ -460,6 +569,21 @@ function KnowledgeBasesPage() {
                       {kb.namespace}
                     </Badge>
                   )}
+                  <Badge
+                    variant='outline'
+                    className={`w-fit text-[10px] flex items-center gap-1 ${
+                      kb.visibility === 'private'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        : kb.visibility === 'public'
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                    }`}
+                  >
+                    {kb.visibility === 'private' && <Lock className='h-3 w-3' />}
+                    {kb.visibility === 'public' && <Globe className='h-3 w-3' />}
+                    {kb.visibility === 'shared' && <Users className='h-3 w-3' />}
+                    {kb.visibility}
+                  </Badge>
                 </CardHeader>
                 <CardContent>
                   {kb.description && (

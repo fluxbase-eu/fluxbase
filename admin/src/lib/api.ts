@@ -1497,13 +1497,27 @@ export const bulkOperationsApi = {
   },
 
   // Bulk delete selected items
-  delete: async (table: string, targetIds: string[]): Promise<BulkActionResponse> => {
-    return bulkOperationsApi.execute({ action: 'delete', targets: targetIds, table })
+  delete: async (
+    table: string,
+    targetIds: string[]
+  ): Promise<BulkActionResponse> => {
+    return bulkOperationsApi.execute({
+      action: 'delete',
+      targets: targetIds,
+      table,
+    })
   },
 
   // Bulk export selected items
-  export: async (table: string, targetIds: string[]): Promise<BulkActionResponse> => {
-    return bulkOperationsApi.execute({ action: 'export', targets: targetIds, table })
+  export: async (
+    table: string,
+    targetIds: string[]
+  ): Promise<BulkActionResponse> => {
+    return bulkOperationsApi.execute({
+      action: 'export',
+      targets: targetIds,
+      table,
+    })
   },
 }
 
@@ -1570,7 +1584,10 @@ export interface SQLExecuteResponse {
 export const sqlApi = {
   // Execute SQL query
   execute: async (query: string): Promise<SQLExecuteResponse> => {
-    const response = await api.post<SQLExecuteResponse>('/admin/api/sql/execute', { query })
+    const response = await api.post<SQLExecuteResponse>(
+      '/admin/api/sql/execute',
+      { query }
+    )
     return response.data
   },
 }
@@ -2726,8 +2743,9 @@ export interface KnowledgeBaseSummary {
   embedding_model: string
   created_at: string
   updated_at: string
-  visibility?: string
-  user_permission?: string
+  visibility: KBVisibility
+  default_user_permission: KBPermission
+  user_permission?: KBPermission
   owner_id?: string
 }
 
@@ -2740,21 +2758,41 @@ export interface KnowledgeBase extends KnowledgeBaseSummary {
   created_by?: string
 }
 
+export type KBVisibility = 'private' | 'shared' | 'public'
+export type KBPermission = 'viewer' | 'editor' | 'owner'
+
+export interface KBPermissionGrant {
+  id: string
+  knowledge_base_id: string
+  user_id: string
+  permission: KBPermission
+  granted_by?: string
+  granted_at: string
+}
+
 export interface CreateKnowledgeBaseRequest {
   name: string
-  collection_id: string // Required - collection to create KB in
   namespace?: string
   description?: string
+  visibility?: KBVisibility
+  default_user_permission?: KBPermission
   embedding_model?: string
   embedding_dimensions?: number
   chunk_size?: number
   chunk_overlap?: number
   chunk_strategy?: string
+  // Initial permissions to grant upon creation
+  initial_permissions?: Array<{
+    user_id: string
+    permission: KBPermission
+  }>
 }
 
 export interface UpdateKnowledgeBaseRequest {
   name?: string
   description?: string
+  visibility?: KBVisibility
+  default_user_permission?: KBPermission
   embedding_model?: string
   embedding_dimensions?: number
   chunk_size?: number
@@ -2778,8 +2816,21 @@ export interface KnowledgeBaseDocument {
   error_message?: string
   metadata?: Record<string, string>
   tags?: string[]
+  owner_id?: string
   created_at: string
   updated_at: string
+}
+
+// Document permission types
+export type DocumentPermission = 'viewer' | 'editor'
+
+export interface DocumentPermissionGrant {
+  id: string
+  document_id: string
+  user_id: string
+  permission: DocumentPermission
+  granted_by: string
+  granted_at: string
 }
 
 export interface AddDocumentRequest {
@@ -3081,6 +3132,46 @@ export const knowledgeBasesApi = {
       `/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases/${kbId}`
     )
   },
+
+  // ============================================================================
+  // Document Permissions
+  // ============================================================================
+
+  // Grant permission on a document to a user
+  grantDocumentPermission: async (
+    kbId: string,
+    docId: string,
+    userId: string,
+    permission: DocumentPermission
+  ): Promise<DocumentPermissionGrant> => {
+    const response = await api.post<DocumentPermissionGrant>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${docId}/permissions`,
+      { user_id: userId, permission }
+    )
+    return response.data
+  },
+
+  // List permissions for a document
+  listDocumentPermissions: async (
+    kbId: string,
+    docId: string
+  ): Promise<DocumentPermissionGrant[]> => {
+    const response = await api.get<DocumentPermissionGrant[]>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${docId}/permissions`
+    )
+    return response.data
+  },
+
+  // Revoke permission from a user on a document
+  revokeDocumentPermission: async (
+    kbId: string,
+    docId: string,
+    userId: string
+  ): Promise<void> => {
+    await api.delete(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${docId}/permissions/${userId}`
+    )
+  },
 }
 
 // =============================================================================
@@ -3089,7 +3180,7 @@ export const knowledgeBasesApi = {
 // =============================================================================
 
 export const userKnowledgeBasesApi = {
-  // Create a knowledge base (requires collection_id and collection edit permission)
+  // Create a knowledge base
   create: async (data: CreateKnowledgeBaseRequest): Promise<KnowledgeBase> => {
     const response = await api.post<KnowledgeBase>(
       '/api/v1/ai/knowledge-bases',
@@ -3114,136 +3205,31 @@ export const userKnowledgeBasesApi = {
     )
     return response.data
   },
-}
 
-// =============================================================================
-// Collections API
-// =============================================================================
-
-export type CollectionMemberRole = 'viewer' | 'editor' | 'owner'
-
-export interface Collection {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  created_by: string | null
-  created_at: string
-  updated_at: string
-  // Derived fields
-  kb_count?: number
-  member_count?: number
-  current_user_role?: CollectionMemberRole | null
-}
-
-export interface CollectionSummary {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  kb_count?: number
-  member_count?: number
-  current_user_role?: CollectionMemberRole | null
-  created_at: string
-  updated_at: string
-}
-
-export interface CollectionMember {
-  user_id: string
-  email?: string
-  name?: string
-  role: CollectionMemberRole
-  added_by: string
-  added_at: string
-}
-
-export interface CreateCollectionRequest {
-  name: string
-  slug?: string
-  description?: string
-}
-
-export interface UpdateCollectionRequest {
-  name?: string
-  description?: string
-}
-
-export const collectionsApi = {
-  // List all collections for current user
-  list: async (): Promise<CollectionSummary[]> => {
-    const response = await api.get<{ collections: CollectionSummary[] }>(
-      '/api/v1/ai/collections'
+  // Share knowledge base with another user (grant permission)
+  share: async (
+    kbId: string,
+    userId: string,
+    permission: KBPermission
+  ): Promise<KBPermissionGrant> => {
+    const response = await api.post<KBPermissionGrant>(
+      `/api/v1/ai/knowledge-bases/${kbId}/share`,
+      { user_id: userId, permission }
     )
-    return response.data.collections || []
-  },
-
-  // Get collection details
-  get: async (id: string): Promise<Collection> => {
-    const response = await api.get<Collection>(`/api/v1/ai/collections/${id}`)
     return response.data
   },
 
-  // Create a new collection
-  create: async (data: CreateCollectionRequest): Promise<Collection> => {
-    const response = await api.post<Collection>('/api/v1/ai/collections', data)
+  // List permissions for a knowledge base
+  listPermissions: async (kbId: string): Promise<KBPermissionGrant[]> => {
+    const response = await api.get<KBPermissionGrant[]>(
+      `/api/v1/ai/knowledge-bases/${kbId}/permissions`
+    )
     return response.data
   },
 
-  // Update collection
-  update: async (id: string, data: UpdateCollectionRequest): Promise<Collection> => {
-    const response = await api.put<Collection>(`/api/v1/ai/collections/${id}`, data)
-    return response.data
-  },
-
-  // Delete collection
-  delete: async (id: string): Promise<void> => {
-    await api.delete(`/api/v1/ai/collections/${id}`)
-  },
-
-  // List knowledge bases in collection
-  listKnowledgeBases: async (collectionId: string): Promise<KnowledgeBaseSummary[]> => {
-    const response = await api.get<{ knowledge_bases: KnowledgeBaseSummary[] }>(
-      `/api/v1/ai/collections/${collectionId}/knowledge-bases`
-    )
-    return response.data.knowledge_bases || []
-  },
-
-  // Add knowledge base to collection
-  addKnowledgeBase: async (collectionId: string, kbId: string): Promise<void> => {
-    await api.post(`/api/v1/ai/collections/${collectionId}/knowledge-bases/${kbId}`, {})
-  },
-
-  // Remove knowledge base from collection
-  removeKnowledgeBase: async (collectionId: string, kbId: string): Promise<void> => {
-    await api.delete(`/api/v1/ai/collections/${collectionId}/knowledge-bases/${kbId}`)
-  },
-
-  // List collection members
-  listMembers: async (collectionId: string): Promise<CollectionMember[]> => {
-    const response = await api.get<{ members: CollectionMember[] }>(
-      `/api/v1/ai/collections/${collectionId}/members`
-    )
-    return response.data.members || []
-  },
-
-  // Add member to collection
-  addMember: async (collectionId: string, userId: string, role: CollectionMemberRole): Promise<void> => {
-    await api.post(`/api/v1/ai/collections/${collectionId}/members`, {
-      user_id: userId,
-      role,
-    })
-  },
-
-  // Remove member from collection
-  removeMember: async (collectionId: string, userId: string): Promise<void> => {
-    await api.delete(`/api/v1/ai/collections/${collectionId}/members/${userId}`)
-  },
-
-  // Update member role
-  updateMemberRole: async (collectionId: string, userId: string, role: CollectionMemberRole): Promise<void> => {
-    await api.put(`/api/v1/ai/collections/${collectionId}/members/${userId}`, {
-      role,
-    })
+  // Revoke permission from a user
+  revokePermission: async (kbId: string, userId: string): Promise<void> => {
+    await api.delete(`/api/v1/ai/knowledge-bases/${kbId}/permissions/${userId}`)
   },
 }
 

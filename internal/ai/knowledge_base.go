@@ -24,8 +24,9 @@ type KnowledgeBase struct {
 	Source              string  `json:"source"`
 	CreatedBy           *string `json:"created_by,omitempty"`
 	// Access control
-	OwnerID    *string      `json:"owner_id,omitempty"`
-	Visibility KBVisibility `json:"visibility"`
+	OwnerID               *string      `json:"owner_id,omitempty"`
+	Visibility            KBVisibility `json:"visibility"`
+	DefaultUserPermission KBPermission `json:"default_user_permission"` // Default permission for all authenticated users
 	// Quotas
 	QuotaMaxDocuments    int   `json:"quota_max_documents"`
 	QuotaMaxChunks       int   `json:"quota_max_chunks"`
@@ -90,6 +91,7 @@ type Document struct {
 	ChunksCount     int             `json:"chunks_count"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
 	Tags            []string        `json:"tags,omitempty"`
+	OwnerID         *string         `json:"owner_id,omitempty"` // Document owner
 	CreatedBy       *string         `json:"created_by,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
@@ -229,26 +231,38 @@ type RetrievalLog struct {
 
 // CreateKnowledgeBaseRequest is the request to create a knowledge base
 type CreateKnowledgeBaseRequest struct {
-	Name                string `json:"name"`
-	Namespace           string `json:"namespace,omitempty"`
-	Description         string `json:"description,omitempty"`
-	EmbeddingModel      string `json:"embedding_model,omitempty"`
-	EmbeddingDimensions int    `json:"embedding_dimensions,omitempty"`
-	ChunkSize           int    `json:"chunk_size,omitempty"`
-	ChunkOverlap        int    `json:"chunk_overlap,omitempty"`
-	ChunkStrategy       string `json:"chunk_strategy,omitempty"`
+	Name                  string        `json:"name"`
+	Namespace             string        `json:"namespace,omitempty"`
+	Description           string        `json:"description,omitempty"`
+	Visibility            *KBVisibility `json:"visibility,omitempty"`
+	DefaultUserPermission KBPermission  `json:"default_user_permission,omitempty"` // Default permission for all users
+	EmbeddingModel        string        `json:"embedding_model,omitempty"`
+	EmbeddingDimensions   int           `json:"embedding_dimensions,omitempty"`
+	ChunkSize             int           `json:"chunk_size,omitempty"`
+	ChunkOverlap          int           `json:"chunk_overlap,omitempty"`
+	ChunkStrategy         string        `json:"chunk_strategy,omitempty"`
+	// InitialPermissions grants permissions to users upon creation
+	InitialPermissions []KBInitialPermission `json:"initial_permissions,omitempty"`
+}
+
+// KBInitialPermission represents a permission to grant upon KB creation
+type KBInitialPermission struct {
+	UserID     string       `json:"user_id"`
+	Permission KBPermission `json:"permission"`
 }
 
 // UpdateKnowledgeBaseRequest is the request to update a knowledge base
 type UpdateKnowledgeBaseRequest struct {
-	Name                *string `json:"name,omitempty"`
-	Description         *string `json:"description,omitempty"`
-	EmbeddingModel      *string `json:"embedding_model,omitempty"`
-	EmbeddingDimensions *int    `json:"embedding_dimensions,omitempty"`
-	ChunkSize           *int    `json:"chunk_size,omitempty"`
-	ChunkOverlap        *int    `json:"chunk_overlap,omitempty"`
-	ChunkStrategy       *string `json:"chunk_strategy,omitempty"`
-	Enabled             *bool   `json:"enabled,omitempty"`
+	Name                  *string       `json:"name,omitempty"`
+	Description           *string       `json:"description,omitempty"`
+	Visibility            *KBVisibility `json:"visibility,omitempty"`
+	DefaultUserPermission *KBPermission `json:"default_user_permission,omitempty"`
+	EmbeddingModel        *string       `json:"embedding_model,omitempty"`
+	EmbeddingDimensions   *int          `json:"embedding_dimensions,omitempty"`
+	ChunkSize             *int          `json:"chunk_size,omitempty"`
+	ChunkOverlap          *int          `json:"chunk_overlap,omitempty"`
+	ChunkStrategy         *string       `json:"chunk_strategy,omitempty"`
+	Enabled               *bool         `json:"enabled,omitempty"`
 }
 
 // CreateDocumentRequest is the request to add a document to a knowledge base
@@ -319,6 +333,34 @@ type KBPermissionGrant struct {
 	Permission      KBPermission `json:"permission"`
 	GrantedBy       *string      `json:"granted_by,omitempty"`
 	GrantedAt       time.Time    `json:"granted_at"`
+}
+
+// ============================================================================
+// DOCUMENT PERMISSIONS
+// ============================================================================
+
+// DocumentPermission defines access level for documents
+type DocumentPermission string
+
+const (
+	DocumentPermissionViewer DocumentPermission = "viewer" // Read only
+	DocumentPermissionEditor DocumentPermission = "editor" // Read + write
+)
+
+// DocumentPermissionGrant represents a permission grant on a document
+type DocumentPermissionGrant struct {
+	ID         string             `json:"id"`
+	DocumentID string             `json:"document_id"`
+	UserID     string             `json:"user_id"`
+	Permission DocumentPermission `json:"permission"`
+	GrantedBy  string             `json:"granted_by"`
+	GrantedAt  time.Time          `json:"granted_at"`
+}
+
+// GrantDocumentPermissionRequest is the request to grant permission on a document
+type GrantDocumentPermissionRequest struct {
+	UserID     string             `json:"user_id"`
+	Permission DocumentPermission `json:"permission"`
 }
 
 // UserQuota represents per-user resource quotas

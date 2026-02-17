@@ -46,7 +46,6 @@ import { Route as AuthenticatedFeaturesIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedExtensionsIndexRouteImport } from './routes/_authenticated/extensions/index'
 import { Route as AuthenticatedEmailSettingsIndexRouteImport } from './routes/_authenticated/email-settings/index'
 import { Route as AuthenticatedDatabaseConfigIndexRouteImport } from './routes/_authenticated/database-config/index'
-import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections/index'
 import { Route as AuthenticatedClientKeysIndexRouteImport } from './routes/_authenticated/client-keys/index'
 import { Route as AuthenticatedChatbotsIndexRouteImport } from './routes/_authenticated/chatbots/index'
 import { Route as AuthenticatedAuthenticationIndexRouteImport } from './routes/_authenticated/authentication/index'
@@ -263,12 +262,6 @@ const AuthenticatedDatabaseConfigIndexRoute =
     path: '/database-config/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedCollectionsIndexRoute =
-  AuthenticatedCollectionsIndexRouteImport.update({
-    id: '/collections/',
-    path: '/collections/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedClientKeysIndexRoute =
   AuthenticatedClientKeysIndexRouteImport.update({
     id: '/client-keys/',
@@ -355,7 +348,6 @@ export interface FileRoutesByFullPath {
   '/authentication/': typeof AuthenticatedAuthenticationIndexRoute
   '/chatbots/': typeof AuthenticatedChatbotsIndexRoute
   '/client-keys/': typeof AuthenticatedClientKeysIndexRoute
-  '/collections/': typeof AuthenticatedCollectionsIndexRoute
   '/database-config/': typeof AuthenticatedDatabaseConfigIndexRoute
   '/email-settings/': typeof AuthenticatedEmailSettingsIndexRoute
   '/extensions/': typeof AuthenticatedExtensionsIndexRoute
@@ -405,7 +397,6 @@ export interface FileRoutesByTo {
   '/authentication': typeof AuthenticatedAuthenticationIndexRoute
   '/chatbots': typeof AuthenticatedChatbotsIndexRoute
   '/client-keys': typeof AuthenticatedClientKeysIndexRoute
-  '/collections': typeof AuthenticatedCollectionsIndexRoute
   '/database-config': typeof AuthenticatedDatabaseConfigIndexRoute
   '/email-settings': typeof AuthenticatedEmailSettingsIndexRoute
   '/extensions': typeof AuthenticatedExtensionsIndexRoute
@@ -457,7 +448,6 @@ export interface FileRoutesById {
   '/_authenticated/authentication/': typeof AuthenticatedAuthenticationIndexRoute
   '/_authenticated/chatbots/': typeof AuthenticatedChatbotsIndexRoute
   '/_authenticated/client-keys/': typeof AuthenticatedClientKeysIndexRoute
-  '/_authenticated/collections/': typeof AuthenticatedCollectionsIndexRoute
   '/_authenticated/database-config/': typeof AuthenticatedDatabaseConfigIndexRoute
   '/_authenticated/email-settings/': typeof AuthenticatedEmailSettingsIndexRoute
   '/_authenticated/extensions/': typeof AuthenticatedExtensionsIndexRoute
@@ -509,7 +499,6 @@ export interface FileRouteTypes {
     | '/authentication/'
     | '/chatbots/'
     | '/client-keys/'
-    | '/collections/'
     | '/database-config/'
     | '/email-settings/'
     | '/extensions/'
@@ -559,7 +548,6 @@ export interface FileRouteTypes {
     | '/authentication'
     | '/chatbots'
     | '/client-keys'
-    | '/collections'
     | '/database-config'
     | '/email-settings'
     | '/extensions'
@@ -610,7 +598,6 @@ export interface FileRouteTypes {
     | '/_authenticated/authentication/'
     | '/_authenticated/chatbots/'
     | '/_authenticated/client-keys/'
-    | '/_authenticated/collections/'
     | '/_authenticated/database-config/'
     | '/_authenticated/email-settings/'
     | '/_authenticated/extensions/'
@@ -917,13 +904,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDatabaseConfigIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/collections/': {
-      id: '/_authenticated/collections/'
-      path: '/collections'
-      fullPath: '/collections/'
-      preLoaderRoute: typeof AuthenticatedCollectionsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/client-keys/': {
       id: '/_authenticated/client-keys/'
       path: '/client-keys'
@@ -1013,7 +993,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuthenticationIndexRoute: typeof AuthenticatedAuthenticationIndexRoute
   AuthenticatedChatbotsIndexRoute: typeof AuthenticatedChatbotsIndexRoute
   AuthenticatedClientKeysIndexRoute: typeof AuthenticatedClientKeysIndexRoute
-  AuthenticatedCollectionsIndexRoute: typeof AuthenticatedCollectionsIndexRoute
   AuthenticatedDatabaseConfigIndexRoute: typeof AuthenticatedDatabaseConfigIndexRoute
   AuthenticatedEmailSettingsIndexRoute: typeof AuthenticatedEmailSettingsIndexRoute
   AuthenticatedExtensionsIndexRoute: typeof AuthenticatedExtensionsIndexRoute
@@ -1053,7 +1032,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuthenticationIndexRoute: AuthenticatedAuthenticationIndexRoute,
   AuthenticatedChatbotsIndexRoute: AuthenticatedChatbotsIndexRoute,
   AuthenticatedClientKeysIndexRoute: AuthenticatedClientKeysIndexRoute,
-  AuthenticatedCollectionsIndexRoute: AuthenticatedCollectionsIndexRoute,
   AuthenticatedDatabaseConfigIndexRoute: AuthenticatedDatabaseConfigIndexRoute,
   AuthenticatedEmailSettingsIndexRoute: AuthenticatedEmailSettingsIndexRoute,
   AuthenticatedExtensionsIndexRoute: AuthenticatedExtensionsIndexRoute,

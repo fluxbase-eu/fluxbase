@@ -47,26 +47,49 @@ func (h *UserKnowledgeBaseHandler) CreateMyKnowledgeBase(c fiber.Ctx) error {
 		})
 	}
 
+	// Set default visibility to private if not specified
+	visibility := KBVisibilityPrivate
+	if req.Visibility != nil {
+		visibility = *req.Visibility
+	}
+
+	// Set default user permission
+	defaultPerm := KBPermissionViewer
+	if req.DefaultUserPermission != "" {
+		defaultPerm = req.DefaultUserPermission
+	}
+
 	// Create KB with owner set to current user
 	kb := &KnowledgeBase{
-		Name:                req.Name,
-		Namespace:           req.Namespace,
-		Description:         req.Description,
-		EmbeddingModel:      req.EmbeddingModel,
-		EmbeddingDimensions: req.EmbeddingDimensions,
-		ChunkSize:           req.ChunkSize,
-		ChunkOverlap:        req.ChunkOverlap,
-		ChunkStrategy:       req.ChunkStrategy,
-		Enabled:             true,
-		Source:              "api",
-		OwnerID:             &userID,
-		Visibility:          KBVisibilityPrivate,
+		Name:                  req.Name,
+		Namespace:             req.Namespace,
+		Description:           req.Description,
+		Visibility:            visibility,
+		DefaultUserPermission: defaultPerm,
+		EmbeddingModel:        req.EmbeddingModel,
+		EmbeddingDimensions:   req.EmbeddingDimensions,
+		ChunkSize:             req.ChunkSize,
+		ChunkOverlap:          req.ChunkOverlap,
+		ChunkStrategy:         req.ChunkStrategy,
+		Enabled:               true,
+		Source:                "api",
+		OwnerID:               &userID,
 	}
 
 	if err := h.storage.CreateKnowledgeBase(ctx, kb); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create knowledge base",
 		})
+	}
+
+	// Grant initial permissions if specified
+	for _, perm := range req.InitialPermissions {
+		_, err := h.storage.GrantKBPermission(ctx, kb.ID, perm.UserID, string(perm.Permission), &userID)
+		if err != nil {
+			// Log error but don't fail the entire request
+			// The KB was created successfully, just permission grant failed
+			continue
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(kb)

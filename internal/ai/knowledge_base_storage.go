@@ -41,8 +41,8 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 			id, name, namespace, description,
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
-			enabled, source, created_by, visibility
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			enabled, source, created_by, visibility, default_user_permission
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING created_at, updated_at
 	`
 
@@ -50,7 +50,7 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Namespace, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility,
+		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility, kb.DefaultUserPermission,
 	).Scan(&kb.CreatedAt, &kb.UpdatedAt)
 }
 
@@ -61,7 +61,8 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
 			enabled, document_count, total_chunks,
-			source, created_by, created_at, updated_at
+			source, created_by, created_at, updated_at,
+			visibility, owner_id, default_user_permission
 		FROM ai.knowledge_bases
 		WHERE id = $1
 	`
@@ -72,7 +73,8 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 		&kb.EmbeddingModel, &kb.EmbeddingDimensions,
 		&kb.ChunkSize, &kb.ChunkOverlap, &kb.ChunkStrategy,
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
-		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt, &kb.Visibility,
+		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
+		&kb.Visibility, &kb.OwnerID, &kb.DefaultUserPermission,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -155,10 +157,17 @@ func (s *KnowledgeBaseStorage) ListKnowledgeBases(ctx context.Context, namespace
 func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *KnowledgeBase) error {
 	query := `
 		UPDATE ai.knowledge_bases SET
-			name = $2, description = $3,
-			embedding_model = $4, embedding_dimensions = $5,
-			chunk_size = $6, chunk_overlap = $7, chunk_strategy = $8,
-			enabled = $9, updated_at = NOW(), visibility = COALESCE($12, visibility)
+			name = $2,
+			description = $3,
+			embedding_model = $4,
+			embedding_dimensions = $5,
+			chunk_size = $6,
+			chunk_overlap = $7,
+			chunk_strategy = $8,
+			enabled = $9,
+			visibility = $10,
+			default_user_permission = $11,
+			updated_at = NOW()
 		WHERE id = $1
 		RETURNING updated_at
 	`
@@ -167,7 +176,7 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Visibility,
+		kb.Enabled, kb.Visibility, kb.DefaultUserPermission,
 	).Scan(&kb.UpdatedAt)
 }
 
@@ -1183,6 +1192,15 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBaseFromRequest(ctx context.Contex
 	if req.Description != "" {
 		kb.Description = req.Description
 	}
+	if req.Visibility != nil {
+		kb.Visibility = *req.Visibility
+	} else {
+		kb.Visibility = KBVisibilityPrivate
+	}
+	kb.DefaultUserPermission = req.DefaultUserPermission
+	if kb.DefaultUserPermission == "" {
+		kb.DefaultUserPermission = KBPermissionViewer
+	}
 	if req.EmbeddingModel != "" {
 		kb.EmbeddingModel = req.EmbeddingModel
 	} else {
@@ -1233,6 +1251,12 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBaseByID(ctx context.Context, id s
 	}
 	if req.Description != nil {
 		kb.Description = *req.Description
+	}
+	if req.Visibility != nil {
+		kb.Visibility = *req.Visibility
+	}
+	if req.DefaultUserPermission != nil {
+		kb.DefaultUserPermission = *req.DefaultUserPermission
 	}
 	if req.EmbeddingModel != nil {
 		kb.EmbeddingModel = *req.EmbeddingModel
@@ -1480,6 +1504,121 @@ func (s *KnowledgeBaseStorage) RevokeKBPermission(ctx context.Context, kbID, use
 		return fmt.Errorf("failed to revoke permission: %w", err)
 	}
 	return nil
+}
+
+// ============================================================================
+// DOCUMENT PERMISSIONS
+// ============================================================================
+
+// GrantDocumentPermission grants permission on a document to a user
+func (s *KnowledgeBaseStorage) GrantDocumentPermission(ctx context.Context, documentID, userID, permission, grantedBy string) (*DocumentPermissionGrant, error) {
+	// First check if the requester owns the document
+	var ownerID string
+	checkQuery := `SELECT owner_id FROM ai.documents WHERE id = $1`
+	err := s.db.QueryRow(ctx, checkQuery, documentID).Scan(&ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("document not found: %w", err)
+	}
+
+	// Verify ownership (service role and dashboard admins bypass this check in the handler)
+	if ownerID != grantedBy {
+		// Check if grantedBy is dashboard admin or service role
+		// This is a simple check - in production you'd want proper auth context
+		return nil, fmt.Errorf("only document owner can grant permissions")
+	}
+
+	// Upsert permission
+	query := `
+		INSERT INTO ai.document_permissions (document_id, user_id, permission, granted_by)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (document_id, user_id)
+		DO UPDATE SET permission = $3, granted_by = $4, granted_at = NOW()
+		RETURNING id, document_id, user_id, permission, granted_by, granted_at
+	`
+
+	var grant DocumentPermissionGrant
+	err = s.db.QueryRow(ctx, query, documentID, userID, permission, grantedBy).Scan(
+		&grant.ID, &grant.DocumentID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to grant document permission: %w", err)
+	}
+
+	return &grant, nil
+}
+
+// ListDocumentPermissions lists all permissions for a document
+func (s *KnowledgeBaseStorage) ListDocumentPermissions(ctx context.Context, documentID string) ([]DocumentPermissionGrant, error) {
+	query := `
+		SELECT id, document_id, user_id, permission, granted_by, granted_at
+		FROM ai.document_permissions
+		WHERE document_id = $1
+		ORDER BY granted_at DESC
+	`
+
+	rows, err := s.db.Query(ctx, query, documentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list document permissions: %w", err)
+	}
+	defer rows.Close()
+
+	var grants []DocumentPermissionGrant
+	for rows.Next() {
+		var grant DocumentPermissionGrant
+		if err := rows.Scan(
+			&grant.ID, &grant.DocumentID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan document permission row")
+			continue
+		}
+		grants = append(grants, grant)
+	}
+
+	return grants, nil
+}
+
+// RevokeDocumentPermission revokes permission from a user on a document
+func (s *KnowledgeBaseStorage) RevokeDocumentPermission(ctx context.Context, documentID, userID string) error {
+	query := `DELETE FROM ai.document_permissions WHERE document_id = $1 AND user_id = $2`
+	_, err := s.db.Exec(ctx, query, documentID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke document permission: %w", err)
+	}
+	return nil
+}
+
+// CanUserAccessDocument checks if a user can access a document
+func (s *KnowledgeBaseStorage) CanUserAccessDocument(ctx context.Context, documentID, userID string) (bool, error) {
+	// Check if user owns the document
+	var ownerID *string
+	checkQuery := `SELECT owner_id FROM ai.documents WHERE id = $1`
+	err := s.db.QueryRow(ctx, checkQuery, documentID).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check document ownership: %w", err)
+	}
+
+	// User owns the document
+	if ownerID != nil && *ownerID == userID {
+		return true, nil
+	}
+
+	// Check if user has been granted permission
+	var hasPermission bool
+	permQuery := `
+		SELECT EXISTS(
+			SELECT 1 FROM ai.document_permissions
+			WHERE document_id = $1 AND user_id = $2
+		)
+	`
+	err = s.db.QueryRow(ctx, permQuery, documentID, userID).Scan(&hasPermission)
+	if err != nil {
+		return false, fmt.Errorf("failed to check document permission: %w", err)
+	}
+
+	return hasPermission, nil
 }
 
 // GetUserQuota retrieves quota information for a user

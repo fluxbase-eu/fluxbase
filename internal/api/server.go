@@ -2298,6 +2298,11 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			router.Patch("/ai/knowledge-bases/:id/documents/:doc_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UpdateDocument)
 			router.Post("/ai/knowledge-bases/:id/documents/upload", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UploadDocument)
 
+			// Document permissions
+			router.Post("/ai/knowledge-bases/:id/documents/:doc_id/permissions", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.GrantDocumentPermission)
+			router.Get("/ai/knowledge-bases/:id/documents/:doc_id/permissions", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListDocumentPermissions)
+			router.Delete("/ai/knowledge-bases/:id/documents/:doc_id/permissions/:user_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.RevokeDocumentPermission)
+
 			// Search/test endpoint
 			router.Post("/ai/knowledge-bases/:id/search", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.SearchKnowledgeBase)
 			router.Post("/ai/knowledge-bases/:id/debug-search", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.DebugSearch)
