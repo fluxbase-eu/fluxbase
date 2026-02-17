@@ -27,7 +27,7 @@ func createSecretsService(t *testing.T, tc *testutil.IntegrationTestContext) *se
 func createTestUser(t *testing.T, tc *testutil.IntegrationTestContext) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()
-	userID := createTestUser(t, tc)
+	userID := uuid.New()
 
 	// Create a test user in the database
 	_, err := tc.DB.Exec(ctx, `

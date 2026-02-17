@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -73,7 +74,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
 		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt, &kb.Visibility,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -102,7 +103,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBaseByName(ctx context.Context, name,
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
 		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt, &kb.Visibility,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -225,7 +226,7 @@ func (s *KnowledgeBaseStorage) GetDocument(ctx context.Context, id string) (*Doc
 		&doc.MimeType, &doc.Content, &doc.ContentHash, &doc.Status, &doc.ErrorMessage,
 		&doc.ChunksCount, &doc.Metadata, &doc.Tags, &doc.CreatedBy, &doc.CreatedAt, &doc.UpdatedAt, &doc.IndexedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -1348,7 +1349,6 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBaseSimple(ctx context.Contex
 
 	return link, nil
 }
-
 
 // ============================================================================
 // Knowledge Base Ownership and Permissions

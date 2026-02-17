@@ -220,6 +220,158 @@ Key metrics and targets:
 
 ---
 
+## Distributed Tracing
+
+Fluxbase supports OpenTelemetry distributed tracing for end-to-end request visibility across services.
+
+### Overview
+
+Distributed tracing tracks requests as they travel through:
+- HTTP API handlers
+- Database queries
+- Edge functions
+- Background jobs
+- External API calls
+
+### Configuration
+
+Enable tracing in your `fluxbase.yaml`:
+
+```yaml
+observability:
+  tracing:
+    enabled: true
+    endpoint: "localhost:4317"        # OTLP collector endpoint
+    service_name: "fluxbase"
+    environment: "production"
+    sample_rate: 0.1                   # Sample 10% of traces
+    insecure: false                    # Use TLS for production
+```
+
+### Setting Up Trace Backends
+
+#### Jaeger (Local Development)
+
+```bash
+docker run -d --name jaeger \
+  -e COLLECTOR_OTLP_ENABLED=true \
+  -p 4317:4317 \
+  -p 16686:16686 \
+  jaegertracing/all-in-one:latest
+```
+
+Configure Fluxbase:
+```yaml
+observability:
+  tracing:
+    enabled: true
+    endpoint: "localhost:4317"
+    insecure: true
+```
+
+Access Jaeger UI: http://localhost:16686
+
+#### Grafana Tempo (Production)
+
+```yaml
+observability:
+  tracing:
+    enabled: true
+    endpoint: "tempo:4317"  # OTLP endpoint
+```
+
+#### Cloud Providers
+
+| Provider | Setup |
+|----------|-------|
+| **AWS X-Ray** | Use AWS Distro for OpenTelemetry (ADOT) Collector |
+| **Google Cloud Trace** | Use OpenTelemetry Collector with GCP exporter |
+| **Azure Monitor** | Use Azure Monitor Application Insights exporter |
+
+### Trace Analysis
+
+**Identify Slow Queries:**
+
+1. Open Jaeger UI or Grafana Tempo
+2. Filter by operation `db.query` or `db.SELECT`
+3. Sort by duration
+4. Click slow spans to see SQL query
+
+**Trace Errors:**
+
+1. Find traces with error status
+2. Expand trace timeline
+3. Look for red error spans
+4. View stack traces
+
+**Performance Optimization:**
+
+1. Look for spans with high duration
+2. Check if spans run sequentially (could parallelize)
+3. Identify N+1 query patterns
+4. Find slow external API calls
+
+### Automatic Spans
+
+Fluxbase automatically creates spans for:
+
+| Component | Span Name | Attributes |
+|-----------|-----------|------------|
+| **Database** | `db.SELECT`, `db.INSERT` | `db.system`, `db.table` |
+| **Storage** | `storage.upload`, `storage.download` | `storage.bucket`, `storage.key` |
+| **Auth** | `auth.login`, `auth.signup` | `auth.operation` |
+| **Functions** | `function.myFunction` | `function.name`, `user.id` |
+| **Jobs** | `job.sendEmail` | `job.name`, `job.id` |
+
+### Custom Spans
+
+Create custom spans for additional visibility:
+
+```go
+import "github.com/fluxbase-eu/fluxbase/internal/observability"
+
+// Start a custom span
+ctx, span := observability.StartSpan(ctx, "my-operation")
+defer span.End()
+
+// Add attributes
+observability.SetSpanAttributes(ctx,
+    attribute.String("user.id", userID),
+)
+
+// Add events
+observability.AddSpanEvent(ctx, "validation.completed")
+
+// Record errors
+if err != nil {
+    observability.RecordError(ctx, err)
+}
+```
+
+### Production Considerations
+
+**Sampling:**
+
+```yaml
+# Development: Sample all traces
+sample_rate: 1.0  # 100%
+
+# Production: Sample subset to reduce overhead
+sample_rate: 0.1  # 10%
+```
+
+**Performance Impact:**
+
+| Configuration | Overhead |
+|--------------|----------|
+| Sampling: 100% | ~5-10% |
+| Sampling: 10% | ~1-2% |
+| Sampling: 1% | <1% |
+
+For more details, see [Distributed Tracing Guide](/guides/distributed-tracing/).
+
+---
+
 ## Troubleshooting
 
 | Issue | Symptoms | Diagnosis | Solutions |

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -746,11 +747,11 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		mcpOAuthHandler:        NewMCPOAuthHandler(db.Pool(), &cfg.MCP, authService, cfg.BaseURL, cfg.GetPublicBaseURL()),
 		internalAIHandler:      internalAIHandler,
 		metrics:                observability.NewMetrics(),
-		startTime:                time.Now(),
+		startTime:              time.Now(),
 		// Server-owned dependencies
-		rateLimiter:              rateLimitStore,
-		pubSub:                   ps,
-		sharedMiddlewareStorage:  sharedMiddlewareStorage,
+		rateLimiter:             rateLimitStore,
+		pubSub:                  ps,
+		sharedMiddlewareStorage: sharedMiddlewareStorage,
 	}
 
 	// Initialize MCP Server if enabled
@@ -1979,7 +1980,7 @@ func (s *Server) setupAuthRoutes(router fiber.Router) {
 		"magiclink":      middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow, s.sharedMiddlewareStorage),
 		"password_reset": middleware.AuthPasswordResetLimiterWithConfig(s.config.Security.AuthPasswordResetRateLimit, s.config.Security.AuthPasswordResetRateWindow, s.sharedMiddlewareStorage),
 		"otp":            middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow, s.sharedMiddlewareStorage), // Use same rate limit as magic link
-		"2fa":            middleware.Auth2FALimiterWithConfig(s.config.Security.Auth2FARateLimit, s.config.Security.Auth2FARateWindow, s.sharedMiddlewareStorage), // Strict rate limit for 2FA verification
+		"2fa":            middleware.Auth2FALimiterWithConfig(s.config.Security.Auth2FARateLimit, s.config.Security.Auth2FARateWindow, s.sharedMiddlewareStorage),                   // Strict rate limit for 2FA verification
 	}
 
 	// Use the auth handler's RegisterRoutes method with rate limiters
@@ -2817,7 +2818,8 @@ func customErrorHandler(c fiber.Ctx, err error) error {
 	message := "Internal Server Error"
 
 	// Check if it's a Fiber error
-	if e, ok := err.(*fiber.Error); ok {
+	var e *fiber.Error
+	if errors.As(err, &e) {
 		code = e.Code
 		message = e.Message
 	}

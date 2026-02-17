@@ -42,16 +42,16 @@ type CSRFConfig struct {
 // DefaultCSRFConfig returns default CSRF configuration
 func DefaultCSRFConfig() CSRFConfig {
 	return CSRFConfig{
-		TokenLength:  32,
-		TokenLookup:  "header:X-CSRF-Token",
-		CookieName:   "csrf_token",
-		CookiePath:   "/",
-		CookieSecure: false, // Set to true in production with HTTPS
+		TokenLength:    32,
+		TokenLookup:    "header:X-CSRF-Token",
+		CookieName:     "csrf_token",
+		CookiePath:     "/",
+		CookieSecure:   false, // Set to true in production with HTTPS
 		CookieHTTPOnly: true,
 		CookieSameSite: "Strict",
-		Expiration:    24 * time.Hour,
-		Storage:       nil,  // Will be initialized in CSRF() function unless provided
-		LazyStorage:   true, // Create storage if nil
+		Expiration:     24 * time.Hour,
+		Storage:        nil,  // Will be initialized in CSRF() function unless provided
+		LazyStorage:    true, // Create storage if nil
 	}
 }
 

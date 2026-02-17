@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"errors"
 	"html/template"
 	"time"
 
@@ -250,7 +251,7 @@ func (h *EmailTemplateHandler) GetTemplate(c fiber.Ctx) error {
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Return default template
 			defaultTemplate, exists := defaultTemplates[templateType]
 			if !exists {
@@ -430,7 +431,7 @@ func (h *EmailTemplateHandler) TestTemplate(c fiber.Ctx) error {
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Use default template
 			emailTemplate = defaultTemplates[templateType]
 		} else {

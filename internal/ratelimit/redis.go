@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -65,12 +66,12 @@ func (s *RedisStore) Get(ctx context.Context, key string) (int64, time.Time, err
 	ttlCmd := pipe.TTL(ctx, prefixedKey)
 
 	_, err := pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return 0, time.Time{}, err
 	}
 
 	countStr, err := getCmd.Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return 0, time.Time{}, nil
 	}
 	if err != nil {

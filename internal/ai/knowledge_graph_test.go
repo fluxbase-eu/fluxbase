@@ -9,13 +9,13 @@ import (
 func TestKnowledgeGraph_AddEntity(t *testing.T) {
 	t.Run("adds entity successfully", func(t *testing.T) {
 		entity := &Entity{
-			ID:             "entity-1",
+			ID:              "entity-1",
 			KnowledgeBaseID: "kb-1",
-			EntityType:     EntityPerson,
-			Name:           "John Smith",
-			CanonicalName:  "John Smith",
-			Aliases:        []string{"Johnny", "J. Smith"},
-			Metadata:       map[string]interface{}{"test": true},
+			EntityType:      EntityPerson,
+			Name:            "John Smith",
+			CanonicalName:   "John Smith",
+			Aliases:         []string{"Johnny", "J. Smith"},
+			Metadata:        map[string]interface{}{"test": true},
 		}
 
 		// Verify entity structure
@@ -125,11 +125,11 @@ func TestKnowledgeGraph_EntityExtractionResult_Struct(t *testing.T) {
 			DocumentID: "doc-1",
 			Entities: []Entity{
 				{
-					ID:             "entity-1",
+					ID:              "entity-1",
 					KnowledgeBaseID: "kb-1",
-					EntityType:     EntityPerson,
-					Name:           "John Smith",
-					CanonicalName:  "John Smith",
+					EntityType:      EntityPerson,
+					Name:            "John Smith",
+					CanonicalName:   "John Smith",
 				},
 			},
 			Relationships: []EntityRelationship{
@@ -146,7 +146,7 @@ func TestKnowledgeGraph_EntityExtractionResult_Struct(t *testing.T) {
 					ID:           "de-1",
 					DocumentID:   "doc-1",
 					EntityID:     "entity-1",
-					MentionCount:  3,
+					MentionCount: 3,
 					Salience:     0.8,
 					Context:      "...context...",
 				},
@@ -167,13 +167,13 @@ func TestKnowledgeGraph_DocumentEntity_Struct(t *testing.T) {
 	t.Run("document entity structure is correct", func(t *testing.T) {
 		offset := 100
 		docEntity := &DocumentEntity{
-			ID:                "de-1",
-			DocumentID:        "doc-1",
-			EntityID:          "entity-1",
-			MentionCount:      5,
+			ID:                 "de-1",
+			DocumentID:         "doc-1",
+			EntityID:           "entity-1",
+			MentionCount:       5,
 			FirstMentionOffset: &offset,
-			Salience:          0.9,
-			Context:           "...John Smith worked at Google...",
+			Salience:           0.9,
+			Context:            "...John Smith worked at Google...",
 		}
 
 		assert.Equal(t, "de-1", docEntity.ID)

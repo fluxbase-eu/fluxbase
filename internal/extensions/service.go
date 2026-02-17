@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -415,7 +416,7 @@ func (s *Service) getAvailableExtension(ctx context.Context, name string) (*Avai
 		&ext.ID, &ext.Name, &ext.DisplayName, &ext.Description, &ext.Category,
 		&ext.IsCore, &ext.RequiresRestart, &ext.DocumentationURL, &ext.CreatedAt, &ext.UpdatedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

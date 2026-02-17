@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"errors"
+
 	"github.com/fluxbase-eu/fluxbase/internal/branching"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -116,19 +118,19 @@ func BranchContext(config BranchContextConfig) fiber.Handler {
 		if config.Router != nil {
 			pool, err = config.Router.GetPool(c.RequestCtx(), branchSlug)
 			if err != nil {
-				if err == branching.ErrBranchNotFound {
+				if errors.Is(err, branching.ErrBranchNotFound) {
 					return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 						"error":   "branch_not_found",
 						"message": "Branch not found: " + branchSlug,
 					})
 				}
-				if err == branching.ErrBranchNotReady {
+				if errors.Is(err, branching.ErrBranchNotReady) {
 					return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 						"error":   "branch_not_ready",
 						"message": "Branch is not ready: " + branchSlug,
 					})
 				}
-				if err == branching.ErrBranchingDisabled {
+				if errors.Is(err, branching.ErrBranchingDisabled) {
 					// For main branch, we should still work
 					if branching.IsMainBranch(branchSlug) {
 						pool = config.Router.GetMainPool()

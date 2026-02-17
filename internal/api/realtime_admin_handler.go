@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -394,7 +395,7 @@ WHERE schema_name = $1 AND table_name = $2`
 		&t.ID, &t.Schema, &t.Table, &t.RealtimeEnabled, &t.Events, &t.ExcludedColumns, &createdAt, &updatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		// Table not registered - check if the table exists at all
 		exists, checkErr := h.tableExists(ctx, schema, table)
 		if checkErr != nil {
@@ -516,7 +517,7 @@ RETURNING id`, strings.Join(updates, ", "))
 
 	var id int
 	err := h.db.Pool().QueryRow(ctx, query, args...).Scan(&id)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": fmt.Sprintf("Realtime not enabled on table '%s.%s'", schema, table),
 		})

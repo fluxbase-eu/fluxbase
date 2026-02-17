@@ -37,6 +37,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// getEnvOrDefault returns the value of an environment variable or a default value.
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 // getDatabase creates a database connection for setup/teardown operations.
 func getDatabase(cfg *config.Config) (*database.Connection, error) {
 	return database.NewConnection(cfg.Database)
@@ -122,9 +130,10 @@ func enablePostGISExtension() {
 	ctx := context.Background()
 
 	cfg := test.GetTestConfig()
-	cfg.Database.User = "postgres"
-	cfg.Database.AdminUser = "postgres"
-	cfg.Database.Password = "postgres"
+	// Use postgres superuser from environment variables (with defaults for local dev)
+	cfg.Database.User = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+	cfg.Database.AdminUser = cfg.Database.User
+	cfg.Database.Password = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
 
 	db, err := getDatabase(cfg)
 	if err != nil {
@@ -476,9 +485,10 @@ func grantRLSTestPermissions() {
 	// Connect as postgres superuser to grant permissions
 	// fluxbase_app cannot grant permissions on schemas it doesn't own
 	cfg := test.GetTestConfig()
-	cfg.Database.User = "postgres"
-	cfg.Database.AdminUser = "postgres"
-	cfg.Database.Password = "postgres"
+	// Use postgres superuser from environment variables (with defaults for local dev)
+	cfg.Database.User = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+	cfg.Database.AdminUser = cfg.Database.User
+	cfg.Database.Password = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
 
 	db, err := getDatabase(cfg)
 	if err != nil {
@@ -606,9 +616,10 @@ func teardownTestTables() {
 	// Connect as postgres superuser to drop tables that may be owned by postgres
 	// (e.g., tasks table created by EnsureRLSTestTables())
 	cfg := test.GetTestConfig()
-	cfg.Database.User = "postgres"
-	cfg.Database.AdminUser = "postgres"
-	cfg.Database.Password = "postgres"
+	// Use postgres superuser from environment variables (with defaults for local dev)
+	cfg.Database.User = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+	cfg.Database.AdminUser = cfg.Database.User
+	cfg.Database.Password = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
 	db, err := getDatabase(cfg)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to connect to database for test teardown")

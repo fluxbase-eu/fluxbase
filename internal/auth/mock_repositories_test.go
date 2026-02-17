@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -60,7 +61,7 @@ func TestMockUserRepository_DuplicateEmail(t *testing.T) {
 	}
 
 	_, err = repo.Create(ctx, req, "hash2")
-	if err != ErrUserAlreadyExists {
+	if !errors.Is(err, ErrUserAlreadyExists) {
 		t.Errorf("Expected ErrUserAlreadyExists, got %v", err)
 	}
 }
@@ -95,7 +96,7 @@ func TestMockUserRepository_Update(t *testing.T) {
 
 	// Old email should not find user
 	_, err = repo.GetByEmail(ctx, "original@example.com")
-	if err != ErrUserNotFound {
+	if !errors.Is(err, ErrUserNotFound) {
 		t.Errorf("Expected ErrUserNotFound for old email, got %v", err)
 	}
 }
@@ -113,7 +114,7 @@ func TestMockUserRepository_Delete(t *testing.T) {
 	}
 
 	_, err = repo.GetByID(ctx, user.ID)
-	if err != ErrUserNotFound {
+	if !errors.Is(err, ErrUserNotFound) {
 		t.Errorf("Expected ErrUserNotFound after delete, got %v", err)
 	}
 }
@@ -202,7 +203,7 @@ func TestMockSessionRepository_UpdateTokens(t *testing.T) {
 
 	// Old tokens should not work
 	_, err = repo.GetByAccessToken(ctx, "old-access")
-	if err != ErrSessionNotFound {
+	if !errors.Is(err, ErrSessionNotFound) {
 		t.Errorf("Expected ErrSessionNotFound for old token, got %v", err)
 	}
 
@@ -228,7 +229,7 @@ func TestMockSessionRepository_Delete(t *testing.T) {
 	}
 
 	_, err = repo.GetByAccessToken(ctx, "access")
-	if err != ErrSessionNotFound {
+	if !errors.Is(err, ErrSessionNotFound) {
 		t.Errorf("Expected ErrSessionNotFound after delete, got %v", err)
 	}
 }

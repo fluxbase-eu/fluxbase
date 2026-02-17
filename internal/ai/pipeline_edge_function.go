@@ -21,17 +21,17 @@ func NewEdgeFunctionPipeline() *EdgeFunctionPipeline {
 
 // EdgeFunctionRequest is the request sent to the edge function
 type EdgeFunctionRequest struct {
-	Event         string        `json:"event"`         // "document.created"
+	Event         string        `json:"event"` // "document.created"
 	Document      Document      `json:"document"`
 	KnowledgeBase KnowledgeBase `json:"knowledge_base"`
 }
 
 // EdgeFunctionResponse is the expected response from the edge function
 type EdgeFunctionResponse struct {
-	Content         string                 `json:"content"`
-	Metadata        map[string]interface{} `json:"metadata"`
-	ShouldChunk     bool                   `json:"should_chunk"`
-	ChunkingConfig  *ChunkingOverride       `json:"chunking_config,omitempty"`
+	Content        string                 `json:"content"`
+	Metadata       map[string]interface{} `json:"metadata"`
+	ShouldChunk    bool                   `json:"should_chunk"`
+	ChunkingConfig *ChunkingOverride      `json:"chunking_config,omitempty"`
 }
 
 // ChunkingOverride allows the function to customize chunking behavior
@@ -46,9 +46,9 @@ func (p *EdgeFunctionPipeline) ExecuteTransform(ctx context.Context, kb *Knowled
 	if kb.PipelineType != string(PipelineTypeEdgeFunction) {
 		// No edge function pipeline configured
 		return &TransformResult{
-			Content:      document.Content,
-			Metadata:     map[string]interface{}{},
-			ShouldChunk:  true,
+			Content:     document.Content,
+			Metadata:    map[string]interface{}{},
+			ShouldChunk: true,
 		}, nil
 	}
 
@@ -56,9 +56,9 @@ func (p *EdgeFunctionPipeline) ExecuteTransform(ctx context.Context, kb *Knowled
 	functionName, ok := kb.PipelineConfig["function_name"].(string)
 	if !ok || functionName == "" {
 		return &TransformResult{
-			Content:      document.Content,
-			Metadata:     map[string]interface{}{},
-			ShouldChunk:  true,
+			Content:     document.Content,
+			Metadata:    map[string]interface{}{},
+			ShouldChunk: true,
 		}, nil
 	}
 
@@ -87,12 +87,12 @@ func (p *EdgeFunctionPipeline) ExecuteTransform(ctx context.Context, kb *Knowled
 	// The actual execution will be implemented by connecting to the functions.Handler
 
 	return &TransformResult{
-		Content:      document.Content,
-		Metadata:     map[string]interface{}{
+		Content: document.Content,
+		Metadata: map[string]interface{}{
 			"pipeline_executed": true,
-			"function_name": functionName,
+			"function_name":     functionName,
 		},
-		ShouldChunk:  true,
+		ShouldChunk: true,
 	}, nil
 }
 

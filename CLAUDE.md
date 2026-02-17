@@ -26,7 +26,7 @@ test/e2e/                # End-to-end tests
 | Module           | Purpose                                                                                                     |
 | ---------------- | ----------------------------------------------------------------------------------------------------------- |
 | `adminui/`       | Admin dashboard UI backend management                                                                       |
-| `ai/`            | Vector search (pgvector), embeddings, knowledge bases, team projects, chatbots                              |
+| `ai/`            | Vector search (pgvector), embeddings, knowledge bases, chatbots                                             |
 | `api/`           | HTTP handlers (100+ files) - REST, GraphQL, storage, auth, DDL, webhooks, RPC, bulk operations, data export |
 | `auth/`          | Authentication - JWT, OAuth2, OIDC, SAML SSO, magic links, MFA, CAPTCHA, impersonation                      |
 | `branching/`     | Database branching - isolated DBs for dev/test environments                                                 |
@@ -37,6 +37,7 @@ test/e2e/                # End-to-end tests
 | `extensions/`    | PostgreSQL extension management system                                                                      |
 | `functions/`     | Edge functions - Deno runtime, bundling, loader, scheduler                                                  |
 | `jobs/`          | Background jobs - queue, workers, scheduler, progress tracking                                              |
+| `logutil/`       | Log utilities (sanitization, formatting)                                                                    |
 | `logging/`       | Structured logging with batching and retention policies                                                     |
 | `mcp/`           | Model Context Protocol server for AI assistant integration                                                  |
 | `middleware/`    | Auth, CORS, rate limiting, logging, branch context middlewares                                              |
@@ -52,6 +53,7 @@ test/e2e/                # End-to-end tests
 | `secrets/`       | Secret management for functions/jobs                                                                        |
 | `settings/`      | Application settings and custom configuration                                                               |
 | `storage/`       | File storage abstraction (local filesystem or S3/MinIO)                                                     |
+| `testcontext/`   | Test context utilities for E2E tests                                                                        |
 | `testutil/`      | Test utilities and helpers                                                                                  |
 | `webhook/`       | Webhook system for database events (INSERT, UPDATE, DELETE)                                                 |
 
@@ -62,7 +64,7 @@ test/e2e/                # End-to-end tests
 - `jobs.*` - Background job storage
 - `functions.*` - Edge functions registry
 - `branching.*` - Database branch metadata, access control, GitHub config
-- `ai.*` - Knowledge bases, documents, chatbots, projects, project members, permissions
+- `ai.*` - Knowledge bases, documents, chatbots, permissions
 - `logging.*` - Centralized logging entries with TimescaleDB hypertable support
 - `public` - User application tables
 
@@ -100,8 +102,10 @@ test/e2e/                # End-to-end tests
 
 **Realtime:**
 
-- `internal/realtime/hub.go` - WebSocket connection hub
-- `internal/realtime/client.go` - Client management
+- `internal/realtime/manager.go` - Main connection manager
+- `internal/realtime/connection.go` - Client connection handling
+- `internal/realtime/subscription.go` - Subscription management
+- `internal/realtime/presence.go` - User online status tracking
 
 **MCP Server:**
 
@@ -141,15 +145,6 @@ test/e2e/                # End-to-end tests
 
 - `internal/observability/metrics.go` - Prometheus metrics
 - `internal/observability/tracing.go` - OpenTelemetry tracing
-
-**Projects (Team Workspaces):**
-
-- `internal/ai/auto_project.go` - Automatic project creation for new users
-- `internal/ai/project_handler.go` - Project CRUD operations
-- `internal/ai/user_kb_handler.go` - User-specific knowledge base operations
-- `internal/api/bulk_operations_handler.go` - Bulk delete and export operations
-- `internal/api/data_export_handler.go` - Data export with CSV/JSON formats
-- `admin/src/features/projects/` - Admin UI components for project management
 
 **Multi-Backend Logging:**
 
@@ -233,17 +228,6 @@ branching:
   auto_delete_after: 24h
   database_prefix: branch_
   admin_database_url: "postgresql://..."
-```
-
-**Projects Configuration:**
-
-```yaml
-ai:
-  projects:
-    enabled: true
-    max_projects_per_user: 5
-    max_members_per_project: 50
-    default_kb_visibility: private # private, shared, public
 ```
 
 **Logging Backend Configuration:**
@@ -349,9 +333,6 @@ Format: `NNN_description.up.sql` / `NNN_description.down.sql`
 - User-scoped RLS policies for knowledge bases
 - Execution log migration to centralized logging
 - TimescaleDB hypertable with compression (7-day) and retention (90-day) policies
-- Projects system for team workspaces with resource limits
-- Project members table with role-based access (viewer, editor, project_admin)
-- Automatic migration from user-owned to project-based knowledge bases
 
 ## Testing
 

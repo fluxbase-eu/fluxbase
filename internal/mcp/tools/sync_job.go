@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -196,7 +197,7 @@ func (t *SyncJobTool) Execute(ctx context.Context, args map[string]any, authCtx 
 	}
 
 	// Check for pgx.ErrNoRows which indicates failure
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return &mcp.ToolResult{
 			Content: []mcp.Content{mcp.ErrorContent("Failed to sync job: database error")},
 			IsError: true,

@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -73,7 +74,7 @@ func (kg *KnowledgeGraph) GetEntity(ctx context.Context, entityID string) (*Enti
 		&entity.CreatedAt, &entity.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("entity not found")
 	}
 	if err != nil {
@@ -240,12 +241,12 @@ func (kg *KnowledgeGraph) GetRelationships(ctx context.Context, kbID string, ent
 		rel.SourceEntity = &Entity{
 			ID:         sourceID,
 			EntityType: EntityType(sourceType),
-			Name:        sourceName,
+			Name:       sourceName,
 		}
 		rel.TargetEntity = &Entity{
 			ID:         targetID,
 			EntityType: EntityType(targetType),
-			Name:        targetName,
+			Name:       targetName,
 		}
 
 		relationships = append(relationships, rel)

@@ -78,8 +78,8 @@ func TestQuotaUsage_Struct(t *testing.T) {
 			ChunksLimit:    1000,
 			StorageUsed:    512 * 1024,
 			StorageLimit:   1024 * 1024,
-			CanAddDocument:  true,
-			CanAddChunks:    true,
+			CanAddDocument: true,
+			CanAddChunks:   true,
 		}
 
 		assert.Equal(t, "user-123", usage.UserID)

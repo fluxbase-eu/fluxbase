@@ -58,8 +58,8 @@ func buildEntityPatterns() map[EntityType][]*regexp.Regexp {
 // ExtractEntities extracts entities from text using rule-based patterns
 func (r *RuleBasedExtractor) ExtractEntities(text string, kbID string) (*EntityExtractionResult, error) {
 	result := &EntityExtractionResult{
-		Entities:   []Entity{},
-		Relationships: []EntityRelationship{},
+		Entities:         []Entity{},
+		Relationships:    []EntityRelationship{},
 		DocumentEntities: []DocumentEntity{},
 	}
 
@@ -88,15 +88,15 @@ func (r *RuleBasedExtractor) ExtractEntities(text string, kbID string) (*EntityE
 				seen[key] = true
 
 				entity := Entity{
-					ID:             uuid.New().String(),
+					ID:              uuid.New().String(),
 					KnowledgeBaseID: kbID,
-					EntityType:     entityType,
-					Name:           matchText,
-					CanonicalName:  canonicalName,
-					Aliases:        []string{},
-					Metadata:       map[string]interface{}{
+					EntityType:      entityType,
+					Name:            matchText,
+					CanonicalName:   canonicalName,
+					Aliases:         []string{},
+					Metadata: map[string]interface{}{
 						"extraction_method": "rule_based",
-						"pattern": pattern.String(),
+						"pattern":           pattern.String(),
 					},
 				}
 
@@ -175,7 +175,7 @@ func (r *RuleBasedExtractor) inferRelationships(text string, kbID string, entiti
 						Direction:        DirectionForward,
 						Metadata: map[string]interface{}{
 							"extraction_method": "rule_based",
-							"context":            match[0],
+							"context":           match[0],
 						},
 					})
 				}
@@ -201,7 +201,7 @@ func (r *RuleBasedExtractor) inferRelationships(text string, kbID string, entiti
 						Direction:        DirectionForward,
 						Metadata: map[string]interface{}{
 							"extraction_method": "rule_based",
-							"context":            match[0],
+							"context":           match[0],
 						},
 					})
 				}
@@ -244,13 +244,13 @@ func (r *RuleBasedExtractor) createDocumentEntities(documentID string, entities 
 		}
 
 		docEntities = append(docEntities, DocumentEntity{
-			ID:                uuid.New().String(),
-			DocumentID:        documentID,
-			EntityID:          entity.ID,
-			MentionCount:      mentionCount,
+			ID:                 uuid.New().String(),
+			DocumentID:         documentID,
+			EntityID:           entity.ID,
+			MentionCount:       mentionCount,
 			FirstMentionOffset: &firstOffset,
-			Salience:          0.5, // Default salience, could be calculated based on frequency/position
-			Context:           context,
+			Salience:           0.5, // Default salience, could be calculated based on frequency/position
+			Context:            context,
 		})
 	}
 

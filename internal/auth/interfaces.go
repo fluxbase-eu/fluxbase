@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+// NOTE ON INTERFACE SIZE:
+// These repository interfaces have more than 3 methods, which exceeds the typical
+// Go guideline of "keep interfaces small". However, this is acceptable here because:
+//
+// 1. They are only used for test mocking (production code uses concrete types)
+// 2. Each interface represents a cohesive, complete repository (single responsibility)
+// 3. All methods are closely related and typically used together
+// 4. Splitting would create many small interfaces without clear benefit
+//
+// If future consumers need only a subset of these methods, smaller interfaces
+// can be extracted at that time (following the "accept interfaces, return structs" principle).
+//
+// See: https://go.dev/blog/laws-of-reflection#use-interfaces-where-appropriate
+
 // UserRepositoryInterface defines user data operations.
 // Implementations can be backed by a real database or mocks for testing.
 // Note: All IDs are strings (UUID strings) to match existing implementation.

@@ -34,21 +34,21 @@ type RouteQuery struct {
 // RouteResult contains the routing decision
 type RouteResult struct {
 	SelectedKBs    []SelectedKnowledgeBase `json:"selected_kbs"`
-	FallbackToAll  bool                    `json:"fallback_to_all"`  // True if no intent match
-	MatchedIntents []string                `json:"matched_intents"`   // Keywords that matched
-	TraceID        string                   `json:"trace_id"`          // For observability
+	FallbackToAll  bool                    `json:"fallback_to_all"` // True if no intent match
+	MatchedIntents []string                `json:"matched_intents"` // Keywords that matched
+	TraceID        string                  `json:"trace_id"`        // For observability
 }
 
 // SelectedKnowledgeBase represents a KB selected for querying with its config
 type SelectedKnowledgeBase struct {
-	KnowledgeBaseID     string  `json:"knowledge_base_id"`
-	KnowledgeBaseName   string  `json:"knowledge_base_name"`
-	AccessLevel         AccessLevel `json:"access_level"`
-	ContextWeight       float64 `json:"context_weight"`
-	Priority            int     `json:"priority"`
+	KnowledgeBaseID     string                 `json:"knowledge_base_id"`
+	KnowledgeBaseName   string                 `json:"knowledge_base_name"`
+	AccessLevel         AccessLevel            `json:"access_level"`
+	ContextWeight       float64                `json:"context_weight"`
+	Priority            int                    `json:"priority"`
 	FilterExpression    map[string]interface{} `json:"filter_expression,omitempty"`
-	MaxChunks           *int    `json:"max_chunks,omitempty"`
-	SimilarityThreshold *float64 `json:"similarity_threshold,omitempty"`
+	MaxChunks           *int                   `json:"max_chunks,omitempty"`
+	SimilarityThreshold *float64               `json:"similarity_threshold,omitempty"`
 }
 
 // Route selects appropriate knowledge bases for a query based on:
@@ -153,10 +153,10 @@ func (r *QueryRouter) buildFallbackResult(links []ChatbotKnowledgeBase, traceID 
 	r.sortSelectedKBs(selected)
 
 	return &RouteResult{
-		SelectedKBs:   selected,
-		FallbackToAll: true,
+		SelectedKBs:    selected,
+		FallbackToAll:  true,
 		MatchedIntents: []string{},
-		TraceID:       traceID,
+		TraceID:        traceID,
 	}
 }
 

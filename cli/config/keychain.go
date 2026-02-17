@@ -3,6 +3,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"runtime"
 
@@ -65,7 +66,7 @@ func (k *KeychainStore) Save(profileName string, creds *Credentials) error {
 func (k *KeychainStore) Load(profileName string) (*Credentials, error) {
 	data, err := keyring.Get(k.serviceName, profileName)
 	if err != nil {
-		if err == keyring.ErrNotFound {
+		if errors.Is(err, keyring.ErrNotFound) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to load from keychain: %w", err)
@@ -82,7 +83,7 @@ func (k *KeychainStore) Load(profileName string) (*Credentials, error) {
 // Delete removes credentials from keychain
 func (k *KeychainStore) Delete(profileName string) error {
 	err := keyring.Delete(k.serviceName, profileName)
-	if err != nil && err != keyring.ErrNotFound {
+	if err != nil && !errors.Is(err, keyring.ErrNotFound) {
 		return fmt.Errorf("failed to delete from keychain: %w", err)
 	}
 	return nil

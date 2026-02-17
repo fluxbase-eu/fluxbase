@@ -19,9 +19,9 @@ func TestPipelineType_Values(t *testing.T) {
 func TestTransformResult_Struct(t *testing.T) {
 	t.Run("transform result structure", func(t *testing.T) {
 		result := &TransformResult{
-			Content:      "Cleaned content",
-			Metadata:     map[string]interface{}{"word_count": 2},
-			ShouldChunk:  true,
+			Content:     "Cleaned content",
+			Metadata:    map[string]interface{}{"word_count": 2},
+			ShouldChunk: true,
 		}
 
 		assert.Equal(t, "Cleaned content", result.Content)
@@ -69,9 +69,9 @@ func TestSQLPipeline_ExecuteTransform_SQLType(t *testing.T) {
 func TestTransformResult_CanDisableChunking(t *testing.T) {
 	t.Run("transform can disable chunking", func(t *testing.T) {
 		result := &TransformResult{
-			Content:      "Pre-chunked content",
-			Metadata:     map[string]interface{}{},
-			ShouldChunk:  false,
+			Content:     "Pre-chunked content",
+			Metadata:    map[string]interface{}{},
+			ShouldChunk: false,
 		}
 
 		assert.False(t, result.ShouldChunk)

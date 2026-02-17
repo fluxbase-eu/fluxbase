@@ -47,8 +47,8 @@ func (h *QuotaHandler) ListUsersWithQuotas(c fiber.Ctx) error {
 	result := make([]fiber.Map, 0, len(users))
 	for _, user := range users {
 		userMap := fiber.Map{
-			"id":       user.ID,
-			"email":    user.Email,
+			"id":        user.ID,
+			"email":     user.Email,
 			"full_name": nil,
 		}
 

@@ -60,7 +60,7 @@ func TestEdgeFunctionPipeline_ExecuteTransform_EdgeFunction(t *testing.T) {
 			PipelineType: string(PipelineTypeEdgeFunction),
 			PipelineConfig: map[string]interface{}{
 				"function_name": "transform-document",
-				"timeout":      30,
+				"timeout":       30,
 			},
 		}
 

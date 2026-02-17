@@ -29,8 +29,8 @@ func NewSQLPipeline(storage *KnowledgeBaseStorage) *SQLPipeline {
 
 // TransformResult represents the result of a document transformation
 type TransformResult struct {
-	Content    string                 `json:"content"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	Content     string                 `json:"content"`
+	Metadata    map[string]interface{} `json:"metadata"`
 	ShouldChunk bool                   `json:"should_chunk"`
 }
 
@@ -39,9 +39,9 @@ func (p *SQLPipeline) ExecuteTransform(ctx context.Context, kb *KnowledgeBase, d
 	if kb.PipelineType != string(PipelineTypeSQL) || kb.TransformationFunction == nil || *kb.TransformationFunction == "" {
 		// No transformation configured
 		return &TransformResult{
-			Content:      document.Content,
-			Metadata:     map[string]interface{}{},
-			ShouldChunk:  true,
+			Content:     document.Content,
+			Metadata:    map[string]interface{}{},
+			ShouldChunk: true,
 		}, nil
 	}
 
@@ -50,7 +50,7 @@ func (p *SQLPipeline) ExecuteTransform(ctx context.Context, kb *KnowledgeBase, d
 	query := fmt.Sprintf("SELECT * FROM %s($1, $2)", *kb.TransformationFunction)
 
 	var (
-		transformedContent string
+		transformedContent  string
 		transformedMetadata map[string]interface{}
 	)
 
@@ -64,9 +64,9 @@ func (p *SQLPipeline) ExecuteTransform(ctx context.Context, kb *KnowledgeBase, d
 	}
 
 	return &TransformResult{
-		Content:      transformedContent,
-		Metadata:     transformedMetadata,
-		ShouldChunk:  true,
+		Content:     transformedContent,
+		Metadata:    transformedMetadata,
+		ShouldChunk: true,
 	}, nil
 }
 

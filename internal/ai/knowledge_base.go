@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -26,15 +27,15 @@ type KnowledgeBase struct {
 	OwnerID    *string      `json:"owner_id,omitempty"`
 	Visibility KBVisibility `json:"visibility"`
 	// Quotas
-	QuotaMaxDocuments    int    `json:"quota_max_documents"`
-	QuotaMaxChunks       int    `json:"quota_max_chunks"`
-	QuotaMaxStorageBytes int64  `json:"quota_max_storage_bytes"`
+	QuotaMaxDocuments    int   `json:"quota_max_documents"`
+	QuotaMaxChunks       int   `json:"quota_max_chunks"`
+	QuotaMaxStorageBytes int64 `json:"quota_max_storage_bytes"`
 	// Pipeline configuration
-	PipelineType            string                 `json:"pipeline_type"`
-	PipelineConfig          map[string]interface{} `json:"pipeline_config,omitempty"`
-	TransformationFunction  *string                `json:"transformation_function,omitempty"`
-	CreatedAt  time.Time    `json:"created_at"`
-	UpdatedAt  time.Time    `json:"updated_at"`
+	PipelineType           string                 `json:"pipeline_type"`
+	PipelineConfig         map[string]interface{} `json:"pipeline_config,omitempty"`
+	TransformationFunction *string                `json:"transformation_function,omitempty"`
+	CreatedAt              time.Time              `json:"created_at"`
+	UpdatedAt              time.Time              `json:"updated_at"`
 }
 
 // KnowledgeBaseSummary is a lightweight version for listing
@@ -149,13 +150,13 @@ type ChatbotKnowledgeBase struct {
 	ID                  string                 `json:"id"`
 	ChatbotID           string                 `json:"chatbot_id"`
 	KnowledgeBaseID     string                 `json:"knowledge_base_id"`
-	AccessLevel         string                 `json:"access_level"`          // full, filtered, tiered
+	AccessLevel         string                 `json:"access_level"` // full, filtered, tiered
 	FilterExpression    map[string]interface{} `json:"filter_expression"`
-	ContextWeight       float64                `json:"context_weight"`        // 0.0-1.0
-	Priority            int                    `json:"priority"`               // For tiered access
-	IntentKeywords      []string               `json:"intent_keywords"`        // For query routing
-	MaxChunks           *int                   `json:"max_chunks"`            // NULL = use default
-	SimilarityThreshold *float64               `json:"similarity_threshold"`  // NULL = use default
+	ContextWeight       float64                `json:"context_weight"`       // 0.0-1.0
+	Priority            int                    `json:"priority"`             // For tiered access
+	IntentKeywords      []string               `json:"intent_keywords"`      // For query routing
+	MaxChunks           *int                   `json:"max_chunks"`           // NULL = use default
+	SimilarityThreshold *float64               `json:"similarity_threshold"` // NULL = use default
 	Enabled             bool                   `json:"enabled"`
 	Metadata            map[string]interface{} `json:"metadata"`
 	CreatedAt           time.Time              `json:"created_at"`
@@ -322,28 +323,28 @@ type KBPermissionGrant struct {
 
 // UserQuota represents per-user resource quotas
 type UserQuota struct {
-	UserID             string    `json:"user_id"`
-	MaxDocuments       int       `json:"max_documents"`
-	MaxChunks          int       `json:"max_chunks"`
-	MaxStorageBytes    int64     `json:"max_storage_bytes"`
-	UsedDocuments      int       `json:"used_documents"`
-	UsedChunks         int       `json:"used_chunks"`
-	UsedStorageBytes   int64     `json:"used_storage_bytes"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	UserID           string    `json:"user_id"`
+	MaxDocuments     int       `json:"max_documents"`
+	MaxChunks        int       `json:"max_chunks"`
+	MaxStorageBytes  int64     `json:"max_storage_bytes"`
+	UsedDocuments    int       `json:"used_documents"`
+	UsedChunks       int       `json:"used_chunks"`
+	UsedStorageBytes int64     `json:"used_storage_bytes"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 // QuotaUsage represents current quota usage
 type QuotaUsage struct {
-	UserID           string `json:"user_id"`
-	DocumentsUsed    int    `json:"documents_used"`
-	DocumentsLimit   int    `json:"documents_limit"`
-	ChunksUsed       int    `json:"chunks_used"`
-	ChunksLimit      int    `json:"chunks_limit"`
-	StorageUsed      int64  `json:"storage_used"`
-	StorageLimit     int64  `json:"storage_limit"`
-	CanAddDocument   bool   `json:"can_add_document"`
-	CanAddChunks     bool   `json:"can_add_chunks"`
+	UserID         string `json:"user_id"`
+	DocumentsUsed  int    `json:"documents_used"`
+	DocumentsLimit int    `json:"documents_limit"`
+	ChunksUsed     int    `json:"chunks_used"`
+	ChunksLimit    int    `json:"chunks_limit"`
+	StorageUsed    int64  `json:"storage_used"`
+	StorageLimit   int64  `json:"storage_limit"`
+	CanAddDocument bool   `json:"can_add_document"`
+	CanAddChunks   bool   `json:"can_add_chunks"`
 }
 
 // SetUserQuotaRequest is the request to set user quotas
@@ -368,8 +369,8 @@ func (e *QuotaError) Error() string {
 
 // IsQuotaError checks if an error is a quota error
 func IsQuotaError(err error) bool {
-	_, ok := err.(*QuotaError)
-	return ok
+	var quotaErr *QuotaError
+	return errors.As(err, &quotaErr)
 }
 
 // ============================================================================
@@ -380,26 +381,26 @@ func IsQuotaError(err error) bool {
 type EntityType string
 
 const (
-	EntityPerson         EntityType = "person"
-	EntityOrganization   EntityType = "organization"
-	EntityLocation       EntityType = "location"
-	EntityConcept        EntityType = "concept"
-	EntityProduct        EntityType = "product"
-	EntityEvent          EntityType = "event"
-	EntityOther          EntityType = "other"
+	EntityPerson       EntityType = "person"
+	EntityOrganization EntityType = "organization"
+	EntityLocation     EntityType = "location"
+	EntityConcept      EntityType = "concept"
+	EntityProduct      EntityType = "product"
+	EntityEvent        EntityType = "event"
+	EntityOther        EntityType = "other"
 )
 
 // Entity represents a named entity extracted from documents
 type Entity struct {
-	ID             string                 `json:"id"`
+	ID              string                 `json:"id"`
 	KnowledgeBaseID string                 `json:"knowledge_base_id"`
-	EntityType     EntityType             `json:"entity_type"`
-	Name           string                 `json:"name"`
-	CanonicalName  string                 `json:"canonical_name"`
-	Aliases        []string               `json:"aliases"`
-	Metadata       map[string]interface{} `json:"metadata"`
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	EntityType      EntityType             `json:"entity_type"`
+	Name            string                 `json:"name"`
+	CanonicalName   string                 `json:"canonical_name"`
+	Aliases         []string               `json:"aliases"`
+	Metadata        map[string]interface{} `json:"metadata"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
 // RelationshipType represents the type of relationship between entities
@@ -430,8 +431,8 @@ const (
 type RelationshipDirection string
 
 const (
-	DirectionForward      RelationshipDirection = "forward"
-	DirectionBackward     RelationshipDirection = "backward"
+	DirectionForward       RelationshipDirection = "forward"
+	DirectionBackward      RelationshipDirection = "backward"
 	DirectionBidirectional RelationshipDirection = "bidirectional"
 )
 
@@ -454,14 +455,14 @@ type EntityRelationship struct {
 
 // DocumentEntity represents a mention of an entity in a document
 type DocumentEntity struct {
-	ID                string    `json:"id"`
-	DocumentID        string    `json:"document_id"`
-	EntityID          string    `json:"entity_id"`
-	MentionCount      int       `json:"mention_count"`
-	FirstMentionOffset *int     `json:"first_mention_offset,omitempty"`
-	Salience          float64   `json:"salience"`
-	Context           string    `json:"context,omitempty"`
-	CreatedAt         time.Time `json:"created_at"`
+	ID                 string    `json:"id"`
+	DocumentID         string    `json:"document_id"`
+	EntityID           string    `json:"entity_id"`
+	MentionCount       int       `json:"mention_count"`
+	FirstMentionOffset *int      `json:"first_mention_offset,omitempty"`
+	Salience           float64   `json:"salience"`
+	Context            string    `json:"context,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
 
 	// Joined fields (not in DB)
 	Entity *Entity `json:"entity,omitempty"`
@@ -480,8 +481,8 @@ type RelatedEntity struct {
 
 // EntityExtractionResult contains entities extracted from a document
 type EntityExtractionResult struct {
-	DocumentID string               `json:"document_id"`
-	Entities   []Entity             `json:"entities"`
-	Relationships []EntityRelationship `json:"relationships"`
-	DocumentEntities []DocumentEntity `json:"document_entities"`
+	DocumentID       string               `json:"document_id"`
+	Entities         []Entity             `json:"entities"`
+	Relationships    []EntityRelationship `json:"relationships"`
+	DocumentEntities []DocumentEntity     `json:"document_entities"`
 }

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -207,7 +208,7 @@ func (t *GetBranchTool) Execute(ctx context.Context, args map[string]any, authCt
 	}
 
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			return &mcp.ToolResult{
 				Content: []mcp.Content{mcp.ErrorContent("Branch not found")},
 				IsError: true,
@@ -475,7 +476,7 @@ func (t *DeleteBranchTool) Execute(ctx context.Context, args map[string]any, aut
 	} else if slug, ok := args["slug"].(string); ok && slug != "" {
 		branch, err := t.storage.GetBranchBySlug(ctx, slug)
 		if err != nil {
-			if err == branching.ErrBranchNotFound {
+			if errors.Is(err, branching.ErrBranchNotFound) {
 				return &mcp.ToolResult{
 					Content: []mcp.Content{mcp.ErrorContent("Branch not found")},
 					IsError: true,
@@ -592,7 +593,7 @@ func (t *ResetBranchTool) Execute(ctx context.Context, args map[string]any, auth
 	} else if slug, ok := args["slug"].(string); ok && slug != "" {
 		branch, err := t.storage.GetBranchBySlug(ctx, slug)
 		if err != nil {
-			if err == branching.ErrBranchNotFound {
+			if errors.Is(err, branching.ErrBranchNotFound) {
 				return &mcp.ToolResult{
 					Content: []mcp.Content{mcp.ErrorContent("Branch not found")},
 					IsError: true,
@@ -990,7 +991,7 @@ func (t *SetActiveBranchTool) Execute(ctx context.Context, args map[string]any, 
 	if branch != "" && branch != "main" {
 		_, err := t.storage.GetBranchBySlug(ctx, branch)
 		if err != nil {
-			if err == branching.ErrBranchNotFound {
+			if errors.Is(err, branching.ErrBranchNotFound) {
 				return &mcp.ToolResult{
 					Content: []mcp.Content{mcp.ErrorContent("Branch not found: " + branch)},
 					IsError: true,

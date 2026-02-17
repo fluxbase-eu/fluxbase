@@ -1395,6 +1395,8 @@ func filterToSQL(f Filter, argCounter *int) (string, interface{}) {
 		if f.Value == nil {
 			return fmt.Sprintf("%s IS NULL", colExpr), nil
 		}
+		// SECURITY: OpIs values are validated during parsing to only accept "true", "false", or "null".
+		// The parsed Go bool value is passed via parameterized query to prevent SQL injection.
 		sql := fmt.Sprintf("%s IS $%d", colExpr, *argCounter)
 		*argCounter++
 		return sql, f.Value

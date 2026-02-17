@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -183,7 +184,7 @@ func (db *pgxSubscriptionDB) IsTableRealtimeEnabled(ctx context.Context, schema,
 		SELECT realtime_enabled FROM realtime.schema_registry
 		WHERE schema_name = $1 AND table_name = $2
 	`, schema, table).Scan(&enabled)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
@@ -261,7 +262,7 @@ func (db *pgxSubscriptionDB) CheckRLSAccess(ctx context.Context, schema, table, 
 func (db *pgxSubscriptionDB) CheckRPCOwnership(ctx context.Context, execID, userID uuid.UUID) (bool, bool, error) {
 	var ownerID *uuid.UUID
 	err := db.pool.QueryRow(ctx, "SELECT user_id FROM rpc.executions WHERE id = $1", execID).Scan(&ownerID)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil
 	}
 	if err != nil {
@@ -276,7 +277,7 @@ func (db *pgxSubscriptionDB) CheckRPCOwnership(ctx context.Context, execID, user
 func (db *pgxSubscriptionDB) CheckJobOwnership(ctx context.Context, execID, userID uuid.UUID) (bool, bool, error) {
 	var ownerID *uuid.UUID
 	err := db.pool.QueryRow(ctx, "SELECT created_by FROM jobs.queue WHERE id = $1", execID).Scan(&ownerID)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil
 	}
 	if err != nil {
@@ -296,7 +297,7 @@ func (db *pgxSubscriptionDB) CheckFunctionOwnership(ctx context.Context, execID,
 		JOIN functions.edge_functions ef ON ee.function_id = ef.id
 		WHERE ee.id = $1
 	`, execID).Scan(&ownerID)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil
 	}
 	if err != nil {

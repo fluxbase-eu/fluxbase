@@ -31,7 +31,7 @@ func createCustomSettingsService(t *testing.T, tc *testutil.IntegrationTestConte
 func createTestUserForCustomSettings(t *testing.T, tc *testutil.IntegrationTestContext) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()
-	userID := createTestUserForCustomSettings(t, tc)
+	userID := uuid.New()
 
 	// Create a test user in the database
 	_, err := tc.DB.Exec(ctx, `

@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -101,7 +102,8 @@ func TestValidateCronSchedule(t *testing.T) {
 				err := ValidateCronSchedule(expr)
 				if err != nil {
 					// Either parsing error or interval error is acceptable
-					_, isCronIntervalError := err.(*CronIntervalError)
+					var intervalErr *CronIntervalError
+					isCronIntervalError := errors.As(err, &intervalErr)
 					if isCronIntervalError {
 						assert.Contains(t, err.Error(), "runs too frequently")
 					}
@@ -587,8 +589,8 @@ func TestCronIntervalError_Additional(t *testing.T) {
 		}
 
 		// Should be able to type assert back to CronIntervalError
-		intervalErr, ok := err.(*CronIntervalError)
-		assert.True(t, ok)
+		var intervalErr *CronIntervalError
+		assert.True(t, errors.As(err, &intervalErr))
 		assert.Equal(t, "*/30 * * * * *", intervalErr.Expression)
 	})
 }

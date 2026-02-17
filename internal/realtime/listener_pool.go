@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -258,7 +259,7 @@ func (lp *ListenerPool) listen(id int) error {
 				if lp.ctx.Err() != nil {
 					return nil
 				}
-				if err == context.DeadlineExceeded || waitCtx.Err() == context.DeadlineExceeded {
+				if errors.Is(err, context.DeadlineExceeded) || errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
 					continue // Timeout is expected
 				}
 				return err

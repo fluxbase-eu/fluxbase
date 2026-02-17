@@ -241,6 +241,25 @@ func (v *Validator) ValidateSQL(sql string, allowedTables, allowedSchemas []stri
 }
 
 // ValidateAccess checks if a user with the given role can access the procedure
+//
+// SECURITY IMPLICATIONS:
+//
+// Service role (service_role and dashboard_admin) bypass all access checks:
+// - These roles have unrestricted access to ALL procedures
+// - If service role credentials are compromised, an attacker gains full database access
+// - Service role tokens should NEVER be exposed to client-side code
+// - Service role credentials should be stored securely (environment variables, secret managers)
+//
+// Recommended safeguards:
+// 1. Restrict service role usage to server-side code only
+// 2. Implement IP whitelisting for service role endpoints (if possible)
+// 3. Enable comprehensive audit logging for all service role operations
+// 4. Consider rate limiting specifically for service roles
+// 5. Rotate service role secrets regularly
+// 6. Never commit service role credentials to version control
+//
+// The bypass is necessary because service_role tokens don't have a user_id,
+// so isAuthenticated will be false even though service_role should have full access.
 func (v *Validator) ValidateAccess(proc *Procedure, userRole string, isAuthenticated bool) error {
 	// Service roles bypass all checks (check first, before authentication)
 	// This is important because service_role tokens don't have a user_id,

@@ -48,12 +48,12 @@ func (s *QuotaService) CheckUserQuota(ctx context.Context, userID string, additi
 	if err != nil {
 		// If quota doesn't exist, use system defaults
 		quota = &UserQuota{
-			UserID:          userID,
-			MaxDocuments:    DefaultSystemQuotaLimits().MaxDocuments,
-			MaxChunks:       DefaultSystemQuotaLimits().MaxChunks,
-			MaxStorageBytes: DefaultSystemQuotaLimits().MaxStorageBytes,
-			UsedDocuments:   0,
-			UsedChunks:      0,
+			UserID:           userID,
+			MaxDocuments:     DefaultSystemQuotaLimits().MaxDocuments,
+			MaxChunks:        DefaultSystemQuotaLimits().MaxChunks,
+			MaxStorageBytes:  DefaultSystemQuotaLimits().MaxStorageBytes,
+			UsedDocuments:    0,
+			UsedChunks:       0,
 			UsedStorageBytes: 0,
 		}
 	}

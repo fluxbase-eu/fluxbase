@@ -100,7 +100,7 @@ const (
 func init() {
 	// Set test mode environment variable to disable GC goroutines in middleware
 	// This prevents goroutine leaks in tests from Fiber's memory storage
-	os.Setenv("FLUXBASE_TEST_MODE", "1")
+	_ = os.Setenv("FLUXBASE_TEST_MODE", "1")
 }
 
 // connectTestDatabaseWithRetry attempts to connect to the test database with exponential backoff.

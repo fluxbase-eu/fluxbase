@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -457,7 +458,7 @@ func (s *WebhookService) Get(ctx context.Context, id uuid.UUID) (*Webhook, error
 		)
 	})
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("webhook not found")
 	}
 	if err != nil {
