@@ -332,7 +332,13 @@ func (r *RAGService) GetChatbotRAGConfig(ctx context.Context, chatbotID string) 
 		if !link.Enabled {
 			continue
 		}
-		totalMaxChunks += link.MaxChunks
+
+		// Use configured max chunks or default to 5
+		maxChunks := 5
+		if link.MaxChunks != nil {
+			maxChunks = *link.MaxChunks
+		}
+		totalMaxChunks += maxChunks
 
 		kb, err := r.storage.GetKnowledgeBase(ctx, link.KnowledgeBaseID)
 		if err == nil && kb != nil && kb.Enabled {

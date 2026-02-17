@@ -5,6 +5,7 @@ package settings_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
@@ -26,12 +27,12 @@ func createSecretsService(t *testing.T, tc *testutil.IntegrationTestContext) *se
 func createTestUser(t *testing.T, tc *testutil.IntegrationTestContext) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 
 	// Create a test user in the database
 	_, err := tc.DB.Exec(ctx, `
-		INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, role)
-		VALUES ($1, $2 || '@test.local', $3, NOW(), 'authenticated')
+		INSERT INTO auth.users (id, email, password_hash, email_verified, role)
+		VALUES ($1, $2 || '@test.local', $3, true, 'authenticated')
 	`, userID, userID.String(), "hashed_password")
 	require.NoError(t, err, "Failed to create test user")
 
@@ -179,8 +180,9 @@ func TestSecretsService_GetUserSecret_WrongUser(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	userID1 := uuid.New()
-	userID2 := uuid.New()
+	// Create actual users in the database
+	userID1 := createTestUser(t, tc)
+	userID2 := createTestUser(t, tc)
 	setupUserSecret(t, tc, userID1, "secret.user.isolated", "secret-value")
 
 	svc := createSecretsService(t, tc)
@@ -299,8 +301,9 @@ func TestSecretsService_GetUserSecrets_UserIsolation(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	userID1 := uuid.New()
-	userID2 := uuid.New()
+	// Create actual users in the database
+	userID1 := createTestUser(t, tc)
+	userID2 := createTestUser(t, tc)
 
 	setupUserSecret(t, tc, userID1, "secret.user.1a", "value1a")
 	setupUserSecret(t, tc, userID2, "secret.user.2a", "value2a")
@@ -401,7 +404,7 @@ func TestSecretsService_SetUserSecret_Create(t *testing.T) {
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 
 	err := svc.SetUserSecret(ctx, userID, "secret.user.create", "user-value", "User secret")
 	require.NoError(t, err)
@@ -416,7 +419,7 @@ func TestSecretsService_SetUserSecret_Update(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 	setupUserSecret(t, tc, userID, "secret.user.update", "original")
 
 	svc := createSecretsService(t, tc)
@@ -436,8 +439,8 @@ func TestSecretsService_SetUserSecret_UserIsolation(t *testing.T) {
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
-	userID1 := uuid.New()
-	userID2 := uuid.New()
+	userID1 := createTestUser(t, tc)
+	userID2 := createTestUser(t, tc)
 
 	// User 1 sets a secret
 	err := svc.SetUserSecret(ctx, userID1, "secret.user.isolated", "user1-value", "User 1 secret")
@@ -499,7 +502,7 @@ func TestSecretsService_DeleteUserSecret_Success(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 	setupUserSecret(t, tc, userID, "secret.user.delete", "value")
 
 	svc := createSecretsService(t, tc)
@@ -520,7 +523,7 @@ func TestSecretsService_DeleteUserSecret_NotFound(t *testing.T) {
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 
 	err := svc.DeleteUserSecret(ctx, userID, "secret.user.nonexistent")
 	assert.Error(t, err)
@@ -531,8 +534,8 @@ func TestSecretsService_DeleteUserSecret_CannotDeleteOtherUsers(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	userID1 := uuid.New()
-	userID2 := uuid.New()
+	userID1 := createTestUser(t, tc)
+	userID2 := createTestUser(t, tc)
 	setupUserSecret(t, tc, userID1, "secret.user.protected", "value")
 
 	svc := createSecretsService(t, tc)
@@ -557,7 +560,7 @@ func TestSecretsService_GetUserSetting_Secret(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 	setupUserSecret(t, tc, userID, "user.secret.setting", "secret-value")
 
 	svc := createSecretsService(t, tc)
@@ -574,7 +577,7 @@ func TestSecretsService_GetUserSetting_NonSecret(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc) // Create actual user in database
 
 	// Create a non-secret user setting
 	req := settings.CreateUserSettingRequest{
@@ -597,7 +600,7 @@ func TestSecretsService_GetUserSetting_NotFound(t *testing.T) {
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 
 	_, err := svc.GetUserSetting(ctx, userID, "user.nonexistent")
 	assert.Error(t, err)
@@ -612,12 +615,12 @@ func TestSecretsService_GetSystemSetting_Secret(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	setupSystemSecret(t, tc, "system.secret.setting", "system-secret")
+	setupSystemSecret(t, tc, "system.secret.setting.getsecret", "system-secret")
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
 
-	value, err := svc.GetSystemSetting(ctx, "system.secret.setting")
+	value, err := svc.GetSystemSetting(ctx, "system.secret.setting.getsecret")
 	require.NoError(t, err)
 	assert.Equal(t, "system-secret", value)
 }
@@ -632,7 +635,7 @@ func TestSecretsService_GetSystemSetting_NonSecret(t *testing.T) {
 
 	// Create a non-secret system setting
 	req := settings.CreateCustomSettingRequest{
-		Key:   "system.public.setting",
+		Key:   "system.public.setting.getnonsecret",
 		Value: map[string]interface{}{"value": "system-public"},
 	}
 	_, err := svc.CreateSetting(ctx, req, createdBy)
@@ -640,7 +643,7 @@ func TestSecretsService_GetSystemSetting_NonSecret(t *testing.T) {
 
 	// Get via SecretsService
 	secretsSvc := createSecretsService(t, tc)
-	value, err := secretsSvc.GetSystemSetting(ctx, "system.public.setting")
+	value, err := secretsSvc.GetSystemSetting(ctx, "system.public.setting.getnonsecret")
 	require.NoError(t, err)
 	assert.Equal(t, "system-public", value)
 }
@@ -667,7 +670,7 @@ func TestSecretsService_GetAllUserSettings_Mixed(t *testing.T) {
 
 	customSvc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc) // Create actual user in database
 
 	// Create secret setting
 	secretReq := settings.CreateSecretSettingRequest{
@@ -708,7 +711,7 @@ func TestSecretsService_GetAllSystemSettings_Mixed(t *testing.T) {
 
 	// Create secret setting
 	secretReq := settings.CreateSecretSettingRequest{
-		Key:   "system.mixed.secret",
+		Key:   "system.mixed.secret.getall",
 		Value: "system-secret",
 	}
 	_, err := customSvc.CreateSecretSetting(ctx, secretReq, nil, createdBy)
@@ -716,7 +719,7 @@ func TestSecretsService_GetAllSystemSettings_Mixed(t *testing.T) {
 
 	// Create non-secret setting
 	publicReq := settings.CreateCustomSettingRequest{
-		Key:   "system.mixed.public",
+		Key:   "system.mixed.public.getall",
 		Value: map[string]interface{}{"value": "system-public"},
 	}
 	_, err = customSvc.CreateSetting(ctx, publicReq, createdBy)
@@ -726,9 +729,10 @@ func TestSecretsService_GetAllSystemSettings_Mixed(t *testing.T) {
 	secretsSvc := createSecretsService(t, tc)
 	settings, err := secretsSvc.GetAllSystemSettings(ctx)
 	require.NoError(t, err)
-	assert.Len(t, settings, 2)
-	assert.Equal(t, "system-secret", settings["system.mixed.secret"])
-	assert.Equal(t, "system-public", settings["system.mixed.public"])
+	// Note: CleanupTestData() doesn't clean custom settings, so we check for our specific items
+	assert.GreaterOrEqual(t, len(settings), 2)
+	assert.Equal(t, "system-secret", settings["system.mixed.secret.getall"])
+	assert.Equal(t, "system-public", settings["system.mixed.public.getall"])
 }
 
 // =============================================================================
@@ -739,13 +743,13 @@ func TestSecretsService_GetSettingWithFallback_UserSetting(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	userID := uuid.New()
-	setupUserSecret(t, tc, userID, "fallback.test", "user-value")
+	userID := createTestUser(t, tc) // Create actual user in database
+	setupUserSecret(t, tc, userID, "fallback.usersetting", "user-value")
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
 
-	value, found, err := svc.GetSettingWithFallback(ctx, &userID, "fallback.test")
+	value, found, err := svc.GetSettingWithFallback(ctx, &userID, "fallback.usersetting")
 	require.NoError(t, err)
 	assert.True(t, found)
 	assert.Equal(t, "user-value", value)
@@ -755,14 +759,15 @@ func TestSecretsService_GetSettingWithFallback_SystemFallback(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	setupSystemSecret(t, tc, "fallback.test", "system-value")
+	uniqueKey := fmt.Sprintf("fallback.systemfallback.%s", uuid.New().String())
+	setupSystemSecret(t, tc, uniqueKey, "system-value")
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 
 	// User doesn't have this setting, should fall back to system
-	value, found, err := svc.GetSettingWithFallback(ctx, &userID, "fallback.test")
+	value, found, err := svc.GetSettingWithFallback(ctx, &userID, uniqueKey)
 	require.NoError(t, err)
 	assert.True(t, found)
 	assert.Equal(t, "system-value", value)
@@ -774,7 +779,7 @@ func TestSecretsService_GetSettingWithFallback_NoFallback(t *testing.T) {
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUser(t, tc)
 
 	value, found, err := svc.GetSettingWithFallback(ctx, &userID, "fallback.nonexistent")
 	require.NoError(t, err)
@@ -786,13 +791,14 @@ func TestSecretsService_GetSettingWithFallback_NilUserID(t *testing.T) {
 	tc := testutil.NewIntegrationTestContext(t)
 	defer tc.CleanupTestData()
 
-	setupSystemSecret(t, tc, "fallback.system", "system-value")
+	uniqueKey := fmt.Sprintf("fallback.systemniluserid.%s", uuid.New().String())
+	setupSystemSecret(t, tc, uniqueKey, "system-value")
 
 	svc := createSecretsService(t, tc)
 	ctx := context.Background()
 
 	// nil userID means only check system settings
-	value, found, err := svc.GetSettingWithFallback(ctx, nil, "fallback.system")
+	value, found, err := svc.GetSettingWithFallback(ctx, nil, uniqueKey)
 	require.NoError(t, err)
 	assert.True(t, found)
 	assert.Equal(t, "system-value", value)

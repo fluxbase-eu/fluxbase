@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -9,7 +10,6 @@ import (
 type KnowledgeBase struct {
 	ID                  string  `json:"id"`
 	Name                string  `json:"name"`
-	CollectionID        *string `json:"collection_id,omitempty"` // Collection this KB belongs to
 	Namespace           string  `json:"namespace"`
 	Description         string  `json:"description,omitempty"`
 	EmbeddingModel      string  `json:"embedding_model"`
@@ -25,6 +25,14 @@ type KnowledgeBase struct {
 	// Access control
 	OwnerID    *string      `json:"owner_id,omitempty"`
 	Visibility KBVisibility `json:"visibility"`
+	// Quotas
+	QuotaMaxDocuments    int    `json:"quota_max_documents"`
+	QuotaMaxChunks       int    `json:"quota_max_chunks"`
+	QuotaMaxStorageBytes int64  `json:"quota_max_storage_bytes"`
+	// Pipeline configuration
+	PipelineType            string                 `json:"pipeline_type"`
+	PipelineConfig          map[string]interface{} `json:"pipeline_config,omitempty"`
+	TransformationFunction  *string                `json:"transformation_function,omitempty"`
 	CreatedAt  time.Time    `json:"created_at"`
 	UpdatedAt  time.Time    `json:"updated_at"`
 }
@@ -138,14 +146,23 @@ type Chunk struct {
 
 // ChatbotKnowledgeBase links a chatbot to a knowledge base
 type ChatbotKnowledgeBase struct {
-	ID                  string    `json:"id"`
-	ChatbotID           string    `json:"chatbot_id"`
-	KnowledgeBaseID     string    `json:"knowledge_base_id"`
-	Enabled             bool      `json:"enabled"`
-	MaxChunks           int       `json:"max_chunks"`
-	SimilarityThreshold float64   `json:"similarity_threshold"`
-	Priority            int       `json:"priority"`
-	CreatedAt           time.Time `json:"created_at"`
+	ID                  string                 `json:"id"`
+	ChatbotID           string                 `json:"chatbot_id"`
+	KnowledgeBaseID     string                 `json:"knowledge_base_id"`
+	AccessLevel         string                 `json:"access_level"`          // full, filtered, tiered
+	FilterExpression    map[string]interface{} `json:"filter_expression"`
+	ContextWeight       float64                `json:"context_weight"`        // 0.0-1.0
+	Priority            int                    `json:"priority"`               // For tiered access
+	IntentKeywords      []string               `json:"intent_keywords"`        // For query routing
+	MaxChunks           *int                   `json:"max_chunks"`            // NULL = use default
+	SimilarityThreshold *float64               `json:"similarity_threshold"`  // NULL = use default
+	Enabled             bool                   `json:"enabled"`
+	Metadata            map[string]interface{} `json:"metadata"`
+	CreatedAt           time.Time              `json:"created_at"`
+	UpdatedAt           time.Time              `json:"updated_at"`
+
+	// Joined fields (not in DB)
+	KnowledgeBaseName string `json:"knowledge_base_name,omitempty"`
 }
 
 // RetrievalResult represents a single chunk retrieved during RAG
@@ -212,7 +229,6 @@ type RetrievalLog struct {
 // CreateKnowledgeBaseRequest is the request to create a knowledge base
 type CreateKnowledgeBaseRequest struct {
 	Name                string `json:"name"`
-	CollectionID        string `json:"collection_id"` // Collection to create KB in (required for permission check)
 	Namespace           string `json:"namespace,omitempty"`
 	Description         string `json:"description,omitempty"`
 	EmbeddingModel      string `json:"embedding_model,omitempty"`
@@ -302,4 +318,170 @@ type KBPermissionGrant struct {
 	Permission      KBPermission `json:"permission"`
 	GrantedBy       *string      `json:"granted_by,omitempty"`
 	GrantedAt       time.Time    `json:"granted_at"`
+}
+
+// UserQuota represents per-user resource quotas
+type UserQuota struct {
+	UserID             string    `json:"user_id"`
+	MaxDocuments       int       `json:"max_documents"`
+	MaxChunks          int       `json:"max_chunks"`
+	MaxStorageBytes    int64     `json:"max_storage_bytes"`
+	UsedDocuments      int       `json:"used_documents"`
+	UsedChunks         int       `json:"used_chunks"`
+	UsedStorageBytes   int64     `json:"used_storage_bytes"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+// QuotaUsage represents current quota usage
+type QuotaUsage struct {
+	UserID           string `json:"user_id"`
+	DocumentsUsed    int    `json:"documents_used"`
+	DocumentsLimit   int    `json:"documents_limit"`
+	ChunksUsed       int    `json:"chunks_used"`
+	ChunksLimit      int    `json:"chunks_limit"`
+	StorageUsed      int64  `json:"storage_used"`
+	StorageLimit     int64  `json:"storage_limit"`
+	CanAddDocument   bool   `json:"can_add_document"`
+	CanAddChunks     bool   `json:"can_add_chunks"`
+}
+
+// SetUserQuotaRequest is the request to set user quotas
+type SetUserQuotaRequest struct {
+	MaxDocuments    int   `json:"max_documents,omitempty"`
+	MaxChunks       int   `json:"max_chunks,omitempty"`
+	MaxStorageBytes int64 `json:"max_storage_bytes,omitempty"`
+}
+
+// QuotaError represents a quota violation error
+type QuotaError struct {
+	ResourceType string // "documents", "chunks", "storage"
+	Used         int64  // Current usage
+	Limit        int64  // Limit
+	Requested    int64  // Amount requested
+}
+
+func (e *QuotaError) Error() string {
+	return fmt.Sprintf("quota exceeded for %s: used=%d, limit=%d, requested=%d",
+		e.ResourceType, e.Used, e.Limit, e.Requested)
+}
+
+// IsQuotaError checks if an error is a quota error
+func IsQuotaError(err error) bool {
+	_, ok := err.(*QuotaError)
+	return ok
+}
+
+// ============================================================================
+// Knowledge Graph: Entities and Relationships
+// ============================================================================
+
+// EntityType represents the type of an entity
+type EntityType string
+
+const (
+	EntityPerson         EntityType = "person"
+	EntityOrganization   EntityType = "organization"
+	EntityLocation       EntityType = "location"
+	EntityConcept        EntityType = "concept"
+	EntityProduct        EntityType = "product"
+	EntityEvent          EntityType = "event"
+	EntityOther          EntityType = "other"
+)
+
+// Entity represents a named entity extracted from documents
+type Entity struct {
+	ID             string                 `json:"id"`
+	KnowledgeBaseID string                 `json:"knowledge_base_id"`
+	EntityType     EntityType             `json:"entity_type"`
+	Name           string                 `json:"name"`
+	CanonicalName  string                 `json:"canonical_name"`
+	Aliases        []string               `json:"aliases"`
+	Metadata       map[string]interface{} `json:"metadata"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+// RelationshipType represents the type of relationship between entities
+type RelationshipType string
+
+const (
+	RelWorksAt      RelationshipType = "works_at"
+	RelLocatedIn    RelationshipType = "located_in"
+	RelFoundedBy    RelationshipType = "founded_by"
+	RelOwns         RelationshipType = "owns"
+	RelPartOf       RelationshipType = "part_of"
+	RelRelatedTo    RelationshipType = "related_to"
+	RelKnows        RelationshipType = "knows"
+	RelCustomerOf   RelationshipType = "customer_of"
+	RelSupplierOf   RelationshipType = "supplier_of"
+	RelInvestedIn   RelationshipType = "invested_in"
+	RelAcquired     RelationshipType = "acquired"
+	RelMergedWith   RelationshipType = "merged_with"
+	RelCompetitorOf RelationshipType = "competitor_of"
+	RelParentOf     RelationshipType = "parent_of"
+	RelChildOf      RelationshipType = "child_of"
+	RelSpouseOf     RelationshipType = "spouse_of"
+	RelSiblingOf    RelationshipType = "sibling_of"
+	RelOther        RelationshipType = "other"
+)
+
+// RelationshipDirection represents the direction of a relationship
+type RelationshipDirection string
+
+const (
+	DirectionForward      RelationshipDirection = "forward"
+	DirectionBackward     RelationshipDirection = "backward"
+	DirectionBidirectional RelationshipDirection = "bidirectional"
+)
+
+// EntityRelationship represents a connection between two entities
+type EntityRelationship struct {
+	ID               string                 `json:"id"`
+	KnowledgeBaseID  string                 `json:"knowledge_base_id"`
+	SourceEntityID   string                 `json:"source_entity_id"`
+	TargetEntityID   string                 `json:"target_entity_id"`
+	RelationshipType RelationshipType       `json:"relationship_type"`
+	Direction        RelationshipDirection  `json:"direction"`
+	Confidence       *float64               `json:"confidence,omitempty"`
+	Metadata         map[string]interface{} `json:"metadata"`
+	CreatedAt        time.Time              `json:"created_at"`
+
+	// Joined fields (not in DB)
+	SourceEntity *Entity `json:"source_entity,omitempty"`
+	TargetEntity *Entity `json:"target_entity,omitempty"`
+}
+
+// DocumentEntity represents a mention of an entity in a document
+type DocumentEntity struct {
+	ID                string    `json:"id"`
+	DocumentID        string    `json:"document_id"`
+	EntityID          string    `json:"entity_id"`
+	MentionCount      int       `json:"mention_count"`
+	FirstMentionOffset *int     `json:"first_mention_offset,omitempty"`
+	Salience          float64   `json:"salience"`
+	Context           string    `json:"context,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+
+	// Joined fields (not in DB)
+	Entity *Entity `json:"entity,omitempty"`
+}
+
+// RelatedEntity represents an entity found through graph traversal
+type RelatedEntity struct {
+	EntityID         string   `json:"entity_id"`
+	EntityType       string   `json:"entity_type"`
+	Name             string   `json:"name"`
+	CanonicalName    string   `json:"canonical_name"`
+	RelationshipType string   `json:"relationship_type"`
+	Depth            int      `json:"depth"`
+	Path             []string `json:"path"` // Entity IDs in traversal path
+}
+
+// EntityExtractionResult contains entities extracted from a document
+type EntityExtractionResult struct {
+	DocumentID string               `json:"document_id"`
+	Entities   []Entity             `json:"entities"`
+	Relationships []EntityRelationship `json:"relationships"`
+	DocumentEntities []DocumentEntity `json:"document_entities"`
 }

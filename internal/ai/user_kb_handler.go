@@ -6,14 +6,12 @@ import (
 
 // UserKnowledgeBaseHandler handles user-facing KB endpoints
 type UserKnowledgeBaseHandler struct {
-	storage           *KnowledgeBaseStorage
-	collectionStorage *CollectionStorage
+	storage *KnowledgeBaseStorage
 }
 
-func NewUserKnowledgeBaseHandler(storage *KnowledgeBaseStorage, collectionStorage *CollectionStorage) *UserKnowledgeBaseHandler {
+func NewUserKnowledgeBaseHandler(storage *KnowledgeBaseStorage) *UserKnowledgeBaseHandler {
 	return &UserKnowledgeBaseHandler{
-		storage:           storage,
-		collectionStorage: collectionStorage,
+		storage: storage,
 	}
 }
 
@@ -36,9 +34,8 @@ func (h *UserKnowledgeBaseHandler) ListMyKnowledgeBases(c fiber.Ctx) error {
 	})
 }
 
-// CreateMyKnowledgeBase creates a user-owned KB within a collection
+// CreateMyKnowledgeBase creates a user-owned KB
 // POST /api/v1/ai/knowledge-bases
-// Security: Users can only create KBs in collections where they have editor or owner role
 func (h *UserKnowledgeBaseHandler) CreateMyKnowledgeBase(c fiber.Ctx) error {
 	ctx := c.RequestCtx()
 	userID := c.Locals("user_id").(string)
@@ -50,31 +47,9 @@ func (h *UserKnowledgeBaseHandler) CreateMyKnowledgeBase(c fiber.Ctx) error {
 		})
 	}
 
-	// Validate collection_id is provided
-	if req.CollectionID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "collection_id is required",
-		})
-	}
-
-	// Permission check: User must have editor or owner role in the collection
-	canEdit, err := h.collectionStorage.CanUserEditCollection(ctx, req.CollectionID, userID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to verify collection permissions",
-		})
-	}
-
-	if !canEdit {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "You do not have permission to create knowledge bases in this collection. Requires editor or owner role.",
-		})
-	}
-
-	// Create KB with owner and collection set
+	// Create KB with owner set to current user
 	kb := &KnowledgeBase{
 		Name:                req.Name,
-		CollectionID:        &req.CollectionID,
 		Namespace:           req.Namespace,
 		Description:         req.Description,
 		EmbeddingModel:      req.EmbeddingModel,
@@ -204,8 +179,8 @@ func (h *UserKnowledgeBaseHandler) RevokePermission(c fiber.Ctx) error {
 }
 
 // RegisterUserKnowledgeBaseRoutes registers user-facing routes
-func RegisterUserKnowledgeBaseRoutes(router fiber.Router, storage *KnowledgeBaseStorage, collectionStorage *CollectionStorage) {
-	handler := NewUserKnowledgeBaseHandler(storage, collectionStorage)
+func RegisterUserKnowledgeBaseRoutes(router fiber.Router, storage *KnowledgeBaseStorage) {
+	handler := NewUserKnowledgeBaseHandler(storage)
 	router.Get("/knowledge-bases", handler.ListMyKnowledgeBases)
 	router.Post("/knowledge-bases", handler.CreateMyKnowledgeBase)
 	router.Get("/knowledge-bases/:id", handler.GetMyKnowledgeBase)

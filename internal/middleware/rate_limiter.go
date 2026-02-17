@@ -106,6 +106,7 @@ type RateLimiterConfig struct {
 	Expiration time.Duration          // Time window for the rate limit
 	KeyFunc    func(fiber.Ctx) string // Function to generate the key for rate limiting
 	Message    string                 // Custom error message
+	Storage    fiber.Storage          // Optional shared storage (if nil, creates new storage)
 }
 
 // NewRateLimiter creates a new rate limiter middleware with custom configuration.
@@ -123,12 +124,22 @@ func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
 	// Log warning about in-memory rate limiting in multi-instance environments
 	logRateLimiterWarning()
 
-	// Always use Fiber's native memory storage for compatibility with Fiber's limiter.
-	// The limiter middleware uses MessagePack encoding internally, which is incompatible
-	// with our custom IncrementAdapter's binary encoding.
-	storage := memory.New(memory.Config{
-		GCInterval: 10 * time.Minute,
-	})
+	// Use provided storage or create new one with test mode detection
+	var storage fiber.Storage
+	if config.Storage != nil {
+		storage = config.Storage
+	} else {
+		// In test mode, use a very long GC interval to effectively disable GC
+		// This prevents the GC goroutine from running frequently in tests
+		gcInterval := 10 * time.Minute
+		if os.Getenv("FLUXBASE_TEST_MODE") == "1" {
+			// Set GC interval to 24 hours to effectively disable it during tests
+			gcInterval = 24 * time.Hour
+		}
+		storage = memory.New(memory.Config{
+			GCInterval: gcInterval,
+		})
+	}
 
 	// Default key function uses IP address
 	if config.KeyFunc == nil {
@@ -173,13 +184,13 @@ func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
 }
 
 // AuthLoginLimiter limits login attempts per IP
-func AuthLoginLimiter() fiber.Handler {
-	return AuthLoginLimiterWithConfig(10, 15*time.Minute)
+func AuthLoginLimiter(storage ...fiber.Storage) fiber.Handler {
+	return AuthLoginLimiterWithConfig(10, 15*time.Minute, storage...)
 }
 
 // AuthLoginLimiterWithConfig creates an auth login rate limiter with custom limits
-func AuthLoginLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func AuthLoginLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Name:       "auth_login",
 		Max:        max,
 		Expiration: expiration,
@@ -187,17 +198,21 @@ func AuthLoginLimiterWithConfig(max int, expiration time.Duration) fiber.Handler
 			return "login:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many login attempts. Please try again in %d minutes.", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // AuthSignupLimiter limits signup attempts per IP
-func AuthSignupLimiter() fiber.Handler {
-	return AuthSignupLimiterWithConfig(10, 15*time.Minute)
+func AuthSignupLimiter(storage ...fiber.Storage) fiber.Handler {
+	return AuthSignupLimiterWithConfig(10, 15*time.Minute, storage...)
 }
 
 // AuthSignupLimiterWithConfig creates an auth signup rate limiter with custom limits
-func AuthSignupLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func AuthSignupLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Name:       "auth_signup",
 		Max:        max,
 		Expiration: expiration,
@@ -205,7 +220,11 @@ func AuthSignupLimiterWithConfig(max int, expiration time.Duration) fiber.Handle
 			return "signup:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many signup attempts. Please try again in %d minutes.", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // AuthPasswordResetLimiter limits password reset requests per IP
@@ -214,8 +233,8 @@ func AuthPasswordResetLimiter() fiber.Handler {
 }
 
 // AuthPasswordResetLimiterWithConfig creates an auth password reset rate limiter with custom limits
-func AuthPasswordResetLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func AuthPasswordResetLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Name:       "auth_password_reset",
 		Max:        max,
 		Expiration: expiration,
@@ -223,18 +242,22 @@ func AuthPasswordResetLimiterWithConfig(max int, expiration time.Duration) fiber
 			return "password_reset:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many password reset requests. Please try again in %d minutes.", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // Auth2FALimiter limits 2FA verification attempts per IP
 // Strict rate limiting to prevent brute-force attacks on 6-digit TOTP codes
-func Auth2FALimiter() fiber.Handler {
-	return Auth2FALimiterWithConfig(5, 5*time.Minute)
+func Auth2FALimiter(storage ...fiber.Storage) fiber.Handler {
+	return Auth2FALimiterWithConfig(5, 5*time.Minute, storage...)
 }
 
 // Auth2FALimiterWithConfig creates an auth 2FA rate limiter with custom limits
-func Auth2FALimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func Auth2FALimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Name:       "auth_2fa",
 		Max:        max,
 		Expiration: expiration,
@@ -242,17 +265,21 @@ func Auth2FALimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
 			return "2fa:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many 2FA verification attempts. Please try again in %d minutes.", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // AuthRefreshLimiter limits token refresh attempts per token
-func AuthRefreshLimiter() fiber.Handler {
-	return AuthRefreshLimiterWithConfig(10, 1*time.Minute)
+func AuthRefreshLimiter(storage ...fiber.Storage) fiber.Handler {
+	return AuthRefreshLimiterWithConfig(10, 1*time.Minute, storage...)
 }
 
 // AuthRefreshLimiterWithConfig creates an auth token refresh rate limiter with custom limits
-func AuthRefreshLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func AuthRefreshLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Name:       "auth_refresh",
 		Max:        max,
 		Expiration: expiration,
@@ -268,17 +295,21 @@ func AuthRefreshLimiterWithConfig(max int, expiration time.Duration) fiber.Handl
 			return "refresh:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many token refresh attempts. Please wait %d minute(s).", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // AuthMagicLinkLimiter limits magic link requests per IP
-func AuthMagicLinkLimiter() fiber.Handler {
-	return AuthMagicLinkLimiterWithConfig(5, 15*time.Minute)
+func AuthMagicLinkLimiter(storage ...fiber.Storage) fiber.Handler {
+	return AuthMagicLinkLimiterWithConfig(5, 15*time.Minute, storage...)
 }
 
 // AuthMagicLinkLimiterWithConfig creates an auth magic link rate limiter with custom limits
-func AuthMagicLinkLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func AuthMagicLinkLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Name:       "auth_magic_link",
 		Max:        max,
 		Expiration: expiration,
@@ -286,7 +317,11 @@ func AuthMagicLinkLimiterWithConfig(max int, expiration time.Duration) fiber.Han
 			return "magiclink:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many magic link requests. Please try again in %d minutes.", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // AuthEmailBasedLimiter limits requests per email address (for sensitive operations)
@@ -310,8 +345,9 @@ func AuthEmailBasedLimiter(prefix string, max int, expiration time.Duration) fib
 
 // GlobalAPILimiter is a general rate limiter for all API endpoints
 // Uses per-IP rate limiting by default, can use per-user rate limiting if enabled
-func GlobalAPILimiter() fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func GlobalAPILimiter(storage ...fiber.Storage) fiber.Handler {
+	// Build config with optional shared storage
+	cfg := RateLimiterConfig{
 		Name:       "global",
 		Max:        100,
 		Expiration: 1 * time.Minute,
@@ -327,7 +363,14 @@ func GlobalAPILimiter() fiber.Handler {
 			return "global_ip:" + c.IP()
 		},
 		Message: "API rate limit exceeded. Maximum 100 requests per minute allowed.",
-	})
+	}
+
+	// Add shared storage if provided
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+
+	return NewRateLimiter(cfg)
 }
 
 // DynamicGlobalAPILimiter creates a rate limiter that respects the dynamic setting
@@ -335,9 +378,9 @@ func GlobalAPILimiter() fiber.Handler {
 // without server restart
 // Admin users (admin, dashboard_admin) are exempt from rate limiting
 // service_role users can be rate-limited if service_role_rate_limit > 0
-func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
-	// Create the actual rate limiter once
-	rateLimiter := GlobalAPILimiter()
+func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache, storage ...fiber.Storage) fiber.Handler {
+	// Create the actual rate limiter once with optional shared storage
+	rateLimiter := GlobalAPILimiter(storage...)
 
 	return func(c fiber.Ctx) error {
 		// Only apply rate limiting to API endpoints
@@ -409,9 +452,9 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 					log.Debug().Msg("Rate limiter: bypassing for service_role (no rate limit configured)")
 					return c.Next()
 				}
-				// Apply service_role rate limiting
+				// Apply service_role rate limiting with shared storage if available
 				rateWindow := settingsCache.GetDuration(ctx, "app.security.service_role_rate_window", 1*time.Minute)
-				serviceRoleLimiter := NewRateLimiter(RateLimiterConfig{
+				serviceRoleLimiterCfg := RateLimiterConfig{
 					Name:       "service_role",
 					Max:        serviceRoleRateLimit,
 					Expiration: rateWindow,
@@ -419,7 +462,12 @@ func DynamicGlobalAPILimiter(settingsCache *auth.SettingsCache) fiber.Handler {
 						return "service_role:" + c.IP()
 					},
 					Message: fmt.Sprintf("Service role rate limit exceeded. Maximum %d requests per %s allowed.", serviceRoleRateLimit, rateWindow.String()),
-				})
+				}
+				// Add shared storage if provided
+				if len(storage) > 0 && storage[0] != nil {
+					serviceRoleLimiterCfg.Storage = storage[0]
+				}
+				serviceRoleLimiter := NewRateLimiter(serviceRoleLimiterCfg)
 				log.Debug().
 					Int("limit", serviceRoleRateLimit).
 					Str("window", rateWindow.String()).
@@ -529,51 +577,63 @@ func PerUserOrIPLimiter(anonMax, userMax, clientKeyMax int, duration time.Durati
 
 // AdminSetupLimiter limits admin setup attempts per IP
 // Very strict since this is a one-time operation
-func AdminSetupLimiter() fiber.Handler {
-	return AdminSetupLimiterWithConfig(5, 15*time.Minute)
+func AdminSetupLimiter(storage ...fiber.Storage) fiber.Handler {
+	return AdminSetupLimiterWithConfig(5, 15*time.Minute, storage...)
 }
 
 // AdminSetupLimiterWithConfig creates an admin setup rate limiter with custom limits
-func AdminSetupLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func AdminSetupLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Max:        max,
 		Expiration: expiration,
 		KeyFunc: func(c fiber.Ctx) string {
 			return "admin_setup:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many admin setup attempts. Please try again in %d minutes.", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // AdminLoginLimiter limits admin login attempts per IP
 // Max is set to 4 to trigger rate limiting before account lockout (which happens at 5 failed attempts)
-func AdminLoginLimiter() fiber.Handler {
-	return AdminLoginLimiterWithConfig(4, 1*time.Minute)
+func AdminLoginLimiter(storage ...fiber.Storage) fiber.Handler {
+	return AdminLoginLimiterWithConfig(4, 1*time.Minute, storage...)
 }
 
 // AdminLoginLimiterWithConfig creates an admin login rate limiter with custom limits
-func AdminLoginLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func AdminLoginLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Max:        max,
 		Expiration: expiration,
 		KeyFunc: func(c fiber.Ctx) string {
 			return "admin_login:" + c.IP()
 		},
 		Message: fmt.Sprintf("Too many admin login attempts. Please try again in %d minutes.", int(expiration.Minutes())),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // GitHubWebhookLimiter limits GitHub webhook requests per IP and repository
 // Prevents abuse of the webhook endpoint for branch creation/deletion
-func GitHubWebhookLimiter() fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func GitHubWebhookLimiter(storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Max:        30,              // 30 requests
 		Expiration: 1 * time.Minute, // per minute per IP
 		KeyFunc: func(c fiber.Ctx) string {
 			return "github_webhook:" + c.IP()
 		},
 		Message: "GitHub webhook rate limit exceeded. Maximum 30 requests per minute allowed.",
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // MigrationAPILimiter limits migrations API requests per service key
@@ -583,17 +643,17 @@ func GitHubWebhookLimiter() fiber.Handler {
 // Service keys (sk_*) use per-key configurable rate limits from the database
 //
 // Deprecated: Use MigrationAPILimiterWithConfig for H-2 security fix
-func MigrationAPILimiter() fiber.Handler {
-	return MigrationAPILimiterWithConfig(0, 0)
+func MigrationAPILimiter(storage ...fiber.Storage) fiber.Handler {
+	return MigrationAPILimiterWithConfig(0, 0, storage...)
 }
 
 // MigrationAPILimiterWithConfig creates a migrations API rate limiter with custom limits
 // H-2: Enforces rate limiting for service_role tokens when configured
 // serviceRoleRateLimit: Max requests for service_role tokens (0 = unlimited, for backward compatibility)
 // serviceRoleRateWindow: Time window for service_role rate limiting
-func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWindow time.Duration) fiber.Handler {
+func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWindow time.Duration, storage ...fiber.Storage) fiber.Handler {
 	// Default rate limiter for service keys without custom limits
-	defaultRateLimiter := NewRateLimiter(RateLimiterConfig{
+	defaultRateLimiterCfg := RateLimiterConfig{
 		Max:        10,            // 10 requests
 		Expiration: 1 * time.Hour, // per hour
 		KeyFunc: func(c fiber.Ctx) string {
@@ -606,12 +666,17 @@ func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWind
 			return "migration_ip:" + c.IP()
 		},
 		Message: "Migrations API rate limit exceeded. Maximum 10 requests per hour allowed.",
-	})
+	}
+	// Add shared storage if provided
+	if len(storage) > 0 && storage[0] != nil {
+		defaultRateLimiterCfg.Storage = storage[0]
+	}
+	defaultRateLimiter := NewRateLimiter(defaultRateLimiterCfg)
 
 	// H-2: Service role rate limiter (if configured)
 	var serviceRoleLimiter fiber.Handler
 	if serviceRoleRateLimit > 0 && serviceRoleRateWindow > 0 {
-		serviceRoleLimiter = NewRateLimiter(RateLimiterConfig{
+		serviceRoleLimiterCfg := RateLimiterConfig{
 			Max:        serviceRoleRateLimit,
 			Expiration: serviceRoleRateWindow,
 			KeyFunc: func(c fiber.Ctx) string {
@@ -630,7 +695,12 @@ func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWind
 				return "service_role_ip:" + c.IP()
 			},
 			Message: fmt.Sprintf("Service role rate limit exceeded. Maximum %d requests per %v allowed.", serviceRoleRateLimit, serviceRoleRateWindow),
-		})
+		}
+		// Add shared storage if provided
+		if len(storage) > 0 && storage[0] != nil {
+			serviceRoleLimiterCfg.Storage = storage[0]
+		}
+		serviceRoleLimiter = NewRateLimiter(serviceRoleLimiterCfg)
 	}
 
 	// Cache for per-key rate limiters (keyed by key ID + limit config)
@@ -681,8 +751,8 @@ func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWind
 		limiterMu.RUnlock()
 
 		if !exists {
-			// Create new limiter for this key's rate limit
-			limiter = NewRateLimiter(RateLimiterConfig{
+			// Create new limiter for this key's rate limit with shared storage if available
+			limiterCfg := RateLimiterConfig{
 				Max:        limit,
 				Expiration: 1 * time.Hour,
 				KeyFunc: func(c fiber.Ctx) string {
@@ -695,7 +765,12 @@ func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWind
 					return "migration_ip:" + c.IP()
 				},
 				Message: fmt.Sprintf("Migrations API rate limit exceeded. Maximum %d requests per hour allowed.", limit),
-			})
+			}
+			// Add shared storage if provided
+			if len(storage) > 0 && storage[0] != nil {
+				limiterCfg.Storage = storage[0]
+			}
+			limiter = NewRateLimiter(limiterCfg)
 
 			// Cache the limiter
 			limiterMu.Lock()
@@ -709,29 +784,13 @@ func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWind
 
 // StorageUploadLimiter limits file upload requests per user/IP
 // Prevents abuse of storage upload endpoints including streaming uploads
-func StorageUploadLimiter() fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
-		Name:       "storage_upload",
-		Max:        60, // 60 uploads
-		Expiration: 1 * time.Minute,
-		KeyFunc: func(c fiber.Ctx) string {
-			// Try to get user ID from locals (set by auth middleware)
-			userID := c.Locals("user_id")
-			if userID != nil {
-				if uid, ok := userID.(string); ok && uid != "" && uid != "anonymous" {
-					return "storage_upload_user:" + uid
-				}
-			}
-			// Fallback to IP for anonymous users
-			return "storage_upload_ip:" + c.IP()
-		},
-		Message: "Storage upload rate limit exceeded. Maximum 60 uploads per minute allowed.",
-	})
+func StorageUploadLimiter(storage ...fiber.Storage) fiber.Handler {
+	return StorageUploadLimiterWithConfig(60, 1*time.Minute, storage...)
 }
 
 // StorageUploadLimiterWithConfig creates a storage upload rate limiter with custom limits
-func StorageUploadLimiterWithConfig(max int, expiration time.Duration) fiber.Handler {
-	return NewRateLimiter(RateLimiterConfig{
+func StorageUploadLimiterWithConfig(max int, expiration time.Duration, storage ...fiber.Storage) fiber.Handler {
+	cfg := RateLimiterConfig{
 		Name:       "storage_upload",
 		Max:        max,
 		Expiration: expiration,
@@ -747,7 +806,11 @@ func StorageUploadLimiterWithConfig(max int, expiration time.Duration) fiber.Han
 			return "storage_upload_ip:" + c.IP()
 		},
 		Message: fmt.Sprintf("Storage upload rate limit exceeded. Maximum %d requests per %s allowed.", max, expiration.String()),
-	})
+	}
+	if len(storage) > 0 && storage[0] != nil {
+		cfg.Storage = storage[0]
+	}
+	return NewRateLimiter(cfg)
 }
 
 // fiber:context-methods migrated

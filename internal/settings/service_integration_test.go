@@ -5,10 +5,13 @@ package settings_test
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/settings"
 	"github.com/fluxbase-eu/fluxbase/internal/testutil"
+	test "github.com/fluxbase-eu/fluxbase/test"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,6 +26,21 @@ const testEncryptionKey = "01234567890123456789012345678901" // 32 bytes for AES
 func createCustomSettingsService(t *testing.T, tc *testutil.IntegrationTestContext) *settings.CustomSettingsService {
 	t.Helper()
 	return settings.NewCustomSettingsService(tc.DB, testEncryptionKey)
+}
+
+func createTestUserForCustomSettings(t *testing.T, tc *testutil.IntegrationTestContext) uuid.UUID {
+	t.Helper()
+	ctx := context.Background()
+	userID := createTestUserForCustomSettings(t, tc)
+
+	// Create a test user in the database
+	_, err := tc.DB.Exec(ctx, `
+		INSERT INTO auth.users (id, email, password_hash, email_verified, role)
+		VALUES ($1, $2 || '@test.local', $3, true, 'authenticated')
+	`, userID, userID.String(), "hashed_password")
+	require.NoError(t, err, "Failed to create test user")
+
+	return userID
 }
 
 // =============================================================================
@@ -388,7 +406,7 @@ func TestCustomSettingsService_CreateSecretSetting_User(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 	createdBy := uuid.New()
 
 	createReq := settings.CreateSecretSettingRequest{
@@ -603,7 +621,7 @@ func TestCustomSettingsService_CreateUserSetting_Success(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	req := settings.CreateUserSettingRequest{
 		Key:         "user.preferences.theme",
@@ -626,7 +644,7 @@ func TestCustomSettingsService_CreateUserSetting_Duplicate(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	req := settings.CreateUserSettingRequest{
 		Key:   "user.duplicate",
@@ -649,7 +667,7 @@ func TestCustomSettingsService_GetUserOwnSetting_Success(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	createReq := settings.CreateUserSettingRequest{
 		Key:         "user.get.test",
@@ -673,7 +691,7 @@ func TestCustomSettingsService_GetUserOwnSetting_NotFound(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	_, err := svc.GetUserOwnSetting(ctx, userID, "user.nonexistent")
 	assert.Error(t, err)
@@ -710,7 +728,7 @@ func TestCustomSettingsService_GetUserSettingWithFallback_UserSource(t *testing.
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	// Create user-specific setting
 	userReq := settings.CreateUserSettingRequest{
@@ -733,7 +751,7 @@ func TestCustomSettingsService_GetUserSettingWithFallback_SystemSource(t *testin
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 	createdBy := uuid.New()
 
 	// Create system setting
@@ -757,7 +775,7 @@ func TestCustomSettingsService_UpdateUserSetting_Success(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	createReq := settings.CreateUserSettingRequest{
 		Key:         "user.update.test",
@@ -786,7 +804,7 @@ func TestCustomSettingsService_UpsertUserSetting_Create(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	req := settings.CreateUserSettingRequest{
 		Key:   "user.upsert.test",
@@ -805,7 +823,7 @@ func TestCustomSettingsService_UpsertUserSetting_Update(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	req := settings.CreateUserSettingRequest{
 		Key:   "user.upsert.update",
@@ -829,7 +847,7 @@ func TestCustomSettingsService_DeleteUserSetting_Success(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	createReq := settings.CreateUserSettingRequest{
 		Key:   "user.delete.test",
@@ -854,7 +872,7 @@ func TestCustomSettingsService_DeleteUserSetting_NotFound(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	err := svc.DeleteUserSetting(ctx, userID, "user.nonexistent")
 	assert.Error(t, err)
@@ -867,7 +885,7 @@ func TestCustomSettingsService_ListUserOwnSettings_Success(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc)
 
 	// Create multiple settings for user
 	userSettingReqs := []settings.CreateUserSettingRequest{
@@ -1021,10 +1039,11 @@ func TestCustomSettingsService_ListSecretSettingsWithTx_Success(t *testing.T) {
 	ctx := context.Background()
 	createdBy := uuid.New()
 
-	// Create secrets
+	// Create secrets with unique keys to avoid conflicts
+	uniqueSuffix := uuid.New().String()
 	secretReqs := []settings.CreateSecretSettingRequest{
-		{Key: "secret.tx.list.1", Value: "value1"},
-		{Key: "secret.tx.list.2", Value: "value2"},
+		{Key: fmt.Sprintf("secret.tx.list.%s.1", uniqueSuffix), Value: "value1"},
+		{Key: fmt.Sprintf("secret.tx.list.%s.2", uniqueSuffix), Value: "value2"},
 	}
 	for _, createReq := range secretReqs {
 		_, err := svc.CreateSecretSetting(ctx, createReq, nil, createdBy)
@@ -1036,10 +1055,16 @@ func TestCustomSettingsService_ListSecretSettingsWithTx_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// List with transaction
+	// List with transaction - Note: will include all existing secrets, not just our test data
 	list, err := svc.ListSecretSettingsWithTx(ctx, tx, nil)
 	require.NoError(t, err)
-	assert.Len(t, list, 2)
+	// Check that our test secrets are in the list (there may be more from other tests)
+	listKeys := make(map[string]bool)
+	for _, s := range list {
+		listKeys[s.Key] = true
+	}
+	assert.True(t, listKeys[secretReqs[0].Key], "First test secret not found")
+	assert.True(t, listKeys[secretReqs[1].Key], "Second test secret not found")
 }
 
 func TestCustomSettingsService_UpsertUserSettingWithTx_Create(t *testing.T) {
@@ -1048,7 +1073,7 @@ func TestCustomSettingsService_UpsertUserSettingWithTx_Create(t *testing.T) {
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc) // Create actual user in database
 
 	// Begin transaction
 	tx, err := tc.DB.BeginTx(ctx)
@@ -1071,7 +1096,7 @@ func TestCustomSettingsService_GetUserSettingWithFallbackWithTx_UserSource(t *te
 
 	svc := createCustomSettingsService(t, tc)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := createTestUserForCustomSettings(t, tc) // Create actual user in database
 
 	// Create user setting
 	req := settings.CreateUserSettingRequest{
@@ -1090,4 +1115,22 @@ func TestCustomSettingsService_GetUserSettingWithFallbackWithTx_UserSource(t *te
 	setting, err := svc.GetUserSettingWithFallbackWithTx(ctx, tx, userID, "user.tx.fallback")
 	require.NoError(t, err)
 	assert.Equal(t, "user", setting.Source)
+}
+
+// TestMain is the entry point for running tests in this package when using go test
+// It ensures that the shared test context is properly cleaned up after all tests run,
+// which prevents goroutine leaks from Fiber's middleware (CSRF, rate limiter, etc.)
+func TestMain(m *testing.M) {
+	// Initialize shared test context before running any tests
+	test.InitSharedTestContext()
+
+	// Run all tests
+	code := m.Run()
+
+	// Clean up shared test context after all tests complete
+	// This shuts down the server and stops all background goroutines
+	test.CleanupSharedTestContext()
+
+	// Exit with the test result code
+	os.Exit(code)
 }

@@ -97,6 +97,12 @@ const (
 	defaultDBHealthTimeout = 10 * time.Second
 )
 
+func init() {
+	// Set test mode environment variable to disable GC goroutines in middleware
+	// This prevents goroutine leaks in tests from Fiber's memory storage
+	os.Setenv("FLUXBASE_TEST_MODE", "1")
+}
+
 // connectTestDatabaseWithRetry attempts to connect to the test database with exponential backoff.
 // This mirrors the retry logic used in the main application (cmd/fluxbase/main.go) to handle
 // race conditions where the database container is running but not yet accepting connections.
@@ -605,10 +611,16 @@ func ResetRLSTestState(tc *TestContext) {
 
 // Close cleans up test context resources
 func (tc *TestContext) Close() {
-	// For shared test context, only reset global state
-	// Don't shut down server, close pubsub, or close database
-	// These are managed by the shared context lifecycle in CleanupSharedTestContext()
+	// For shared test context, shut down the server to stop background goroutines
+	// then reset global state
 	if tc.isShared {
+		// Shutdown the server first to stop all background goroutines
+		// (idempotency cleanup, rate limiter GC, etc.)
+		if tc.Server != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = tc.Server.Shutdown(ctx)
+		}
 		ResetGlobalTestState()
 		return
 	}

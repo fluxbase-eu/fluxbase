@@ -1491,6 +1491,13 @@ func (h *AuthHandler) SendOTP(c fiber.Ctx) error {
 		})
 	}
 
+	// Validate auth service is initialized (after input validation)
+	if h.authService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Authentication service not available",
+		})
+	}
+
 	// Send OTP
 	var err error
 	purpose := "signin" // Default purpose
@@ -1508,12 +1515,14 @@ func (h *AuthHandler) SendOTP(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to send OTP")
+		log.Error().Str("error", err.Error()).Msg("Failed to send OTP")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to send OTP code",
 		})
 	}
 
+	// Return Supabase-compatible OTP response
+	// For send requests, user and session are both nil (OTP delivered but not verified yet)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"user":    nil,
 		"session": nil,

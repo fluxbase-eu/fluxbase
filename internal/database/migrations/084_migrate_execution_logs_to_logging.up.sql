@@ -54,8 +54,15 @@ BEGIN
             DROP TABLE IF EXISTS logging.entries_ai CASCADE;
             DROP TABLE IF EXISTS logging.entries_custom CASCADE;
 
-            -- Remove partitioning constraint from parent table
-            ALTER TABLE logging.entries DROP CONSTRAINT IF EXISTS logging_entries_pkey;
+            -- Remove partitioning constraint from parent table (if exists)
+            -- Note: Can't use DROP CONSTRAINT IF EXISTS in older PostgreSQL versions
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conname = 'logging_entries_pkey'
+                AND conrelid = 'logging.entries'::regclass
+            ) THEN
+                ALTER TABLE logging.entries DROP CONSTRAINT logging_entries_pkey;
+            END IF;
 
             -- Add primary key without partitioning
             ALTER TABLE logging.entries ADD PRIMARY KEY (id);

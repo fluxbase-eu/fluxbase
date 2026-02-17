@@ -35,8 +35,9 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	t.Run("create global secret", func(t *testing.T) {
+		secretName := fmt.Sprintf("TEST_API_KEY_%s", uuid.New().String()[:8])
 		reqBody := map[string]interface{}{
-			"name":  "TEST_API_KEY",
+			"name":  secretName,
 			"value": "sk-1234567890abcdef",
 			"scope": "global",
 		}
@@ -47,7 +48,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		var result secrets.Secret
 		err := json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
-		assert.Equal(t, "TEST_API_KEY", result.Name)
+		assert.Equal(t, secretName, result.Name)
 		assert.Equal(t, "global", result.Scope)
 		assert.Equal(t, 1, result.Version)
 		assert.NotEqual(t, uuid.UUID{}, result.ID)
@@ -56,8 +57,9 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 
 	t.Run("create namespace secret", func(t *testing.T) {
 		namespace := "production"
+		secretName := fmt.Sprintf("DB_PASSWORD_%s", uuid.New().String()[:8])
 		reqBody := map[string]interface{}{
-			"name":      "DB_PASSWORD",
+			"name":      secretName,
 			"value":     "supersecret",
 			"scope":     "namespace",
 			"namespace": namespace,
@@ -69,6 +71,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		var result secrets.Secret
 		err := json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
+		assert.Equal(t, secretName, result.Name)
 		assert.Equal(t, "namespace", result.Scope)
 		assert.Equal(t, &namespace, result.Namespace)
 	})
@@ -76,9 +79,10 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 	t.Run("create secret with all fields", func(t *testing.T) {
 		expiresAt := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 		description := "Production API key for external service"
+		secretName := fmt.Sprintf("FULL_SECRET_%s", uuid.New().String()[:8])
 
 		reqBody := map[string]interface{}{
-			"name":        "FULL_SECRET",
+			"name":        secretName,
 			"value":       "full-secret-value",
 			"scope":       "global",
 			"description": description,
@@ -91,7 +95,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		var result secrets.Secret
 		err := json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
-		assert.Equal(t, "FULL_SECRET", result.Name)
+		assert.Equal(t, secretName, result.Name)
 		assert.Equal(t, &description, result.Description)
 		assert.NotNil(t, result.ExpiresAt)
 	})

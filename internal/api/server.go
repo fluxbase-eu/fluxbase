@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
+	"github.com/gofiber/storage/memory/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -59,6 +61,7 @@ type Server struct {
 	webhookHandler         *WebhookHandler
 	monitoringHandler      *MonitoringHandler
 	userManagementHandler  *UserManagementHandler
+	quotaHandler           *QuotaHandler
 	invitationHandler      *InvitationHandler
 	ddlHandler             *DDLHandler
 	oauthProviderHandler   *OAuthProviderHandler
@@ -93,8 +96,6 @@ type Server struct {
 	aiMetrics              *observability.Metrics
 	knowledgeBaseHandler   *ai.KnowledgeBaseHandler
 	kbStorage              *ai.KnowledgeBaseStorage
-	collectionStorage      *ai.CollectionStorage
-	collectionHandler      *ai.CollectionHandler
 	rpcHandler             *rpc.Handler
 	rpcScheduler           *rpc.Scheduler
 	graphqlHandler         *GraphQLHandler
@@ -139,6 +140,10 @@ type Server struct {
 	// Server-owned dependencies (instead of global singletons)
 	rateLimiter ratelimit.Store
 	pubSub      pubsub.PubSub
+
+	// Shared storage for middleware (rate limiter, CSRF, etc.)
+	// This prevents creating multiple GC goroutines from Fiber's memory.New()
+	sharedMiddlewareStorage fiber.Storage
 
 	// Test transaction support (for HTTP API tests with transaction isolation)
 	// When set, HTTP requests use this transaction instead of the connection pool
@@ -201,6 +206,18 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	} else {
 		log.Info().Str("backend", cfg.Scaling.Backend).Msg("Pub/sub initialized for cross-instance broadcasting")
 	}
+
+	// Initialize shared middleware storage to prevent multiple GC goroutines
+	// Fiber's memory.New() spawns GC goroutines that cannot be stopped
+	// By using a single shared storage, we only get one set of GC goroutines per server
+	// In test mode, use a very long GC interval to effectively disable GC
+	gcInterval := 10 * time.Minute
+	if os.Getenv("FLUXBASE_TEST_MODE") == "1" {
+		gcInterval = 24 * time.Hour
+	}
+	sharedMiddlewareStorage := memory.New(memory.Config{
+		GCInterval: gcInterval,
+	})
 
 	// Initialize email manager (handles dynamic refresh from settings)
 	// The settings cache and secrets service will be injected later once they're initialized
@@ -540,9 +557,8 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	// Create knowledge base handler for RAG management
 	var knowledgeBaseHandler *ai.KnowledgeBaseHandler
 	var kbStorage *ai.KnowledgeBaseStorage
-	var collectionStorage *ai.CollectionStorage = nil
 	var ocrService *ai.OCRService
-	var collectionHandler *ai.CollectionHandler = nil
+	var quotaHandler *QuotaHandler
 	if cfg.AI.Enabled {
 		// Initialize OCR service for image-based PDF extraction
 		if cfg.AI.OCREnabled {
@@ -580,10 +596,10 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			Bool("ocr_enabled", ocrService != nil && ocrService.IsEnabled()).
 			Msg("Knowledge base handler initialized")
 
-		// Initialize collection storage and handler for KB collections
-		collectionStorage = ai.NewCollectionStorage(db)
-		collectionHandler = ai.NewCollectionHandler(collectionStorage)
-		log.Info().Msg("Collection handler initialized")
+		// Initialize quota service and handler
+		quotaService := ai.NewQuotaService(kbStorage)
+		quotaHandler = NewQuotaHandler(quotaService, userMgmtService)
+		log.Info().Msg("Quota service and handler initialized")
 	}
 
 	// Create internal AI handler for custom MCP tools, edge functions, and jobs
@@ -678,6 +694,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		webhookHandler:         webhookHandler,
 		monitoringHandler:      monitoringHandler,
 		userManagementHandler:  userMgmtHandler,
+		quotaHandler:           quotaHandler,
 		invitationHandler:      invitationHandler,
 		ddlHandler:             ddlHandler,
 		realtimeAdminHandler:   realtimeAdminHandler,
@@ -712,8 +729,6 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		aiMetrics:              aiMetrics,
 		knowledgeBaseHandler:   knowledgeBaseHandler,
 		kbStorage:              kbStorage,
-		collectionStorage:      collectionStorage,
-		collectionHandler:      collectionHandler,
 		rpcHandler:             rpcHandler,
 		rpcScheduler:           rpcScheduler,
 		extensionsHandler:      extensions.NewHandler(extensions.NewService(db)),
@@ -731,10 +746,11 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		mcpOAuthHandler:        NewMCPOAuthHandler(db.Pool(), &cfg.MCP, authService, cfg.BaseURL, cfg.GetPublicBaseURL()),
 		internalAIHandler:      internalAIHandler,
 		metrics:                observability.NewMetrics(),
-		startTime:              time.Now(),
+		startTime:                time.Now(),
 		// Server-owned dependencies
-		rateLimiter: rateLimitStore,
-		pubSub:      ps,
+		rateLimiter:              rateLimitStore,
+		pubSub:                   ps,
+		sharedMiddlewareStorage:  sharedMiddlewareStorage,
 	}
 
 	// Initialize MCP Server if enabled
@@ -1386,7 +1402,8 @@ func (s *Server) setupMiddlewares() {
 	// Global rate limiting - 100 requests per minute per IP
 	// Uses dynamic limiter that checks settings cache on each request
 	// This allows toggling rate limiting via admin UI without server restart
-	s.app.Use(middleware.DynamicGlobalAPILimiter(s.authHandler.authService.GetSettingsCache()))
+	// Pass shared storage to prevent multiple GC goroutines
+	s.app.Use(middleware.DynamicGlobalAPILimiter(s.authHandler.authService.GetSettingsCache(), s.sharedMiddlewareStorage))
 
 	// Per-endpoint body size limits and JSON depth protection
 	if s.config.Server.BodyLimits.Enabled {
@@ -1602,7 +1619,7 @@ func (s *Server) setupRoutes() {
 		// GitHub webhook endpoint (no auth, uses signature verification)
 		// Rate limited to prevent abuse - use specific path to avoid affecting other /api/v1 routes
 		s.app.Post("/api/v1/webhooks/github",
-			middleware.GitHubWebhookLimiter(),
+			middleware.GitHubWebhookLimiter(s.sharedMiddlewareStorage),
 			s.githubWebhook.HandleWebhook,
 		)
 	}
@@ -1689,23 +1706,13 @@ func (s *Server) setupRoutes() {
 			s.aiHandler.UpdateUserConversation,
 		)
 
-		// Collection management routes (require authentication)
-		if s.collectionHandler != nil {
-			collectionRouter := s.app.Group("/api/v1/ai",
-				middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
-				middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-			)
-			s.collectionHandler.RegisterRoutes(collectionRouter)
-		}
-
 		// User-facing Knowledge Base routes (require authentication)
-		// These routes enforce permission-based KB creation within collections
-		if s.kbStorage != nil && s.collectionStorage != nil {
+		if s.kbStorage != nil {
 			userKBRouter := s.app.Group("/api/v1/ai",
 				middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
 				middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
 			)
-			ai.RegisterUserKnowledgeBaseRoutes(userKBRouter, s.kbStorage, s.collectionStorage)
+			ai.RegisterUserKnowledgeBaseRoutes(userKBRouter, s.kbStorage)
 			log.Info().Msg("User-facing knowledge base routes registered")
 		}
 	}
@@ -1964,14 +1971,15 @@ func (s *Server) setupRESTRoutes(router fiber.Router) {
 // setupAuthRoutes sets up authentication routes
 func (s *Server) setupAuthRoutes(router fiber.Router) {
 	// Import rate limiters from middleware package using config values
+	// Pass shared storage to prevent multiple GC goroutines
 	rateLimiters := map[string]fiber.Handler{
-		"signup":         middleware.AuthSignupLimiterWithConfig(s.config.Security.AuthSignupRateLimit, s.config.Security.AuthSignupRateWindow),
-		"login":          middleware.AuthLoginLimiterWithConfig(s.config.Security.AuthLoginRateLimit, s.config.Security.AuthLoginRateWindow),
-		"refresh":        middleware.AuthRefreshLimiterWithConfig(s.config.Security.AuthRefreshRateLimit, s.config.Security.AuthRefreshRateWindow),
-		"magiclink":      middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow),
-		"password_reset": middleware.AuthPasswordResetLimiterWithConfig(s.config.Security.AuthPasswordResetRateLimit, s.config.Security.AuthPasswordResetRateWindow),
-		"otp":            middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow), // Use same rate limit as magic link
-		"2fa":            middleware.Auth2FALimiterWithConfig(s.config.Security.Auth2FARateLimit, s.config.Security.Auth2FARateWindow),                   // Strict rate limit for 2FA verification
+		"signup":         middleware.AuthSignupLimiterWithConfig(s.config.Security.AuthSignupRateLimit, s.config.Security.AuthSignupRateWindow, s.sharedMiddlewareStorage),
+		"login":          middleware.AuthLoginLimiterWithConfig(s.config.Security.AuthLoginRateLimit, s.config.Security.AuthLoginRateWindow, s.sharedMiddlewareStorage),
+		"refresh":        middleware.AuthRefreshLimiterWithConfig(s.config.Security.AuthRefreshRateLimit, s.config.Security.AuthRefreshRateWindow, s.sharedMiddlewareStorage),
+		"magiclink":      middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow, s.sharedMiddlewareStorage),
+		"password_reset": middleware.AuthPasswordResetLimiterWithConfig(s.config.Security.AuthPasswordResetRateLimit, s.config.Security.AuthPasswordResetRateWindow, s.sharedMiddlewareStorage),
+		"otp":            middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow, s.sharedMiddlewareStorage), // Use same rate limit as magic link
+		"2fa":            middleware.Auth2FALimiterWithConfig(s.config.Security.Auth2FARateLimit, s.config.Security.Auth2FARateWindow, s.sharedMiddlewareStorage), // Strict rate limit for 2FA verification
 	}
 
 	// Use the auth handler's RegisterRoutes method with rate limiters
@@ -2022,11 +2030,11 @@ func (s *Server) setupStorageRoutes(router fiber.Router) {
 
 	// Streaming upload (must come before /:bucket/*)
 	// Apply storage upload rate limiting before authentication to prevent abuse
-	router.Post("/:bucket/stream/*", middleware.StorageUploadLimiter(), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.StreamUpload)
+	router.Post("/:bucket/stream/*", middleware.StorageUploadLimiter(s.sharedMiddlewareStorage), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.StreamUpload)
 
 	// Chunked upload routes (for resumable large file uploads, must come before /:bucket/*)
 	// Apply storage upload rate limiting to chunked upload init
-	router.Post("/:bucket/chunked/init", middleware.StorageUploadLimiter(), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.InitChunkedUpload)
+	router.Post("/:bucket/chunked/init", middleware.StorageUploadLimiter(s.sharedMiddlewareStorage), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.InitChunkedUpload)
 	router.Put("/:bucket/chunked/:uploadId/:chunkIndex", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.UploadChunk)
 	router.Post("/:bucket/chunked/:uploadId/complete", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.CompleteChunkedUpload)
 	router.Get("/:bucket/chunked/:uploadId/status", middleware.RequireScope(auth.ScopeStorageRead), s.storageHandler.GetChunkedUploadStatus)
@@ -2049,10 +2057,12 @@ func (s *Server) setupDashboardAuthRoutes(router fiber.Router) {
 	router.Post("/setup", middleware.AdminSetupLimiterWithConfig(
 		s.config.Security.AdminSetupRateLimit,
 		s.config.Security.AdminSetupRateWindow,
+		s.sharedMiddlewareStorage,
 	), s.adminAuthHandler.InitialSetup)
 	router.Post("/login", middleware.AdminLoginLimiterWithConfig(
 		s.config.Security.AdminLoginRateLimit,
 		s.config.Security.AdminLoginRateWindow,
+		s.sharedMiddlewareStorage,
 	), s.adminAuthHandler.AdminLogin)
 	router.Post("/refresh", s.adminAuthHandler.AdminRefreshToken)
 
@@ -2176,6 +2186,13 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 	router.Patch("/users/:id", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.userManagementHandler.UpdateUser)
 	router.Patch("/users/:id/role", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.userManagementHandler.UpdateUserRole)
 	router.Post("/users/:id/reset-password", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.userManagementHandler.ResetUserPassword)
+
+	// Quota management routes (require admin, dashboard_admin, or service_role)
+	if s.quotaHandler != nil {
+		router.Get("/users-with-quotas", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.quotaHandler.ListUsersWithQuotas)
+		router.Get("/users/:id/quota", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.quotaHandler.GetUserQuota)
+		router.Put("/users/:id/quota", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.quotaHandler.SetUserQuota)
+	}
 
 	// Invitation management routes (require admin or dashboard_admin role)
 	router.Post("/invitations", unifiedAuth, RequireRole("admin", "dashboard_admin"), s.invitationHandler.CreateInvitation)
@@ -2353,7 +2370,7 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			middleware.RequireMigrationsIPAllowlist(&s.config.Migrations),
 			middleware.RequireServiceKeyOnly(s.db.Pool(), s.authHandler.authService),
 			middleware.RequireMigrationScope(),
-			middleware.MigrationAPILimiterWithConfig(s.config.Security.ServiceRoleRateLimit, s.config.Security.ServiceRoleRateWindow),
+			middleware.MigrationAPILimiterWithConfig(s.config.Security.ServiceRoleRateLimit, s.config.Security.ServiceRoleRateWindow, s.sharedMiddlewareStorage),
 			middleware.MigrationsAuditLog(),
 		}
 

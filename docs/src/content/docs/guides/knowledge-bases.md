@@ -685,6 +685,319 @@ console.log('Linked KBs:', links)
 @fluxbase:knowledge-base my-kb-name
 ```
 
+## Advanced Features
+
+### Knowledge Graph (Entities & Relationships)
+
+Fluxbase includes a built-in knowledge graph system that extracts entities and relationships from documents, enabling more intelligent context retrieval.
+
+#### Entity Extraction
+
+Entities are automatically extracted from documents when they are indexed. The system supports:
+
+- **Persons**: Names with titles (Dr. John Smith, Mr. Jane Doe) and capitalized multi-word names
+- **Organizations**: Company names with suffixes (Inc, Corp, LLC) and known tech companies
+- **Locations**: Cities, US states, and countries
+- **Products**: Common tech products and services
+
+#### Relationship Extraction
+
+The system infers relationships between entities based on text patterns:
+
+- `works_at`: "John Smith works at Google"
+- `founded_by`: "Steve Jobs founded Apple Inc"
+- `located_in`: "Google headquarters in California"
+
+#### Querying Entities
+
+```typescript
+// Search entities by name
+const { data: entities } = await client.admin.ai.searchEntities('kb-id', 'Google')
+
+// Get relationships for an entity
+const { data: relationships } = await client.admin.ai.getEntityRelationships('kb-id', 'entity-id')
+
+// Find related entities (graph traversal)
+const { data: related } = await client.admin.ai.findRelatedEntities('kb-id', 'entity-id', {
+  max_depth: 2,
+  relationship_types: ['works_at', 'located_in']
+})
+```
+
+#### Entity Types
+
+| Type | Description | Examples |
+|------|-------------|----------|
+| `person` | People | John Smith, Dr. Jane Doe |
+| `organization` | Companies, organizations | Google, Apple Inc, Microsoft |
+| `location` | Places, cities, states | New York, California, San Francisco |
+| `product` | Products and services | iPhone, AWS, Kubernetes |
+| `concept` | Abstract concepts | Machine Learning, REST API |
+| `event` | Events | WWDC 2024, Product Launch |
+| `other` | Other entities | Custom categories |
+
+### Document Transformation Pipelines
+
+Transform document content before chunking and embedding using SQL functions or Edge Functions (Deno).
+
+#### Pipeline Types
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `none` | No transformation | Default behavior |
+| `sql` | SQL function | Data cleaning, PII redaction, custom parsing |
+| `edge_function` | Deno/TypeScript | Complex transformations, external API calls |
+| `webhook` | HTTP webhook | Integration with external services |
+
+#### SQL Transformation
+
+Create a SQL function to transform documents:
+
+```sql
+CREATE OR REPLACE FUNCTION transform_document(doc_content TEXT, doc_metadata JSONB)
+RETURNS TABLE(transformed_content TEXT, metadata JSONB) AS $$
+BEGIN
+    -- Example: Remove PII, normalize text
+    RETURN QUERY SELECT
+        regexp_replace(doc_content, '\b\d{3}-\d{2}-\d{4}\b', 'XXX-XX-XXXX', 'g') AS transformed_content,
+        doc_metadata || '{"transformed": true}' AS metadata;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+Configure the knowledge base to use it:
+
+```typescript
+const { data: kb } = await client.admin.ai.updateKnowledgeBase('kb-id', {
+  pipeline_type: 'sql',
+  transformation_function: 'transform_document'
+})
+```
+
+#### Edge Function Transformation
+
+Create a Deno edge function:
+
+```typescript
+// /edge-functions/transform-document.ts
+export default async function transformDocument(props: {
+  content: string;
+  metadata: Record<string, unknown>;
+}) {
+  const { content, metadata } = props;
+
+  // Example: Extract structured data, clean HTML, call external APIs
+  const cleaned = content
+    .replace(/<script[^>]*>.*?<\/script>/gs, '')
+    .replace(/<style[^>]*>.*?<\/style>/gs, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return {
+    transformed_content: cleaned,
+    metadata: {
+      ...metadata,
+      transformed: true,
+      cleaned_at: new Date().toISOString(),
+    },
+  };
+}
+```
+
+Configure:
+
+```typescript
+await client.admin.ai.updateKnowledgeBase('kb-id', {
+  pipeline_type: 'edge_function',
+  pipeline_config: {
+    function_name: 'transform-document',
+    timeout_ms: 5000,
+  }
+})
+```
+
+#### Chunking Override
+
+Functions can override the default chunking strategy:
+
+```typescript
+export default async function transformDocument(props: {
+  content: string;
+  metadata: Record<string, unknown>;
+}) {
+  return {
+    transformed_content: props.content,
+    chunking: {
+      chunk_size: 1024,  // Override default
+      chunk_overlap: 100,
+    },
+  };
+}
+```
+
+### Quota Management
+
+Control resource usage with per-user and per-knowledge-base quotas.
+
+#### Quota Types
+
+| Resource | Default User Quota | Default KB Quota |
+|----------|-------------------|------------------|
+| Documents | 10,000 | 1,000 |
+| Chunks | 500,000 | 50,000 |
+| Storage | 10 GB | 1 GB |
+
+#### Managing User Quotas
+
+```typescript
+// Set user quota
+await client.admin.ai.setUserQuota('user-id', {
+  max_documents: 5000,
+  max_chunks: 100000,
+  max_storage_bytes: 5 * 1024 * 1024 * 1024, // 5GB
+})
+
+// Get user quota usage
+const { data: usage } = await client.admin.ai.getUserQuotaUsage('user-id')
+
+console.log('Documents:', usage.documents_used, '/', usage.documents_limit)
+console.log('Can add document:', usage.can_add_document)
+```
+
+#### Quota Enforcement
+
+Quotas are enforced when adding documents:
+
+```typescript
+const { data, error } = await client.admin.ai.addDocument('kb-id', {
+  title: 'My Document',
+  content: '...',
+})
+
+if (error && error.code === 'quota_exceeded') {
+  console.error('Quota exceeded:', error.message)
+  // Error: quota exceeded for documents: used=1000, limit=1000
+}
+```
+
+### User-Owned Knowledge Bases
+
+Knowledge bases can be owned by users with visibility controls (private, shared, public).
+
+#### Visibility Levels
+
+| Level | Access | Description |
+|-------|--------|-------------|
+| `private` | Owner only | Default for user-created KBs |
+| `shared` | Explicit permissions | Owner grants access to specific users |
+| `public` | All authenticated users | Read-only access for everyone |
+
+#### Creating User-Owned KBs
+
+```typescript
+// Create a private knowledge base (owned by current user)
+const { data: kb } = await client.ai.createKnowledgeBase({
+  name: 'my-notes',
+  description: 'My personal notes',
+  visibility: 'private', // Owner only
+})
+
+// Create a shared knowledge base
+const { data: kb } = await client.ai.createKnowledgeBase({
+  name: 'team-docs',
+  description: 'Team documentation',
+  visibility: 'shared', // Explicit permissions
+})
+
+// Create a public knowledge base
+const { data: kb } = await client.admin.ai.createKnowledgeBase({
+  name: 'public-help',
+  description: 'Public help docs',
+  visibility: 'public', // All authenticated users
+})
+```
+
+#### Managing Permissions
+
+```typescript
+// Grant permission
+await client.admin.ai.grantKnowledgeBasePermission('kb-id', {
+  user_id: 'other-user-id',
+  permission: 'editor' // 'viewer' | 'editor' | 'owner'
+})
+
+// Revoke permission
+await client.admin.ai.revokeKnowledgeBasePermission('kb-id', 'other-user-id')
+
+// List permissions
+const { data: permissions } = await client.admin.ai.listKnowledgeBasePermissions('kb-id')
+```
+
+#### Permission Levels
+
+| Level | Capabilities |
+|-------|--------------|
+| `viewer` | Read-only access to KB and documents |
+| `editor` | Read + write (add/update/delete documents) |
+| `owner` | Full control + manage permissions |
+
+### Enhanced Chatbot Integration
+
+Knowledge bases can be linked to chatbots with advanced options:
+
+#### Tiered Access
+
+Retrieve chunks from knowledge bases in priority order:
+
+```typescript
+// Link KB with priority
+await client.admin.ai.linkKnowledgeBaseToChatbot('chatbot-id', {
+  knowledge_base_id: 'priority-kb-id',
+  access_level: 'tiered',
+  priority: 1, // Lower number = higher priority
+  max_chunks: 5,
+})
+
+// Link secondary KB
+await client.admin.ai.linkKnowledgeBaseToChatbot('chatbot-id', {
+  knowledge_base_id: 'secondary-kb-id',
+  access_level: 'tiered',
+  priority: 10,
+  max_chunks: 3,
+})
+```
+
+#### Filtered Access
+
+Retrieve chunks that match a filter expression:
+
+```typescript
+await client.admin.ai.linkKnowledgeBaseToChatbot('chatbot-id', {
+  knowledge_base_id: 'kb-id',
+  access_level: 'filtered',
+  filter_expression: {
+    category: 'technical', // Only retrieve technical docs
+    language: 'en',
+  },
+})
+```
+
+#### Intent-Based Routing
+
+Route queries to specific knowledge bases based on keywords:
+
+```typescript
+await client.admin.ai.linkKnowledgeBaseToChatbot('chatbot-id', {
+  knowledge_base_id: 'sales-kb-id',
+  intent_keywords: ['pricing', 'sales', 'quote', 'purchase'],
+})
+
+await client.admin.ai.linkKnowledgeBaseToChatbot('chatbot-id', {
+  knowledge_base_id: 'support-kb-id',
+  intent_keywords: ['help', 'troubleshooting', 'error', 'bug'],
+})
+```
+
 ## Next Steps
 
 - [AI Chatbots](/guides/ai-chatbots) - Chatbot configuration and usage

@@ -204,14 +204,18 @@ func TestChunk_Struct(t *testing.T) {
 
 func TestChatbotKnowledgeBase_Struct(t *testing.T) {
 	t.Run("all fields can be set", func(t *testing.T) {
+		maxChunks := 5
+		threshold := 0.7
 		link := ChatbotKnowledgeBase{
 			ID:                  "link-123",
 			ChatbotID:           "chatbot-456",
 			KnowledgeBaseID:     "kb-789",
+			AccessLevel:         "full",
 			Enabled:             true,
-			MaxChunks:           5,
-			SimilarityThreshold: 0.7,
-			Priority:            1,
+			MaxChunks:           &maxChunks,
+			SimilarityThreshold: &threshold,
+			Priority:            100,
+			ContextWeight:       1.0,
 			CreatedAt:           time.Now(),
 		}
 
@@ -219,9 +223,9 @@ func TestChatbotKnowledgeBase_Struct(t *testing.T) {
 		assert.Equal(t, "chatbot-456", link.ChatbotID)
 		assert.Equal(t, "kb-789", link.KnowledgeBaseID)
 		assert.True(t, link.Enabled)
-		assert.Equal(t, 5, link.MaxChunks)
-		assert.Equal(t, 0.7, link.SimilarityThreshold)
-		assert.Equal(t, 1, link.Priority)
+		assert.Equal(t, 5, *link.MaxChunks)
+		assert.Equal(t, 0.7, *link.SimilarityThreshold)
+		assert.Equal(t, 100, link.Priority)
 	})
 }
 

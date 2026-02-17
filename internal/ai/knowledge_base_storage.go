@@ -439,34 +439,61 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBase(ctx context.Context, lin
 		link.ID = uuid.New().String()
 	}
 	link.CreatedAt = time.Now()
+	link.UpdatedAt = time.Now()
+
+	// Set defaults
+	if link.AccessLevel == "" {
+		link.AccessLevel = "full"
+	}
+	if link.ContextWeight == 0 {
+		link.ContextWeight = 1.0
+	}
+	if link.Priority == 0 {
+		link.Priority = 100
+	}
 
 	query := `
 		INSERT INTO ai.chatbot_knowledge_bases (
-			id, chatbot_id, knowledge_base_id, enabled,
-			max_chunks, similarity_threshold, priority
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			id, chatbot_id, knowledge_base_id,
+			access_level, filter_expression, context_weight, priority,
+			intent_keywords, max_chunks, similarity_threshold,
+			enabled, metadata
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		ON CONFLICT (chatbot_id, knowledge_base_id) DO UPDATE SET
-			enabled = EXCLUDED.enabled,
+			access_level = EXCLUDED.access_level,
+			filter_expression = EXCLUDED.filter_expression,
+			context_weight = EXCLUDED.context_weight,
+			priority = EXCLUDED.priority,
+			intent_keywords = EXCLUDED.intent_keywords,
 			max_chunks = EXCLUDED.max_chunks,
 			similarity_threshold = EXCLUDED.similarity_threshold,
-			priority = EXCLUDED.priority
-		RETURNING created_at
+			enabled = EXCLUDED.enabled,
+			metadata = EXCLUDED.metadata,
+			updated_at = NOW()
+		RETURNING created_at, updated_at
 	`
 
 	return s.db.QueryRow(ctx, query,
-		link.ID, link.ChatbotID, link.KnowledgeBaseID, link.Enabled,
-		link.MaxChunks, link.SimilarityThreshold, link.Priority,
-	).Scan(&link.CreatedAt)
+		link.ID, link.ChatbotID, link.KnowledgeBaseID,
+		link.AccessLevel, link.FilterExpression, link.ContextWeight, link.Priority,
+		link.IntentKeywords, link.MaxChunks, link.SimilarityThreshold,
+		link.Enabled, link.Metadata,
+	).Scan(&link.CreatedAt, &link.UpdatedAt)
 }
 
 // GetChatbotKnowledgeBases retrieves all knowledge base links for a chatbot
 func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBases(ctx context.Context, chatbotID string) ([]ChatbotKnowledgeBase, error) {
 	query := `
-		SELECT id, chatbot_id, knowledge_base_id, enabled,
-			max_chunks, similarity_threshold, priority, created_at
-		FROM ai.chatbot_knowledge_bases
-		WHERE chatbot_id = $1
-		ORDER BY priority DESC
+		SELECT ckb.id, ckb.chatbot_id, ckb.knowledge_base_id,
+			ckb.access_level, ckb.filter_expression, ckb.context_weight,
+			ckb.priority, ckb.intent_keywords, ckb.max_chunks,
+			ckb.similarity_threshold, ckb.enabled, ckb.metadata,
+			ckb.created_at, ckb.updated_at,
+			kb.name as knowledge_base_name
+		FROM ai.chatbot_knowledge_bases ckb
+		JOIN ai.knowledge_bases kb ON kb.id = ckb.knowledge_base_id
+		WHERE ckb.chatbot_id = $1
+		ORDER BY ckb.priority DESC
 	`
 
 	rows, err := s.db.Query(ctx, query, chatbotID)
@@ -479,8 +506,12 @@ func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBases(ctx context.Context, cha
 	for rows.Next() {
 		var link ChatbotKnowledgeBase
 		if err := rows.Scan(
-			&link.ID, &link.ChatbotID, &link.KnowledgeBaseID, &link.Enabled,
-			&link.MaxChunks, &link.SimilarityThreshold, &link.Priority, &link.CreatedAt,
+			&link.ID, &link.ChatbotID, &link.KnowledgeBaseID,
+			&link.AccessLevel, &link.FilterExpression, &link.ContextWeight,
+			&link.Priority, &link.IntentKeywords, &link.MaxChunks,
+			&link.SimilarityThreshold, &link.Enabled, &link.Metadata,
+			&link.CreatedAt, &link.UpdatedAt,
+			&link.KnowledgeBaseName,
 		); err != nil {
 			log.Warn().Err(err).Msg("Failed to scan chatbot knowledge base link")
 			continue
@@ -489,6 +520,11 @@ func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBases(ctx context.Context, cha
 	}
 
 	return links, nil
+}
+
+// GetChatbotKnowledgeBaseLinks is an alias for GetChatbotKnowledgeBases for the query router
+func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBaseLinks(ctx context.Context, chatbotID string) ([]ChatbotKnowledgeBase, error) {
+	return s.GetChatbotKnowledgeBases(ctx, chatbotID)
 }
 
 // UnlinkChatbotKnowledgeBase removes a link between chatbot and knowledge base
@@ -906,7 +942,18 @@ func (s *KnowledgeBaseStorage) SearchChatbotKnowledge(ctx context.Context, chatb
 			continue
 		}
 
-		results, err := s.SearchChunks(ctx, link.KnowledgeBaseID, queryEmbedding, link.MaxChunks, link.SimilarityThreshold)
+		// Use link defaults or fall back to system defaults
+		maxChunks := 5
+		if link.MaxChunks != nil {
+			maxChunks = *link.MaxChunks
+		}
+
+		threshold := 0.7
+		if link.SimilarityThreshold != nil {
+			threshold = *link.SimilarityThreshold
+		}
+
+		results, err := s.SearchChunks(ctx, link.KnowledgeBaseID, queryEmbedding, maxChunks, threshold)
 		if err != nil {
 			log.Warn().Err(err).Str("kb_id", link.KnowledgeBaseID).Msg("Failed to search knowledge base")
 			continue
@@ -1219,7 +1266,11 @@ func (s *KnowledgeBaseStorage) ListAllKnowledgeBases(ctx context.Context) ([]Kno
 
 // UpdateChatbotKnowledgeBaseOptions represents options for updating a link
 type UpdateChatbotKnowledgeBaseOptions struct {
+	AccessLevel         *string
+	FilterExpression    map[string]interface{}
+	ContextWeight       *float64
 	Priority            *int
+	IntentKeywords      []string
 	MaxChunks           *int
 	SimilarityThreshold *float64
 	Enabled             *bool
@@ -1246,14 +1297,26 @@ func (s *KnowledgeBaseStorage) UpdateChatbotKnowledgeBaseLink(ctx context.Contex
 	}
 
 	// Apply updates
+	if opts.AccessLevel != nil {
+		existingLink.AccessLevel = *opts.AccessLevel
+	}
+	if opts.FilterExpression != nil {
+		existingLink.FilterExpression = opts.FilterExpression
+	}
+	if opts.ContextWeight != nil {
+		existingLink.ContextWeight = *opts.ContextWeight
+	}
 	if opts.Priority != nil {
 		existingLink.Priority = *opts.Priority
 	}
+	if opts.IntentKeywords != nil {
+		existingLink.IntentKeywords = opts.IntentKeywords
+	}
 	if opts.MaxChunks != nil {
-		existingLink.MaxChunks = *opts.MaxChunks
+		existingLink.MaxChunks = opts.MaxChunks
 	}
 	if opts.SimilarityThreshold != nil {
-		existingLink.SimilarityThreshold = *opts.SimilarityThreshold
+		existingLink.SimilarityThreshold = opts.SimilarityThreshold
 	}
 	if opts.Enabled != nil {
 		existingLink.Enabled = *opts.Enabled
@@ -1272,10 +1335,11 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBaseSimple(ctx context.Contex
 	link := &ChatbotKnowledgeBase{
 		ChatbotID:           chatbotID,
 		KnowledgeBaseID:     kbID,
+		AccessLevel:         "full",
 		Enabled:             true,
 		Priority:            priority,
-		MaxChunks:           maxChunks,
-		SimilarityThreshold: similarityThreshold,
+		MaxChunks:           &maxChunks,
+		SimilarityThreshold: &similarityThreshold,
 	}
 
 	if err := s.LinkChatbotKnowledgeBase(ctx, link); err != nil {
@@ -1284,6 +1348,7 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBaseSimple(ctx context.Contex
 
 	return link, nil
 }
+
 
 // ============================================================================
 // Knowledge Base Ownership and Permissions
@@ -1414,5 +1479,81 @@ func (s *KnowledgeBaseStorage) RevokeKBPermission(ctx context.Context, kbID, use
 	if err != nil {
 		return fmt.Errorf("failed to revoke permission: %w", err)
 	}
+	return nil
+}
+
+// GetUserQuota retrieves quota information for a user
+func (s *KnowledgeBaseStorage) GetUserQuota(ctx context.Context, userID string) (*UserQuota, error) {
+	query := `
+		SELECT user_id, max_documents, max_chunks, max_storage_bytes,
+		       used_documents, used_chunks, used_storage_bytes,
+		       created_at, updated_at
+		FROM ai.user_quotas
+		WHERE user_id = $1
+	`
+
+	var quota UserQuota
+	err := s.db.QueryRow(ctx, query, userID).Scan(
+		&quota.UserID,
+		&quota.MaxDocuments,
+		&quota.MaxChunks,
+		&quota.MaxStorageBytes,
+		&quota.UsedDocuments,
+		&quota.UsedChunks,
+		&quota.UsedStorageBytes,
+		&quota.CreatedAt,
+		&quota.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &quota, nil
+}
+
+// SetUserQuota creates or updates quota for a user
+func (s *KnowledgeBaseStorage) SetUserQuota(ctx context.Context, quota *UserQuota) error {
+	query := `
+		INSERT INTO ai.user_quotas (user_id, max_documents, max_chunks, max_storage_bytes)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id) DO UPDATE
+		SET max_documents = COALESCE(EXCLUDED.max_documents, ai.user_quotas.max_documents),
+		    max_chunks = COALESCE(EXCLUDED.max_chunks, ai.user_quotas.max_chunks),
+		    max_storage_bytes = COALESCE(EXCLUDED.max_storage_bytes, ai.user_quotas.max_storage_bytes),
+		    updated_at = NOW()
+	`
+
+	_, err := s.db.Exec(ctx, query,
+		quota.UserID,
+		quota.MaxDocuments,
+		quota.MaxChunks,
+		quota.MaxStorageBytes,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to set user quota: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateUserQuotaUsage updates quota usage counters for a user
+func (s *KnowledgeBaseStorage) UpdateUserQuotaUsage(ctx context.Context, userID string, docsDelta int, chunksDelta int, storageDelta int64) error {
+	query := `
+		INSERT INTO ai.user_quotas (user_id, used_documents, used_chunks, used_storage_bytes)
+		VALUES ($1, GREATEST(0, $2), GREATEST(0, $3), GREATEST(0, $4))
+		ON CONFLICT (user_id) DO UPDATE
+		SET used_documents = GREATEST(0, ai.user_quotas.used_documents + $2),
+		    used_chunks = GREATEST(0, ai.user_quotas.used_chunks + $3),
+		    used_storage_bytes = GREATEST(0, ai.user_quotas.used_storage_bytes + $4),
+		    updated_at = NOW()
+	`
+
+	_, err := s.db.Exec(ctx, query, userID, docsDelta, chunksDelta, storageDelta)
+	if err != nil {
+		return fmt.Errorf("failed to update quota usage: %w", err)
+	}
+
 	return nil
 }

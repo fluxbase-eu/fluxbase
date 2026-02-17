@@ -1415,6 +1415,9 @@ func (s *Service) updateUserFromOIDCClaims(ctx context.Context, user *User, clai
 
 // SendOTP sends an OTP code via email
 func (s *Service) SendOTP(ctx context.Context, email, purpose string) error {
+	if s.otpService == nil {
+		return fmt.Errorf("OTP service not initialized")
+	}
 	return s.otpService.SendEmailOTP(ctx, email, purpose)
 }
 

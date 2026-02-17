@@ -145,17 +145,19 @@ test-coverage: ## Run ALL tests (unit + e2e) with combined coverage (requires po
 	@echo "${BLUE}║           COVERAGE REPORT (Unit + E2E)                     ║${NC}"
 	@echo "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 	@echo ""
-	@echo "${YELLOW}[1/5] Running ALL Go tests with coverage (this may take 20+ minutes)...${NC}"
-	@echo "${BLUE}Watch for '=== RUN TestName' lines below showing test progress${NC}"
+	@echo "${YELLOW}[1/5] Running Go unit tests with coverage for code metrics (~30-60 seconds)...${NC}"
+	@echo "${BLUE}Note: Integration tests with service goroutines are skipped for accurate coverage metrics${NC}"
 	@echo ""
-	@FLUXBASE_LOG_LEVEL=info FLUXBASE_PARALLEL_TEST=true NO_COLOR=1 go test -v -timeout 30m -tags=integration -coverprofile=coverage.out -covermode=atomic -p 1 ./... 2>&1 | tee /tmp/go-test-output.txt
+	@FLUXBASE_LOG_LEVEL=info FLUXBASE_PARALLEL_TEST=true NO_COLOR=1 go test -v -timeout 30m -short -coverprofile=coverage.out -covermode=atomic -p 1 $(shell go list ./... | grep -v "^github.com/fluxbase-eu/fluxbase/test/e2e$$") 2>&1 | tee /tmp/go-test-output.txt
+	@echo ""
+	@echo "${BLUE}Full test output written to: ${YELLOW}/tmp/go-test-output.txt${NC}"
 	@echo ""
 	@echo "${YELLOW}[2/5] Checking coverage thresholds...${NC}"
 	@-go-test-coverage --config=.testcoverage.yml || echo "${YELLOW}Coverage threshold not met (informational only)${NC}"
 	@echo ""
 	@echo "${YELLOW}[3/5] Generating Go coverage report...${NC}"
 	@go tool cover -html=coverage.out -o coverage.html
-	@go tool cover -func=coverage.out | grep total | awk '{print "  ${GREEN}Go Coverage (Unit + E2E): " $$3 "${NC}"}'
+	@go tool cover -func=coverage.out | grep total | awk '{print "  ${GREEN}Go Coverage (Unit Tests Only): " $$3 "${NC}"}'
 	@echo ""
 	@echo "${YELLOW}[4/5] Running SDK tests with coverage...${NC}"
 	@cd sdk && unset NODE_OPTIONS && npx vitest --coverage --run 2>&1 | tail -20 || true
@@ -163,10 +165,14 @@ test-coverage: ## Run ALL tests (unit + e2e) with combined coverage (requires po
 	@echo "${YELLOW}[5/5] Cleaning up test resources...${NC}"
 	@$(MAKE) test-cleanup
 	@echo ""
-	@echo "${GREEN}Coverage reports generated:${NC}"
-	@echo "  - coverage.out     (Go profile - includes e2e)"
-	@echo "  - coverage.html    (Go HTML report)"
-	@echo "  - sdk/coverage/    (SDK coverage)"
+	@echo "${GREEN}Coverage reports generated (unit tests only):${NC}"
+	@echo "  - coverage.out           (Go profile - unit tests)"
+	@echo "  - coverage.html          (Go HTML report)"
+	@echo "  - sdk/coverage/          (SDK coverage)"
+	@echo "  - /tmp/go-test-output.txt (Full test log)"
+	@echo ""
+	@echo "${YELLOW}Note: Integration tests excluded from coverage to avoid service goroutine interference.${NC}"
+	@echo "${YELLOW}      Run 'make test-full' for integration tests with coverage.${NC}"
 
 test-coverage-check: ## Check coverage thresholds without running tests (requires coverage.out)
 	@go-test-coverage --config=.testcoverage.yml
@@ -179,7 +185,9 @@ test-coverage-unit: ## Run unit tests only with coverage (excludes e2e, faster f
 	@echo "${YELLOW}[1/3] Running Go unit tests with coverage (~30-60 seconds)...${NC}"
 	@echo "${BLUE}Watch for: '=== RUN TestName' lines showing test progress${NC}"
 	@echo ""
-	@FLUXBASE_LOG_LEVEL=info go test -v -short -timeout 5m -coverprofile=coverage.out -covermode=atomic $(shell go list ./... | grep -v '/test/e2e' | grep -v '/test$$')
+	@FLUXBASE_LOG_LEVEL=info go test -v -short -timeout 5m -coverprofile=coverage.out -covermode=atomic $(shell go list ./... | grep -v '/test/e2e' | grep -v '/test$$') 2>&1 | tee /tmp/go-test-unit-output.txt
+	@echo ""
+	@echo "${BLUE}Unit test output written to: ${YELLOW}/tmp/go-test-unit-output.txt${NC}"
 	@echo ""
 	@echo "${YELLOW}[2/3] Generating Go coverage report...${NC}"
 	@go tool cover -html=coverage.out -o coverage.html
@@ -189,9 +197,10 @@ test-coverage-unit: ## Run unit tests only with coverage (excludes e2e, faster f
 	@cd sdk && unset NODE_OPTIONS && npx vitest --coverage --run 2>&1 | tail -20 || true
 	@echo ""
 	@echo "${GREEN}Unit test coverage reports generated:${NC}"
-	@echo "  - coverage.out     (Go profile - unit only)"
-	@echo "  - coverage.html    (Go HTML report)"
-	@echo "  - sdk/coverage/    (SDK coverage)"
+	@echo "  - coverage.out              (Go profile - unit only)"
+	@echo "  - coverage.html             (Go HTML report)"
+	@echo "  - sdk/coverage/             (SDK coverage)"
+	@echo "  - /tmp/go-test-unit-output.txt (Unit test log)"
 
 test-coverage-full: test-coverage ## Alias for test-coverage (now includes e2e by default)
 

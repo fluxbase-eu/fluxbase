@@ -10,12 +10,10 @@ import (
 func TestNewUserKnowledgeBaseHandler(t *testing.T) {
 	t.Run("creates handler with storage", func(t *testing.T) {
 		storage := &KnowledgeBaseStorage{}
-		collectionStorage := &CollectionStorage{}
-		handler := NewUserKnowledgeBaseHandler(storage, collectionStorage)
+		handler := NewUserKnowledgeBaseHandler(storage)
 
 		assert.NotNil(t, handler)
 		assert.Same(t, storage, handler.storage)
-		assert.Same(t, collectionStorage, handler.collectionStorage)
 	})
 }
 
@@ -24,8 +22,7 @@ func TestUserKnowledgeBaseHandler_ListMyKnowledgeBases(t *testing.T) {
 		// This would require a mock database or test database setup
 		// For now, verify the handler is properly structured
 		storage := &KnowledgeBaseStorage{}
-		collectionStorage := &CollectionStorage{}
-		handler := NewUserKnowledgeBaseHandler(storage, collectionStorage)
+		handler := NewUserKnowledgeBaseHandler(storage)
 
 		assert.NotNil(t, handler.storage)
 	})
@@ -34,8 +31,7 @@ func TestUserKnowledgeBaseHandler_ListMyKnowledgeBases(t *testing.T) {
 func TestUserKnowledgeBaseHandler_CreateMyKnowledgeBase(t *testing.T) {
 	t.Run("creates KB with owner set", func(t *testing.T) {
 		storage := &KnowledgeBaseStorage{}
-		collectionStorage := &CollectionStorage{}
-		handler := NewUserKnowledgeBaseHandler(storage, collectionStorage)
+		handler := NewUserKnowledgeBaseHandler(storage)
 
 		assert.NotNil(t, handler)
 	})
@@ -44,8 +40,7 @@ func TestUserKnowledgeBaseHandler_CreateMyKnowledgeBase(t *testing.T) {
 func TestUserKnowledgeBaseHandler_ShareKnowledgeBase(t *testing.T) {
 	t.Run("owner can grant permissions", func(t *testing.T) {
 		storage := &KnowledgeBaseStorage{}
-		collectionStorage := &CollectionStorage{}
-		handler := NewUserKnowledgeBaseHandler(storage, collectionStorage)
+		handler := NewUserKnowledgeBaseHandler(storage)
 
 		assert.NotNil(t, handler)
 	})
@@ -54,8 +49,7 @@ func TestUserKnowledgeBaseHandler_ShareKnowledgeBase(t *testing.T) {
 func TestUserKnowledgeBaseHandler_RevokePermission(t *testing.T) {
 	t.Run("owner can revoke permissions", func(t *testing.T) {
 		storage := &KnowledgeBaseStorage{}
-		collectionStorage := &CollectionStorage{}
-		handler := NewUserKnowledgeBaseHandler(storage, collectionStorage)
+		handler := NewUserKnowledgeBaseHandler(storage)
 
 		assert.NotNil(t, handler)
 	})

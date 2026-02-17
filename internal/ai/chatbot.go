@@ -2,10 +2,13 @@ package ai
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // IntentRule defines a mapping between user keywords and required/forbidden tables/tools
@@ -687,4 +690,40 @@ func GroupTablesBySchema(tables []QualifiedTable) map[string][]string {
 // HasMCPTools returns true if the chatbot has MCP tools configured
 func (c *Chatbot) HasMCPTools() bool {
 	return len(c.MCPTools) > 0
+}
+
+// AccessLevel defines the level of access a chatbot has to a knowledge base
+type AccessLevel string
+
+const (
+	// AccessLevelFull - chatbot can retrieve all chunks from the KB
+	AccessLevelFull AccessLevel = "full"
+	// AccessLevelFiltered - chatbot retrieves chunks matching filter_expression
+	AccessLevelFiltered AccessLevel = "filtered"
+	// AccessLevelTiered - chatbot retrieves based on priority ordering
+	AccessLevelTiered AccessLevel = "tiered"
+)
+
+// TraceIDGenerator generates trace IDs for observability
+type TraceIDGenerator interface {
+	GenerateTraceID() string
+	GenerateSpanID() string
+}
+
+// DefaultTraceIDGenerator implements trace ID generation
+type DefaultTraceIDGenerator struct{}
+
+// NewTraceIDGenerator creates a new trace ID generator
+func NewTraceIDGenerator() *DefaultTraceIDGenerator {
+	return &DefaultTraceIDGenerator{}
+}
+
+// GenerateTraceID generates a unique trace ID
+func (t *DefaultTraceIDGenerator) GenerateTraceID() string {
+	return fmt.Sprintf("trace_%x", uuid.New().String())
+}
+
+// GenerateSpanID generates a unique span ID
+func (t *DefaultTraceIDGenerator) GenerateSpanID() string {
+	return fmt.Sprintf("span_%x", uuid.New().String())
 }

@@ -3,6 +3,7 @@ package middleware
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -30,23 +31,27 @@ type CSRFConfig struct {
 	// Expiration is how long tokens are valid
 	Expiration time.Duration
 	// Storage is used to store tokens (default: in-memory)
+	// If provided, this storage will be used instead of creating a new one
+	// This allows sharing a single storage instance across multiple middleware
 	Storage fiber.Storage
+	// LazyStorage creates storage only if Storage is nil
+	// Set to false if you want to force using the provided Storage
+	LazyStorage bool
 }
 
 // DefaultCSRFConfig returns default CSRF configuration
 func DefaultCSRFConfig() CSRFConfig {
 	return CSRFConfig{
-		TokenLength:    32,
-		TokenLookup:    "header:X-CSRF-Token",
-		CookieName:     "csrf_token",
-		CookiePath:     "/",
-		CookieSecure:   false, // Set to true in production with HTTPS
+		TokenLength:  32,
+		TokenLookup:  "header:X-CSRF-Token",
+		CookieName:   "csrf_token",
+		CookiePath:   "/",
+		CookieSecure: false, // Set to true in production with HTTPS
 		CookieHTTPOnly: true,
 		CookieSameSite: "Strict",
-		Expiration:     24 * time.Hour,
-		Storage: memory.New(memory.Config{
-			GCInterval: 10 * time.Minute,
-		}),
+		Expiration:    24 * time.Hour,
+		Storage:       nil,  // Will be initialized in CSRF() function unless provided
+		LazyStorage:   true, // Create storage if nil
 	}
 }
 
@@ -58,10 +63,17 @@ func CSRF(config ...CSRFConfig) fiber.Handler {
 		cfg = config[0]
 	}
 
-	// Initialize storage if not provided
-	if cfg.Storage == nil {
+	// Initialize storage if not provided and LazyStorage is true
+	if cfg.Storage == nil && cfg.LazyStorage {
+		// In test mode, use a very long GC interval to effectively disable GC
+		// This prevents the GC goroutine from running frequently in tests
+		gcInterval := 10 * time.Minute
+		if os.Getenv("FLUXBASE_TEST_MODE") == "1" {
+			// Set GC interval to 24 hours to effectively disable it during tests
+			gcInterval = 24 * time.Hour
+		}
 		cfg.Storage = memory.New(memory.Config{
-			GCInterval: 10 * time.Minute,
+			GCInterval: gcInterval,
 		})
 	}
 

@@ -23,7 +23,8 @@ func TestDefaultCSRFConfig(t *testing.T) {
 	assert.True(t, cfg.CookieHTTPOnly)
 	assert.Equal(t, "Strict", cfg.CookieSameSite)
 	assert.Equal(t, 24*time.Hour, cfg.Expiration)
-	assert.NotNil(t, cfg.Storage)
+	// Storage is nil in default config and initialized in CSRF() function
+	assert.Nil(t, cfg.Storage)
 }
 
 func TestCSRF_SkipsSafeMethods(t *testing.T) {

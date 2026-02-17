@@ -703,7 +703,14 @@ func (h *KnowledgeBaseHandler) UpdateChatbotKnowledgeBase(c fiber.Ctx) error {
 		})
 	}
 
-	link, err := h.storage.UpdateChatbotKnowledgeBaseLink(ctx, chatbotID, kbID, UpdateChatbotKnowledgeBaseOptions(req))
+	opts := UpdateChatbotKnowledgeBaseOptions{
+		Priority:            req.Priority,
+		MaxChunks:           req.MaxChunks,
+		SimilarityThreshold: req.SimilarityThreshold,
+		Enabled:             req.Enabled,
+	}
+
+	link, err := h.storage.UpdateChatbotKnowledgeBaseLink(ctx, chatbotID, kbID, opts)
 	if err != nil {
 		log.Error().Err(err).
 			Str("chatbot_id", chatbotID).

@@ -98,11 +98,6 @@ export const sidebarData: SidebarData = {
       collapsible: true,
       items: [
         {
-          title: 'Collections',
-          url: '/collections',
-          icon: FolderOpen,
-        },
-        {
           title: 'Knowledge Bases',
           url: '/knowledge-bases',
           icon: BookOpen,
@@ -111,6 +106,11 @@ export const sidebarData: SidebarData = {
           title: 'AI Chatbots',
           url: '/chatbots',
           icon: Bot,
+        },
+        {
+          title: 'Quotas',
+          url: '/quotas',
+          icon: Shield,
         },
         {
           title: 'MCP Tools',
