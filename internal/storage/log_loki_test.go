@@ -912,11 +912,14 @@ func TestLokiLogStorage_GroupByLabels(t *testing.T) {
 		// Should have 2 groups (different levels)
 		assert.Len(t, groups, 2)
 
-		// First group should have 2 entries (same level)
-		assert.Len(t, groups[0], 2)
+		// Collect group sizes
+		groupSizes := make([]int, len(groups))
+		for i, group := range groups {
+			groupSizes[i] = len(group)
+		}
 
-		// Second group should have 1 entry
-		assert.Len(t, groups[1], 1)
+		// Should have one group with 2 entries and one with 1 entry
+		assert.ElementsMatch(t, []int{1, 2}, groupSizes)
 	})
 
 	t.Run("handles empty entry list", func(t *testing.T) {

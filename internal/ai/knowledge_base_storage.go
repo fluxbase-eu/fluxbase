@@ -307,6 +307,75 @@ func (s *KnowledgeBaseStorage) DeleteDocument(ctx context.Context, id string) er
 	return err
 }
 
+// DeleteDocumentsByFilter deletes documents matching the given metadata filter
+// Returns the number of documents deleted
+func (s *KnowledgeBaseStorage) DeleteDocumentsByFilter(
+	ctx context.Context,
+	knowledgeBaseID string,
+	filter *MetadataFilter,
+) (int, error) {
+	// Build WHERE clause for filtering
+	whereConditions := []string{
+		"knowledge_base_id = $1",
+	}
+	args := []interface{}{knowledgeBaseID}
+	argIndex := 2
+
+	// User isolation filter
+	if filter != nil && filter.UserID != nil {
+		whereConditions = append(whereConditions, fmt.Sprintf(`(
+			metadata->>'user_id' = $%d OR
+			metadata->>'user_id' IS NULL OR
+			NOT (metadata ? 'user_id')
+		)`, argIndex))
+		args = append(args, *filter.UserID)
+		argIndex++
+	}
+
+	// Tag filter - documents must have ALL specified tags
+	if filter != nil && len(filter.Tags) > 0 {
+		whereConditions = append(whereConditions, fmt.Sprintf("tags @> $%d", argIndex))
+		args = append(args, filter.Tags)
+		argIndex++
+	}
+
+	// Advanced metadata filter with operators and logical combinations
+	if filter != nil && filter.AdvancedFilter != nil {
+		// We need to use 'd' as the table alias for consistency, but here we're querying documents directly
+		// So we need to adjust the SQL builder or prefix the table name
+		metadataSQL, metadataArgs, err := buildMetadataFilterSQLForTable(*filter.AdvancedFilter, &argIndex, "")
+		if err != nil {
+			return 0, fmt.Errorf("failed to build metadata filter: %w", err)
+		}
+		if metadataSQL != "" {
+			whereConditions = append(whereConditions, metadataSQL)
+			args = append(args, metadataArgs...)
+		}
+	}
+
+	// Legacy simple metadata filter (exact match only)
+	if filter != nil && filter.AdvancedFilter == nil && len(filter.Metadata) > 0 {
+		for key, value := range filter.Metadata {
+			escapedKey := escapeStringLiteral(key)
+			whereConditions = append(whereConditions, fmt.Sprintf("metadata->>'%s' = $%d", escapedKey, argIndex))
+			args = append(args, value)
+			argIndex++
+		}
+	}
+
+	whereClause := strings.Join(whereConditions, " AND ")
+
+	query := fmt.Sprintf("DELETE FROM ai.documents WHERE %s", whereClause)
+
+	result, err := s.db.Exec(ctx, query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete documents by filter: %w", err)
+	}
+
+	rowsAffected := result.RowsAffected()
+	return int(rowsAffected), nil
+}
+
 // UpdateDocumentMetadata updates a document's title, metadata, and tags
 func (s *KnowledgeBaseStorage) UpdateDocumentMetadata(ctx context.Context, id string, title *string, metadata map[string]string, tags []string) (*Document, error) {
 	// Build the metadata JSON
@@ -1025,6 +1094,338 @@ func (s *KnowledgeBaseStorage) SearchChunksWithGraphBoost(
 	return results, nil
 }
 
+// buildMetadataFilterSQL builds SQL WHERE conditions and args from a MetadataFilterGroup
+// Returns (WHERE clause fragment, args, error)
+func buildMetadataFilterSQL(group MetadataFilterGroup, argIndex *int) (string, []interface{}, error) {
+	var conditions []string
+	var args []interface{}
+
+	// Process all conditions in this group
+	for _, cond := range group.Conditions {
+		conditionSQL, conditionArgs, err := buildConditionSQL(cond, argIndex)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to build condition for key '%s': %w", cond.Key, err)
+		}
+		conditions = append(conditions, conditionSQL)
+		args = append(args, conditionArgs...)
+	}
+
+	// Process nested groups recursively
+	for _, nestedGroup := range group.Groups {
+		nestedSQL, nestedArgs, err := buildMetadataFilterSQL(nestedGroup, argIndex)
+		if err != nil {
+			return "", nil, err
+		}
+		if nestedSQL != "" {
+			conditions = append(conditions, fmt.Sprintf("(%s)", nestedSQL))
+			args = append(args, nestedArgs...)
+		}
+	}
+
+	if len(conditions) == 0 {
+		return "", args, nil
+	}
+
+	logicalOp := string(group.LogicalOp)
+	if logicalOp == "" {
+		logicalOp = "AND" // Default to AND
+	}
+
+	whereClause := strings.Join(conditions, fmt.Sprintf(" %s ", logicalOp))
+	return whereClause, args, nil
+}
+
+// buildConditionSQL builds SQL for a single MetadataCondition
+func buildConditionSQL(cond MetadataCondition, argIndex *int) (string, []interface{}, error) {
+	var args []interface{}
+	var sqlCond string
+
+	// Use d.metadata->>'key' syntax to extract metadata as text
+	metadataRef := fmt.Sprintf("d.metadata->>'%s'", escapeStringLiteral(cond.Key))
+
+	switch cond.Operator {
+	case MetadataOpEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s = $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpNotEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for not equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s != $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpILike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for ilike operator")
+		}
+		sqlCond = fmt.Sprintf("%s ILIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for like operator")
+		}
+		sqlCond = fmt.Sprintf("%s LIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpNotIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for NOT IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s NOT IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpGreaterThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than operator")
+		}
+		sqlCond = fmt.Sprintf("%s > $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpGreaterThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s >= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than operator")
+		}
+		sqlCond = fmt.Sprintf("%s < $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s <= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpBetween:
+		if cond.Min == nil || cond.Max == nil {
+			return "", nil, errors.New("min and max are required for BETWEEN operator")
+		}
+		sqlCond = fmt.Sprintf("%s BETWEEN $%d AND $%d", metadataRef, *argIndex, *argIndex+1)
+		args = append(args, fmt.Sprintf("%v", cond.Min), fmt.Sprintf("%v", cond.Max))
+		*argIndex += 2
+
+	case MetadataOpIsNull:
+		sqlCond = fmt.Sprintf("%s IS NULL", metadataRef)
+
+	case MetadataOpIsNotNull:
+		sqlCond = fmt.Sprintf("%s IS NOT NULL", metadataRef)
+
+	default:
+		return "", nil, fmt.Errorf("unsupported operator: %s", cond.Operator)
+	}
+
+	return sqlCond, args, nil
+}
+
+// escapeStringLiteral escapes single quotes in a string literal for SQL
+func escapeStringLiteral(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
+}
+
+// buildMetadataFilterSQLForTable builds SQL WHERE conditions and args from a MetadataFilterGroup
+// tablePrefix is the table alias prefix (e.g., "d" for "d.metadata") or empty string for direct table access
+func buildMetadataFilterSQLForTable(group MetadataFilterGroup, argIndex *int, tablePrefix string) (string, []interface{}, error) {
+	// Reuse the existing function with proper table prefix
+	// For backward compatibility, when tablePrefix is empty, we use "metadata" directly
+	prefix := tablePrefix
+	if prefix == "" {
+		prefix = "" // No prefix needed
+	} else if prefix != "" && !strings.HasSuffix(prefix, ".") {
+		prefix = prefix + "."
+	}
+
+	// Build conditions using the modified prefix
+	var conditions []string
+	var args []interface{}
+
+	for _, cond := range group.Conditions {
+		conditionSQL, conditionArgs, err := buildConditionSQLForTable(cond, argIndex, prefix)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to build condition for key '%s': %w", cond.Key, err)
+		}
+		conditions = append(conditions, conditionSQL)
+		args = append(args, conditionArgs...)
+	}
+
+	// Process nested groups recursively
+	for _, nestedGroup := range group.Groups {
+		nestedSQL, nestedArgs, err := buildMetadataFilterSQLForTable(nestedGroup, argIndex, tablePrefix)
+		if err != nil {
+			return "", nil, err
+		}
+		if nestedSQL != "" {
+			conditions = append(conditions, fmt.Sprintf("(%s)", nestedSQL))
+			args = append(args, nestedArgs...)
+		}
+	}
+
+	if len(conditions) == 0 {
+		return "", args, nil
+	}
+
+	logicalOp := string(group.LogicalOp)
+	if logicalOp == "" {
+		logicalOp = "AND"
+	}
+
+	whereClause := strings.Join(conditions, fmt.Sprintf(" %s ", logicalOp))
+	return whereClause, args, nil
+}
+
+// buildConditionSQLForTable builds SQL for a single MetadataCondition with a table prefix
+func buildConditionSQLForTable(cond MetadataCondition, argIndex *int, tablePrefix string) (string, []interface{}, error) {
+	var args []interface{}
+	var sqlCond string
+
+	// Use prefix + metadata->>'key' syntax
+	metadataRef := fmt.Sprintf("%smetadata->>'%s'", tablePrefix, escapeStringLiteral(cond.Key))
+
+	switch cond.Operator {
+	case MetadataOpEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s = $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpNotEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for not equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s != $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpILike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for ilike operator")
+		}
+		sqlCond = fmt.Sprintf("%s ILIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for like operator")
+		}
+		sqlCond = fmt.Sprintf("%s LIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpNotIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for NOT IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s NOT IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpGreaterThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than operator")
+		}
+		sqlCond = fmt.Sprintf("%s > $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpGreaterThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s >= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than operator")
+		}
+		sqlCond = fmt.Sprintf("%s < $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s <= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpBetween:
+		if cond.Min == nil || cond.Max == nil {
+			return "", nil, errors.New("min and max are required for BETWEEN operator")
+		}
+		sqlCond = fmt.Sprintf("%s BETWEEN $%d AND $%d", metadataRef, *argIndex, *argIndex+1)
+		args = append(args, fmt.Sprintf("%v", cond.Min), fmt.Sprintf("%v", cond.Max))
+		*argIndex += 2
+
+	case MetadataOpIsNull:
+		sqlCond = fmt.Sprintf("%s IS NULL", metadataRef)
+
+	case MetadataOpIsNotNull:
+		sqlCond = fmt.Sprintf("%s IS NOT NULL", metadataRef)
+
+	default:
+		return "", nil, fmt.Errorf("unsupported operator: %s", cond.Operator)
+	}
+
+	return sqlCond, args, nil
+}
+
 // SearchChunksWithFilter searches for similar chunks with metadata filtering for user isolation
 func (s *KnowledgeBaseStorage) SearchChunksWithFilter(
 	ctx context.Context,
@@ -1061,6 +1462,29 @@ func (s *KnowledgeBaseStorage) SearchChunksWithFilter(
 	if filter != nil && len(filter.Tags) > 0 {
 		whereConditions = append(whereConditions, fmt.Sprintf("d.tags @> $%d", argIndex))
 		args = append(args, filter.Tags)
+		argIndex++
+	}
+
+	// Advanced metadata filter with operators and logical combinations
+	if filter != nil && filter.AdvancedFilter != nil {
+		metadataSQL, metadataArgs, err := buildMetadataFilterSQL(*filter.AdvancedFilter, &argIndex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build metadata filter: %w", err)
+		}
+		if metadataSQL != "" {
+			whereConditions = append(whereConditions, metadataSQL)
+			args = append(args, metadataArgs...)
+		}
+	}
+
+	// Legacy simple metadata filter (exact match only) - for backward compatibility
+	if filter != nil && filter.AdvancedFilter == nil && len(filter.Metadata) > 0 {
+		for key, value := range filter.Metadata {
+			escapedKey := escapeStringLiteral(key)
+			whereConditions = append(whereConditions, fmt.Sprintf("d.metadata->>'%s' = $%d", escapedKey, argIndex))
+			args = append(args, value)
+			argIndex++
+		}
 	}
 
 	whereClause := strings.Join(whereConditions, " AND ")

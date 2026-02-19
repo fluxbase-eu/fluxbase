@@ -235,12 +235,18 @@ func NewWebhookService(db *database.Connection) *WebhookService {
 }
 
 // parseTableReference splits a table reference into schema and table name
-// e.g., "auth.users" -> ("auth", "users"), "users" -> ("auth", "users")
+// e.g.:
+//   - "auth.users" -> ("auth", "users")
+//   - "ai.documents" -> ("ai", "documents")
+//   - "users" -> ("auth", "users") - defaults to auth schema for backward compatibility
+//
+// For AI schema tables, always use the full reference "ai.documents", "ai.chunks", etc.
 func parseTableReference(tableRef string) (schema, table string) {
 	if idx := strings.Index(tableRef, "."); idx > 0 {
 		return tableRef[:idx], tableRef[idx+1:]
 	}
-	// Default to auth schema since most webhook targets are auth tables
+	// Default to auth schema for backward compatibility
+	// For AI schema tables, use explicit "ai.documents" format
 	return "auth", tableRef
 }
 

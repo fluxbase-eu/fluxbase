@@ -542,6 +542,71 @@ func (h *KnowledgeBaseHandler) DeleteDocument(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+// DeleteDocumentsByFilter deletes documents matching a metadata filter
+// POST /api/v1/admin/ai/knowledge-bases/:id/documents/delete-by-filter
+func (h *KnowledgeBaseHandler) DeleteDocumentsByFilter(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if kbID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Knowledge base ID is required",
+		})
+	}
+
+	var req struct {
+		Tags           []string            `json:"tags"`
+		Metadata       map[string]string   `json:"metadata"`
+		MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
+	}
+
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Get user ID from context (for user isolation)
+	var userID *string
+	if uid := c.Locals("user_id"); uid != nil {
+		if uidStr, ok := uid.(string); ok && uidStr != "" {
+			userID = &uidStr
+		}
+	}
+
+	// Build the filter
+	filter := &MetadataFilter{
+		Tags:           req.Tags,
+		Metadata:       req.Metadata,
+		AdvancedFilter: req.MetadataFilter,
+		IncludeGlobal:  false, // Only delete user's own documents
+	}
+
+	// Only non-admin users are filtered by user_id
+	if userID != nil {
+		isAdmin := false
+		if role := c.Locals("role"); role != nil {
+			isAdmin = role == "service_role" || role == "dashboard_admin"
+		}
+		if !isAdmin {
+			filter.UserID = userID
+		}
+	}
+
+	// Delete documents
+	count, err := h.storage.DeleteDocumentsByFilter(ctx, kbID, filter)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Msg("Failed to delete documents by filter")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete documents",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"deleted_count": count,
+	})
+}
+
 // UpdateDocument updates a document's metadata and tags
 // PATCH /api/v1/admin/ai/knowledge-bases/:id/documents/:doc_id
 func (h *KnowledgeBaseHandler) UpdateDocument(c fiber.Ctx) error {

@@ -204,15 +204,17 @@ func (r *RAGService) VectorSearch(ctx context.Context, opts VectorSearchOptions)
 	var filter *MetadataFilter
 	if opts.UserID != nil && !opts.IsAdmin {
 		filter = &MetadataFilter{
-			UserID:        opts.UserID,
-			Tags:          opts.Tags,
-			Metadata:      opts.Metadata,
-			IncludeGlobal: true,
+			UserID:         opts.UserID,
+			Tags:           opts.Tags,
+			Metadata:       opts.Metadata,
+			AdvancedFilter: opts.MetadataFilter,
+			IncludeGlobal:  true,
 		}
-	} else if len(opts.Tags) > 0 || len(opts.Metadata) > 0 {
+	} else if len(opts.Tags) > 0 || len(opts.Metadata) > 0 || opts.MetadataFilter != nil {
 		filter = &MetadataFilter{
-			Tags:     opts.Tags,
-			Metadata: opts.Metadata,
+			Tags:           opts.Tags,
+			Metadata:       opts.Metadata,
+			AdvancedFilter: opts.MetadataFilter,
 		}
 	}
 
