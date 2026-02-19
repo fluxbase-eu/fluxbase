@@ -185,29 +185,29 @@ type RetrievalResult struct {
 type MetadataOperator string
 
 const (
-	MetadataOpEquals        MetadataOperator = "="         // Exact match
-	MetadataOpNotEquals     MetadataOperator = "!="        // Not equal
-	MetadataOpILike         MetadataOperator = "ILIKE"     // Case-insensitive pattern match
-	MetadataOpLike          MetadataOperator = "LIKE"      // Case-sensitive pattern match
-	MetadataOpIn            MetadataOperator = "IN"        // Value in list
-	MetadataOpNotIn         MetadataOperator = "NOT IN"    // Value not in list
-	MetadataOpGreaterThan   MetadataOperator = ">"         // Greater than
-	MetadataOpGreaterThanOr MetadataOperator = ">="        // Greater than or equal
-	MetadataOpLessThan      MetadataOperator = "<"         // Less than
-	MetadataOpLessThanOr    MetadataOperator = "<="        // Less than or equal
-	MetadataOpBetween       MetadataOperator = "BETWEEN"   // Value between two numbers
-	MetadataOpIsNull        MetadataOperator = "IS NULL"   // Value is null
+	MetadataOpEquals        MetadataOperator = "="           // Exact match
+	MetadataOpNotEquals     MetadataOperator = "!="          // Not equal
+	MetadataOpILike         MetadataOperator = "ILIKE"       // Case-insensitive pattern match
+	MetadataOpLike          MetadataOperator = "LIKE"        // Case-sensitive pattern match
+	MetadataOpIn            MetadataOperator = "IN"          // Value in list
+	MetadataOpNotIn         MetadataOperator = "NOT IN"      // Value not in list
+	MetadataOpGreaterThan   MetadataOperator = ">"           // Greater than
+	MetadataOpGreaterThanOr MetadataOperator = ">="          // Greater than or equal
+	MetadataOpLessThan      MetadataOperator = "<"           // Less than
+	MetadataOpLessThanOr    MetadataOperator = "<="          // Less than or equal
+	MetadataOpBetween       MetadataOperator = "BETWEEN"     // Value between two numbers
+	MetadataOpIsNull        MetadataOperator = "IS NULL"     // Value is null
 	MetadataOpIsNotNull     MetadataOperator = "IS NOT NULL" // Value is not null
 )
 
 // MetadataCondition represents a single metadata filter condition with an operator
 type MetadataCondition struct {
-	Key      string              `json:"key"`                 // Metadata key
-	Operator MetadataOperator    `json:"operator"`            // Comparison operator
-	Value    interface{}         `json:"value,omitempty"`     // Single value (for =, !=, >, <, etc.)
-	Values   []interface{}       `json:"values,omitempty"`    // Multiple values (for IN, NOT IN)
-	Min      interface{}         `json:"min,omitempty"`       // Minimum value (for BETWEEN)
-	Max      interface{}         `json:"max,omitempty"`       // Maximum value (for BETWEEN)
+	Key      string           `json:"key"`              // Metadata key
+	Operator MetadataOperator `json:"operator"`         // Comparison operator
+	Value    interface{}      `json:"value,omitempty"`  // Single value (for =, !=, >, <, etc.)
+	Values   []interface{}    `json:"values,omitempty"` // Multiple values (for IN, NOT IN)
+	Min      interface{}      `json:"min,omitempty"`    // Minimum value (for BETWEEN)
+	Max      interface{}      `json:"max,omitempty"`    // Maximum value (for BETWEEN)
 }
 
 // LogicalOperator represents how conditions should be combined
@@ -215,24 +215,24 @@ type LogicalOperator string
 
 const (
 	LogicalOpAND LogicalOperator = "AND" // All conditions must match
-	LogicalOpOR  LogicalOperator = "OR"   // Any condition must match
+	LogicalOpOR  LogicalOperator = "OR"  // Any condition must match
 )
 
 // MetadataFilterGroup represents a group of metadata conditions with logical operators
 type MetadataFilterGroup struct {
-	Conditions []MetadataCondition    `json:"conditions"` // Filter conditions
-	LogicalOp   LogicalOperator       `json:"logical_op"` // How to combine conditions (AND/OR)
-	Groups      []MetadataFilterGroup `json:"groups,omitempty"` // Nested groups for complex queries
+	Conditions []MetadataCondition   `json:"conditions"`       // Filter conditions
+	LogicalOp  LogicalOperator       `json:"logical_op"`       // How to combine conditions (AND/OR)
+	Groups     []MetadataFilterGroup `json:"groups,omitempty"` // Nested groups for complex queries
 }
 
 // MetadataFilter for user isolation and tag filtering in vector search
 // For advanced filtering, use AdvancedFilter field instead of Metadata map
 type MetadataFilter struct {
-	UserID         *string               // If set, filter to this user's content + global content
-	Tags           []string              // Filter by tags (documents must have ALL these tags)
-	IncludeGlobal  bool                  // Include content without user_id (default: true)
-	Metadata       map[string]string     // Arbitrary key-value filters on document metadata (legacy, exact match only)
-	AdvancedFilter *MetadataFilterGroup  // Advanced filtering with operators and logical combinations
+	UserID         *string              // If set, filter to this user's content + global content
+	Tags           []string             // Filter by tags (documents must have ALL these tags)
+	IncludeGlobal  bool                 // Include content without user_id (default: true)
+	Metadata       map[string]string    // Arbitrary key-value filters on document metadata (legacy, exact match only)
+	AdvancedFilter *MetadataFilterGroup // Advanced filtering with operators and logical combinations
 }
 
 // VectorSearchResult represents a single search result from the vector_search tool
@@ -254,11 +254,11 @@ type VectorSearchOptions struct {
 	Limit            int
 	Threshold        float64
 	Tags             []string
-	Metadata         map[string]string     // Arbitrary key-value filters on document metadata (legacy)
-	MetadataFilter   *MetadataFilterGroup  // Advanced metadata filtering with operators
-	UserID           *string               // For user isolation
-	IsAdmin          bool                  // Admin can bypass user filter
-	GraphBoostWeight float64               // How much to weight entity matches vs vector similarity (0.0-1.0, default 0)
+	Metadata         map[string]string    // Arbitrary key-value filters on document metadata (legacy)
+	MetadataFilter   *MetadataFilterGroup // Advanced metadata filtering with operators
+	UserID           *string              // For user isolation
+	IsAdmin          bool                 // Admin can bypass user filter
+	GraphBoostWeight float64              // How much to weight entity matches vs vector similarity (0.0-1.0, default 0)
 }
 
 // RetrievalLog records a RAG retrieval operation

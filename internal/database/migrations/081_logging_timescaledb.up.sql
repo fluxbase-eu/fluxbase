@@ -15,8 +15,17 @@
 --
 -- See: https://docs.timescale.com/self-hosted/latest/install/
 
--- Create TimescaleDB extension if available (idempotent - no error if not installed)
-CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+-- Create TimescaleDB extension if available (fails gracefully if not installed)
+DO $$
+BEGIN
+    BEGIN
+        CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+        RAISE NOTICE 'TimescaleDB extension created successfully';
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE NOTICE 'TimescaleDB extension not available, logging system will use regular PostgreSQL';
+    END;
+END $$;
 
 -- FOR DEVELOPERS:
 -- The application runtime code (internal/storage/log_timescaledb.go) handles

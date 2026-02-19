@@ -573,9 +573,9 @@ func TestBuildMetadataFilterSQL_BetweenOperator(t *testing.T) {
 
 func TestEscapeStringLiteral(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
-		want string
+		want  string
 	}{
 		{
 			name:  "no single quotes",
@@ -594,12 +594,12 @@ func TestEscapeStringLiteral(t *testing.T) {
 		},
 		{
 			name:  "starts with single quote",
-			input:  "'test",
+			input: "'test",
 			want:  "''test",
 		},
 		{
 			name:  "ends with single quote",
-			input:  "test'",
+			input: "test'",
 			want:  "test''",
 		},
 	}

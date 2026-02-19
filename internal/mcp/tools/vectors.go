@@ -72,7 +72,7 @@ func (t *SearchVectorsTool) InputSchema() map[string]any {
 				"description": "Advanced metadata filter with operators and logical combinations",
 				"properties": map[string]any{
 					"conditions": map[string]any{
-						"type": "array",
+						"type":        "array",
 						"description": "Filter conditions combined with logical_op (default: AND)",
 						"items": map[string]any{
 							"type": "object",

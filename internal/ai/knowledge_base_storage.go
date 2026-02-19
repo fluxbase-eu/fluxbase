@@ -1267,7 +1267,7 @@ func buildMetadataFilterSQLForTable(group MetadataFilterGroup, argIndex *int, ta
 	if prefix == "" {
 		prefix = "" // No prefix needed
 	} else if prefix != "" && !strings.HasSuffix(prefix, ".") {
-		prefix = prefix + "."
+		prefix += "."
 	}
 
 	// Build conditions using the modified prefix

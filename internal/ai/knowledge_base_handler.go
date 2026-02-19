@@ -555,8 +555,8 @@ func (h *KnowledgeBaseHandler) DeleteDocumentsByFilter(c fiber.Ctx) error {
 	}
 
 	var req struct {
-		Tags           []string            `json:"tags"`
-		Metadata       map[string]string   `json:"metadata"`
+		Tags           []string             `json:"tags"`
+		Metadata       map[string]string    `json:"metadata"`
 		MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
 	}
 
