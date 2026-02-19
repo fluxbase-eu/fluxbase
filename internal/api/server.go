@@ -580,9 +580,18 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		}
 
 		kbStorage = ai.NewKnowledgeBaseStorage(db)
+
+		// Initialize knowledge graph for entity and relationship storage
+		knowledgeGraph := ai.NewKnowledgeGraph(kbStorage)
+		log.Info().Msg("Knowledge graph initialized")
+
+		// Initialize entity extractor for extracting entities from documents
+		entityExtractor := ai.NewRuleBasedExtractor()
+		log.Info().Msg("Entity extractor initialized")
+
 		var docProcessor *ai.DocumentProcessor
 		if vectorHandler != nil && vectorHandler.GetEmbeddingService() != nil {
-			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService())
+			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService(), entityExtractor, knowledgeGraph)
 		}
 
 		// Use OCR-enabled handler if OCR service is available
@@ -592,9 +601,17 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			knowledgeBaseHandler = ai.NewKnowledgeBaseHandler(kbStorage, docProcessor)
 		}
 		knowledgeBaseHandler.SetStorageService(storageService)
+
+		// Initialize table exporter for database schema export
+		tableExporter := ai.NewTableExporter(db, docProcessor, knowledgeGraph, kbStorage)
+		knowledgeBaseHandler.SetTableExporter(tableExporter)
+		log.Info().Msg("Table exporter initialized")
+
 		log.Info().
 			Bool("processing_enabled", docProcessor != nil).
 			Bool("ocr_enabled", ocrService != nil && ocrService.IsEnabled()).
+			Bool("entity_extraction_enabled", true).
+			Bool("table_export_enabled", true).
 			Msg("Knowledge base handler initialized")
 
 		// Initialize quota service and handler
@@ -1169,6 +1186,15 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 		} else {
 			log.Debug().Msg("MCP: Vector search tool not registered - RAG service not available")
 		}
+	}
+
+	// Knowledge graph tools
+	if s.kbStorage != nil {
+		knowledgeGraph := ai.NewKnowledgeGraph(s.kbStorage)
+		toolRegistry.Register(mcptools.NewQueryKnowledgeGraphTool(knowledgeGraph))
+		toolRegistry.Register(mcptools.NewFindRelatedEntitiesTool(knowledgeGraph))
+		toolRegistry.Register(mcptools.NewBrowseKnowledgeGraphTool(knowledgeGraph))
+		log.Debug().Msg("MCP: Registered knowledge graph tools")
 	}
 
 	// DDL tools (schema/table management)
@@ -2312,6 +2338,10 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			router.Post("/ai/chatbots/:id/knowledge-bases", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.LinkKnowledgeBase)
 			router.Put("/ai/chatbots/:id/knowledge-bases/:kb_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UpdateChatbotKnowledgeBase)
 			router.Delete("/ai/chatbots/:id/knowledge-bases/:kb_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UnlinkKnowledgeBase)
+
+			// Table export routes
+			router.Post("/ai/knowledge-bases/:id/tables/export", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ExportTableToKnowledgeBase)
+			router.Get("/ai/tables", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListExportableTables)
 		}
 	}
 

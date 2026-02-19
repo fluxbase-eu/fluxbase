@@ -11,6 +11,7 @@ import (
 // EntityExtractor extracts entities from text
 type EntityExtractor interface {
 	ExtractEntities(text string, kbID string) (*EntityExtractionResult, error)
+	ExtractEntitiesWithRelationships(text string, kbID string, documentID string) (*EntityExtractionResult, error)
 }
 
 // RuleBasedExtractor uses regex patterns and rules to extract entities
@@ -51,6 +52,43 @@ func buildEntityPatterns() map[EntityType][]*regexp.Regexp {
 		EntityProduct: {
 			// Products (common tech products)
 			regexp.MustCompile(`\b(?:iPhone|iPad|MacBook|iMac|AirPods|Apple Watch|Galaxy|Pixel|Surface|Kindle|Echo|Alexa|Nest|PlayStation|Xbox|Nintendo|Switch|Android|iOS|Windows|macOS|Linux|Ubuntu|Debian|Red Hat|CentOS|Docker|Kubernetes|AWS|Azure|GCP|Heroku|Vercel|Netlify|Cloudflare)\b`),
+		},
+		EntityURL: {
+			// HTTP/HTTPS URLs
+			regexp.MustCompile(`https?://[^\s]+`),
+			// URLs starting with www
+			regexp.MustCompile(`www\.[^\s]+`),
+		},
+		EntityAPIEndpoint: {
+			// API paths like /api/v1/users, /api/v1/auth/...
+			regexp.MustCompile(`(?i)(?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+(?:/api/[^\s]+)`),
+			regexp.MustCompile(`/[a-z]*api/v[0-9]+/[^\s]+`),
+			// GraphQL endpoints
+			regexp.MustCompile(`(?i)/graphql[^\s]*`),
+		},
+		EntityDateTime: {
+			// ISO 8601 dates: 2025-02-18, 2025-02-18T10:00:00Z
+			regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?\b`),
+			// Common date formats: Feb 18, 2025; February 18, 2025
+			regexp.MustCompile(`\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b`),
+			// Relative time: 2h 30m, 3 days ago
+			regexp.MustCompile(`\b\d+\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\b`),
+		},
+		EntityCodeReference: {
+			// Go file paths: internal/ai/kb.go, pkg/server/main.go
+			regexp.MustCompile(`[a-z_]+/[a-z_]+/\w+\.go`),
+			// TypeScript/JavaScript file paths: src/components/Button.tsx
+			regexp.MustCompile(`[a-z_]+/[a-z_]+/\w+\.(?:ts|tsx|js|jsx|py|rs|java|cpp|c|h)`),
+			// GitHub repo references: github.com/user/repo
+			regexp.MustCompile(`github\.com/[^\s]+/[^\s]+`),
+		},
+		EntityError: {
+			// Go error patterns: ErrNotFound, ErrInvalidInput
+			regexp.MustCompile(`\bErr[A-Z][a-zA-Z]+\b`),
+			// HTTP error codes: 404 Unauthorized, 500 Internal Server Error
+			regexp.MustCompile(`\b(?:401|403|404|500|502|503)\s+[A-Z][^\s]*\b`),
+			// Error phrases in quotes
+			regexp.MustCompile(`(?i)"(?:error|failed|cannot|unable)[^\"]*"`),
 		},
 	}
 }

@@ -17,13 +17,22 @@ import (
 type DocumentProcessor struct {
 	storage          *KnowledgeBaseStorage
 	embeddingService *EmbeddingService
+	entityExtractor  EntityExtractor
+	knowledgeGraph   *KnowledgeGraph
 }
 
 // NewDocumentProcessor creates a new document processor
-func NewDocumentProcessor(storage *KnowledgeBaseStorage, embeddingService *EmbeddingService) *DocumentProcessor {
+func NewDocumentProcessor(
+	storage *KnowledgeBaseStorage,
+	embeddingService *EmbeddingService,
+	entityExtractor EntityExtractor,
+	knowledgeGraph *KnowledgeGraph,
+) *DocumentProcessor {
 	return &DocumentProcessor{
 		storage:          storage,
 		embeddingService: embeddingService,
+		entityExtractor:  entityExtractor,
+		knowledgeGraph:   knowledgeGraph,
 	}
 }
 
@@ -72,6 +81,13 @@ func (p *DocumentProcessor) ProcessDocument(ctx context.Context, doc *Document, 
 	}
 
 	log.Info().Str("doc_id", doc.ID).Int("chunks", len(textChunks)).Msg("Document chunked")
+
+	// Extract entities and relationships (best-effort, doesn't fail processing)
+	if p.entityExtractor != nil && p.knowledgeGraph != nil {
+		if err := p.extractAndStoreEntities(ctx, doc); err != nil {
+			log.Warn().Err(err).Str("doc_id", doc.ID).Msg("Entity extraction failed, continuing with embedding")
+		}
+	}
 
 	// Generate embeddings for all chunks
 	embeddings, err := p.generateEmbeddings(ctx, textChunks)
@@ -525,4 +541,46 @@ func (p *DocumentProcessor) AddDocument(ctx context.Context, kbID string, req Cr
 	}()
 
 	return doc, nil
+}
+
+// extractAndStoreEntities extracts entities and relationships from a document and stores them in the knowledge graph
+func (p *DocumentProcessor) extractAndStoreEntities(ctx context.Context, doc *Document) error {
+	// Use the entity extractor to get entities, relationships, and document-entity links
+	result, err := p.entityExtractor.ExtractEntitiesWithRelationships(
+		doc.Content,
+		doc.KnowledgeBaseID,
+		doc.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to extract entities: %w", err)
+	}
+
+	// Store entities (deduplicated by canonical name via constraint)
+	for _, entity := range result.Entities {
+		if err := p.knowledgeGraph.AddEntity(ctx, &entity); err != nil {
+			log.Warn().Err(err).Str("entity", entity.Name).Msg("Failed to add entity")
+		}
+	}
+
+	// Store relationships
+	for _, rel := range result.Relationships {
+		if err := p.knowledgeGraph.AddRelationship(ctx, &rel); err != nil {
+			log.Warn().Err(err).Str("source", rel.SourceEntityID).Str("target", rel.TargetEntityID).Msg("Failed to add relationship")
+		}
+	}
+
+	// Store document-entity links
+	if len(result.DocumentEntities) > 0 {
+		if err := p.knowledgeGraph.AddDocumentEntities(ctx, result.DocumentEntities); err != nil {
+			return fmt.Errorf("failed to add document entities: %w", err)
+		}
+	}
+
+	log.Info().
+		Str("doc_id", doc.ID).
+		Int("entities", len(result.Entities)).
+		Int("relationships", len(result.Relationships)).
+		Msg("Entity extraction complete")
+
+	return nil
 }

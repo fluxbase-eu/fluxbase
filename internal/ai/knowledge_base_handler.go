@@ -18,6 +18,7 @@ type KnowledgeBaseHandler struct {
 	storageService *storage.Service
 	textExtractor  *TextExtractor
 	ocrService     *OCRService
+	tableExporter  *TableExporter
 }
 
 // NewKnowledgeBaseHandler creates a new knowledge base handler
@@ -1153,6 +1154,102 @@ func (h *KnowledgeBaseHandler) RevokeDocumentPermission(c fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// SetTableExporter sets the table exporter for database schema export
+func (h *KnowledgeBaseHandler) SetTableExporter(exporter *TableExporter) {
+	h.tableExporter = exporter
+}
+
+// ============================================================================
+// TABLE EXPORT ENDPOINTS
+// ============================================================================
+
+// ExportTableToKnowledgeBase exports a database table as a knowledge base document
+// POST /api/v1/admin/ai/knowledge-bases/:id/tables/export
+func (h *KnowledgeBaseHandler) ExportTableToKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if kbID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Knowledge base ID is required",
+		})
+	}
+
+	var req ExportTableRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	req.KnowledgeBaseID = kbID
+
+	// Set defaults
+	if req.SampleRowCount == 0 {
+		req.SampleRowCount = 5
+	}
+
+	if h.tableExporter == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Table export service not configured",
+		})
+	}
+
+	result, err := h.tableExporter.ExportTable(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Str("table", req.Table).Msg("Failed to export table")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to export table: %v", err),
+		})
+	}
+
+	return c.JSON(result)
+}
+
+// ListExportableTables lists all tables that can be exported to knowledge bases
+// GET /api/v1/admin/ai/tables
+func (h *KnowledgeBaseHandler) ListExportableTables(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	schema := c.Query("schema", "public")
+
+	if h.tableExporter == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Table export service not configured",
+		})
+	}
+
+	tables, err := h.tableExporter.ListExportableTables(ctx, []string{schema})
+	if err != nil {
+		log.Error().Err(err).Str("schema", schema).Msg("Failed to list tables")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to list tables",
+		})
+	}
+
+	// Return simplified table info
+	type TableSummary struct {
+		Schema      string `json:"schema"`
+		Name        string `json:"name"`
+		Columns     int    `json:"columns"`
+		ForeignKeys int    `json:"foreign_keys"`
+	}
+
+	summaries := make([]TableSummary, len(tables))
+	for i, t := range tables {
+		summaries[i] = TableSummary{
+			Schema:      t.Schema,
+			Name:        t.Name,
+			Columns:     len(t.Columns),
+			ForeignKeys: len(t.ForeignKeys),
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"tables": summaries,
+		"count":  len(summaries),
+	})
 }
 
 // fiber:context-methods migrated

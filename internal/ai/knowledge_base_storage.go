@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -644,6 +645,15 @@ type HybridSearchOptions struct {
 	Filter         *MetadataFilter // Optional metadata filter for user isolation
 }
 
+// GraphBoostOptions contains options for graph-boosted search
+type GraphBoostOptions struct {
+	QueryEmbedding   []float32 // Query vector embedding
+	QueryText        string    // Query text for entity extraction
+	Limit            int       // Maximum number of results to return
+	Threshold        float64   // Minimum similarity threshold (0-1)
+	GraphBoostWeight float64   // How much to weight entity matches vs vector similarity (0.0-1.0)
+}
+
 // SearchChunksHybrid performs hybrid search combining vector similarity with full-text search
 func (s *KnowledgeBaseStorage) SearchChunksHybrid(ctx context.Context, knowledgeBaseID string, opts HybridSearchOptions) ([]RetrievalResult, error) {
 	// Default weights
@@ -847,6 +857,170 @@ func (s *KnowledgeBaseStorage) searchHybrid(ctx context.Context, knowledgeBaseID
 		Int("results_count", len(results)).
 		Str("kb_id", knowledgeBaseID).
 		Msg("Hybrid search completed")
+
+	return results, nil
+}
+
+// SearchChunksWithGraphBoost performs vector search with entity-based boosting
+// This combines semantic similarity with knowledge graph entity salience
+// Entities are extracted from the query and documents mentioning those entities receive a ranking boost
+func (s *KnowledgeBaseStorage) SearchChunksWithGraphBoost(
+	ctx context.Context,
+	knowledgeBaseID string,
+	knowledgeGraph *KnowledgeGraph,
+	entityExtractor EntityExtractor,
+	opts GraphBoostOptions,
+) ([]RetrievalResult, error) {
+	// Apply defaults and validate
+	if opts.GraphBoostWeight < 0 {
+		opts.GraphBoostWeight = 0
+	} else if opts.GraphBoostWeight > 1 {
+		opts.GraphBoostWeight = 1
+	}
+
+	// If no boosting requested, use regular search for efficiency
+	if opts.GraphBoostWeight == 0 {
+		return s.SearchChunks(ctx, knowledgeBaseID, opts.QueryEmbedding, opts.Limit, opts.Threshold)
+	}
+
+	log.Debug().
+		Str("kb_id", knowledgeBaseID).
+		Float64("boost_weight", opts.GraphBoostWeight).
+		Str("query", opts.QueryText).
+		Msg("SearchChunksWithGraphBoost starting")
+
+	// Step 1: Extract entities from query text
+	var queryEntities []Entity
+	if entityExtractor != nil && opts.QueryText != "" {
+		extracted, err := entityExtractor.ExtractEntities(opts.QueryText, knowledgeBaseID)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to extract entities from query, using vector-only search")
+			return s.SearchChunks(ctx, knowledgeBaseID, opts.QueryEmbedding, opts.Limit, opts.Threshold)
+		}
+		queryEntities = extracted.Entities
+		log.Debug().Int("entity_count", len(queryEntities)).Msg("Extracted entities from query")
+	}
+
+	// Step 2: Get more results than needed (for re-ranking)
+	retrievalLimit := opts.Limit * 3 // Get 3x results for re-ranking
+	if retrievalLimit < 10 {
+		retrievalLimit = 10
+	}
+	if retrievalLimit > 100 {
+		retrievalLimit = 100
+	}
+
+	chunks, err := s.SearchChunks(ctx, knowledgeBaseID, opts.QueryEmbedding, retrievalLimit, opts.Threshold)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(chunks) == 0 {
+		return chunks, nil
+	}
+
+	// Step 3: Calculate entity salience per document
+	documentEntitySalience := make(map[string]float64) // document_id -> salience sum
+
+	if len(queryEntities) > 0 && knowledgeGraph != nil {
+		// For each query entity, find documents that mention it
+		for _, queryEntity := range queryEntities {
+			// Search for exact entity matches in the knowledge base
+			matchingEntities, err := knowledgeGraph.SearchEntities(ctx, knowledgeBaseID, queryEntity.CanonicalName, nil, 50)
+			if err != nil {
+				log.Warn().Err(err).Str("entity", queryEntity.CanonicalName).Msg("Failed to search for entity")
+				continue
+			}
+
+			// For each matching entity, get documents mentioning it with salience
+			for _, entity := range matchingEntities {
+				docEntities, err := knowledgeGraph.GetDocumentEntities(ctx, "")
+				if err != nil {
+					continue
+				}
+
+				// Aggregate salience per document
+				for _, de := range docEntities {
+					if de.EntityID == entity.ID {
+						documentEntitySalience[de.DocumentID] += de.Salience
+					}
+				}
+			}
+		}
+	}
+
+	log.Debug().
+		Int("documents_with_entities", len(documentEntitySalience)).
+		Msg("Found documents with entity matches")
+
+	// Step 4: Apply entity boost and re-rank
+	type boostedResult struct {
+		result      RetrievalResult
+		entityBoost float64
+		finalScore  float64
+	}
+
+	boosted := make([]boostedResult, 0, len(chunks))
+
+	// Find max salience for normalization
+	maxSalience := 0.0
+	for _, salience := range documentEntitySalience {
+		if salience > maxSalience {
+			maxSalience = salience
+		}
+	}
+
+	for _, chunk := range chunks {
+		entityBoost := 0.0
+		if salience, ok := documentEntitySalience[chunk.DocumentID]; ok && maxSalience > 0 {
+			// Normalize to 0-1
+			entityBoost = (salience / maxSalience)
+		}
+
+		// Combined score: weighted average of vector similarity and entity boost
+		vectorWeight := 1.0 - opts.GraphBoostWeight
+		finalScore := (chunk.Similarity * vectorWeight) + (entityBoost * opts.GraphBoostWeight)
+
+		boosted = append(boosted, boostedResult{
+			result:      chunk,
+			entityBoost: entityBoost,
+			finalScore:  finalScore,
+		})
+	}
+
+	// Sort by final score (descending)
+	sort.Slice(boosted, func(i, j int) bool {
+		return boosted[i].finalScore > boosted[j].finalScore
+	})
+
+	// Step 5: Return top N results
+	resultCount := opts.Limit
+	if resultCount > len(boosted) {
+		resultCount = len(boosted)
+	}
+
+	results := make([]RetrievalResult, resultCount)
+	for i := 0; i < resultCount; i++ {
+		results[i] = boosted[i].result
+		// Update similarity to the final score for consistency
+		results[i].Similarity = boosted[i].finalScore
+		// Store boost info in metadata for debugging (serialize as JSON)
+		metadataMap := make(map[string]any)
+		if len(results[i].Metadata) > 0 {
+			// Parse existing metadata if present (ignore errors - this is just for debugging)
+			_ = json.Unmarshal(results[i].Metadata, &metadataMap)
+		}
+		metadataMap["entity_boost"] = boosted[i].entityBoost
+		metadataMap["final_score"] = boosted[i].finalScore
+		metadataJSON, _ := json.Marshal(metadataMap)
+		results[i].Metadata = json.RawMessage(metadataJSON)
+	}
+
+	log.Debug().
+		Int("results_count", len(results)).
+		Float64("top_boost", boosted[0].entityBoost).
+		Float64("top_final_score", boosted[0].finalScore).
+		Msg("SearchChunksWithGraphBoost completed")
 
 	return results, nil
 }

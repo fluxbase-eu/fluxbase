@@ -202,15 +202,16 @@ type VectorSearchResult struct {
 
 // VectorSearchOptions contains options for explicit vector search via the tool
 type VectorSearchOptions struct {
-	ChatbotID      string
-	Query          string
-	KnowledgeBases []string // Specific KB names, or empty for all linked
-	Limit          int
-	Threshold      float64
-	Tags           []string
-	Metadata       map[string]string // Arbitrary key-value filters on document metadata
-	UserID         *string           // For user isolation
-	IsAdmin        bool              // Admin can bypass user filter
+	ChatbotID        string
+	Query            string
+	KnowledgeBases   []string // Specific KB names, or empty for all linked
+	Limit            int
+	Threshold        float64
+	Tags             []string
+	Metadata         map[string]string // Arbitrary key-value filters on document metadata
+	UserID           *string           // For user isolation
+	IsAdmin          bool              // Admin can bypass user filter
+	GraphBoostWeight float64           // How much to weight entity matches vs vector similarity (0.0-1.0, default 0)
 }
 
 // RetrievalLog records a RAG retrieval operation
@@ -423,13 +424,19 @@ func IsQuotaError(err error) bool {
 type EntityType string
 
 const (
-	EntityPerson       EntityType = "person"
-	EntityOrganization EntityType = "organization"
-	EntityLocation     EntityType = "location"
-	EntityConcept      EntityType = "concept"
-	EntityProduct      EntityType = "product"
-	EntityEvent        EntityType = "event"
-	EntityOther        EntityType = "other"
+	EntityPerson        EntityType = "person"
+	EntityOrganization  EntityType = "organization"
+	EntityLocation      EntityType = "location"
+	EntityConcept       EntityType = "concept"
+	EntityProduct       EntityType = "product"
+	EntityEvent         EntityType = "event"
+	EntityTable         EntityType = "table"
+	EntityURL           EntityType = "url"
+	EntityAPIEndpoint   EntityType = "api_endpoint"
+	EntityDateTime      EntityType = "datetime"
+	EntityCodeReference EntityType = "code_reference"
+	EntityError         EntityType = "error"
+	EntityOther         EntityType = "other"
 )
 
 // Entity represents a named entity extracted from documents
@@ -466,6 +473,8 @@ const (
 	RelChildOf      RelationshipType = "child_of"
 	RelSpouseOf     RelationshipType = "spouse_of"
 	RelSiblingOf    RelationshipType = "sibling_of"
+	RelForeignKey   RelationshipType = "foreign_key"
+	RelDependsOn    RelationshipType = "depends_on"
 	RelOther        RelationshipType = "other"
 )
 

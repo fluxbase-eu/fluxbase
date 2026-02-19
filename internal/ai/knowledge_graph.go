@@ -375,3 +375,85 @@ func (kg *KnowledgeGraph) GetDocumentEntities(ctx context.Context, documentID st
 
 	return docEntities, nil
 }
+
+// GetEntitiesByDocument retrieves all entities mentioned in a document
+func (kg *KnowledgeGraph) GetEntitiesByDocument(ctx context.Context, documentID string) ([]Entity, error) {
+	query := `
+		SELECT DISTINCT e.id, e.knowledge_base_id, e.entity_type, e.name,
+			   e.canonical_name, e.aliases, e.metadata, e.created_at, e.updated_at
+		FROM ai.entities e
+		JOIN ai.document_entities de ON de.entity_id = e.id
+		WHERE de.document_id = $1
+		ORDER BY de.salience DESC, e.name
+	`
+
+	rows, err := kg.storage.db.Query(ctx, query, documentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get document entities: %w", err)
+	}
+	defer rows.Close()
+
+	var entities []Entity
+	for rows.Next() {
+		var entity Entity
+		if err := rows.Scan(
+			&entity.ID, &entity.KnowledgeBaseID, &entity.EntityType, &entity.Name,
+			&entity.CanonicalName, &entity.Aliases, &entity.Metadata,
+			&entity.CreatedAt, &entity.UpdatedAt,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan entity")
+			continue
+		}
+		entities = append(entities, entity)
+	}
+
+	return entities, nil
+}
+
+// BatchAddEntities adds multiple entities efficiently using batch operations
+func (kg *KnowledgeGraph) BatchAddEntities(ctx context.Context, entities []Entity) error {
+	if len(entities) == 0 {
+		return nil
+	}
+
+	// Use pgx batch operation for efficiency
+	batch := &pgx.Batch{}
+
+	query := `
+		INSERT INTO ai.entities (
+			id, knowledge_base_id, entity_type, name, canonical_name,
+			aliases, metadata, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (knowledge_base_id, entity_type, canonical_name)
+		DO UPDATE SET
+			name = EXCLUDED.name,
+			aliases = EXCLUDED.aliases,
+			metadata = EXCLUDED.metadata,
+			updated_at = NOW()
+	`
+
+	for _, entity := range entities {
+		if entity.ID == "" {
+			entity.ID = uuid.New().String()
+		}
+		entity.CreatedAt = time.Now()
+		entity.UpdatedAt = time.Now()
+
+		batch.Queue(query,
+			entity.ID, entity.KnowledgeBaseID, entity.EntityType, entity.Name,
+			entity.CanonicalName, entity.Aliases, entity.Metadata,
+			entity.CreatedAt, entity.UpdatedAt,
+		)
+	}
+
+	br := kg.storage.db.Pool().SendBatch(ctx, batch)
+	defer func() { _ = br.Close() }()
+
+	for range entities {
+		if _, err := br.Exec(); err != nil {
+			return fmt.Errorf("failed to insert entity: %w", err)
+		}
+	}
+
+	return nil
+}

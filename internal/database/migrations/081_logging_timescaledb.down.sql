@@ -1,6 +1,6 @@
 -- TimescaleDB Support - Rollback
 --
--- This migration was purely documentation (no schema changes).
+-- This migration created the TimescaleDB extension if it was available.
 -- To remove TimescaleDB support:
 --
 -- 1. The application will handle cleanup if configured to do so

@@ -2848,6 +2848,29 @@ export interface AddDocumentResponse {
   message: string
 }
 
+// Table export types
+export interface TableSummary {
+  schema: string
+  name: string
+  columns: number
+  foreign_keys: number
+}
+
+export interface ExportTableOptions {
+  schema: string
+  table: string
+  include_sample_rows?: boolean
+  sample_row_count?: number
+  include_foreign_keys?: boolean
+  include_indexes?: boolean
+}
+
+export interface ExportTableResult {
+  document_id: string
+  entity_id: string
+  relationship_ids: string[]
+}
+
 export interface ChatbotKnowledgeBaseLink {
   id: string
   chatbot_id: string
@@ -3171,6 +3194,32 @@ export const knowledgeBasesApi = {
     await api.delete(
       `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${docId}/permissions/${userId}`
     )
+  },
+
+  // ============================================================================
+  // Table Export
+  // ============================================================================
+
+  // List all exportable tables
+  listTables: async (schema?: string): Promise<TableSummary[]> => {
+    const params = schema ? { schema } : {}
+    const response = await api.get<{
+      tables: TableSummary[]
+      count: number
+    }>('/api/v1/admin/ai/tables', { params })
+    return response.data.tables || []
+  },
+
+  // Export a table to a knowledge base
+  exportTable: async (
+    kbId: string,
+    options: ExportTableOptions
+  ): Promise<ExportTableResult> => {
+    const response = await api.post<ExportTableResult>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/tables/export`,
+      options
+    )
+    return response.data
   },
 }
 

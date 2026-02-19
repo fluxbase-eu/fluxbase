@@ -14,6 +14,9 @@ import {
   AlertTriangle,
   Pencil,
   X,
+  Database,
+  Search,
+  Settings,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -689,6 +692,36 @@ function KnowledgeBaseDetailPage() {
           </Dialog>
         </div>
       </div>
+
+      {/* Tab Navigation */}
+      <Tabs defaultValue='documents' className='w-full'>
+        <TabsList className='grid w-full grid-cols-4'>
+          <TabsTrigger value='documents' asChild>
+            <a href={`/knowledge-bases/${id}`} className='flex items-center gap-2'>
+              <FileText className='h-4 w-4' />
+              Documents
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value='tables' asChild>
+            <a href={`/knowledge-bases/${id}/tables`} className='flex items-center gap-2'>
+              <Database className='h-4 w-4' />
+              Tables
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value='search' asChild>
+            <a href={`/knowledge-bases/${id}/search`} className='flex items-center gap-2'>
+              <Search className='h-4 w-4' />
+              Search
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value='settings' asChild>
+            <a href={`/knowledge-bases/${id}/settings`} className='flex items-center gap-2'>
+              <Settings className='h-4 w-4' />
+              Settings
+            </a>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <Card>
         <CardHeader>

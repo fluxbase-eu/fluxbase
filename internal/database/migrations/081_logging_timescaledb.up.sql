@@ -1,33 +1,32 @@
 -- TimescaleDB Support for Logging System
 --
--- This migration documents TimescaleDB support for the logging system.
--- TimescaleDB provides enhanced features for time-series log data including:
+-- This migration creates the TimescaleDB extension (if available) and documents
+-- TimescaleDB support for the logging system. TimescaleDB provides enhanced
+-- features for time-series log data including:
 -- - Automatic time-based partitioning (hypertables)
 -- - Compression of old data
 -- - Automated retention policies
 -- - Improved query performance for time-series data
 --
--- PREREQUISITES:
--- To use TimescaleDB features, the PostgreSQL server must have the TimescaleDB
--- extension installed. See: https://docs.timescale.com/self-hosted/latest/install/
+-- The TimescaleDB extension will be created if it's installed on the PostgreSQL
+-- server. If TimescaleDB is not available, this migration will succeed without
+-- creating the extension, and the logging system will fall back to regular
+-- PostgreSQL storage.
 --
+-- See: https://docs.timescale.com/self-hosted/latest/install/
+
+-- Create TimescaleDB extension if available (idempotent - no error if not installed)
+CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+
 -- FOR DEVELOPERS:
 -- The application runtime code (internal/storage/log_timescaledb.go) handles
 -- TimescaleDB initialization automatically when configured with:
 --   logging.backend: timescaledb or postgres-timescaledb
 --
 -- The application will:
--- 1. Create the TimescaleDB extension if not present
+-- 1. Verify the TimescaleDB extension exists (already created by this migration if available)
 -- 2. Convert logging.entries to a hypertable
 -- 3. Enable compression and retention policies (if configured)
---
--- OPTIONAL MIGRATION:
--- If TimescaleDB is available and you want to enable it manually before running
--- the application, execute the following SQL:
---
---   CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
---
--- Note: This is optional - the application will create the extension if needed.
 --
 -- WITHOUT TIMESCALEDB:
 -- If TimescaleDB is not installed, the logging system will fall back to

@@ -51,7 +51,10 @@ func NewChatHandler(
 	var ragService *RAGService
 	if embeddingService != nil {
 		kbStorage := NewKnowledgeBaseStorage(db)
-		ragService = NewRAGService(kbStorage, embeddingService)
+		// Initialize knowledge graph and entity extractor for graph-boosted search
+		knowledgeGraph := NewKnowledgeGraph(kbStorage)
+		entityExtractor := NewRuleBasedExtractor()
+		ragService = NewRAGService(kbStorage, embeddingService, knowledgeGraph, entityExtractor)
 	}
 
 	return &ChatHandler{

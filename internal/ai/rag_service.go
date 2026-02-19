@@ -13,13 +13,22 @@ import (
 type RAGService struct {
 	storage          *KnowledgeBaseStorage
 	embeddingService *EmbeddingService
+	knowledgeGraph   *KnowledgeGraph // For graph-boosted search
+	entityExtractor  EntityExtractor // For extracting entities from queries
 }
 
 // NewRAGService creates a new RAG service
-func NewRAGService(storage *KnowledgeBaseStorage, embeddingService *EmbeddingService) *RAGService {
+func NewRAGService(
+	storage *KnowledgeBaseStorage,
+	embeddingService *EmbeddingService,
+	knowledgeGraph *KnowledgeGraph,
+	entityExtractor EntityExtractor,
+) *RAGService {
 	return &RAGService{
 		storage:          storage,
 		embeddingService: embeddingService,
+		knowledgeGraph:   knowledgeGraph,
+		entityExtractor:  entityExtractor,
 	}
 }
 
@@ -243,22 +252,43 @@ func (r *RAGService) VectorSearch(ctx context.Context, opts VectorSearchOptions)
 	perKBLimit := opts.Limit // Could distribute across KBs if needed
 
 	for kbID, kb := range kbsToSearch {
-		// Use hybrid search combining vector similarity with full-text search
-		hybridOpts := HybridSearchOptions{
-			Query:          opts.Query,
-			QueryEmbedding: queryEmbedding,
-			Limit:          perKBLimit,
-			Threshold:      opts.Threshold,
-			Mode:           SearchModeHybrid,
-			SemanticWeight: 0.7, // 70% semantic, 30% keyword
-			KeywordBoost:   0.2, // 20% boost for exact keyword matches
-			Filter:         filter,
+		var results []RetrievalResult
+		var err error
+
+		// Use graph-boosted search if requested and available
+		if opts.GraphBoostWeight > 0 && r.knowledgeGraph != nil && r.entityExtractor != nil {
+			graphOpts := GraphBoostOptions{
+				QueryEmbedding:   queryEmbedding,
+				QueryText:        opts.Query,
+				Limit:            perKBLimit,
+				Threshold:        opts.Threshold,
+				GraphBoostWeight: opts.GraphBoostWeight,
+			}
+			results, err = r.storage.SearchChunksWithGraphBoost(ctx, kbID, r.knowledgeGraph, r.entityExtractor, graphOpts)
+			if err != nil {
+				log.Warn().Err(err).Str("kb_id", kbID).Str("kb_name", kb.Name).Msg("Failed to search with graph boost, falling back to hybrid")
+				// Fall back to hybrid search
+			}
 		}
 
-		results, err := r.storage.SearchChunksHybrid(ctx, kbID, hybridOpts)
-		if err != nil {
-			log.Warn().Err(err).Str("kb_id", kbID).Str("kb_name", kb.Name).Msg("Failed to search knowledge base")
-			continue
+		// Fallback to hybrid search if graph search wasn't used or failed
+		if len(results) == 0 {
+			hybridOpts := HybridSearchOptions{
+				Query:          opts.Query,
+				QueryEmbedding: queryEmbedding,
+				Limit:          perKBLimit,
+				Threshold:      opts.Threshold,
+				Mode:           SearchModeHybrid,
+				SemanticWeight: 0.7, // 70% semantic, 30% keyword
+				KeywordBoost:   0.2, // 20% boost for exact keyword matches
+				Filter:         filter,
+			}
+
+			results, err = r.storage.SearchChunksHybrid(ctx, kbID, hybridOpts)
+			if err != nil {
+				log.Warn().Err(err).Str("kb_id", kbID).Str("kb_name", kb.Name).Msg("Failed to search knowledge base")
+				continue
+			}
 		}
 
 		for _, result := range results {
