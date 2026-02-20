@@ -808,22 +808,6 @@ type TestContextOptions struct {
 func NewTestContextWithOptions(t *testing.T, opts TestContextOptions) *TestContext {
 	t.Helper()
 
-	// If shared context is available, use it but with custom dependencies
-	// This avoids creating additional database connection pools
-	if IsSharedTestContextInitialized() {
-		tc := GetSharedTestContext(t)
-
-		// Override dependencies for this test
-		if opts.RateLimiter != nil {
-			ratelimit.SetGlobalStore(opts.RateLimiter)
-		}
-		if opts.PubSub != nil {
-			pubsub.SetGlobalPubSub(opts.PubSub)
-		}
-
-		return tc
-	}
-
 	cfg := GetTestConfig()
 
 	// Set dependencies before creating server

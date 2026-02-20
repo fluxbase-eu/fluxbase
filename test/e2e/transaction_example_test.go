@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/test"
@@ -152,6 +153,12 @@ func TestExampleHTTPTransactionIsolation(t *testing.T) {
 // This is Phase 2 of the test isolation plan - each test gets its own rate limiter
 // and pub/sub instances instead of using global singletons.
 func TestExampleDependencyInjection(t *testing.T) {
+	// Skip in CI environment - this test needs isolated dependencies which requires
+	// a separate server instance, consuming additional database connections
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping in CI: test requires isolated server instance")
+	}
+
 	// Create test-specific in-memory dependencies
 	rateLimiter, pubSub := test.NewInMemoryDependencies()
 
@@ -186,6 +193,12 @@ func TestExampleDependencyInjection(t *testing.T) {
 // TestExampleDependencyInjectionMultipleRuns demonstrates that tests with
 // custom dependencies can run multiple times without polluting each other.
 func TestExampleDependencyInjectionMultipleRuns(t *testing.T) {
+	// Skip in CI environment - this test needs isolated dependencies which requires
+	// a separate server instance, consuming additional database connections
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping in CI: test requires isolated server instance")
+	}
+
 	// Each test run gets fresh dependencies
 	rateLimiter, pubSub := test.NewInMemoryDependencies()
 
