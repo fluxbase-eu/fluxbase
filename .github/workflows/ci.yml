@@ -5,6 +5,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      postgres_tag:
+        description: "Custom Postgres image tag (e.g., add-new-feature)"
+        required: false
+        default: "18"
+        type: string
 
 env:
   GO_VERSION: "1.25.7"
@@ -156,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: ghcr.io/fluxbase-eu/fluxbase-postgres:18
+        image: ghcr.io/fluxbase-eu/fluxbase-postgres:${{ inputs.postgres_tag || '18' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
