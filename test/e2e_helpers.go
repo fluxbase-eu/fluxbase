@@ -611,16 +611,10 @@ func ResetRLSTestState(tc *TestContext) {
 
 // Close cleans up test context resources
 func (tc *TestContext) Close() {
-	// For shared test context, shut down the server to stop background goroutines
-	// then reset global state
+	// For shared test context, only reset global state
+	// Don't shut down server, close pubsub, or close database
+	// These are managed by the shared context lifecycle in CleanupSharedTestContext()
 	if tc.isShared {
-		// Shutdown the server first to stop all background goroutines
-		// (idempotency cleanup, rate limiter GC, etc.)
-		if tc.Server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			_ = tc.Server.Shutdown(ctx)
-		}
 		ResetGlobalTestState()
 		return
 	}
