@@ -106,5 +106,5 @@ body:
       description: Any additional environment details (OS, database version, etc.)
       placeholder: |
         - OS: Ubuntu 22.04
-        - PostgreSQL: 16.1
-        - Go: 1.25.7
+        - PostgreSQL: 18.1
+        - Go: 1.26.0
