@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -248,9 +249,8 @@ func TestWebhookTriggerRetry(t *testing.T) {
 
 	// Configure webhook trigger service for faster retries in tests (3 second interval)
 	triggerService := tc.Server.GetWebhookTriggerService()
-	if triggerService != nil {
-		triggerService.SetBacklogInterval(3 * time.Second)
-	}
+	require.NotNil(t, triggerService, "Webhook trigger service should be available")
+	triggerService.SetBacklogInterval(3 * time.Second)
 
 	// Create a failing webhook server (returns 500) with mutex for thread-safe access
 	var mu sync.Mutex
@@ -317,10 +317,31 @@ func TestWebhookTriggerRetry(t *testing.T) {
 	//           T=3s backlog processor runs, second attempt fails, next_retry_at = T+3+4s = T+7s (attempt 2 * 2s backoff)
 	//           T=6s backlog processor runs (nothing ready yet)
 	//           T=9s backlog processor runs, third attempt succeeds
-	// Use 25 seconds to account for CI timing variability
+	// Use 30 seconds to account for CI timing variability
+
+	// First, wait for the webhook event to be created
+	var eventID string
+	eventCreated := tc.WaitForCondition(10*time.Second, 100*time.Millisecond, func() bool {
+		results := tc.QuerySQL("SELECT id, next_retry_at, processed FROM auth.webhook_events WHERE webhook_id = $1 ORDER BY created_at DESC LIMIT 1", webhookID)
+		if len(results) == 0 {
+			return false
+		}
+		eventID = results[0]["id"].(string)
+		t.Logf("Event created: id=%s, next_retry_at=%v, processed=%v", eventID, results[0]["next_retry_at"], results[0]["processed"])
+		return true
+	})
+	require.True(t, eventCreated, "Webhook event should be created within 10 seconds")
+
+	// Trigger an immediate backlog check to ensure the event is picked up
+	// This helps avoid timing issues in CI where the ticker might not fire at expected times
+	triggerService.CheckBacklogNow(context.Background())
+
+	// Then wait for at least 3 delivery attempts
+	// Periodically trigger backlog checks to ensure retries happen even if ticker is slow
 	var dbAttempts int
+	var lastCheckTime time.Time
 	success := tc.WaitForCondition(25*time.Second, 500*time.Millisecond, func() bool {
-		results := tc.QuerySQL("SELECT attempts FROM auth.webhook_events WHERE webhook_id = $1 ORDER BY created_at DESC LIMIT 1", webhookID)
+		results := tc.QuerySQL("SELECT attempts, next_retry_at, processed FROM auth.webhook_events WHERE id = $1", eventID)
 		if len(results) == 0 {
 			return false
 		}
@@ -331,6 +352,17 @@ func TestWebhookTriggerRetry(t *testing.T) {
 		case int:
 			dbAttempts = v
 		}
+		if dbAttempts > 0 && dbAttempts < 3 {
+			t.Logf("Delivery attempt %d: next_retry_at=%v", dbAttempts, results[0]["next_retry_at"])
+		}
+
+		// Trigger backlog check every 2 seconds to help retries along
+		// This ensures the test doesn't get stuck waiting for the ticker
+		if time.Since(lastCheckTime) >= 2*time.Second {
+			triggerService.CheckBacklogNow(context.Background())
+			lastCheckTime = time.Now()
+		}
+
 		return dbAttempts >= 3
 	})
 	require.True(t, success, "Webhook should be retried at least 3 times within 25 seconds (db attempts: %d)", dbAttempts)

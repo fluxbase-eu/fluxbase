@@ -52,6 +52,17 @@
       "matchPackageNames": ["eslint", "@eslint/js"],
       "allowedVersions": "9.x",
       "matchManagers": ["npm"]
+    },
+    {
+      "description": "Allow both elasticsearch v8 and v9 as separate major versions",
+      "matchPackageNames": [
+        "github.com/elastic/go-elasticsearch/v8",
+        "github.com/elastic/go-elasticsearch/v9"
+      ],
+      "separateMajorMinor": false,
+      "major": {
+        "enabled": false
+      }
     }
   ]
 }

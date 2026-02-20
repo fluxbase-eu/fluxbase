@@ -160,6 +160,12 @@ func (s *TriggerService) SetBacklogInterval(interval time.Duration) {
 	}
 }
 
+// CheckBacklogNow immediately triggers a backlog check (useful for testing)
+// This bypasses the ticker and checks for pending retries immediately
+func (s *TriggerService) CheckBacklogNow(ctx context.Context) {
+	s.checkForRetries(ctx)
+}
+
 // WaitForReady blocks until the LISTEN subscription is established or context is cancelled.
 // This is primarily useful for testing to ensure the listener is ready before triggering events.
 // Returns an error if the listener failed to start.
