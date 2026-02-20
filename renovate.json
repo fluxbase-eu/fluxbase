@@ -19,9 +19,10 @@
   ],
   "packageRules": [
     {
-      "description": "Group Go version updates across go.mod and CI workflows",
+      "description": "Pin Go to 1.25.x until golangci-lint supports 1.26",
       "matchPackageNames": ["go"],
       "matchDatasources": ["golang-version", "gomod"],
+      "allowedVersions": "1.25.x",
       "groupName": "go"
     },
     {
