@@ -8,10 +8,26 @@
   ],
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
+  "regexManagers": [
+    {
+      "description": "Update GO_VERSION in CI workflow",
+      "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"],
+      "matchStrings": ["GO_VERSION:\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "golang-version"
+    }
+  ],
   "packageRules": [
     {
-      "description": "Group Go dependencies",
+      "description": "Group Go version updates across go.mod and CI workflows",
+      "matchPackageNames": ["go"],
+      "matchDatasources": ["golang-version", "gomod"],
+      "groupName": "go"
+    },
+    {
+      "description": "Group Go module dependencies",
       "matchManagers": ["gomod"],
+      "matchPackageNames": ["!go"],
       "groupName": "go dependencies"
     },
     {
