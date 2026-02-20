@@ -15,16 +15,23 @@
 --
 -- See: https://docs.timescale.com/self-hosted/latest/install/
 
--- Create TimescaleDB extension if available (fails gracefully if not installed)
+-- Create TimescaleDB extension only if it's available on the server
+-- We first check pg_available_extensions to avoid connection errors
+-- when the extension is not installed
 DO $$
 BEGIN
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-        RAISE NOTICE 'TimescaleDB extension created successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'TimescaleDB extension not available, logging system will use regular PostgreSQL';
-    END;
+    -- Check if timescaledb is available before attempting to create it
+    IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'timescaledb') THEN
+        BEGIN
+            CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+            RAISE NOTICE 'TimescaleDB extension created successfully';
+        EXCEPTION
+            WHEN OTHERS THEN
+                RAISE NOTICE 'TimescaleDB extension could not be created: %, logging system will use regular PostgreSQL', SQLERRM;
+        END;
+    ELSE
+        RAISE NOTICE 'TimescaleDB extension not available on this server, logging system will use regular PostgreSQL';
+    END IF;
 END $$;
 
 -- FOR DEVELOPERS:
