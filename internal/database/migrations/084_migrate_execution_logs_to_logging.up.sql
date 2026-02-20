@@ -38,7 +38,6 @@ DECLARE
     );
 
     is_hypertable BOOLEAN := FALSE;
-    pk_constraint_name TEXT;
 BEGIN
     -- Only proceed with TimescaleDB-specific logic if extension is available
     IF timescaledb_available AND entries_table_exists THEN
@@ -52,52 +51,12 @@ BEGIN
 
         -- If logging.entries exists but is NOT a hypertable, convert it
         IF NOT is_hypertable THEN
-            -- Drop existing partitions (data is preserved)
-            DROP TABLE IF EXISTS logging.entries_system CASCADE;
-            DROP TABLE IF EXISTS logging.entries_http CASCADE;
-            DROP TABLE IF EXISTS logging.entries_security CASCADE;
-            DROP TABLE IF EXISTS logging.entries_execution CASCADE;
-            DROP TABLE IF EXISTS logging.entries_ai CASCADE;
-            DROP TABLE IF EXISTS logging.entries_custom CASCADE;
+            -- Note: Converting a partitioned table to hypertable is complex.
+            -- For now, we keep the existing partitioned structure which works well.
+            -- TimescaleDB hypertable conversion can be done manually if needed.
+            -- The partitioned table with (id, category) primary key is efficient.
 
-            -- Remove primary key constraint from parent table (required for hypertable conversion)
-            -- The constraint name might be auto-generated, so we find it dynamically
-            SELECT conname INTO pk_constraint_name
-            FROM pg_constraint
-            WHERE conrelid = 'logging.entries'::regclass
-            AND contype = 'p'
-            LIMIT 1;
-
-            IF pk_constraint_name IS NOT NULL THEN
-                EXECUTE format('ALTER TABLE logging.entries DROP CONSTRAINT %I', pk_constraint_name);
-                RAISE NOTICE 'Dropped primary key constraint: %', pk_constraint_name;
-            END IF;
-
-            -- Add primary key without partitioning
-            ALTER TABLE logging.entries ADD PRIMARY KEY (id);
-
-            -- Convert to hypertable (migrates existing data)
-            PERFORM create_hypertable('logging.entries', 'timestamp', if_not_exists := TRUE, migrate_data := TRUE);
-
-            -- Apply compression for existing data (older than 7 days)
-            ALTER TABLE logging.entries SET (
-                timescaledb.compress = TRUE,
-                timescaledb.compress_segmentby = 'category, level',
-                timescaledb.compress_orderby = 'timestamp DESC'
-            );
-
-            -- Add compression policy for new data (compress after 7 days)
-            PERFORM add_compression_policy('logging.entries', INTERVAL '7 days',
-                compress_after := INTERVAL '7 days',
-                if_not_exists := TRUE
-            );
-
-            -- Add retention policy (90 days default, can be adjusted per category)
-            PERFORM add_retention_policy('logging.entries', INTERVAL '90 days',
-                if_not_exists := TRUE
-            );
-
-            RAISE NOTICE 'Logging entries table has been converted to TimescaleDB hypertable';
+            RAISE NOTICE 'Logging entries table uses PostgreSQL partitioning (TimescaleDB hypertable conversion skipped for safety)';
         END IF;
     END IF;
 
