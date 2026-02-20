@@ -1474,6 +1474,124 @@ export const clientKeysApi = {
   },
 }
 
+// Bulk Operations API
+export interface BulkActionRequest {
+  action: 'delete' | 'export'
+  targets: string[]
+  table: string
+}
+
+export interface BulkActionResponse {
+  success: boolean
+  message?: string
+  rows_affected?: number
+  count?: number
+  records?: Array<Record<string, unknown>>
+}
+
+export const bulkOperationsApi = {
+  // Execute bulk action (delete or export)
+  execute: async (request: BulkActionRequest): Promise<BulkActionResponse> => {
+    const response = await api.post<BulkActionResponse>('/api/v1/bulk', request)
+    return response.data
+  },
+
+  // Bulk delete selected items
+  delete: async (
+    table: string,
+    targetIds: string[]
+  ): Promise<BulkActionResponse> => {
+    return bulkOperationsApi.execute({
+      action: 'delete',
+      targets: targetIds,
+      table,
+    })
+  },
+
+  // Bulk export selected items
+  export: async (
+    table: string,
+    targetIds: string[]
+  ): Promise<BulkActionResponse> => {
+    return bulkOperationsApi.execute({
+      action: 'export',
+      targets: targetIds,
+      table,
+    })
+  },
+}
+
+// Data Export API
+export const dataExportApi = {
+  // Export selected items as CSV or JSON
+  export: async (
+    table: string,
+    targetIds: string[],
+    format: 'csv' | 'json' = 'csv'
+  ): Promise<BulkActionResponse | string> => {
+    const items = JSON.stringify(targetIds)
+    const url = `/api/v1/export?table=${table}&items=${encodeURIComponent(items)}&format=${format}`
+
+    if (format === 'json') {
+      const response = await api.get(url)
+      return response.data as BulkActionResponse
+    }
+
+    // For CSV, download as file
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      headers: {
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error('Export failed')
+    }
+
+    const blob = await response.blob()
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = `export_${Date.now()}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    return 'Download started'
+  },
+}
+
+// SQL Execution API
+export interface SQLExecuteRequest {
+  query: string
+}
+
+export interface SQLResult {
+  columns?: string[]
+  rows?: Array<Record<string, unknown>>
+  row_count: number
+  affected_rows?: number
+  execution_time_ms: number
+  error?: string
+  statement: string
+}
+
+export interface SQLExecuteResponse {
+  results: SQLResult[]
+}
+
+export const sqlApi = {
+  // Execute SQL query
+  execute: async (query: string): Promise<SQLExecuteResponse> => {
+    const response = await api.post<SQLExecuteResponse>(
+      '/admin/api/sql/execute',
+      { query }
+    )
+    return response.data
+  },
+}
+
 // Backwards compatibility aliases (deprecated)
 /** @deprecated Use ClientKey instead */
 export type APIKey = ClientKey
@@ -1574,10 +1692,34 @@ export const adminAuthAPI = {
     refresh_token: string
     expires_in: number
   }> => {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/v1/admin/setup`,
-      data
+    // Create a fresh axios instance without any interceptors for setup
+    const setupAxios = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    })
+
+    // Add request interceptor to debug what's being sent
+    setupAxios.interceptors.request.use((config) => {
+      // Debug: Request config for ${config.url}
+      return config
+    })
+
+    // Add response interceptor to debug responses
+    setupAxios.interceptors.response.use(
+      (response) => {
+        // Debug: Response status ${response.status}
+        return response
+      },
+      (error) => {
+        // Debug: Request error for ${error.config?.url}
+        return Promise.reject(error)
+      }
     )
+
+    const response = await setupAxios.post('/api/v1/admin/setup', data)
     return response.data
   },
 
@@ -2601,6 +2743,10 @@ export interface KnowledgeBaseSummary {
   embedding_model: string
   created_at: string
   updated_at: string
+  visibility: KBVisibility
+  default_user_permission: KBPermission
+  user_permission?: KBPermission
+  owner_id?: string
 }
 
 export interface KnowledgeBase extends KnowledgeBaseSummary {
@@ -2612,20 +2758,41 @@ export interface KnowledgeBase extends KnowledgeBaseSummary {
   created_by?: string
 }
 
+export type KBVisibility = 'private' | 'shared' | 'public'
+export type KBPermission = 'viewer' | 'editor' | 'owner'
+
+export interface KBPermissionGrant {
+  id: string
+  knowledge_base_id: string
+  user_id: string
+  permission: KBPermission
+  granted_by?: string
+  granted_at: string
+}
+
 export interface CreateKnowledgeBaseRequest {
   name: string
   namespace?: string
   description?: string
+  visibility?: KBVisibility
+  default_user_permission?: KBPermission
   embedding_model?: string
   embedding_dimensions?: number
   chunk_size?: number
   chunk_overlap?: number
   chunk_strategy?: string
+  // Initial permissions to grant upon creation
+  initial_permissions?: Array<{
+    user_id: string
+    permission: KBPermission
+  }>
 }
 
 export interface UpdateKnowledgeBaseRequest {
   name?: string
   description?: string
+  visibility?: KBVisibility
+  default_user_permission?: KBPermission
   embedding_model?: string
   embedding_dimensions?: number
   chunk_size?: number
@@ -2649,8 +2816,21 @@ export interface KnowledgeBaseDocument {
   error_message?: string
   metadata?: Record<string, string>
   tags?: string[]
+  owner_id?: string
   created_at: string
   updated_at: string
+}
+
+// Document permission types
+export type DocumentPermission = 'viewer' | 'editor'
+
+export interface DocumentPermissionGrant {
+  id: string
+  document_id: string
+  user_id: string
+  permission: DocumentPermission
+  granted_by: string
+  granted_at: string
 }
 
 export interface AddDocumentRequest {
@@ -2666,6 +2846,29 @@ export interface AddDocumentResponse {
   document_id: string
   status: string
   message: string
+}
+
+// Table export types
+export interface TableSummary {
+  schema: string
+  name: string
+  columns: number
+  foreign_keys: number
+}
+
+export interface ExportTableOptions {
+  schema: string
+  table: string
+  include_sample_rows?: boolean
+  sample_row_count?: number
+  include_foreign_keys?: boolean
+  include_indexes?: boolean
+}
+
+export interface ExportTableResult {
+  document_id: string
+  entity_id: string
+  relationship_ids: string[]
 }
 
 export interface ChatbotKnowledgeBaseLink {
@@ -2951,6 +3154,131 @@ export const knowledgeBasesApi = {
     await api.delete(
       `/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases/${kbId}`
     )
+  },
+
+  // ============================================================================
+  // Document Permissions
+  // ============================================================================
+
+  // Grant permission on a document to a user
+  grantDocumentPermission: async (
+    kbId: string,
+    docId: string,
+    userId: string,
+    permission: DocumentPermission
+  ): Promise<DocumentPermissionGrant> => {
+    const response = await api.post<DocumentPermissionGrant>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${docId}/permissions`,
+      { user_id: userId, permission }
+    )
+    return response.data
+  },
+
+  // List permissions for a document
+  listDocumentPermissions: async (
+    kbId: string,
+    docId: string
+  ): Promise<DocumentPermissionGrant[]> => {
+    const response = await api.get<DocumentPermissionGrant[]>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${docId}/permissions`
+    )
+    return response.data
+  },
+
+  // Revoke permission from a user on a document
+  revokeDocumentPermission: async (
+    kbId: string,
+    docId: string,
+    userId: string
+  ): Promise<void> => {
+    await api.delete(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${docId}/permissions/${userId}`
+    )
+  },
+
+  // ============================================================================
+  // Table Export
+  // ============================================================================
+
+  // List all exportable tables
+  listTables: async (schema?: string): Promise<TableSummary[]> => {
+    const params = schema ? { schema } : {}
+    const response = await api.get<{
+      tables: TableSummary[]
+      count: number
+    }>('/api/v1/admin/ai/tables', { params })
+    return response.data.tables || []
+  },
+
+  // Export a table to a knowledge base
+  exportTable: async (
+    kbId: string,
+    options: ExportTableOptions
+  ): Promise<ExportTableResult> => {
+    const response = await api.post<ExportTableResult>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/tables/export`,
+      options
+    )
+    return response.data
+  },
+}
+
+// =============================================================================
+// User-facing Knowledge Base API
+// Uses /api/v1/ai/knowledge-bases endpoints with permission-based checks
+// =============================================================================
+
+export const userKnowledgeBasesApi = {
+  // Create a knowledge base
+  create: async (data: CreateKnowledgeBaseRequest): Promise<KnowledgeBase> => {
+    const response = await api.post<KnowledgeBase>(
+      '/api/v1/ai/knowledge-bases',
+      data
+    )
+    return response.data
+  },
+
+  // List user's knowledge bases (those they own or have access to)
+  list: async (): Promise<KnowledgeBaseSummary[]> => {
+    const response = await api.get<{
+      knowledge_bases: KnowledgeBaseSummary[]
+      count: number
+    }>('/api/v1/ai/knowledge-bases')
+    return response.data.knowledge_bases || []
+  },
+
+  // Get knowledge base details (if user has access)
+  get: async (id: string): Promise<KnowledgeBase> => {
+    const response = await api.get<KnowledgeBase>(
+      `/api/v1/ai/knowledge-bases/${id}`
+    )
+    return response.data
+  },
+
+  // Share knowledge base with another user (grant permission)
+  share: async (
+    kbId: string,
+    userId: string,
+    permission: KBPermission
+  ): Promise<KBPermissionGrant> => {
+    const response = await api.post<KBPermissionGrant>(
+      `/api/v1/ai/knowledge-bases/${kbId}/share`,
+      { user_id: userId, permission }
+    )
+    return response.data
+  },
+
+  // List permissions for a knowledge base
+  listPermissions: async (kbId: string): Promise<KBPermissionGrant[]> => {
+    const response = await api.get<KBPermissionGrant[]>(
+      `/api/v1/ai/knowledge-bases/${kbId}/permissions`
+    )
+    return response.data
+  },
+
+  // Revoke permission from a user
+  revokePermission: async (kbId: string, userId: string): Promise<void> => {
+    await api.delete(`/api/v1/ai/knowledge-bases/${kbId}/permissions/${userId}`)
   },
 }
 

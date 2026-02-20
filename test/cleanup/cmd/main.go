@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
@@ -33,10 +34,20 @@ func main() {
 		// Construct from individual environment variables (used in devcontainer)
 		host := getEnvOrDefault("FLUXBASE_DATABASE_HOST", "localhost")
 		port := getEnvOrDefault("FLUXBASE_DATABASE_PORT", "5432")
-		user := getEnvOrDefault("FLUXBASE_DATABASE_USER", "postgres")
-		password := getEnvOrDefault("FLUXBASE_DATABASE_PASSWORD", "postgres")
+		// Always connect as postgres superuser for cleanup to ensure we can drop tables
+		user := getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+		password := getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
 		database := getEnvOrDefault("FLUXBASE_DATABASE_DATABASE", "fluxbase_test")
 		dbURL = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, database)
+	} else {
+		// If DATABASE_URL is provided, replace the user with postgres superuser
+		// This ensures we have permission to drop tables owned by other users
+		host := getEnvOrDefault("FLUXBASE_DATABASE_HOST", "localhost")
+		port := getEnvOrDefault("FLUXBASE_DATABASE_PORT", "5432")
+		adminUser := getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+		adminPassword := getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
+		database := getEnvOrDefault("FLUXBASE_DATABASE_DATABASE", "fluxbase_test")
+		dbURL = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", adminUser, adminPassword, host, port, database)
 	}
 
 	ctx := context.Background()
@@ -128,6 +139,18 @@ func main() {
 		log.Error().Err(err).Msg("Failed to delete test storage buckets")
 	} else if result.RowsAffected() > 0 {
 		log.Info().Int64("count", result.RowsAffected()).Msg("Deleted test storage buckets")
+	}
+
+	// 6. Truncate logging.entries table to clean up log entries from tests
+	// Don't drop the table as it's created by migrations
+	result, err = pool.Exec(ctx, "TRUNCATE TABLE logging.entries CASCADE")
+	if err != nil {
+		// If logging schema doesn't exist, just log and continue
+		if !strings.Contains(err.Error(), "schema") {
+			log.Error().Err(err).Msg("Failed to truncate logging entries")
+		}
+	} else if result.RowsAffected() > 0 {
+		log.Info().Int64("count", result.RowsAffected()).Msg("Truncated logging entries")
 	}
 
 	log.Info().Msg("Test resource cleanup complete")

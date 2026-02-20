@@ -1005,10 +1005,11 @@ func TestTriggerService_EventChannel(t *testing.T) {
 
 		// Next send should block
 		done := make(chan bool)
+		errChan := make(chan string, 1)
 		go func() {
 			select {
 			case svc.eventChan <- uuid.New():
-				t.Fatal("should not be able to send to full channel")
+				errChan <- "should not be able to send to full channel"
 			case <-time.After(100 * time.Millisecond):
 				// Expected - channel is full
 			}
@@ -1016,6 +1017,12 @@ func TestTriggerService_EventChannel(t *testing.T) {
 		}()
 
 		<-done
+		select {
+		case errMsg := <-errChan:
+			t.Fatal(errMsg)
+		default:
+			// No error, test passed
+		}
 
 		// Cleanup: drain some events
 		for i := 0; i < 100; i++ {
@@ -1041,10 +1048,10 @@ func TestTriggerService_ListenRetryLogic(t *testing.T) {
 		// From listen function
 		retryDelay := 200 * time.Millisecond
 
-		retryDelay = retryDelay * 2
+		retryDelay *= 2
 		assert.Equal(t, 400*time.Millisecond, retryDelay)
 
-		retryDelay = retryDelay * 2
+		retryDelay *= 2
 		assert.Equal(t, 800*time.Millisecond, retryDelay)
 	})
 
@@ -1054,7 +1061,7 @@ func TestTriggerService_ListenRetryLogic(t *testing.T) {
 
 		// Simulate doubling
 		for i := 0; i < 10; i++ {
-			retryDelay = retryDelay * 2
+			retryDelay *= 2
 			if retryDelay > 2*time.Second {
 				retryDelay = 2 * time.Second
 			}
@@ -1096,7 +1103,7 @@ func TestWebhookEvent_StatusTransitions(t *testing.T) {
 		}
 
 		// Simulate failure handling
-		event.Attempts = event.Attempts + 1
+		event.Attempts++
 
 		assert.Equal(t, 1, event.Attempts)
 	})

@@ -1114,13 +1114,13 @@ func (s *Service) VerifyTOTPWithContext(ctx context.Context, userID, code, ipAdd
 		match, err := VerifyBackupCode(code, hashedCode)
 		if err == nil && match {
 			// Remove used backup code
-			newBackupCodes := append(backupCodes[:i], backupCodes[i+1:]...)
+			backupCodes = append(backupCodes[:i], backupCodes[i+1:]...)
 
 			_, err = s.userRepo.db.Pool().Exec(ctx, `
 				UPDATE auth.users
 				SET backup_codes = $1, updated_at = NOW()
 				WHERE id = $2
-			`, newBackupCodes, userID)
+			`, backupCodes, userID)
 
 			if err != nil {
 				return fmt.Errorf("failed to update backup codes: %w", err)
@@ -1415,6 +1415,9 @@ func (s *Service) updateUserFromOIDCClaims(ctx context.Context, user *User, clai
 
 // SendOTP sends an OTP code via email
 func (s *Service) SendOTP(ctx context.Context, email, purpose string) error {
+	if s.otpService == nil {
+		return fmt.Errorf("OTP service not initialized")
+	}
 	return s.otpService.SendEmailOTP(ctx, email, purpose)
 }
 

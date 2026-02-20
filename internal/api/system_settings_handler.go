@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -78,7 +79,7 @@ func (h *SystemSettingsHandler) GetSetting(c fiber.Ctx) error {
 
 	setting, err := h.settingsService.GetSetting(ctx, key)
 	if err != nil {
-		if err == auth.ErrSettingNotFound {
+		if errors.Is(err, auth.ErrSettingNotFound) {
 			// Return default value for known settings instead of 404
 			if defaultSetting := h.getDefaultSetting(key); defaultSetting != nil {
 				// Populate override information for defaults too
@@ -202,7 +203,7 @@ func (h *SystemSettingsHandler) DeleteSetting(c fiber.Ctx) error {
 	}
 
 	if err := h.settingsService.DeleteSetting(ctx, key); err != nil {
-		if err == auth.ErrSettingNotFound {
+		if errors.Is(err, auth.ErrSettingNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Setting not found",
 			})

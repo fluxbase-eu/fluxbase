@@ -323,7 +323,7 @@ func TestCreateSchema_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -349,7 +349,7 @@ func TestCreateSchema_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -371,7 +371,7 @@ func TestCreateTable_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -388,7 +388,7 @@ func TestCreateTable_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -414,7 +414,7 @@ func TestCreateTable_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -431,7 +431,7 @@ func TestCreateTable_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -602,7 +602,7 @@ func TestDDLHandler_AddColumn_AllOptions(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
@@ -652,7 +652,7 @@ func TestDDLHandler_DropColumn_Params(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
@@ -711,7 +711,7 @@ func TestDDLHandler_RenameTable_VariousNames(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
@@ -935,17 +935,19 @@ func TestDDLHandler_NilDatabase(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			switch tt.method {
 			case "POST":
-				if tt.name == "CreateSchema" {
+				switch tt.name {
+				case "CreateSchema":
 					app.Post("/ddl/schemas", handler.CreateSchema)
-				} else if tt.name == "CreateTable" {
+				case "CreateTable":
 					app.Post("/ddl/tables", handler.CreateTable)
-				} else if tt.name == "AddColumn" {
+				case "AddColumn":
 					app.Post("/ddl/tables/:schema/:table/columns", handler.AddColumn)
 				}
 			case "DELETE":
-				if tt.name == "DeleteTable" {
+				switch tt.name {
+				case "DeleteTable":
 					app.Delete("/ddl/tables/:schema/:table", handler.DeleteTable)
-				} else if tt.name == "DropColumn" {
+				case "DropColumn":
 					app.Delete("/ddl/tables/:schema/:table/columns/:column", handler.DropColumn)
 				}
 			case "PATCH":
@@ -962,7 +964,7 @@ func TestDDLHandler_NilDatabase(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})

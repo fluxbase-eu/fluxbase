@@ -13,7 +13,7 @@ func TestDirectoryBasedFunctions(t *testing.T) {
 	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "test-dir-functions-")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create flat file function
 	flatCode := `async function handler(req) { return { status: 200, body: "flat" }; }`
@@ -70,7 +70,7 @@ func TestFlatFilePriority(t *testing.T) {
 	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "test-priority-")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	functionName := "priority"
 
@@ -109,7 +109,7 @@ func TestFlatFilePriority(t *testing.T) {
 func TestDirectoryWithoutIndexTs(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "test-no-index-")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create directory without index.ts
 	dirPath := filepath.Join(tmpDir, "no-index")
@@ -135,7 +135,7 @@ func TestDirectoryWithoutIndexTs(t *testing.T) {
 func TestResolveFunctionPath_BasicPatterns(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "test-resolve-")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create flat file
 	flatCode := "flat"

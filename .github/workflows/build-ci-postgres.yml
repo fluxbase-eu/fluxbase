@@ -1,0 +1,62 @@
+name: Build CI Postgres Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Custom tag for the image (e.g., add-new-feature)"
+        required: true
+        type: string
+      postgres_version:
+        description: "PostgreSQL version"
+        required: false
+        default: "18.1"
+        type: string
+      postgres_major:
+        description: "PostgreSQL major version"
+        required: false
+        default: "18"
+        type: string
+
+permissions:
+  packages: write
+
+jobs:
+  build:
+    name: Build Postgres Image for CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./postgres
+          file: ./postgres/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/fluxbase-postgres:${{ inputs.tag }}
+          build-args: |
+            POSTGRES_VERSION=${{ inputs.postgres_version }}
+            POSTGRES_MAJOR=${{ inputs.postgres_major }}
+          cache-from: type=gha,scope=postgres-ci
+          cache-to: type=gha,mode=max,scope=postgres-ci
+
+      - name: Summary
+        run: |
+          echo "### CI Postgres Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image: \`ghcr.io/${{ github.repository_owner }}/fluxbase-postgres:${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To use this image in CI, trigger the CI workflow with:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`postgres_tag\`: \`${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY

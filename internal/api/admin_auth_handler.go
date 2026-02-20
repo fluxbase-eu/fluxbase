@@ -11,6 +11,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/gofiber/fiber/v3"
+	"github.com/rs/zerolog/log"
 )
 
 // AdminAuthHandler handles admin-specific authentication
@@ -95,6 +96,8 @@ func (h *AdminAuthHandler) GetSetupStatus(c fiber.Ctx) error {
 // InitialSetup creates the first admin user
 // POST /api/v1/admin/setup
 func (h *AdminAuthHandler) InitialSetup(c fiber.Ctx) error {
+	log.Debug().Str("path", c.Path()).Str("method", c.Method()).Msg("InitialSetup handler called")
+
 	ctx := context.Background()
 
 	// Check if setup has already been completed using system settings

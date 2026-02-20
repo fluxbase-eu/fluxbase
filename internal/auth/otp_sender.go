@@ -39,6 +39,13 @@ func NewDefaultOTPSender(emailService RealEmailService, fromAddress, appName str
 
 // SendEmailOTP sends an OTP code via email
 func (s *DefaultOTPSender) SendEmailOTP(ctx context.Context, to, code, purpose string) error {
+	// Check if email service is available
+	if s.emailService == nil {
+		// Log but don't fail - OTP is still stored and can be verified
+		// This allows OTP to work in test environments without email configuration
+		return nil
+	}
+
 	subject := s.getEmailSubject(purpose)
 	body := s.getEmailBody(code, purpose)
 

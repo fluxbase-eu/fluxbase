@@ -169,7 +169,8 @@ func (c *Client) addAuth(req *http.Request) error {
 	}
 
 	// Check if token needs refresh
-	if creds.AccessToken != "" && creds.ExpiresAt > 0 {
+	switch {
+	case creds.AccessToken != "" && creds.ExpiresAt > 0:
 		// Refresh 60 seconds before expiry
 		if time.Now().Unix() >= creds.ExpiresAt-60 {
 			if creds.RefreshToken != "" {
@@ -182,9 +183,9 @@ func (c *Client) addAuth(req *http.Request) error {
 			}
 		}
 		req.Header.Set("Authorization", "Bearer "+creds.AccessToken)
-	} else if creds.APIKey != "" {
+	case creds.APIKey != "":
 		req.Header.Set("Authorization", "Bearer "+creds.APIKey)
-	} else {
+	default:
 		return fmt.Errorf("no valid credentials - run 'fluxbase auth login'")
 	}
 

@@ -98,6 +98,7 @@ func NewManager(ctx context.Context) *Manager {
 }
 
 // NewManagerWithLimit creates a new connection manager with a connection limit
+//
 // Deprecated: Use NewManagerWithConfig for more control
 func NewManagerWithLimit(ctx context.Context, maxConnections int) *Manager {
 	return NewManagerWithConfig(ctx, ManagerConfig{MaxConnections: maxConnections})

@@ -106,8 +106,8 @@ func TestSettingsCache_IsOverriddenByEnv(t *testing.T) {
 	cache := NewSettingsCache(nil, time.Minute)
 
 	t.Run("returns true when env var is set", func(t *testing.T) {
-		os.Setenv("FLUXBASE_AUTH_ENABLED", "true")
-		defer os.Unsetenv("FLUXBASE_AUTH_ENABLED")
+		_ = os.Setenv("FLUXBASE_AUTH_ENABLED", "true")
+		defer func() { _ = os.Unsetenv("FLUXBASE_AUTH_ENABLED") }()
 
 		result := cache.IsOverriddenByEnv("app.auth.enabled")
 		assert.True(t, result)

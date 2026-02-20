@@ -28,12 +28,12 @@ func TestBuildEnvForFunction(t *testing.T) {
 
 	// Set environment variables
 	for key, value := range testVars {
-		os.Setenv(key, value)
+		_ = os.Setenv(key, value)
 	}
 	defer func() {
 		// Clean up
 		for key := range testVars {
-			os.Unsetenv(key)
+			_ = os.Unsetenv(key)
 		}
 	}()
 
@@ -88,13 +88,13 @@ func TestBuildEnvForFunction(t *testing.T) {
 	}
 
 	// Test system variables behavior
-	os.Setenv("PATH", "/usr/bin")
-	os.Setenv("HOME", "/home/user")
-	os.Setenv("RANDOM_VAR", "should-be-excluded")
+	_ = os.Setenv("PATH", "/usr/bin")
+	_ = os.Setenv("HOME", "/home/user")
+	_ = os.Setenv("RANDOM_VAR", "should-be-excluded")
 	defer func() {
-		os.Unsetenv("PATH")
-		os.Unsetenv("HOME")
-		os.Unsetenv("RANDOM_VAR")
+		_ = os.Unsetenv("PATH")
+		_ = os.Unsetenv("HOME")
+		_ = os.Unsetenv("RANDOM_VAR")
 	}()
 
 	env = buildEnv(req, RuntimeTypeFunction, "http://localhost:8080", "user-token", "service-token", nil, nil)
@@ -412,8 +412,8 @@ func TestEncryptionKeyBlocked(t *testing.T) {
 	}
 
 	// Set the encryption key env var
-	os.Setenv("FLUXBASE_ENCRYPTION_KEY", "my-secret-encryption-key")
-	defer os.Unsetenv("FLUXBASE_ENCRYPTION_KEY")
+	_ = os.Setenv("FLUXBASE_ENCRYPTION_KEY", "my-secret-encryption-key")
+	defer func() { _ = os.Unsetenv("FLUXBASE_ENCRYPTION_KEY") }()
 
 	req := ExecutionRequest{
 		ID:        uuid.New(),

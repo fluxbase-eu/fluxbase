@@ -527,8 +527,7 @@ func TestVerifyWebhookSignature(t *testing.T) {
 	t.Run("Verify valid signature", func(t *testing.T) {
 		timestamp := time.Now().Unix()
 		signature := generateTimestampedSignature(payload, secret, timestamp)
-		header := "t=" + time.Now().Format("1136239445") // Use Unix format
-		header = "t=" + timeUnixString(timestamp) + ",v1=" + signature
+		header := "t=" + timeUnixString(timestamp) + ",v1=" + signature
 
 		err := VerifyWebhookSignature(payload, header, secret, 5*time.Minute)
 		assert.NoError(t, err)
@@ -819,7 +818,7 @@ func TestSendWebhookSync(t *testing.T) {
 	t.Run("webhook delivery failure - 404 response", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Not found"))
+			_, _ = w.Write([]byte("Not found"))
 		}))
 		defer server.Close()
 
@@ -850,7 +849,7 @@ func TestSendWebhookSync(t *testing.T) {
 	t.Run("webhook delivery failure - 500 response", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal Server Error"))
+			_, _ = w.Write([]byte("Internal Server Error"))
 		}))
 		defer server.Close()
 
@@ -1062,7 +1061,7 @@ func TestSendWebhookSync(t *testing.T) {
 			t.Run(fmt.Sprintf("HTTP %d", code), func(t *testing.T) {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(code)
-					w.Write([]byte(http.StatusText(code)))
+					_, _ = w.Write([]byte(http.StatusText(code)))
 				}))
 				defer server.Close()
 

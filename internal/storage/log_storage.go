@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"time"
 )
 
 // LogStorage defines the interface for log storage backends.
@@ -39,7 +40,8 @@ type LogStorage interface {
 
 // LogStorageConfig contains configuration for creating a LogStorage instance.
 type LogStorageConfig struct {
-	// Backend type: "postgres", "s3", "local"
+	// Backend type: "postgres", "s3", "local", "elasticsearch", "opensearch",
+	// "clickhouse", "timescaledb", "postgres-timescaledb", "loki"
 	Backend string `mapstructure:"backend"`
 
 	// PostgreSQL settings (used when backend is "postgres")
@@ -51,6 +53,40 @@ type LogStorageConfig struct {
 
 	// Local filesystem settings (used when backend is "local")
 	LocalPath string `mapstructure:"local_path"`
+
+	// Elasticsearch settings (used when backend is "elasticsearch")
+	ElasticsearchURLs     []string `mapstructure:"elasticsearch_urls"`
+	ElasticsearchUsername string   `mapstructure:"elasticsearch_username"`
+	ElasticsearchPassword string   `mapstructure:"elasticsearch_password"`
+	ElasticsearchIndex    string   `mapstructure:"elasticsearch_index"`   // default: "fluxbase-logs"
+	ElasticsearchVersion  int      `mapstructure:"elasticsearch_version"` // default: 8 (8 or 9)
+
+	// OpenSearch settings (used when backend is "opensearch")
+	OpenSearchURLs     []string `mapstructure:"opensearch_urls"`
+	OpenSearchUsername string   `mapstructure:"opensearch_username"`
+	OpenSearchPassword string   `mapstructure:"opensearch_password"`
+	OpenSearchIndex    string   `mapstructure:"opensearch_index"`   // default: "fluxbase-logs"
+	OpenSearchVersion  int      `mapstructure:"opensearch_version"` // default: 2
+
+	// ClickHouse settings (used when backend is "clickhouse")
+	ClickHouseAddresses []string `mapstructure:"clickhouse_addresses"`
+	ClickHouseUsername  string   `mapstructure:"clickhouse_username"`
+	ClickHousePassword  string   `mapstructure:"clickhouse_password"`
+	ClickHouseDatabase  string   `mapstructure:"clickhouse_database"` // default: "fluxbase"
+	ClickHouseTable     string   `mapstructure:"clickhouse_table"`    // default: "logs"
+	ClickHouseTTL       int      `mapstructure:"clickhouse_ttl_days"` // default: 30
+
+	// TimescaleDB settings (used with postgres-timescaledb or timescaledb backend)
+	TimescaleDBEnabled       bool          `mapstructure:"timescaledb_enabled"`
+	TimescaleDBCompression   bool          `mapstructure:"timescaledb_compress"`
+	TimescaleDBCompressAfter time.Duration `mapstructure:"timescaledb_compress_after"`
+
+	// Loki settings (used when backend is "loki")
+	LokiURL      string   `mapstructure:"loki_url"` // required
+	LokiUsername string   `mapstructure:"loki_username"`
+	LokiPassword string   `mapstructure:"loki_password"`
+	LokiTenantID string   `mapstructure:"loki_tenant_id"`
+	LokiLabels   []string `mapstructure:"loki_static_labels"` // default: ["app", "env"]
 
 	// Batching configuration
 	BatchSize     int `mapstructure:"batch_size"`

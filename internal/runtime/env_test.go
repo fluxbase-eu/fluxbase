@@ -505,7 +505,7 @@ func TestBuildEnv_SystemVariablesNotSetIfMissing(t *testing.T) {
 	}
 
 	for _, v := range systemVars {
-		os.Unsetenv(v)
+		_ = os.Unsetenv(v)
 	}
 
 	env := buildEnv(req, RuntimeTypeFunction, "", "", "", nil, nil)

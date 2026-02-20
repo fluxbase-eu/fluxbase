@@ -202,16 +202,6 @@ func (m *mockCacheProvider) MoveObject(ctx context.Context, srcBucket, srcKey, d
 	return nil
 }
 
-// Helper to get object count for a bucket
-func (m *mockCacheProvider) objectCount(bucket string) int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	if bucketData, exists := m.objects[bucket]; exists {
-		return len(bucketData)
-	}
-	return 0
-}
-
 // =============================================================================
 // NewTransformCache Tests
 // =============================================================================

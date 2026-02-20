@@ -91,7 +91,7 @@ func TestCreateWebhook_Validation(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
@@ -223,7 +223,7 @@ func TestGetWebhook_InvalidID(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// For empty id, Fiber returns 404 because route doesn't match
 			if tt.id == "" {
@@ -260,7 +260,7 @@ func TestUpdateWebhook_InvalidID(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -286,7 +286,7 @@ func TestUpdateWebhook_InvalidBody(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -314,7 +314,7 @@ func TestDeleteWebhook_InvalidID(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -342,7 +342,7 @@ func TestTestWebhook_InvalidID(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -370,7 +370,7 @@ func TestListDeliveries_InvalidID(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 

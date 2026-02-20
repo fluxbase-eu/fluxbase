@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -148,7 +149,7 @@ func (s *Storage) GetProcedure(ctx context.Context, id string) (*Procedure, erro
 		&proc.Enabled, &proc.Version, &proc.Source, &proc.CreatedBy, &proc.CreatedAt, &proc.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -177,7 +178,7 @@ func (s *Storage) GetProcedureByName(ctx context.Context, namespace, name string
 		&proc.Enabled, &proc.Version, &proc.Source, &proc.CreatedBy, &proc.CreatedAt, &proc.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -500,7 +501,7 @@ func (s *Storage) GetExecution(ctx context.Context, id string) (*Execution, erro
 		&exec.CreatedAt, &exec.StartedAt, &exec.CompletedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

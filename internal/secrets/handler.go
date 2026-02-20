@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
+	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -362,11 +363,7 @@ func (h *Handler) GetStats(c fiber.Ctx) error {
 
 // Helper functions for error detection
 func isDuplicateKeyError(err error) bool {
-	if err == nil {
-		return false
-	}
-	errStr := err.Error()
-	return contains(errStr, "duplicate key") || contains(errStr, "unique constraint") || contains(errStr, "unique_secret_name_scope")
+	return database.IsUniqueViolation(err)
 }
 
 func isNotFoundError(err error) bool {

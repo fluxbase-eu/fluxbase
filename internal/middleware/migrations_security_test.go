@@ -96,7 +96,7 @@ func TestGetClientIP(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			if tt.expectedIP != "" {
 				assert.Equal(t, tt.expectedIP, resultIP)
@@ -123,7 +123,7 @@ func TestGetClientIP_MultipleIPsInForwardedFor(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should use the first (leftmost) IP - the original client
 	assert.Equal(t, "203.0.113.195", resultIP)
@@ -173,7 +173,7 @@ func TestRequireMigrationsEnabled(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -193,7 +193,7 @@ func TestRequireMigrationsEnabled(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 404, resp.StatusCode)
 
@@ -223,7 +223,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -246,7 +246,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -269,7 +269,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 
@@ -296,7 +296,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -320,7 +320,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -344,7 +344,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 
@@ -354,7 +354,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		resp2, err := app.Test(req2)
 		require.NoError(t, err)
-		defer resp2.Body.Close()
+		defer func() { _ = resp2.Body.Close() }()
 
 		assert.Equal(t, 403, resp2.StatusCode)
 	})
@@ -382,7 +382,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -404,7 +404,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 
@@ -429,7 +429,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -451,7 +451,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -473,7 +473,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 
@@ -498,7 +498,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 
@@ -522,7 +522,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -538,7 +538,7 @@ func TestRequireMigrationScope(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -566,7 +566,7 @@ func TestMigrationsAuditLog(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations/status", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -582,7 +582,7 @@ func TestMigrationsAuditLog(t *testing.T) {
 		req := httptest.NewRequest("POST", "/migrations/run", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -598,7 +598,7 @@ func TestMigrationsAuditLog(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations/fail", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 500, resp.StatusCode)
 	})
@@ -616,7 +616,7 @@ func TestMigrationsAuditLog(t *testing.T) {
 		req := httptest.NewRequest("GET", "/migrations/error", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 400, resp.StatusCode)
 	})
@@ -641,7 +641,7 @@ func TestRequireServiceKeyOnly_NoAuth(t *testing.T) {
 	req := httptest.NewRequest("GET", "/migrations", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 401, resp.StatusCode)
 
@@ -664,7 +664,7 @@ func TestRequireServiceKeyOnly_InvalidServiceKeyFormat(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 401, resp.StatusCode)
 	})
@@ -675,7 +675,7 @@ func TestRequireServiceKeyOnly_InvalidServiceKeyFormat(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 401, resp.StatusCode)
 	})
@@ -695,7 +695,7 @@ func TestRequireServiceKeyOnly_NoAuthProvided(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 401, resp.StatusCode)
 	})
@@ -712,7 +712,7 @@ func TestRequireServiceKeyOnly_NoAuthProvided(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 401, resp.StatusCode)
 	})
@@ -729,7 +729,7 @@ func TestRequireServiceKeyOnly_NoAuthProvided(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 401, resp.StatusCode)
 	})
@@ -752,7 +752,7 @@ func BenchmarkGetClientIP_WithForwardedFor(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -769,7 +769,7 @@ func BenchmarkGetClientIP_WithRealIP(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -798,7 +798,7 @@ func BenchmarkRequireMigrationsIPAllowlist_InRange(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -821,7 +821,7 @@ func BenchmarkRequireMigrationScope_JWT(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -844,6 +844,6 @@ func BenchmarkRequireMigrationScope_ServiceKey(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }

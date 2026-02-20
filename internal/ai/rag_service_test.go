@@ -9,7 +9,7 @@ import (
 
 func TestNewRAGService(t *testing.T) {
 	t.Run("creates service with storage and embedding service", func(t *testing.T) {
-		service := NewRAGService(nil, nil)
+		service := NewRAGService(nil, nil, nil, nil)
 		assert.NotNil(t, service)
 	})
 }

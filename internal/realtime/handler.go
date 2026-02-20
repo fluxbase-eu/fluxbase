@@ -246,15 +246,20 @@ func (h *RealtimeHandler) handleConnection(c *websocket.Conn) {
 func (h *RealtimeHandler) handleMessage(conn *Connection, msg ClientMessage) {
 	switch msg.Type {
 	case MessageTypeSubscribe:
-		// Check if this is an admin channel subscription (broadcast-only, no table required)
-		if len(msg.Channel) >= 15 && msg.Channel[:15] == "realtime:admin:" {
+		// Check if this is a broadcast-only channel (no table required)
+		isAdminChannel := len(msg.Channel) >= 15 && msg.Channel[:15] == "realtime:admin:"
+		isFluxbaseChannel := len(msg.Channel) >= 9 && msg.Channel[:9] == "fluxbase:"
+
+		if isAdminChannel || isFluxbaseChannel {
 			// Admin channels require admin role
-			if conn.Role != "admin" && conn.Role != "dashboard_admin" && conn.Role != "service_role" {
-				_ = conn.SendMessage(ServerMessage{
-					Type:  MessageTypeError,
-					Error: "admin access required to subscribe to admin channels",
-				})
-				return
+			if isAdminChannel {
+				if conn.Role != "admin" && conn.Role != "dashboard_admin" && conn.Role != "service_role" {
+					_ = conn.SendMessage(ServerMessage{
+						Type:  MessageTypeError,
+						Error: "admin access required to subscribe to admin channels",
+					})
+					return
+				}
 			}
 
 			// Subscribe connection to channel (broadcast-only, no database subscription)

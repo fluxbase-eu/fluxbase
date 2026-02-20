@@ -232,6 +232,72 @@ func (h *LoggingHandler) FlushLogs(c fiber.Ctx) error {
 	})
 }
 
+// GenerateTestLogs handles POST /admin/logs/test
+// @Summary Generate test logs
+// @Description Generates test log entries for diagnostic purposes
+// @Tags Admin/Logging
+// @Accept json
+// @Produce json
+// @Success 200 {object} SuccessResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /admin/logs/test [post]
+func (h *LoggingHandler) GenerateTestLogs(c fiber.Ctx) error {
+	if h.loggingService == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Logging service not available",
+		})
+	}
+
+	// Generate test logs of different types and levels
+	testLogs := []*storage.LogEntry{
+		{
+			Category: storage.LogCategorySystem,
+			Level:    storage.LogLevelInfo,
+			Message:  "Test info log from admin endpoint",
+			Fields:   map[string]any{"test": true, "component": "admin_test"},
+		},
+		{
+			Category: storage.LogCategorySystem,
+			Level:    storage.LogLevelWarn,
+			Message:  "Test warn log from admin endpoint",
+			Fields:   map[string]any{"test": true, "component": "admin_test"},
+		},
+		{
+			Category: storage.LogCategorySystem,
+			Level:    storage.LogLevelError,
+			Message:  "Test error log from admin endpoint",
+			Fields:   map[string]any{"test": true, "component": "admin_test"},
+		},
+		{
+			Category: storage.LogCategoryHTTP,
+			Level:    storage.LogLevelInfo,
+			Message:  "Test HTTP log - page navigation simulation",
+			Fields: map[string]any{
+				"test":        true,
+				"method":      "GET",
+				"path":        "/admin/logs/test",
+				"status_code": 200,
+				"duration_ms": 45,
+			},
+		},
+	}
+
+	// Log each test entry
+	ctx := c.RequestCtx()
+	for _, logEntry := range testLogs {
+		h.loggingService.Log(ctx, logEntry)
+	}
+
+	return c.JSON(fiber.Map{
+		"message":      "Test logs generated",
+		"count":        len(testLogs),
+		"check_page":   "/admin/logs",
+		"check_db":     "Query logging.logs table directly",
+		"check_stream": "Look for WebSocket log_entry messages",
+	})
+}
+
 // LogQueryResponse represents the response from log query
 type LogQueryResponse struct {
 	Entries    []*storage.LogEntry `json:"entries"`

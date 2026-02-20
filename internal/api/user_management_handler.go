@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
@@ -117,7 +118,7 @@ func (h *UserManagementHandler) GetUserByID(c fiber.Ctx) error {
 
 	user, err := h.userMgmtService.GetEnrichedUserByID(c.RequestCtx(), userID, userType)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
@@ -170,7 +171,7 @@ func (h *UserManagementHandler) DeleteUser(c fiber.Ctx) error {
 
 	err := h.userMgmtService.DeleteUser(c.RequestCtx(), userID, userType)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
@@ -207,7 +208,7 @@ func (h *UserManagementHandler) UpdateUserRole(c fiber.Ctx) error {
 
 	user, err := h.userMgmtService.UpdateUserRole(c.RequestCtx(), userID, req.Role, userType)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
@@ -240,7 +241,7 @@ func (h *UserManagementHandler) UpdateUser(c fiber.Ctx) error {
 
 	user, err := h.userMgmtService.UpdateUser(c.RequestCtx(), userID, req, userType)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
@@ -266,7 +267,7 @@ func (h *UserManagementHandler) ResetUserPassword(c fiber.Ctx) error {
 
 	result, err := h.userMgmtService.ResetUserPassword(c.RequestCtx(), userID, userType)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
@@ -294,7 +295,7 @@ func (h *UserManagementHandler) LockUser(c fiber.Ctx) error {
 
 	err := h.userMgmtService.LockUser(c.RequestCtx(), userID, userType)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
@@ -322,7 +323,7 @@ func (h *UserManagementHandler) UnlockUser(c fiber.Ctx) error {
 
 	err := h.userMgmtService.UnlockUser(c.RequestCtx(), userID, userType)
 	if err != nil {
-		if err == auth.ErrUserNotFound {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})

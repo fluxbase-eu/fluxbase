@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -77,7 +78,8 @@ func setupDashboardAuthTestServer(t *testing.T) (*fiber.App, *DashboardAuthHandl
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
-			if e, ok := err.(*fiber.Error); ok {
+			var e *fiber.Error
+			if errors.As(err, &e) {
 				code = e.Code
 			}
 			return c.Status(code).JSON(fiber.Map{
@@ -131,7 +133,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -158,12 +160,12 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 		assert.Contains(t, result["error"], "Password login is disabled")
 	})
 
@@ -178,8 +180,8 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 		require.NoError(t, err)
 
 		// Set environment variable to force password login
-		os.Setenv("FLUXBASE_DASHBOARD_FORCE_PASSWORD_LOGIN", "true")
-		defer os.Unsetenv("FLUXBASE_DASHBOARD_FORCE_PASSWORD_LOGIN")
+		_ = os.Setenv("FLUXBASE_DASHBOARD_FORCE_PASSWORD_LOGIN", "true")
+		defer func() { _ = os.Unsetenv("FLUXBASE_DASHBOARD_FORCE_PASSWORD_LOGIN") }()
 
 		loginReq := map[string]interface{}{
 			"email":    testEmail,
@@ -191,7 +193,7 @@ func TestDashboardPasswordLoginDisabled(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should succeed because env var overrides
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -216,12 +218,12 @@ func TestGetSSOProvidersEndpoint(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/dashboard/auth/sso/providers", nil)
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 
 		assert.NotNil(t, result["providers"])
 		assert.Equal(t, false, result["password_login_disabled"])
@@ -240,12 +242,12 @@ func TestGetSSOProvidersEndpoint(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/dashboard/auth/sso/providers", nil)
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 
 		assert.NotNil(t, result["providers"])
 		assert.Equal(t, true, result["password_login_disabled"])

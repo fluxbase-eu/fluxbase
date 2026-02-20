@@ -362,7 +362,7 @@ func TestAuditLogger_LogAuth(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// Log output should contain event data
 			logOutput := buf.String()
@@ -389,7 +389,7 @@ func TestAuditLogger_LogUserManagement(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	logOutput := buf.String()
 	assert.Contains(t, logOutput, "delete")
@@ -412,7 +412,7 @@ func TestAuditLogger_LogClientKeyOperation(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	logOutput := buf.String()
 	assert.Contains(t, logOutput, "create")
@@ -435,7 +435,7 @@ func TestAuditLogger_LogConfigChange(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	logOutput := buf.String()
 	assert.Contains(t, logOutput, "rate_limit")
@@ -495,7 +495,7 @@ func TestAuditLogger_LogSecurityEvent(t *testing.T) {
 
 			resp, err := testApp.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			logOutput := buf.String()
 			assert.Contains(t, logOutput, tt.event)
@@ -529,7 +529,7 @@ func TestStructuredLogger_SkipPaths(t *testing.T) {
 		req := httptest.NewRequest("GET", "/health", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -538,7 +538,7 @@ func TestStructuredLogger_SkipPaths(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/users", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -557,7 +557,7 @@ func TestStructuredLogger_DefaultConfig(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -580,7 +580,7 @@ func TestStructuredLogger_CustomLogger(t *testing.T) {
 	req := httptest.NewRequest("GET", "/logged", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Custom logger should have received log entries
 	assert.Contains(t, buf.String(), "HTTP request")
@@ -612,7 +612,7 @@ func TestStructuredLogger_SkipSuccessfulRequests(t *testing.T) {
 		req := httptest.NewRequest("GET", "/success", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 		// Log should be empty for successful requests
@@ -624,7 +624,7 @@ func TestStructuredLogger_SkipSuccessfulRequests(t *testing.T) {
 		req := httptest.NewRequest("GET", "/error", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 500, resp.StatusCode)
 		// Error requests should be logged
@@ -654,7 +654,7 @@ func TestStructuredLogger_RequestID(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Contains(t, buf.String(), "custom-request-id-123")
 	})
@@ -685,7 +685,7 @@ func TestStructuredLogger_UserContext(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	logOutput := buf.String()
 	assert.Contains(t, logOutput, "user-123")
@@ -724,7 +724,7 @@ func TestStructuredLogger_StatusCodes(t *testing.T) {
 			req := httptest.NewRequest("GET", "/test", nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.statusCode, resp.StatusCode)
 			// All status codes should be logged
@@ -757,7 +757,7 @@ func TestStructuredLogger_LogRequestBody(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Contains(t, buf.String(), "request_body")
 	})
@@ -770,7 +770,7 @@ func TestStructuredLogger_LogRequestBody(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Contains(t, buf.String(), "truncated")
 	})
@@ -794,7 +794,7 @@ func TestStructuredLogger_QueryStringRedaction(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test?token=secret123&page=1", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	logOutput := buf.String()
 	// Token should be redacted
@@ -823,7 +823,7 @@ func TestStructuredLogger_Referer(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Contains(t, buf.String(), "https://example.com/page")
 }
@@ -847,7 +847,7 @@ func TestStructuredLogger_HandlerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/error", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	logOutput := buf.String()
 	assert.Contains(t, logOutput, "Internal error")
@@ -916,6 +916,6 @@ func BenchmarkStructuredLogger(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }

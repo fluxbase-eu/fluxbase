@@ -3365,15 +3365,21 @@ export interface SearchKnowledgeBaseResponse {
 // ============================================================================
 
 /**
+ * Individual service health status
+ */
+export interface ServiceHealth {
+  status: string; // "healthy", "degraded", "unhealthy"
+  message?: string;
+  latency_ms?: number;
+}
+
+/**
  * System health status response
  */
 export interface HealthResponse {
-  status: string;
-  services: {
-    database: boolean;
-    realtime: boolean;
-  };
-  timestamp: string;
+  status: string; // "healthy", "degraded", "unhealthy"
+  services: Record<string, ServiceHealth>;
+  timestamp?: string;
 }
 
 // ============================================================================

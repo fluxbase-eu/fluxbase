@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -60,7 +61,7 @@ func TestMockUserRepository_DuplicateEmail(t *testing.T) {
 	}
 
 	_, err = repo.Create(ctx, req, "hash2")
-	if err != ErrUserAlreadyExists {
+	if !errors.Is(err, ErrUserAlreadyExists) {
 		t.Errorf("Expected ErrUserAlreadyExists, got %v", err)
 	}
 }
@@ -95,7 +96,7 @@ func TestMockUserRepository_Update(t *testing.T) {
 
 	// Old email should not find user
 	_, err = repo.GetByEmail(ctx, "original@example.com")
-	if err != ErrUserNotFound {
+	if !errors.Is(err, ErrUserNotFound) {
 		t.Errorf("Expected ErrUserNotFound for old email, got %v", err)
 	}
 }
@@ -113,7 +114,7 @@ func TestMockUserRepository_Delete(t *testing.T) {
 	}
 
 	_, err = repo.GetByID(ctx, user.ID)
-	if err != ErrUserNotFound {
+	if !errors.Is(err, ErrUserNotFound) {
 		t.Errorf("Expected ErrUserNotFound after delete, got %v", err)
 	}
 }
@@ -127,8 +128,8 @@ func TestMockUserRepository_Count(t *testing.T) {
 		t.Errorf("Expected count 0, got %d", count)
 	}
 
-	repo.Create(ctx, CreateUserRequest{Email: "user1@example.com"}, "hash")
-	repo.Create(ctx, CreateUserRequest{Email: "user2@example.com"}, "hash")
+	_, _ = repo.Create(ctx, CreateUserRequest{Email: "user1@example.com"}, "hash")
+	_, _ = repo.Create(ctx, CreateUserRequest{Email: "user2@example.com"}, "hash")
 
 	count, _ = repo.Count(ctx)
 	if count != 2 {
@@ -202,7 +203,7 @@ func TestMockSessionRepository_UpdateTokens(t *testing.T) {
 
 	// Old tokens should not work
 	_, err = repo.GetByAccessToken(ctx, "old-access")
-	if err != ErrSessionNotFound {
+	if !errors.Is(err, ErrSessionNotFound) {
 		t.Errorf("Expected ErrSessionNotFound for old token, got %v", err)
 	}
 
@@ -228,7 +229,7 @@ func TestMockSessionRepository_Delete(t *testing.T) {
 	}
 
 	_, err = repo.GetByAccessToken(ctx, "access")
-	if err != ErrSessionNotFound {
+	if !errors.Is(err, ErrSessionNotFound) {
 		t.Errorf("Expected ErrSessionNotFound after delete, got %v", err)
 	}
 }
@@ -238,8 +239,8 @@ func TestMockSessionRepository_DeleteByUserID(t *testing.T) {
 	ctx := context.Background()
 
 	userID := "user-123"
-	repo.Create(ctx, userID, "access1", "refresh1", time.Now().Add(time.Hour))
-	repo.Create(ctx, userID, "access2", "refresh2", time.Now().Add(time.Hour))
+	_, _ = repo.Create(ctx, userID, "access1", "refresh1", time.Now().Add(time.Hour))
+	_, _ = repo.Create(ctx, userID, "access2", "refresh2", time.Now().Add(time.Hour))
 
 	sessions, _ := repo.GetByUserID(ctx, userID)
 	if len(sessions) != 2 {
@@ -262,8 +263,8 @@ func TestMockSessionRepository_DeleteExpired(t *testing.T) {
 	ctx := context.Background()
 
 	// Create one expired and one valid session
-	repo.Create(ctx, "user-123", "expired", "refresh1", time.Now().Add(-time.Hour))
-	repo.Create(ctx, "user-456", "valid", "refresh2", time.Now().Add(time.Hour))
+	_, _ = repo.Create(ctx, "user-123", "expired", "refresh1", time.Now().Add(-time.Hour))
+	_, _ = repo.Create(ctx, "user-456", "valid", "refresh2", time.Now().Add(time.Hour))
 
 	deleted, err := repo.DeleteExpired(ctx)
 	if err != nil {
@@ -335,8 +336,8 @@ func TestMockTokenBlacklistRepository_DeleteExpired(t *testing.T) {
 
 	user1 := "user-1"
 	user2 := "user-2"
-	repo.Add(ctx, "expired", &user1, "logout", time.Now().Add(-time.Hour))
-	repo.Add(ctx, "valid", &user2, "logout", time.Now().Add(time.Hour))
+	_ = repo.Add(ctx, "expired", &user1, "logout", time.Now().Add(-time.Hour))
+	_ = repo.Add(ctx, "valid", &user2, "logout", time.Now().Add(time.Hour))
 
 	deleted, err := repo.DeleteExpired(ctx)
 	if err != nil {

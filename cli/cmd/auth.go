@@ -142,19 +142,20 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 	var creds *cliconfig.Credentials
 	var userInfo *cliconfig.UserInfo
 
-	if loginToken != "" {
+	switch {
+	case loginToken != "":
 		// Token-based authentication
 		creds = &cliconfig.Credentials{
 			APIKey: loginToken,
 		}
 		fmt.Println("Using API token for authentication")
-	} else if useSSO {
+	case useSSO:
 		// SSO authentication
 		creds, userInfo, err = performSSOAuthentication(server)
 		if err != nil {
 			return fmt.Errorf("SSO login failed: %w", err)
 		}
-	} else {
+	default:
 		// Check if password login is disabled on the server
 		ssoInfo, ssoErr := getSSOProviders(server)
 		if ssoErr == nil && ssoInfo.PasswordLoginDisabled {

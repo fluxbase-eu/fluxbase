@@ -338,7 +338,8 @@ func runTablesInsert(cmd *cobra.Command, args []string) error {
 
 	// Get data
 	var data interface{}
-	if tableFile != "" {
+	switch {
+	case tableFile != "":
 		content, err := os.ReadFile(tableFile) //nolint:gosec // CLI tool reads user-provided file path
 		if err != nil {
 			return fmt.Errorf("failed to read file: %w", err)
@@ -346,11 +347,11 @@ func runTablesInsert(cmd *cobra.Command, args []string) error {
 		if err := json.Unmarshal(content, &data); err != nil {
 			return fmt.Errorf("invalid JSON in file: %w", err)
 		}
-	} else if tableData != "" {
+	case tableData != "":
 		if err := json.Unmarshal([]byte(tableData), &data); err != nil {
 			return fmt.Errorf("invalid JSON data: %w", err)
 		}
-	} else {
+	default:
 		return fmt.Errorf("either --data or --file is required")
 	}
 
@@ -383,7 +384,8 @@ func runTablesUpdate(cmd *cobra.Command, args []string) error {
 
 	// Get data
 	var data interface{}
-	if tableFile != "" {
+	switch {
+	case tableFile != "":
 		content, err := os.ReadFile(tableFile) //nolint:gosec // CLI tool reads user-provided file path
 		if err != nil {
 			return fmt.Errorf("failed to read file: %w", err)
@@ -391,11 +393,11 @@ func runTablesUpdate(cmd *cobra.Command, args []string) error {
 		if err := json.Unmarshal(content, &data); err != nil {
 			return fmt.Errorf("invalid JSON in file: %w", err)
 		}
-	} else if tableData != "" {
+	case tableData != "":
 		if err := json.Unmarshal([]byte(tableData), &data); err != nil {
 			return fmt.Errorf("invalid JSON data: %w", err)
 		}
-	} else {
+	default:
 		return fmt.Errorf("either --data or --file is required")
 	}
 

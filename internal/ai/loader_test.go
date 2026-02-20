@@ -31,8 +31,8 @@ func TestLoader_LoadAll(t *testing.T) {
 		// Create a temporary file
 		tmpFile, err := os.CreateTemp("", "test-chatbot-*.txt")
 		require.NoError(t, err)
-		defer os.Remove(tmpFile.Name())
-		tmpFile.Close()
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
+		_ = tmpFile.Close()
 
 		loader := NewLoader(tmpFile.Name())
 		chatbots, err := loader.LoadAll()
@@ -45,7 +45,7 @@ func TestLoader_LoadAll(t *testing.T) {
 		// Create a temporary directory structure
 		tmpDir, err := os.MkdirTemp("", "chatbots-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create chatbot directory and file
 		chatbotDir := filepath.Join(tmpDir, "test-bot")
@@ -78,7 +78,7 @@ export default async function handler(ctx) {
 		// Create a temporary directory structure
 		tmpDir, err := os.MkdirTemp("", "chatbots-nested-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create nested chatbot directory
 		chatbotDir := filepath.Join(tmpDir, "analytics", "reports")
@@ -100,7 +100,7 @@ export default async function handler(ctx) {
 	t.Run("skips hidden directories", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "chatbots-hidden-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create hidden directory
 		hiddenDir := filepath.Join(tmpDir, ".hidden")
@@ -118,7 +118,7 @@ export default async function handler(ctx) {
 	t.Run("skips node_modules directory", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "chatbots-nodemodules-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create node_modules directory
 		nodeModulesDir := filepath.Join(tmpDir, "node_modules", "some-package")
@@ -136,7 +136,7 @@ export default async function handler(ctx) {
 	t.Run("skips _shared directory", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "chatbots-shared-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create _shared directory
 		sharedDir := filepath.Join(tmpDir, "_shared")
@@ -154,7 +154,7 @@ export default async function handler(ctx) {
 	t.Run("only processes index.ts files", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "chatbots-indexts-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create directory with non-index.ts file
 		botDir := filepath.Join(tmpDir, "bot")
@@ -174,7 +174,7 @@ func TestLoader_LoadOne(t *testing.T) {
 	t.Run("loads chatbot from default namespace", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "chatbots-loadone-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create chatbot
 		botDir := filepath.Join(tmpDir, "my-bot")
@@ -200,7 +200,7 @@ export default async function handler(ctx) { return {}; }
 	t.Run("loads chatbot from custom namespace", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "chatbots-loadone-ns-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create namespaced chatbot
 		botDir := filepath.Join(tmpDir, "custom-ns", "my-bot")
@@ -218,7 +218,7 @@ export default async function handler(ctx) { return {}; }
 	t.Run("returns error for non-existent chatbot", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "chatbots-loadone-notfound-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		loader := NewLoader(tmpDir)
 		chatbot, err := loader.LoadOne("default", "nonexistent")
@@ -231,7 +231,7 @@ export default async function handler(ctx) { return {}; }
 func TestLoader_ChatbotExists(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "chatbots-exists-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create one chatbot
 	botDir := filepath.Join(tmpDir, "existing-bot")

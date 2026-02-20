@@ -220,13 +220,13 @@ func TestGetSetting_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/settings/", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 }
@@ -248,13 +248,13 @@ func TestUpdateSetting_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 
@@ -269,13 +269,13 @@ func TestUpdateSetting_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -291,13 +291,13 @@ func TestUpdateSetting_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Equal(t, "Invalid setting key", result["error"])
 		assert.Equal(t, "INVALID_SETTING_KEY", result["code"])
 	})
@@ -317,13 +317,13 @@ func TestDeleteSetting_Validation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/settings/", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Setting key is required", result["error"])
 	})
 }
@@ -398,13 +398,13 @@ func TestSystemSettingsInternalErrors(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/settings", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Settings service not initialized", result["error"])
 	})
 
@@ -416,13 +416,13 @@ func TestSystemSettingsInternalErrors(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/settings/app.auth.signup_enabled", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Equal(t, "Settings service not initialized", result["error"])
 	})
 }
@@ -482,7 +482,7 @@ func TestSystemSettingsHTTPMethods(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/settings", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 	})
@@ -496,7 +496,7 @@ func TestSystemSettingsHTTPMethods(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/settings/app.auth.signup_enabled", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 	})
@@ -510,7 +510,7 @@ func TestSystemSettingsHTTPMethods(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/settings/app.auth.signup_enabled", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 	})
@@ -524,7 +524,7 @@ func TestSystemSettingsHTTPMethods(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/settings/app.auth.signup_enabled", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusMethodNotAllowed, resp.StatusCode)
 	})

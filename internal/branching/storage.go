@@ -3,6 +3,7 @@ package branching
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -83,7 +84,7 @@ func (s *Storage) GetBranch(ctx context.Context, id uuid.UUID) (*Branch, error) 
 		&branch.UpdatedAt,
 		&branch.ExpiresAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrBranchNotFound
 	}
 	if err != nil {
@@ -120,7 +121,7 @@ func (s *Storage) GetBranchBySlug(ctx context.Context, slug string) (*Branch, er
 		&branch.UpdatedAt,
 		&branch.ExpiresAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrBranchNotFound
 	}
 	if err != nil {
@@ -157,7 +158,7 @@ func (s *Storage) GetBranchByGitHubPR(ctx context.Context, repo string, prNumber
 		&branch.UpdatedAt,
 		&branch.ExpiresAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrBranchNotFound
 	}
 	if err != nil {
@@ -195,7 +196,7 @@ func (s *Storage) GetMainBranch(ctx context.Context) (*Branch, error) {
 		&branch.UpdatedAt,
 		&branch.ExpiresAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrBranchNotFound
 	}
 	if err != nil {
@@ -573,7 +574,7 @@ func (s *Storage) GetGitHubConfig(ctx context.Context, repository string) (*GitH
 		&config.CreatedAt,
 		&config.UpdatedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrGitHubConfigNotFound
 	}
 	if err != nil {
@@ -746,7 +747,7 @@ func (s *Storage) GetUserAccess(ctx context.Context, branchID, userID uuid.UUID)
 		&access.GrantedAt,
 		&access.GrantedBy,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrBranchNotFound
 	}
 	if err != nil {
@@ -779,7 +780,7 @@ func (s *Storage) HasAccess(ctx context.Context, branchID, userID uuid.UUID, min
 
 	var accessLevel BranchAccessLevel
 	err = s.pool.QueryRow(ctx, query, branchID, userID).Scan(&accessLevel)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
@@ -805,7 +806,7 @@ func (s *Storage) UserHasAccess(ctx context.Context, slug string, userID uuid.UU
 	// Get the branch first
 	branch, err := s.GetBranchBySlug(ctx, slug)
 	if err != nil {
-		if err == ErrBranchNotFound {
+		if errors.Is(err, ErrBranchNotFound) {
 			return false, nil
 		}
 		return false, err

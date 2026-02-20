@@ -531,6 +531,9 @@ type AIConfig struct {
 	OCREnabled   bool     `mapstructure:"ocr_enabled"`   // Enable OCR for image-based PDFs
 	OCRProvider  string   `mapstructure:"ocr_provider"`  // OCR provider: tesseract
 	OCRLanguages []string `mapstructure:"ocr_languages"` // Default languages for OCR (e.g., ["eng", "deu"])
+
+	// RAG Configuration (for retrieval-augmented generation)
+	RAGGraphBoostWeight float64 `mapstructure:"rag_graph_boost_weight"` // How much to weight entity matches vs vector similarity (0.0-1.0, default 0)
 }
 
 // RPCConfig contains RPC (Remote Procedure Call) configuration
@@ -1427,6 +1430,7 @@ func (sc *StorageConfig) Validate() error {
 }
 
 // ConnectionString returns the PostgreSQL connection string using the runtime user
+//
 // Deprecated: Use RuntimeConnectionString() or AdminConnectionString() instead
 func (dc *DatabaseConfig) ConnectionString() string {
 	return dc.RuntimeConnectionString()

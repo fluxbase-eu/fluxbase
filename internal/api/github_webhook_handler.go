@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -191,7 +192,7 @@ func (h *GitHubWebhookHandler) verifySignature(c fiber.Ctx, repository string) e
 
 	// Get the webhook configuration for this repository
 	ghConfig, err := h.manager.GetStorage().GetGitHubConfig(c.RequestCtx(), repository)
-	if err != nil && err != branching.ErrGitHubConfigNotFound {
+	if err != nil && !errors.Is(err, branching.ErrGitHubConfigNotFound) {
 		return fmt.Errorf("failed to get GitHub config: %w", err)
 	}
 
@@ -269,7 +270,7 @@ func (h *GitHubWebhookHandler) handlePullRequestEvent(c fiber.Ctx, payload *GitH
 
 	// Get GitHub config for this repository
 	ghConfig, err := h.manager.GetStorage().GetGitHubConfig(c.RequestCtx(), repo)
-	if err != nil && err != branching.ErrGitHubConfigNotFound {
+	if err != nil && !errors.Is(err, branching.ErrGitHubConfigNotFound) {
 		log.Error().Err(err).Str("repository", repo).Msg("Failed to get GitHub config")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "config_error",
@@ -329,7 +330,7 @@ func (h *GitHubWebhookHandler) createBranchForPR(c fiber.Ctx, repo string, pr *G
 			Int("pr_number", pr.Number).
 			Msg("Failed to create branch for PR")
 
-		if err == branching.ErrBranchExists {
+		if errors.Is(err, branching.ErrBranchExists) {
 			// Branch already exists, return success
 			return c.Status(fiber.StatusOK).JSON(fiber.Map{
 				"status":  "exists",
@@ -337,7 +338,7 @@ func (h *GitHubWebhookHandler) createBranchForPR(c fiber.Ctx, repo string, pr *G
 			})
 		}
 
-		if err == branching.ErrMaxBranchesReached {
+		if errors.Is(err, branching.ErrMaxBranchesReached) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error":   "max_branches_reached",
 				"message": "Maximum number of branches has been reached",
@@ -377,7 +378,7 @@ func (h *GitHubWebhookHandler) deleteBranchForPR(c fiber.Ctx, repo string, pr *G
 	// Find branch by PR
 	branch, err := h.manager.GetStorage().GetBranchByGitHubPR(c.RequestCtx(), repo, pr.Number)
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			// Branch doesn't exist, return success
 			return c.Status(fiber.StatusOK).JSON(fiber.Map{
 				"status":  "not_found",

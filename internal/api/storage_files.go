@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -77,7 +78,7 @@ func (h *StorageHandler) UploadFile(c fiber.Ctx) error {
 		`SELECT max_file_size, allowed_mime_types FROM storage.get_bucket_settings($1)`,
 		bucket,
 	).Scan(&bucketMaxFileSize, &bucketAllowedMimeTypes)
-	if err != nil && err != pgx.ErrNoRows {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		log.Error().Err(err).Str("bucket", bucket).Msg("Failed to get bucket settings")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to validate bucket settings",
@@ -306,7 +307,7 @@ func (h *StorageHandler) DownloadFile(c fiber.Ctx) error {
 	`, bucket, key).Scan(&objectID, &mimeType, &fileSize)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "file not found or insufficient permissions",
 			})
@@ -396,6 +397,7 @@ func (h *StorageHandler) DownloadFile(c fiber.Ctx) error {
 		result, err := h.transformer.Transform(reader, object.ContentType, transformOpts)
 		_ = reader.Close() // Close original reader since we read all data
 
+		//nolint:gocritic // Error handling flow, not switch-compatible
 		if err != nil {
 			// Log the error but return the original if transform fails
 			log.Warn().Err(err).Str("bucket", bucket).Str("key", key).Msg("Image transform failed, returning original")
@@ -664,7 +666,7 @@ func (h *StorageHandler) GetFileInfo(c fiber.Ctx) error {
 	`, bucket, key).Scan(&id, &mimeType, &size, &metadata, &ownerID, &createdAt, &updatedAt)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "file not found or insufficient permissions",
 			})

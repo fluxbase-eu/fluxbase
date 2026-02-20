@@ -245,25 +245,26 @@ func (s *SAMLService) AddProviderFromConfig(cfg config.SAMLProviderConfig) error
 	var metadataXML []byte
 	var err error
 
-	if cfg.IdPMetadataURL != "" {
+	switch {
+	case cfg.IdPMetadataURL != "":
 		// Validate HTTPS requirement for metadata URL
 		if err := validateMetadataURL(cfg.IdPMetadataURL, cfg.AllowInsecureMetadataURL); err != nil {
 			return err
 		}
 		metadataXML, err = s.fetchMetadata(cfg.IdPMetadataURL)
 		if err != nil {
-			return fmt.Errorf("%w: %v", ErrSAMLMetadataFetchFailed, err)
+			return fmt.Errorf("%w: %w", ErrSAMLMetadataFetchFailed, err)
 		}
-	} else if cfg.IdPMetadataXML != "" {
+	case cfg.IdPMetadataXML != "":
 		metadataXML = []byte(cfg.IdPMetadataXML)
-	} else {
+	default:
 		return errors.New("either idp_metadata_url or idp_metadata_xml must be provided")
 	}
 
 	// Parse metadata
 	metadata, err := samlsp.ParseMetadata(metadataXML)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrSAMLMetadataParseFailed, err)
+		return fmt.Errorf("%w: %w", ErrSAMLMetadataParseFailed, err)
 	}
 
 	provider.metadata = metadata
@@ -482,7 +483,7 @@ func (s *SAMLService) ParseAssertion(providerName string, samlResponse string) (
 	// We use the ACS URL as the current URL and nil for request IDs (for IdP-initiated flows)
 	assertion, err := sp.ParseXMLResponse(responseXML, nil, sp.AcsURL)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrSAMLAssertionInvalid, err)
+		return nil, fmt.Errorf("%w: %w", ErrSAMLAssertionInvalid, err)
 	}
 
 	// Validate time conditions
@@ -952,21 +953,21 @@ func (s *SAMLService) ParseLogoutRequest(samlRequest, relayState string, isDefla
 	// Decode base64
 	requestXML, err := base64.StdEncoding.DecodeString(samlRequest)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: base64 decode failed: %v", ErrSAMLInvalidLogoutRequest, err)
+		return nil, "", fmt.Errorf("%w: base64 decode failed: %w", ErrSAMLInvalidLogoutRequest, err)
 	}
 
 	// Inflate if using HTTP-Redirect binding (deflated)
 	if isDeflated {
 		requestXML, err = inflateBytes(requestXML)
 		if err != nil {
-			return nil, "", fmt.Errorf("%w: inflate failed: %v", ErrSAMLInvalidLogoutRequest, err)
+			return nil, "", fmt.Errorf("%w: inflate failed: %w", ErrSAMLInvalidLogoutRequest, err)
 		}
 	}
 
 	// Parse XML
 	var logoutRequest saml.LogoutRequest
 	if err := xml.Unmarshal(requestXML, &logoutRequest); err != nil {
-		return nil, "", fmt.Errorf("%w: XML parse failed: %v", ErrSAMLInvalidLogoutRequest, err)
+		return nil, "", fmt.Errorf("%w: XML parse failed: %w", ErrSAMLInvalidLogoutRequest, err)
 	}
 
 	// Find matching provider by issuer
@@ -1008,21 +1009,21 @@ func (s *SAMLService) ParseLogoutResponse(samlResponse string, isDeflated bool) 
 	// Decode base64
 	responseXML, err := base64.StdEncoding.DecodeString(samlResponse)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: base64 decode failed: %v", ErrSAMLInvalidLogoutResponse, err)
+		return nil, "", fmt.Errorf("%w: base64 decode failed: %w", ErrSAMLInvalidLogoutResponse, err)
 	}
 
 	// Inflate if using HTTP-Redirect binding (deflated)
 	if isDeflated {
 		responseXML, err = inflateBytes(responseXML)
 		if err != nil {
-			return nil, "", fmt.Errorf("%w: inflate failed: %v", ErrSAMLInvalidLogoutResponse, err)
+			return nil, "", fmt.Errorf("%w: inflate failed: %w", ErrSAMLInvalidLogoutResponse, err)
 		}
 	}
 
 	// Parse XML
 	var logoutResponse saml.LogoutResponse
 	if err := xml.Unmarshal(responseXML, &logoutResponse); err != nil {
-		return nil, "", fmt.Errorf("%w: XML parse failed: %v", ErrSAMLInvalidLogoutResponse, err)
+		return nil, "", fmt.Errorf("%w: XML parse failed: %w", ErrSAMLInvalidLogoutResponse, err)
 	}
 
 	// Find matching provider by issuer
@@ -1172,7 +1173,7 @@ func ValidateRelayState(relayState string, allowedHosts []string) (string, error
 	// Parse the URL
 	u, err := url.Parse(relayState)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrSAMLInvalidRelayState, err)
+		return "", fmt.Errorf("%w: %w", ErrSAMLInvalidRelayState, err)
 	}
 
 	// Block protocol-relative URLs (//evil.com/path)
@@ -1308,6 +1309,7 @@ func (s *SAMLService) LoadProvidersFromDB(ctx context.Context) error {
 
 		// Determine which metadata to use
 		var metadataToUse string
+		//nolint:gocritic // Conditions check different variables, not switch-compatible
 		if metadataCached != nil && *metadataCached != "" {
 			metadataToUse = *metadataCached
 		} else if metadataXML != nil && *metadataXML != "" {

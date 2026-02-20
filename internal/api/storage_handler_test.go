@@ -528,9 +528,10 @@ func TestStorageHandler_MultipleLimiterInstances(t *testing.T) {
 	limiters := make(map[string]*rate.Limiter)
 
 	for _, key := range keys {
+		// Call multiple times to test caching - should return same limiter
+		handler.getTransformLimiter(key)
+		handler.getTransformLimiter(key)
 		limiter := handler.getTransformLimiter(key)
-		limiter = handler.getTransformLimiter(key) // Call twice to test caching
-		limiter = handler.getTransformLimiter(key) // Call thrice
 		limiters[key] = limiter
 	}
 

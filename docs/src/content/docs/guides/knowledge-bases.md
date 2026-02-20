@@ -40,6 +40,7 @@ graph LR
 ```
 
 The RAG pipeline:
+
 1. Documents are chunked into smaller segments
 2. Each chunk is embedded using an embedding model (e.g., text-embedding-3-small)
 3. Embeddings are stored in PostgreSQL using pgvector
@@ -91,6 +92,7 @@ FLUXBASE_AI_EMBEDDING_MODEL=nomic-embed-text
 ```
 
 **Default Models** (when using AI provider fallback):
+
 - OpenAI: `text-embedding-3-small`
 - Azure: `text-embedding-ada-002`
 - Ollama: `nomic-embed-text`
@@ -111,20 +113,20 @@ FLUXBASE_AI_EMBEDDING_MODEL=nomic-embed-text
 ### Using the SDK
 
 ```typescript
-import { createClient } from '@fluxbase/sdk'
+import { createClient } from "@fluxbase/sdk";
 
-const client = createClient('http://localhost:8080', 'service-role-key')
+const client = createClient("http://localhost:8080", "service-role-key");
 
 // Create a knowledge base
 const { data: kb, error } = await client.admin.ai.createKnowledgeBase({
-  name: 'product-docs',
-  description: 'Product documentation and FAQs',
+  name: "product-docs",
+  description: "Product documentation and FAQs",
   chunk_size: 512,
   chunk_overlap: 50,
-  chunk_strategy: 'recursive', // or 'sentence', 'paragraph', 'fixed'
-})
+  chunk_strategy: "recursive", // or 'sentence', 'paragraph', 'fixed'
+});
 
-console.log('Created KB:', kb.id)
+console.log("Created KB:", kb.id);
 ```
 
 ### Using the REST API
@@ -149,8 +151,8 @@ Once you have a knowledge base, add documents to it. Documents are automatically
 
 ```typescript
 // Add a document
-const { data, error } = await client.admin.ai.addDocument('kb-id', {
-  title: 'Getting Started Guide',
+const { data, error } = await client.admin.ai.addDocument("kb-id", {
+  title: "Getting Started Guide",
   content: `
     # Getting Started with Our Product
 
@@ -167,30 +169,30 @@ const { data, error } = await client.admin.ai.addDocument('kb-id', {
     After installation, launch the application and create an account...
   `,
   metadata: {
-    category: 'guides',
-    version: '1.0',
+    category: "guides",
+    version: "1.0",
   },
-})
+});
 
-console.log('Document ID:', data.document_id)
-console.log('Status:', data.status) // 'processing'
+console.log("Document ID:", data.document_id);
+console.log("Status:", data.status); // 'processing'
 ```
 
 ### Bulk Document Upload
 
 ```typescript
 const documents = [
-  { title: 'FAQ', content: faqContent },
-  { title: 'API Reference', content: apiContent },
-  { title: 'Troubleshooting', content: troubleshootingContent },
-]
+  { title: "FAQ", content: faqContent },
+  { title: "API Reference", content: apiContent },
+  { title: "Troubleshooting", content: troubleshootingContent },
+];
 
 for (const doc of documents) {
-  const { data, error } = await client.admin.ai.addDocument('kb-id', doc)
+  const { data, error } = await client.admin.ai.addDocument("kb-id", doc);
   if (error) {
-    console.error(`Failed to add ${doc.title}:`, error)
+    console.error(`Failed to add ${doc.title}:`, error);
   } else {
-    console.log(`Added ${doc.title}: ${data.document_id}`)
+    console.log(`Added ${doc.title}: ${data.document_id}`);
   }
 }
 ```
@@ -200,13 +202,13 @@ for (const doc of documents) {
 Documents are processed asynchronously. Check status:
 
 ```typescript
-const { data: docs } = await client.admin.ai.listDocuments('kb-id')
+const { data: docs } = await client.admin.ai.listDocuments("kb-id");
 
 for (const doc of docs) {
-  console.log(`${doc.title}: ${doc.status}`)
+  console.log(`${doc.title}: ${doc.status}`);
   // Status: 'pending' | 'processing' | 'indexed' | 'failed'
-  if (doc.status === 'failed') {
-    console.error(`Error: ${doc.error_message}`)
+  if (doc.status === "failed") {
+    console.error(`Error: ${doc.error_message}`);
   }
 }
 ```
@@ -217,18 +219,18 @@ In addition to pasting text content, you can upload document files directly. Flu
 
 ### Supported File Types
 
-| Format | Extension | MIME Type |
-|--------|-----------|-----------|
-| PDF | `.pdf` | `application/pdf` |
-| Plain Text | `.txt` | `text/plain` |
-| Markdown | `.md` | `text/markdown` |
-| HTML | `.html`, `.htm` | `text/html` |
-| CSV | `.csv` | `text/csv` |
-| Word Document | `.docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
-| Excel Spreadsheet | `.xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
-| Rich Text | `.rtf` | `application/rtf` |
-| EPUB | `.epub` | `application/epub+zip` |
-| JSON | `.json` | `application/json` |
+| Format            | Extension       | MIME Type                                                                 |
+| ----------------- | --------------- | ------------------------------------------------------------------------- |
+| PDF               | `.pdf`          | `application/pdf`                                                         |
+| Plain Text        | `.txt`          | `text/plain`                                                              |
+| Markdown          | `.md`           | `text/markdown`                                                           |
+| HTML              | `.html`, `.htm` | `text/html`                                                               |
+| CSV               | `.csv`          | `text/csv`                                                                |
+| Word Document     | `.docx`         | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| Excel Spreadsheet | `.xlsx`         | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`       |
+| Rich Text         | `.rtf`          | `application/rtf`                                                         |
+| EPUB              | `.epub`         | `application/epub+zip`                                                    |
+| JSON              | `.json`         | `application/json`                                                        |
 
 **Maximum file size:** 50MB
 
@@ -245,38 +247,38 @@ In addition to pasting text content, you can upload document files directly. Flu
 
 ```typescript
 // Browser environment
-const fileInput = document.getElementById('file') as HTMLInputElement
-const file = fileInput.files?.[0]
+const fileInput = document.getElementById("file") as HTMLInputElement;
+const file = fileInput.files?.[0];
 
 if (file) {
   const { data, error } = await client.admin.ai.uploadDocument(
-    'kb-id',
+    "kb-id",
     file,
-    'Custom Document Title' // Optional
-  )
+    "Custom Document Title", // Optional
+  );
 
   if (data) {
-    console.log('Document ID:', data.document_id)
-    console.log('Filename:', data.filename)
-    console.log('Extracted text length:', data.extracted_length)
-    console.log('MIME type:', data.mime_type)
+    console.log("Document ID:", data.document_id);
+    console.log("Filename:", data.filename);
+    console.log("Extracted text length:", data.extracted_length);
+    console.log("MIME type:", data.mime_type);
   }
 }
 ```
 
 ```typescript
 // Node.js environment
-import { readFile } from 'fs/promises'
-import { Blob } from 'buffer'
+import { readFile } from "fs/promises";
+import { Blob } from "buffer";
 
-const content = await readFile('document.pdf')
-const blob = new Blob([content], { type: 'application/pdf' })
+const content = await readFile("document.pdf");
+const blob = new Blob([content], { type: "application/pdf" });
 
 const { data, error } = await client.admin.ai.uploadDocument(
-  'kb-id',
+  "kb-id",
   blob,
-  'My PDF Document'
-)
+  "My PDF Document",
+);
 ```
 
 ### Upload via REST API
@@ -312,12 +314,12 @@ Fluxbase uses specialized libraries to extract text from each file type:
 
 Choose the chunking strategy that best fits your content:
 
-| Strategy | Description | Best For |
-|----------|-------------|----------|
-| `recursive` | Splits by paragraphs, then sentences, then characters | General text, documentation |
-| `sentence` | Splits by sentence boundaries | Q&A content, conversational text |
-| `paragraph` | Splits by paragraph (double newlines) | Well-structured documents |
-| `fixed` | Fixed character count splits | Code, logs, structured data |
+| Strategy    | Description                                           | Best For                         |
+| ----------- | ----------------------------------------------------- | -------------------------------- |
+| `recursive` | Splits by paragraphs, then sentences, then characters | General text, documentation      |
+| `sentence`  | Splits by sentence boundaries                         | Q&A content, conversational text |
+| `paragraph` | Splits by paragraph (double newlines)                 | Well-structured documents        |
+| `fixed`     | Fixed character count splits                          | Code, logs, structured data      |
 
 ### Configuring Chunk Size
 
@@ -328,19 +330,19 @@ Choose the chunking strategy that best fits your content:
 ```typescript
 // For FAQ-style content (shorter, precise chunks)
 await client.admin.ai.createKnowledgeBase({
-  name: 'faq',
+  name: "faq",
   chunk_size: 256,
   chunk_overlap: 25,
-  chunk_strategy: 'sentence',
-})
+  chunk_strategy: "sentence",
+});
 
 // For technical documentation (larger chunks with context)
 await client.admin.ai.createKnowledgeBase({
-  name: 'tech-docs',
+  name: "tech-docs",
   chunk_size: 1024,
   chunk_overlap: 100,
-  chunk_strategy: 'recursive',
-})
+  chunk_strategy: "recursive",
+});
 ```
 
 ## Linking Knowledge Bases to Chatbots
@@ -368,39 +370,40 @@ Use the provided context to answer questions about our product.
 If you don't find relevant information in the context, say so honestly.
 
 Current user ID: {{user_id}}
-`
+`;
 ```
 
 ### RAG Annotations Reference
 
-| Annotation | Description | Default |
-|------------|-------------|---------|
-| `@fluxbase:knowledge-base` | Name of knowledge base to use (can specify multiple) | - |
-| `@fluxbase:rag-max-chunks` | Maximum chunks to retrieve | `5` |
-| `@fluxbase:rag-similarity-threshold` | Minimum similarity score (0.0-1.0) | `0.7` |
+| Annotation                           | Description                                          | Default |
+| ------------------------------------ | ---------------------------------------------------- | ------- |
+| `@fluxbase:knowledge-base`           | Name of knowledge base to use (can specify multiple) | -       |
+| `@fluxbase:rag-max-chunks`           | Maximum chunks to retrieve                           | `5`     |
+| `@fluxbase:rag-similarity-threshold` | Minimum similarity score (0.0-1.0)                   | `0.7`   |
 
 ### Method 2: Using the Admin API
 
 ```typescript
 // Link a knowledge base to a chatbot
-const { data, error } = await client.admin.ai.linkKnowledgeBase('chatbot-id', {
-  knowledge_base_id: 'kb-id',
-  priority: 1,         // Higher priority = searched first
-  max_chunks: 5,       // Max chunks from this KB
+const { data, error } = await client.admin.ai.linkKnowledgeBase("chatbot-id", {
+  knowledge_base_id: "kb-id",
+  priority: 1, // Higher priority = searched first
+  max_chunks: 5, // Max chunks from this KB
   similarity_threshold: 0.7,
-})
+});
 
 // Update link settings
-await client.admin.ai.updateChatbotKnowledgeBase('chatbot-id', 'kb-id', {
+await client.admin.ai.updateChatbotKnowledgeBase("chatbot-id", "kb-id", {
   max_chunks: 10,
   enabled: true,
-})
+});
 
 // List linked knowledge bases
-const { data: links } = await client.admin.ai.listChatbotKnowledgeBases('chatbot-id')
+const { data: links } =
+  await client.admin.ai.listChatbotKnowledgeBases("chatbot-id");
 
 // Unlink a knowledge base
-await client.admin.ai.unlinkKnowledgeBase('chatbot-id', 'kb-id')
+await client.admin.ai.unlinkKnowledgeBase("chatbot-id", "kb-id");
 ```
 
 ## How RAG Works in Chat
@@ -445,19 +448,21 @@ Test your knowledge base setup before deploying:
 ```typescript
 // Search a knowledge base directly
 const { data, error } = await client.admin.ai.searchKnowledgeBase(
-  'kb-id',
-  'how do I reset my password',
+  "kb-id",
+  "how do I reset my password",
   {
     max_chunks: 5,
     threshold: 0.5, // Lower threshold for testing
-  }
-)
+  },
+);
 
 if (data) {
-  console.log(`Found ${data.count} results:`)
+  console.log(`Found ${data.count} results:`);
   for (const result of data.results) {
-    console.log(`\n--- ${result.document_title} (${result.similarity.toFixed(3)}) ---`)
-    console.log(result.content)
+    console.log(
+      `\n--- ${result.document_title} (${result.similarity.toFixed(3)}) ---`,
+    );
+    console.log(result.content);
   }
 }
 ```
@@ -502,11 +507,11 @@ if (data) {
 
 ```typescript
 const { data: kb } = await client.admin.ai.createKnowledgeBase({
-  name: 'support-kb',
-  description: 'Customer support documentation',
+  name: "support-kb",
+  description: "Customer support documentation",
   chunk_size: 512,
   chunk_overlap: 50,
-})
+});
 ```
 
 ### Step 2: Add Support Documentation
@@ -514,7 +519,7 @@ const { data: kb } = await client.admin.ai.createKnowledgeBase({
 ```typescript
 // Add FAQ
 await client.admin.ai.addDocument(kb.id, {
-  title: 'Frequently Asked Questions',
+  title: "Frequently Asked Questions",
   content: `
     ## Account Questions
 
@@ -529,11 +534,11 @@ await client.admin.ai.addDocument(kb.id, {
     ### How do I update my payment method?
     Go to Settings > Billing > Payment Methods...
   `,
-})
+});
 
 // Add troubleshooting guide
 await client.admin.ai.addDocument(kb.id, {
-  title: 'Troubleshooting Guide',
+  title: "Troubleshooting Guide",
   content: `
     ## Common Issues
 
@@ -546,7 +551,7 @@ await client.admin.ai.addDocument(kb.id, {
     1. Verify your credentials
     2. Check if your account is active...
   `,
-})
+});
 ```
 
 ### Step 3: Create RAG-Enabled Chatbot
@@ -588,7 +593,7 @@ export default `You are a friendly customer support assistant.
 - Look up user's support tickets (use execute_sql)
 
 Current user ID: {{user_id}}
-`
+`;
 ```
 
 ### Step 4: Deploy and Test
@@ -604,11 +609,11 @@ curl -X POST http://localhost:8080/api/v1/admin/ai/chatbots/sync \
 const chat = client.ai.createChat({
   token: userJWT,
   onContent: (delta) => process.stdout.write(delta),
-})
+});
 
-await chat.connect()
-const convId = await chat.startChat('support-bot')
-chat.sendMessage(convId, 'How do I reset my password?')
+await chat.connect();
+const convId = await chat.startChat("support-bot");
+chat.sendMessage(convId, "How do I reset my password?");
 ```
 
 ## Monitoring & Analytics
@@ -616,26 +621,26 @@ chat.sendMessage(convId, 'How do I reset my password?')
 ### View Knowledge Base Stats
 
 ```typescript
-const { data: kb } = await client.admin.ai.getKnowledgeBase('kb-id')
+const { data: kb } = await client.admin.ai.getKnowledgeBase("kb-id");
 
-console.log('Documents:', kb.document_count)
-console.log('Total Chunks:', kb.total_chunks)
-console.log('Embedding Model:', kb.embedding_model)
+console.log("Documents:", kb.document_count);
+console.log("Total Chunks:", kb.total_chunks);
+console.log("Embedding Model:", kb.embedding_model);
 ```
 
 ### Track Document Processing
 
 ```typescript
-const { data: docs } = await client.admin.ai.listDocuments('kb-id')
+const { data: docs } = await client.admin.ai.listDocuments("kb-id");
 
 const stats = {
   total: docs.length,
-  indexed: docs.filter(d => d.status === 'indexed').length,
-  processing: docs.filter(d => d.status === 'processing').length,
-  failed: docs.filter(d => d.status === 'failed').length,
-}
+  indexed: docs.filter((d) => d.status === "indexed").length,
+  processing: docs.filter((d) => d.status === "processing").length,
+  failed: docs.filter((d) => d.status === "failed").length,
+};
 
-console.log('Document Stats:', stats)
+console.log("Document Stats:", stats);
 ```
 
 ## Troubleshooting
@@ -643,27 +648,31 @@ console.log('Document Stats:', stats)
 ### Documents Not Being Embedded
 
 **Check embedding provider configuration:**
+
 - Verify `FLUXBASE_AI_EMBEDDING_ENABLED=true`
 - Confirm client keys are valid
 - Check provider endpoint is accessible
 
 **Check document status:**
+
 ```typescript
-const { data: doc } = await client.admin.ai.getDocument('kb-id', 'doc-id')
-console.log('Status:', doc.status)
-console.log('Error:', doc.error_message)
+const { data: doc } = await client.admin.ai.getDocument("kb-id", "doc-id");
+console.log("Status:", doc.status);
+console.log("Error:", doc.error_message);
 ```
 
 ### Poor Search Results
 
 **Lower similarity threshold for testing:**
+
 ```typescript
-const { data } = await client.admin.ai.searchKnowledgeBase('kb-id', query, {
+const { data } = await client.admin.ai.searchKnowledgeBase("kb-id", query, {
   threshold: 0.3, // Lower threshold to see more results
-})
+});
 ```
 
 **Check chunk content:**
+
 - Ensure documents are properly chunked
 - Verify content is relevant to expected queries
 - Try different chunking strategies
@@ -671,12 +680,15 @@ const { data } = await client.admin.ai.searchKnowledgeBase('kb-id', query, {
 ### RAG Context Not Appearing
 
 **Verify chatbot has linked knowledge bases:**
+
 ```typescript
-const { data: links } = await client.admin.ai.listChatbotKnowledgeBases('chatbot-id')
-console.log('Linked KBs:', links)
+const { data: links } =
+  await client.admin.ai.listChatbotKnowledgeBases("chatbot-id");
+console.log("Linked KBs:", links);
 ```
 
 **Check annotation syntax:**
+
 ```typescript
 // Correct
 * @fluxbase:knowledge-base my-kb-name
@@ -684,6 +696,665 @@ console.log('Linked KBs:', links)
 // Wrong (no asterisk in multi-line comment)
 @fluxbase:knowledge-base my-kb-name
 ```
+
+## Advanced Features
+
+### Knowledge Graph (Entities & Relationships)
+
+Fluxbase includes a built-in knowledge graph system that extracts entities and relationships from documents, enabling more intelligent context retrieval.
+
+#### Entity Extraction
+
+Entities are automatically extracted from documents when they are indexed. The system supports:
+
+- **Persons**: Names with titles (Dr. John Smith, Mr. Jane Doe) and capitalized multi-word names
+- **Organizations**: Company names with suffixes (Inc, Corp, LLC) and known tech companies
+- **Locations**: Cities, US states, and countries
+- **Products**: Common tech products and services
+
+#### Relationship Extraction
+
+The system infers relationships between entities based on text patterns:
+
+- `works_at`: "John Smith works at Google"
+- `founded_by`: "Steve Jobs founded Apple Inc"
+- `located_in`: "Google headquarters in California"
+
+#### Querying Entities
+
+```typescript
+// Search entities by name
+const { data: entities } = await client.admin.ai.searchEntities(
+  "kb-id",
+  "Google",
+);
+
+// Get relationships for an entity
+const { data: relationships } = await client.admin.ai.getEntityRelationships(
+  "kb-id",
+  "entity-id",
+);
+
+// Find related entities (graph traversal)
+const { data: related } = await client.admin.ai.findRelatedEntities(
+  "kb-id",
+  "entity-id",
+  {
+    max_depth: 2,
+    relationship_types: ["works_at", "located_in"],
+  },
+);
+```
+
+#### Entity Types
+
+| Type           | Description              | Examples                            |
+| -------------- | ------------------------ | ----------------------------------- |
+| `person`       | People                   | John Smith, Dr. Jane Doe            |
+| `organization` | Companies, organizations | Google, Apple Inc, Microsoft        |
+| `location`     | Places, cities, states   | New York, California, San Francisco |
+| `product`      | Products and services    | iPhone, AWS, Kubernetes             |
+| `concept`      | Abstract concepts        | Machine Learning, REST API          |
+| `event`        | Events                   | WWDC 2024, Product Launch           |
+| `other`        | Other entities           | Custom categories                   |
+
+### Document Transformation Pipelines
+
+Transform document content before chunking and embedding using SQL functions or Edge Functions (Deno).
+
+#### Pipeline Types
+
+| Type            | Description       | Use Case                                     |
+| --------------- | ----------------- | -------------------------------------------- |
+| `none`          | No transformation | Default behavior                             |
+| `sql`           | SQL function      | Data cleaning, PII redaction, custom parsing |
+| `edge_function` | Deno/TypeScript   | Complex transformations, external API calls  |
+| `webhook`       | HTTP webhook      | Integration with external services           |
+
+#### SQL Transformation
+
+Create a SQL function to transform documents:
+
+```sql
+CREATE OR REPLACE FUNCTION transform_document(doc_content TEXT, doc_metadata JSONB)
+RETURNS TABLE(transformed_content TEXT, metadata JSONB) AS $$
+BEGIN
+    -- Example: Remove PII, normalize text
+    RETURN QUERY SELECT
+        regexp_replace(doc_content, '\b\d{3}-\d{2}-\d{4}\b', 'XXX-XX-XXXX', 'g') AS transformed_content,
+        doc_metadata || '{"transformed": true}' AS metadata;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+Configure the knowledge base to use it:
+
+```typescript
+const { data: kb } = await client.admin.ai.updateKnowledgeBase("kb-id", {
+  pipeline_type: "sql",
+  transformation_function: "transform_document",
+});
+```
+
+#### Edge Function Transformation
+
+Create a Deno edge function:
+
+```typescript
+// /edge-functions/transform-document.ts
+export default async function transformDocument(props: {
+  content: string;
+  metadata: Record<string, unknown>;
+}) {
+  const { content, metadata } = props;
+
+  // Example: Extract structured data, clean HTML, call external APIs
+  const cleaned = content
+    .replace(/<script[^>]*>.*?<\/script>/gs, "")
+    .replace(/<style[^>]*>.*?<\/style>/gs, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return {
+    transformed_content: cleaned,
+    metadata: {
+      ...metadata,
+      transformed: true,
+      cleaned_at: new Date().toISOString(),
+    },
+  };
+}
+```
+
+Configure:
+
+```typescript
+await client.admin.ai.updateKnowledgeBase("kb-id", {
+  pipeline_type: "edge_function",
+  pipeline_config: {
+    function_name: "transform-document",
+    timeout_ms: 5000,
+  },
+});
+```
+
+#### Chunking Override
+
+Functions can override the default chunking strategy:
+
+```typescript
+export default async function transformDocument(props: {
+  content: string;
+  metadata: Record<string, unknown>;
+}) {
+  return {
+    transformed_content: props.content,
+    chunking: {
+      chunk_size: 1024, // Override default
+      chunk_overlap: 100,
+    },
+  };
+}
+```
+
+### Quota Management
+
+Control resource usage with per-user and per-knowledge-base quotas.
+
+#### Quota Types
+
+| Resource  | Default User Quota | Default KB Quota |
+| --------- | ------------------ | ---------------- |
+| Documents | 10,000             | 1,000            |
+| Chunks    | 500,000            | 50,000           |
+| Storage   | 10 GB              | 1 GB             |
+
+#### Managing User Quotas
+
+```typescript
+// Set user quota
+await client.admin.ai.setUserQuota("user-id", {
+  max_documents: 5000,
+  max_chunks: 100000,
+  max_storage_bytes: 5 * 1024 * 1024 * 1024, // 5GB
+});
+
+// Get user quota usage
+const { data: usage } = await client.admin.ai.getUserQuotaUsage("user-id");
+
+console.log("Documents:", usage.documents_used, "/", usage.documents_limit);
+console.log("Can add document:", usage.can_add_document);
+```
+
+#### Quota Enforcement
+
+Quotas are enforced when adding documents:
+
+```typescript
+const { data, error } = await client.admin.ai.addDocument("kb-id", {
+  title: "My Document",
+  content: "...",
+});
+
+if (error && error.code === "quota_exceeded") {
+  console.error("Quota exceeded:", error.message);
+  // Error: quota exceeded for documents: used=1000, limit=1000
+}
+```
+
+### User-Owned Knowledge Bases
+
+Knowledge bases can be owned by users with visibility controls (private, shared, public).
+
+#### Visibility Levels
+
+| Level     | Access                  | Description                           |
+| --------- | ----------------------- | ------------------------------------- |
+| `private` | Owner only              | Default for user-created KBs          |
+| `shared`  | Explicit permissions    | Owner grants access to specific users |
+| `public`  | All authenticated users | Read-only access for everyone         |
+
+#### Creating User-Owned KBs
+
+```typescript
+// Create a private knowledge base (owned by current user)
+const { data: kb } = await client.ai.createKnowledgeBase({
+  name: "my-notes",
+  description: "My personal notes",
+  visibility: "private", // Owner only
+});
+
+// Create a shared knowledge base
+const { data: kb } = await client.ai.createKnowledgeBase({
+  name: "team-docs",
+  description: "Team documentation",
+  visibility: "shared", // Explicit permissions
+});
+
+// Create a public knowledge base
+const { data: kb } = await client.admin.ai.createKnowledgeBase({
+  name: "public-help",
+  description: "Public help docs",
+  visibility: "public", // All authenticated users
+});
+```
+
+#### Managing Permissions
+
+```typescript
+// Grant permission
+await client.admin.ai.grantKnowledgeBasePermission("kb-id", {
+  user_id: "other-user-id",
+  permission: "editor", // 'viewer' | 'editor' | 'owner'
+});
+
+// Revoke permission
+await client.admin.ai.revokeKnowledgeBasePermission("kb-id", "other-user-id");
+
+// List permissions
+const { data: permissions } =
+  await client.admin.ai.listKnowledgeBasePermissions("kb-id");
+```
+
+#### Permission Levels
+
+| Level    | Capabilities                               |
+| -------- | ------------------------------------------ |
+| `viewer` | Read-only access to KB and documents       |
+| `editor` | Read + write (add/update/delete documents) |
+| `owner`  | Full control + manage permissions          |
+
+### Enhanced Chatbot Integration
+
+Knowledge bases can be linked to chatbots with advanced options:
+
+#### Tiered Access
+
+Retrieve chunks from knowledge bases in priority order:
+
+```typescript
+// Link KB with priority
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "priority-kb-id",
+  access_level: "tiered",
+  priority: 1, // Lower number = higher priority
+  max_chunks: 5,
+});
+
+// Link secondary KB
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "secondary-kb-id",
+  access_level: "tiered",
+  priority: 10,
+  max_chunks: 3,
+});
+```
+
+#### Filtered Access
+
+Retrieve chunks that match a filter expression:
+
+```typescript
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "kb-id",
+  access_level: "filtered",
+  filter_expression: {
+    category: "technical", // Only retrieve technical docs
+    language: "en",
+  },
+});
+```
+
+#### Intent-Based Routing
+
+Route queries to specific knowledge bases based on keywords:
+
+```typescript
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "sales-kb-id",
+  intent_keywords: ["pricing", "sales", "quote", "purchase"],
+});
+
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "support-kb-id",
+  intent_keywords: ["help", "troubleshooting", "error", "bug"],
+});
+```
+
+## Entity Extraction
+
+### Overview
+
+Fluxbase automatically extracts entities and relationships from documents when they are processed. This enables knowledge graph capabilities and improves search relevance.
+
+### Entity Types
+
+The following entity types are automatically extracted from documents:
+
+| Type               | Description                       | Examples                                       |
+| ------------------ | --------------------------------- | ---------------------------------------------- |
+| **person**         | People and names                  | John Smith, Dr. Jane Doe, CEO Bob              |
+| **organization**   | Companies and organizations       | Google, Microsoft, Corp, LLC                   |
+| **location**       | Geographic locations              | New York, London, Paris, California            |
+| **concept**        | Abstract concepts and ideas       | Machine Learning, Democracy                    |
+| **product**        | Products and services             | iPhone, AWS, Docker, Kubernetes                |
+| **event**          | Events and time-based occurrences | Olympics, World War II                         |
+| **table**          | Database tables                   | `auth.users`, `public.orders`                  |
+| **url**            | URLs and links                    | `https://example.com`, `www.fluxbase.com/docs` |
+| **api_endpoint**   | REST/GraphQL/RPC endpoints        | `POST /api/v1/users`, `GET /api/v1/auth/...`   |
+| **datetime**       | Dates, times, durations           | `2025-02-18`, `2h 30m`, `next week`            |
+| **code_reference** | File paths, repos, code snippets  | `internal/ai/kb.go`, `github.com/user/repo`    |
+| **error**          | Error codes, exceptions           | `ErrNotFound`, `404 Unauthorized`              |
+
+### Relationship Types
+
+Entities are connected by the following relationship types:
+
+| Type            | Description                       | Example                          |
+| --------------- | --------------------------------- | -------------------------------- |
+| **works_at**    | Person works at organization      | "John works at Google"           |
+| **located_in**  | Entity located in location        | "Office in San Francisco"        |
+| **founded_by**  | Organization founded by person    | "Apple founded by Steve Jobs"    |
+| **owns**        | Ownership relationship            | "Company owns product"           |
+| **part_of**     | Hierarchical/part-of relationship | "Chapter is part of book"        |
+| **related_to**  | General relationship              | "Concept A related to Concept B" |
+| **knows**       | Person knows person               | "Alice knows Bob"                |
+| **foreign_key** | Database foreign key              | `orders.user_id → users.id`      |
+| **depends_on**  | Dependency relationship           | "View depends on table"          |
+
+### Automatic Extraction
+
+Entities and relationships are extracted automatically when documents are processed:
+
+1. Documents are uploaded to a knowledge base
+2. Document content is chunked for embedding
+3. Rule-based entity extraction identifies entities and relationships
+4. Entities are stored in the knowledge graph
+5. Document-entity mentions are tracked
+
+### Knowledge Graph
+
+The knowledge graph enables:
+
+- **Graph Traversal**: Find related entities across multiple hops (up to depth 5)
+- **Entity Search**: Fuzzy search for entities by name
+- **Relationship Queries**: Get all relationships for an entity
+- **Document Links**: See which documents mention each entity
+
+### Use Case: Location Tracking Example
+
+For applications tracking user location data with JSON geodata:
+
+```json
+// Document content (location visits)
+[
+  {
+    "user_id": "123",
+    "location": { "lat": 40.7128, "lng": -74.006, "city": "New York" },
+    "timestamp": "2025-02-18T10:00:00Z"
+  },
+  {
+    "user_id": "456",
+    "location": { "lat": 51.5074, "lng": -0.1278, "city": "London" },
+    "timestamp": "2025-02-18T11:00:00Z"
+  }
+]
+```
+
+**What Gets Extracted:**
+
+- Entities: "New York" (location), "London" (location), "2025-02-18" (datetime)
+- Documents: JSON records stored as searchable chunks
+- Embeddings: Text representation enables semantic search
+
+## Database Table Export
+
+### Overview
+
+Export database tables as knowledge base documents with embedded schema information. This enables AI assistants to understand your database structure and answer schema-related questions.
+
+### Exporting Tables
+
+#### Using the Admin Dashboard
+
+1. Navigate to **Knowledge Bases** → Select a knowledge base
+2. Click the **Tables** tab
+3. Filter by schema (optional)
+4. Click **Export** on a table
+5. Configure export options:
+   - Include foreign keys
+   - Include indexes
+   - Include sample rows
+
+#### Using the API
+
+```typescript
+import { knowledgeBasesApi } from "@/lib/api";
+
+// List all exportable tables
+const tables = await knowledgeBasesApi.listTables("auth");
+
+// Export a table
+const result = await knowledgeBasesApi.exportTable("kb-id", {
+  schema: "auth",
+  table: "users",
+  include_foreign_keys: true,
+  include_indexes: true,
+  include_sample_rows: false,
+});
+
+// Returns:
+// {
+//   document_id: "uuid",
+//   entity_id: "uuid",
+//   relationship_ids: ["uuid", "uuid"]
+// }
+```
+
+#### API Endpoints
+
+```bash
+# List exportable tables
+GET /api/v1/admin/ai/tables?schema=auth
+
+# Export table to knowledge base
+POST /api/v1/admin/ai/knowledge-bases/{id}/tables/export
+Content-Type: application/json
+
+{
+  "schema": "auth",
+  "table": "users",
+  "include_foreign_keys": true,
+  "include_indexes": true,
+  "include_sample_rows": false
+}
+```
+
+### What Gets Created
+
+For each exported table, three artifacts are created:
+
+1. **Document**: Markdown schema documentation
+
+   ```markdown
+   # Table: auth.users
+
+   ## Description
+
+   Database table in schema `auth`.
+
+   **Primary Key:** id
+
+   ## Columns
+
+   | Column | Type | Nullable | Default           |
+   | ------ | ---- | -------- | ----------------- |
+   | id     | uuid | NOT NULL | gen_random_uuid() |
+   | email  | text | NOT NULL |                   |
+
+   ...
+   ```
+
+2. **Entity**: Graph representation
+
+   ```json
+   {
+     "entity_type": "table",
+     "name": "auth.users",
+     "metadata": {
+       "schema": "auth",
+       "table": "users",
+       "column_count": 15,
+       "primary_key": ["id"]
+     }
+   }
+   ```
+
+3. **Relationships**: Foreign key connections
+   ```json
+   {
+     "relationship_type": "foreign_key",
+     "source_entity_id": "table-entity-id",
+     "target_entity_id": "referenced-table-entity-id",
+     "metadata": {
+       "column": "user_id",
+       "referenced_column": "id"
+     }
+   }
+   ```
+
+### Use Cases
+
+- **Schema Documentation**: Automatically document your database structure
+- **AI Assistant Context**: Help AI understand your database schema
+- **Relationship Discovery**: Explore table relationships through the knowledge graph
+- **Onboarding**: Quickly share database structure with team members
+
+## MCP Tools for Knowledge Graph
+
+### Overview
+
+Fluxbase provides Model Context Protocol (MCP) tools for interacting with the knowledge graph from AI assistants.
+
+### Available Tools
+
+#### 1. query_knowledge_graph
+
+Query entities in the knowledge graph with filtering:
+
+```json
+{
+  "name": "query_knowledge_graph",
+  "arguments": {
+    "knowledge_base_id": "kb-uuid",
+    "entity_type": "location",
+    "search_query": "San Francisco",
+    "limit": 50,
+    "include_relationships": true
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "knowledge_base_id": "kb-uuid",
+  "entities": [
+    {
+      "id": "entity-uuid",
+      "type": "location",
+      "name": "San Francisco",
+      "canonical_name": "San Francisco",
+      "relationships": [...]
+    }
+  ],
+  "count": 1
+}
+```
+
+#### 2. find_related_entities
+
+Find entities related to a starting entity using graph traversal:
+
+```json
+{
+  "name": "find_related_entities",
+  "arguments": {
+    "knowledge_base_id": "kb-uuid",
+    "entity_id": "entity-uuid",
+    "max_depth": 2,
+    "relationship_types": ["works_at", "located_in"],
+    "limit": 100
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "knowledge_base_id": "kb-uuid",
+  "starting_entity_id": "entity-uuid",
+  "related_entities": [
+    {
+      "entity_id": "related-uuid",
+      "entity_type": "organization",
+      "name": "Google",
+      "depth": 1,
+      "relationship_type": "works_at"
+    }
+  ],
+  "count": 5
+}
+```
+
+#### 3. browse_knowledge_graph
+
+Browse the knowledge graph from a starting entity:
+
+```json
+{
+  "name": "browse_knowledge_graph",
+  "arguments": {
+    "knowledge_base_id": "kb-uuid",
+    "start_entity": "entity-id-or-name",
+    "direction": "both",
+    "limit": 50
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "knowledge_base_id": "kb-uuid",
+  "entity": {
+    "id": "entity-uuid",
+    "type": "person",
+    "name": "John Smith"
+  },
+  "neighborhood": {
+    "outgoing": [
+      {
+        "id": "rel-uuid",
+        "type": "works_at",
+        "target_entity": {
+          "id": "target-uuid",
+          "type": "organization",
+          "name": "Google"
+        }
+      }
+    ],
+    "incoming": [...]
+  }
+}
+```
+
+### Tool Scopes
+
+Knowledge graph tools require the `read:vectors` scope for authorization.
 
 ## Next Steps
 

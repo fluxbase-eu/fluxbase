@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
 )
@@ -32,7 +33,17 @@ func NewLogService(cfg LogStorageConfig, db *database.Connection, fileStorage Pr
 		if db == nil {
 			return nil, fmt.Errorf("database connection required for postgres log backend")
 		}
-		storage = NewPostgresLogStorage(db)
+		// Try TimescaleDB first, fall back to regular PostgreSQL if not available
+		tsdbCfg := TimescaleDBConfig{
+			Enabled:       true,
+			Compressed:    true,
+			CompressAfter: 168 * time.Hour, // 7 days
+		}
+		storage, err = newTimescaleDBLogStorage(tsdbCfg, db)
+		if err != nil {
+			// TimescaleDB not available, fall back to regular PostgreSQL
+			storage = NewPostgresLogStorage(db)
+		}
 
 	case "s3":
 		if fileStorage == nil {
@@ -53,8 +64,60 @@ func NewLogService(cfg LogStorageConfig, db *database.Connection, fileStorage Pr
 			return nil, fmt.Errorf("failed to initialize local log storage: %w", err)
 		}
 
+	case "elasticsearch":
+		storage, err = newElasticsearchLogStorage(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize elasticsearch log storage: %w", err)
+		}
+
+	case "opensearch":
+		storage, err = newOpenSearchLogStorage(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize opensearch log storage: %w", err)
+		}
+
+	case "clickhouse":
+		storage, err = newClickHouseLogStorage(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize clickhouse log storage: %w", err)
+		}
+
+	case "timescaledb":
+		if db == nil {
+			return nil, fmt.Errorf("database connection required for timescaledb log backend")
+		}
+		tsdbCfg := TimescaleDBConfig{
+			Enabled:       cfg.TimescaleDBEnabled,
+			Compressed:    cfg.TimescaleDBCompression,
+			CompressAfter: cfg.TimescaleDBCompressAfter,
+		}
+		storage, err = newTimescaleDBLogStorage(tsdbCfg, db)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize timescaledb log storage: %w", err)
+		}
+
+	case "postgres-timescaledb":
+		if db == nil {
+			return nil, fmt.Errorf("database connection required for postgres-timescaledb log backend")
+		}
+		tsdbCfg := TimescaleDBConfig{
+			Enabled:       cfg.TimescaleDBEnabled,
+			Compressed:    cfg.TimescaleDBCompression,
+			CompressAfter: cfg.TimescaleDBCompressAfter,
+		}
+		storage, err = newPostgresTimescaleDBStorage(tsdbCfg, db)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize postgres-timescaledb log storage: %w", err)
+		}
+
+	case "loki":
+		storage, err = newLokiLogStorage(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize loki log storage: %w", err)
+		}
+
 	default:
-		return nil, fmt.Errorf("unsupported log storage backend: %s (supported: postgres, s3, local)", cfg.Backend)
+		return nil, fmt.Errorf("unsupported log storage backend: %s (supported: postgres, postgres-timescaledb, timescaledb, elasticsearch, opensearch, clickhouse, loki, s3, local)", cfg.Backend)
 	}
 
 	return &LogService{
@@ -71,6 +134,36 @@ func (s *LogService) GetBackendName() string {
 // IsPostgres returns true if the log storage backend is PostgreSQL.
 func (s *LogService) IsPostgres() bool {
 	return s.Storage.Name() == "postgres"
+}
+
+// IsPostgresTimescaleDB returns true if the log storage backend is PostgreSQL with TimescaleDB.
+func (s *LogService) IsPostgresTimescaleDB() bool {
+	return s.Storage.Name() == "postgres-timescaledb"
+}
+
+// IsTimescaleDB returns true if the log storage backend is TimescaleDB.
+func (s *LogService) IsTimescaleDB() bool {
+	return s.Storage.Name() == "timescaledb"
+}
+
+// IsElasticsearch returns true if the log storage backend is Elasticsearch.
+func (s *LogService) IsElasticsearch() bool {
+	return s.Storage.Name() == "elasticsearch"
+}
+
+// IsOpenSearch returns true if the log storage backend is OpenSearch.
+func (s *LogService) IsOpenSearch() bool {
+	return s.Storage.Name() == "opensearch"
+}
+
+// IsClickHouse returns true if the log storage backend is ClickHouse.
+func (s *LogService) IsClickHouse() bool {
+	return s.Storage.Name() == "clickhouse"
+}
+
+// IsLoki returns true if the log storage backend is Loki.
+func (s *LogService) IsLoki() bool {
+	return s.Storage.Name() == "loki"
 }
 
 // IsS3 returns true if the log storage backend is S3.

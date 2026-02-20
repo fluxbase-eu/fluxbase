@@ -350,7 +350,7 @@ func (s *PasswordResetService) RequestPasswordReset(ctx context.Context, email s
 
 	// Send email with plaintext token
 	if err := s.emailSender.SendPasswordReset(ctx, email, resetToken.PlaintextToken, link); err != nil {
-		return fmt.Errorf("%w: %v", ErrEmailSendFailed, err)
+		return fmt.Errorf("%w: %w", ErrEmailSendFailed, err)
 	}
 
 	return nil

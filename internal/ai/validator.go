@@ -142,12 +142,10 @@ func (v *SQLValidator) Validate(sql string) *ValidationResult {
 					result.Errors = append(result.Errors, fmt.Sprintf("Table not allowed: %s", table))
 				}
 			}
-		} else {
+		} else if len(v.allowedTables) > 0 && !v.allowedTables[tableLower] {
 			// No schema prefix - check against allowed tables
-			if len(v.allowedTables) > 0 && !v.allowedTables[tableLower] {
-				result.Valid = false
-				result.Errors = append(result.Errors, fmt.Sprintf("Table not allowed: %s", table))
-			}
+			result.Valid = false
+			result.Errors = append(result.Errors, fmt.Sprintf("Table not allowed: %s", table))
 		}
 	}
 
@@ -201,8 +199,7 @@ func (v *SQLValidator) extractTables(stmt *pg_query.Node) []string {
 			return
 		}
 
-		switch n := node.Node.(type) {
-		case *pg_query.Node_RangeVar:
+		if n, ok := node.Node.(*pg_query.Node_RangeVar); ok {
 			if n.RangeVar != nil {
 				tableName := n.RangeVar.Relname
 				if n.RangeVar.Schemaname != "" {

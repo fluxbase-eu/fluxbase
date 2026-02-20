@@ -201,8 +201,9 @@ func runGraphQLMutation(cmd *cobra.Command, args []string) error {
 func executeGraphQL(cmd *cobra.Command, args []string, operationType string) error {
 	// Get the query/mutation
 	var query string
+	//nolint:gocritic
 	if graphqlFile != "" {
-		content, err := os.ReadFile(graphqlFile) //nolint:gosec // CLI tool reads user-provided file path
+		content, err := os.ReadFile(graphqlFile)
 		if err != nil {
 			return fmt.Errorf("failed to read file: %w", err)
 		}

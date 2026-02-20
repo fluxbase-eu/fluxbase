@@ -488,9 +488,7 @@ func TestSendValidationError(t *testing.T) {
 
 func TestSendMissingAuth(t *testing.T) {
 	app := fiber.New()
-	app.Get("/test", func(c fiber.Ctx) error {
-		return SendMissingAuth(c)
-	})
+	app.Get("/test", SendMissingAuth)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
@@ -506,9 +504,7 @@ func TestSendMissingAuth(t *testing.T) {
 
 func TestSendInvalidToken(t *testing.T) {
 	app := fiber.New()
-	app.Get("/test", func(c fiber.Ctx) error {
-		return SendInvalidToken(c)
-	})
+	app.Get("/test", SendInvalidToken)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
@@ -524,9 +520,7 @@ func TestSendInvalidToken(t *testing.T) {
 
 func TestSendTokenRevoked(t *testing.T) {
 	app := fiber.New()
-	app.Get("/test", func(c fiber.Ctx) error {
-		return SendTokenRevoked(c)
-	})
+	app.Get("/test", SendTokenRevoked)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
@@ -542,9 +536,7 @@ func TestSendTokenRevoked(t *testing.T) {
 
 func TestSendInsufficientPermissions(t *testing.T) {
 	app := fiber.New()
-	app.Get("/test", func(c fiber.Ctx) error {
-		return SendInsufficientPermissions(c)
-	})
+	app.Get("/test", SendInsufficientPermissions)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
@@ -560,9 +552,7 @@ func TestSendInsufficientPermissions(t *testing.T) {
 
 func TestSendAdminRequired(t *testing.T) {
 	app := fiber.New()
-	app.Get("/test", func(c fiber.Ctx) error {
-		return SendAdminRequired(c)
-	})
+	app.Get("/test", SendAdminRequired)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
@@ -578,9 +568,7 @@ func TestSendAdminRequired(t *testing.T) {
 
 func TestSendInvalidBody(t *testing.T) {
 	app := fiber.New()
-	app.Get("/test", func(c fiber.Ctx) error {
-		return SendInvalidBody(c)
-	})
+	app.Get("/test", SendInvalidBody)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)

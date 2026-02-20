@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -442,7 +443,7 @@ func (h *OAuthHandler) getProviderConfig(ctx context.Context, providerName strin
 		&authURL, &tokenURL, &isCustom, &allowAppLogin, &isEncrypted,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("OAuth provider '%s' not found or disabled", providerName)
 	}
 	if err != nil {
@@ -593,13 +594,13 @@ func (h *OAuthHandler) createOrLinkOAuthUser(
 	isNewUser := false
 
 	// pgx returns error for no rows, not sql.ErrNoRows
-	if err != nil && err.Error() == "no rows in result set" || err == sql.ErrNoRows {
+	if err != nil && err.Error() == "no rows in result set" || errors.Is(err, sql.ErrNoRows) {
 		// Check if user exists with this email
 		var existingUserID uuid.UUID
 		query = "SELECT id FROM auth.users WHERE email = $1"
 		err = tx.QueryRow(ctx, query, email).Scan(&existingUserID)
 
-		if err != nil && (err.Error() == "no rows in result set" || err == sql.ErrNoRows) {
+		if err != nil && (err.Error() == "no rows in result set" || errors.Is(err, sql.ErrNoRows)) {
 			// Create new user
 			userID = uuid.New()
 			query = `
@@ -611,11 +612,14 @@ func (h *OAuthHandler) createOrLinkOAuthUser(
 				return nil, false, fmt.Errorf("failed to create user: %w", err)
 			}
 			isNewUser = true
-		} else if err != nil {
-			return nil, false, fmt.Errorf("failed to check existing user: %w", err)
 		} else {
-			// Link to existing user
-			userID = existingUserID
+			switch {
+			case err != nil:
+				return nil, false, fmt.Errorf("failed to check existing user: %w", err)
+			default:
+				// Link to existing user
+				userID = existingUserID
+			}
 		}
 
 		// Create OAuth link

@@ -147,17 +147,38 @@ func (le *LeaderElector) tryAcquireLock(onBecomeLeader, onLoseLeadership func())
 }
 
 // releaseLock releases the advisory lock if held.
+//
+// Note: PostgreSQL advisory locks are session-level and are automatically
+// released when the connection that acquired them closes. With connection
+// pooling, we cannot guarantee that the same connection will be used to
+// release the lock that acquired it. Therefore:
+//
+// 1. We attempt to release the lock but handle failures gracefully
+// 2. The lock will be automatically released when the connection closes
+// 3. Leadership state is tracked in memory via isLeader
+// 4. If this instance was the leader, another instance will acquire the lock
 func (le *LeaderElector) releaseLock() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	var released bool
 	err := le.pool.QueryRow(ctx, "SELECT pg_advisory_unlock($1)", le.lockID).Scan(&released)
+
+	// Clear local leadership state regardless of unlock result
+	le.isLeaderMu.Lock()
+	wasLeader := le.isLeader
+	le.isLeader = false
+	le.isLeaderMu.Unlock()
+
 	if err != nil {
-		log.Error().
+		// Connection may be closed or we may be using a different connection from the pool
+		// This is expected with connection pooling - the lock will be auto-released
+		// when the original connection closes
+		log.Debug().
 			Err(err).
 			Str("lock", le.lockName).
-			Msg("Failed to release advisory lock")
+			Bool("was_leader", wasLeader).
+			Msg("Advisory lock release failed (connection may have closed, lock auto-released)")
 		return
 	}
 
@@ -165,11 +186,12 @@ func (le *LeaderElector) releaseLock() {
 		log.Info().
 			Str("lock", le.lockName).
 			Msg("Released leader lock")
+	} else {
+		// Lock was not held by this session (connection was recycled)
+		log.Debug().
+			Str("lock", le.lockName).
+			Msg("Advisory lock not held by current session (connection was recycled)")
 	}
-
-	le.isLeaderMu.Lock()
-	le.isLeader = false
-	le.isLeaderMu.Unlock()
 }
 
 // TryAcquireOnce tries to acquire the lock once and returns immediately.

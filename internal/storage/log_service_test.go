@@ -11,45 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockLogStorage implements LogStorage for testing
-type mockLogStorage struct {
-	name   string
-	closed bool
-}
-
-func (m *mockLogStorage) Name() string {
-	return m.name
-}
-
-func (m *mockLogStorage) Health(ctx context.Context) error {
-	return nil
-}
-
-func (m *mockLogStorage) Write(ctx context.Context, entries []*LogEntry) error {
-	return nil
-}
-
-func (m *mockLogStorage) Query(ctx context.Context, opts LogQueryOptions) (*LogQueryResult, error) {
-	return &LogQueryResult{}, nil
-}
-
-func (m *mockLogStorage) GetExecutionLogs(ctx context.Context, executionID string, afterLine int) ([]*LogEntry, error) {
-	return nil, nil
-}
-
-func (m *mockLogStorage) Stats(ctx context.Context) (*LogStats, error) {
-	return &LogStats{}, nil
-}
-
-func (m *mockLogStorage) Delete(ctx context.Context, opts LogQueryOptions) (int64, error) {
-	return 0, nil
-}
-
-func (m *mockLogStorage) Close() error {
-	m.closed = true
-	return nil
-}
-
 func TestNewLogService(t *testing.T) {
 	t.Run("errors for postgres backend without db", func(t *testing.T) {
 		cfg := LogStorageConfig{
@@ -101,7 +62,7 @@ func TestNewLogService(t *testing.T) {
 		svc, err := NewLogService(cfg, nil, nil)
 		require.NoError(t, err)
 		require.NotNil(t, svc)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		assert.True(t, svc.IsLocal())
 		assert.False(t, svc.IsPostgres())
@@ -146,7 +107,7 @@ func TestLogService_Methods(t *testing.T) {
 
 	svc, err := NewLogService(cfg, nil, nil)
 	require.NoError(t, err)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	t.Run("GetBackendName returns correct name", func(t *testing.T) {
 		assert.Equal(t, "local", svc.GetBackendName())
@@ -191,7 +152,7 @@ func TestLogService_Defaults(t *testing.T) {
 
 	svc, err := NewLogService(cfg, nil, nil)
 	require.NoError(t, err)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	t.Run("BatchSize returns default when zero", func(t *testing.T) {
 		assert.Equal(t, 100, svc.BatchSize())
@@ -352,7 +313,7 @@ func TestLocalLogStorageIntegration(t *testing.T) {
 
 	storage, err := NewLocalLogStorage(tmpDir)
 	require.NoError(t, err)
-	defer storage.Close()
+	defer func() { _ = storage.Close() }()
 
 	ctx := context.Background()
 

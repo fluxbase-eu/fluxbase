@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -94,7 +95,8 @@ func setupStorageTestServer(t *testing.T) (*fiber.App, string, *database.Connect
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
-			if e, ok := err.(*fiber.Error); ok {
+			var e *fiber.Error
+			if errors.As(err, &e) {
 				code = e.Code
 			}
 			return c.Status(code).JSON(fiber.Map{
@@ -142,7 +144,7 @@ func createTestBucket(t *testing.T, app *fiber.App, bucketName string) {
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err := app.Test(req)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		// Ignore whether delete succeeded or not (bucket might not exist)
 	}
 
@@ -150,7 +152,7 @@ func createTestBucket(t *testing.T, app *fiber.App, bucketName string) {
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/storage/buckets/"+bucketName, nil)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Accept both 201 (created) and 409 (already exists) as success
 	// 409 is acceptable because we tried to delete first, but the delete might have failed
@@ -168,7 +170,7 @@ func uploadTestFile(t *testing.T, app *fiber.App, bucket, path, content string) 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/storage/"+bucket+"/"+path, nil)
 	resp, err := app.Test(req)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		// Ignore whether delete succeeded or not (file might not exist)
 	}
 
@@ -186,7 +188,7 @@ func uploadTestFile(t *testing.T, app *fiber.App, bucket, path, content string) 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Accept both 201 (created) and 200 (updated/replaced) as success
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {

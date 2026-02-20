@@ -259,7 +259,7 @@ func TestStorageS3ListFiles(t *testing.T) {
 		writer := multipart.NewWriter(body)
 		part, err := writer.CreateFormFile("file", fileName)
 		require.NoError(t, err)
-		_, err = part.Write([]byte(fmt.Sprintf("S3 Content %d", i)))
+		_, err = fmt.Fprintf(part, "S3 Content %d", i)
 		require.NoError(t, err)
 		err = writer.Close()
 		require.NoError(t, err)

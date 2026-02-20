@@ -94,54 +94,6 @@ func (m *serviceTestMockStorage) getEntries() []*storage.LogEntry {
 	return result
 }
 
-// mockPubSubForService implements pubsub.PubSub for testing
-type mockPubSubForService struct {
-	mu       sync.Mutex
-	messages []struct {
-		channel string
-		payload []byte
-	}
-	closed bool
-}
-
-func newMockPubSubForService() *mockPubSubForService {
-	return &mockPubSubForService{
-		messages: make([]struct {
-			channel string
-			payload []byte
-		}, 0),
-	}
-}
-
-func (m *mockPubSubForService) Publish(ctx context.Context, channel string, payload []byte) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.messages = append(m.messages, struct {
-		channel string
-		payload []byte
-	}{channel: channel, payload: payload})
-	return nil
-}
-
-type pubsubMessage struct {
-	Channel string
-	Payload []byte
-}
-
-func (m *mockPubSubForService) Subscribe(ctx context.Context, channel string) (<-chan pubsubMessage, error) {
-	ch := make(chan pubsubMessage)
-	go func() {
-		<-ctx.Done()
-		close(ch)
-	}()
-	return ch, nil
-}
-
-func (m *mockPubSubForService) Close() error {
-	m.closed = true
-	return nil
-}
-
 // createTestService creates a Service for testing with mocked dependencies
 func createTestService(cfg *config.LoggingConfig) (*Service, *serviceTestMockStorage) {
 	mockStorage := newServiceTestMockStorage()
@@ -155,7 +107,7 @@ func createTestService(cfg *config.LoggingConfig) (*Service, *serviceTestMockSto
 	}
 
 	// Create a batcher with our mock
-	s.batcher = NewBatcher(
+	s.batcher = storage.NewBatcher(
 		10,                   // batch size
 		100*time.Millisecond, // flush interval
 		1000,                 // buffer size
@@ -171,7 +123,7 @@ func TestService_Log(t *testing.T) {
 	t.Run("logs entry with generated ID", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		entry := &storage.LogEntry{
 			Category: storage.LogCategorySystem,
@@ -194,7 +146,7 @@ func TestService_Log(t *testing.T) {
 	t.Run("preserves existing ID", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		existingID := uuid.New()
 		entry := &storage.LogEntry{
@@ -205,7 +157,7 @@ func TestService_Log(t *testing.T) {
 		}
 
 		svc.Log(context.Background(), entry)
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -215,7 +167,7 @@ func TestService_Log(t *testing.T) {
 	t.Run("sets timestamp if zero", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		entry := &storage.LogEntry{
 			Category: storage.LogCategorySystem,
@@ -225,7 +177,7 @@ func TestService_Log(t *testing.T) {
 
 		before := time.Now()
 		svc.Log(context.Background(), entry)
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 		after := time.Now()
 
 		entries := mockStorage.getEntries()
@@ -238,7 +190,7 @@ func TestService_Log(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
 
-		svc.Close()
+		_ = svc.Close()
 
 		entry := &storage.LogEntry{
 			Category: storage.LogCategorySystem,
@@ -257,7 +209,7 @@ func TestService_Log(t *testing.T) {
 func TestService_LogSystem(t *testing.T) {
 	cfg := &config.LoggingConfig{}
 	svc, mockStorage := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	fields := map[string]any{
 		"component":  "test-component",
@@ -267,7 +219,7 @@ func TestService_LogSystem(t *testing.T) {
 	}
 
 	svc.LogSystem(context.Background(), storage.LogLevelInfo, "System log test", fields)
-	svc.Flush(context.Background())
+	_ = svc.Flush(context.Background())
 
 	entries := mockStorage.getEntries()
 	require.Len(t, entries, 1)
@@ -285,7 +237,7 @@ func TestService_LogHTTP(t *testing.T) {
 	t.Run("logs HTTP request with info level for 2xx", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		fields := &storage.HTTPLogFields{
 			Method:        "GET",
@@ -300,7 +252,7 @@ func TestService_LogHTTP(t *testing.T) {
 		}
 
 		svc.LogHTTP(context.Background(), fields, "req-123", "trace-456", "user-789", "192.168.1.1")
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -318,7 +270,7 @@ func TestService_LogHTTP(t *testing.T) {
 	t.Run("logs HTTP request with warn level for 4xx", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		fields := &storage.HTTPLogFields{
 			Method:     "POST",
@@ -328,7 +280,7 @@ func TestService_LogHTTP(t *testing.T) {
 		}
 
 		svc.LogHTTP(context.Background(), fields, "", "", "", "")
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -338,7 +290,7 @@ func TestService_LogHTTP(t *testing.T) {
 	t.Run("logs HTTP request with error level for 5xx", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		fields := &storage.HTTPLogFields{
 			Method:     "GET",
@@ -348,7 +300,7 @@ func TestService_LogHTTP(t *testing.T) {
 		}
 
 		svc.LogHTTP(context.Background(), fields, "", "", "", "")
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -360,7 +312,7 @@ func TestService_LogSecurity(t *testing.T) {
 	t.Run("logs successful security event", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		fields := &storage.SecurityLogFields{
 			EventType: "login_success",
@@ -374,7 +326,7 @@ func TestService_LogSecurity(t *testing.T) {
 		}
 
 		svc.LogSecurity(context.Background(), fields, "req-123", "user-456", "192.168.1.1")
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -389,7 +341,7 @@ func TestService_LogSecurity(t *testing.T) {
 	t.Run("logs failed security event with warn level", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		fields := &storage.SecurityLogFields{
 			EventType: "login_failed",
@@ -398,7 +350,7 @@ func TestService_LogSecurity(t *testing.T) {
 		}
 
 		svc.LogSecurity(context.Background(), fields, "", "", "")
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -409,7 +361,7 @@ func TestService_LogSecurity(t *testing.T) {
 func TestService_LogExecution(t *testing.T) {
 	cfg := &config.LoggingConfig{}
 	svc, mockStorage := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	fields := map[string]any{
 		"request_id": "req-123",
@@ -418,7 +370,7 @@ func TestService_LogExecution(t *testing.T) {
 	}
 
 	svc.LogExecution(context.Background(), "exec-001", "function", storage.LogLevelDebug, "Function started", fields)
-	svc.Flush(context.Background())
+	_ = svc.Flush(context.Background())
 
 	entries := mockStorage.getEntries()
 	require.Len(t, entries, 1)
@@ -437,7 +389,7 @@ func TestService_LogExecution(t *testing.T) {
 func TestService_LogAI(t *testing.T) {
 	cfg := &config.LoggingConfig{}
 	svc, mockStorage := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	fields := map[string]any{
 		"model":       "gpt-4",
@@ -447,7 +399,7 @@ func TestService_LogAI(t *testing.T) {
 	}
 
 	svc.LogAI(context.Background(), fields, "req-123", "user-456")
-	svc.Flush(context.Background())
+	_ = svc.Flush(context.Background())
 
 	entries := mockStorage.getEntries()
 	require.Len(t, entries, 1)
@@ -467,7 +419,7 @@ func TestService_LogCustom(t *testing.T) {
 			CustomCategories: []string{"metrics", "audit", "analytics"},
 		}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		fields := map[string]any{
 			"component":  "metrics",
@@ -476,7 +428,7 @@ func TestService_LogCustom(t *testing.T) {
 		}
 
 		svc.LogCustom(context.Background(), "metrics", storage.LogLevelInfo, "Custom metric log", fields)
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -492,10 +444,10 @@ func TestService_LogCustom(t *testing.T) {
 			CustomCategories: []string{"metrics", "audit"},
 		}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		svc.LogCustom(context.Background(), "invalid", storage.LogLevelInfo, "Test", nil)
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -507,10 +459,10 @@ func TestService_LogCustom(t *testing.T) {
 			CustomCategories: []string{}, // No restrictions
 		}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		svc.LogCustom(context.Background(), "any-category", storage.LogLevelInfo, "Test", nil)
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		require.Len(t, entries, 1)
@@ -524,7 +476,7 @@ func TestService_IsValidCustomCategory(t *testing.T) {
 			CustomCategories: []string{},
 		}
 		svc, _ := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		assert.True(t, svc.IsValidCustomCategory("anything"))
 		assert.True(t, svc.IsValidCustomCategory("random"))
@@ -535,7 +487,7 @@ func TestService_IsValidCustomCategory(t *testing.T) {
 			CustomCategories: []string{"metrics", "audit"},
 		}
 		svc, _ := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		assert.True(t, svc.IsValidCustomCategory("metrics"))
 		assert.True(t, svc.IsValidCustomCategory("audit"))
@@ -546,7 +498,7 @@ func TestService_IsValidCustomCategory(t *testing.T) {
 			CustomCategories: []string{"metrics", "audit"},
 		}
 		svc, _ := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		assert.False(t, svc.IsValidCustomCategory("invalid"))
 		assert.False(t, svc.IsValidCustomCategory("other"))
@@ -558,7 +510,7 @@ func TestService_GetCustomCategories(t *testing.T) {
 		CustomCategories: []string{"metrics", "audit", "analytics"},
 	}
 	svc, _ := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	categories := svc.GetCustomCategories()
 	assert.Len(t, categories, 3)
@@ -571,7 +523,7 @@ func TestService_LineNumbers(t *testing.T) {
 	t.Run("increments line numbers per execution", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		// Log multiple entries for same execution
 		for i := 0; i < 5; i++ {
@@ -583,7 +535,7 @@ func TestService_LineNumbers(t *testing.T) {
 			svc.Log(context.Background(), entry)
 		}
 
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		assert.Len(t, entries, 5)
@@ -595,7 +547,7 @@ func TestService_LineNumbers(t *testing.T) {
 	t.Run("separate line numbers per execution", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		// Log for exec-001
 		svc.Log(context.Background(), &storage.LogEntry{
@@ -616,7 +568,7 @@ func TestService_LineNumbers(t *testing.T) {
 			Message:     "Line 1",
 		})
 
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		assert.Len(t, entries, 3)
@@ -631,7 +583,7 @@ func TestService_LineNumbers(t *testing.T) {
 	t.Run("clears line numbers", func(t *testing.T) {
 		cfg := &config.LoggingConfig{}
 		svc, mockStorage := createTestService(cfg)
-		defer svc.Close()
+		defer func() { _ = svc.Close() }()
 
 		// Log some entries
 		svc.Log(context.Background(), &storage.LogEntry{
@@ -655,7 +607,7 @@ func TestService_LineNumbers(t *testing.T) {
 			Message:     "New Line 1",
 		})
 
-		svc.Flush(context.Background())
+		_ = svc.Flush(context.Background())
 
 		entries := mockStorage.getEntries()
 		assert.Len(t, entries, 3)
@@ -673,7 +625,7 @@ func TestService_GetRetentionPolicy(t *testing.T) {
 		CustomRetentionDays:    45,
 	}
 	svc, _ := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	tests := []struct {
 		category storage.LogCategory
@@ -699,7 +651,7 @@ func TestService_GetRetentionPolicy(t *testing.T) {
 func TestService_Query(t *testing.T) {
 	cfg := &config.LoggingConfig{}
 	svc, mockStorage := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	// Set up mock result
 	mockStorage.queryResult = &storage.LogQueryResult{
@@ -725,7 +677,7 @@ func TestService_Query(t *testing.T) {
 func TestService_Stats(t *testing.T) {
 	cfg := &config.LoggingConfig{}
 	svc, mockStorage := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	// Set up mock stats
 	mockStorage.stats = &storage.LogStats{
@@ -773,7 +725,7 @@ func TestService_Writer(t *testing.T) {
 		ConsoleFormat:  "json",
 	}
 	svc, _ := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	// Create writer manually since we're using mocks
 	svc.writer = NewWriter(svc, true, "json")
@@ -785,7 +737,7 @@ func TestService_Writer(t *testing.T) {
 func TestService_Storage(t *testing.T) {
 	cfg := &config.LoggingConfig{}
 	svc, mockStorage := createTestService(cfg)
-	defer svc.Close()
+	defer func() { _ = svc.Close() }()
 
 	storage := svc.Storage()
 	assert.Same(t, mockStorage, storage)

@@ -26,7 +26,7 @@ func TestRequireSyncIPAllowlist_EmptyConfig(t *testing.T) {
 	req := httptest.NewRequest("GET", "/sync", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -43,7 +43,7 @@ func TestRequireSyncIPAllowlist_NilConfig(t *testing.T) {
 	req := httptest.NewRequest("GET", "/sync", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -118,7 +118,7 @@ func TestRequireSyncIPAllowlist_IPMatching(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			if tt.shouldAllow {
 				assert.Equal(t, 200, resp.StatusCode)
@@ -153,7 +153,7 @@ func TestRequireSyncIPAllowlist_MultipleRanges(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -164,7 +164,7 @@ func TestRequireSyncIPAllowlist_MultipleRanges(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -175,7 +175,7 @@ func TestRequireSyncIPAllowlist_MultipleRanges(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -186,7 +186,7 @@ func TestRequireSyncIPAllowlist_MultipleRanges(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -220,7 +220,7 @@ func TestRequireSyncIPAllowlist_ErrorMessage(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, 403, resp.StatusCode)
 
@@ -253,7 +253,7 @@ func TestRequireSyncIPAllowlist_InvalidCIDR(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -275,7 +275,7 @@ func TestRequireSyncIPAllowlist_InvalidCIDR(t *testing.T) {
 		req := httptest.NewRequest("GET", "/sync", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// All invalid = empty valid ranges = allow all
 		assert.Equal(t, 200, resp.StatusCode)
@@ -300,7 +300,7 @@ func TestRequireSyncIPAllowlist_IPv6(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -318,7 +318,7 @@ func TestRequireSyncIPAllowlist_IPv6(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -343,7 +343,7 @@ func TestRequireSyncIPAllowlist_ProxyChain(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -362,7 +362,7 @@ func TestRequireSyncIPAllowlist_ProxyChain(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 403, resp.StatusCode)
 	})
@@ -386,7 +386,7 @@ func TestRequireSyncIPAllowlist_XRealIP(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -413,7 +413,7 @@ func TestRequireSyncIPAllowlist_FeatureNames(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, 200, resp.StatusCode)
 		})
@@ -437,7 +437,7 @@ func BenchmarkRequireSyncIPAllowlist_EmptyConfig(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -455,7 +455,7 @@ func BenchmarkRequireSyncIPAllowlist_SingleRange(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -481,7 +481,7 @@ func BenchmarkRequireSyncIPAllowlist_MultipleRanges(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -499,6 +499,6 @@ func BenchmarkRequireSyncIPAllowlist_Denied(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }

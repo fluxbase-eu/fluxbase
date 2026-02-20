@@ -1,33 +1,34 @@
 import {
   LayoutDashboard,
   Database,
+  GitFork,
+  Code,
+  Code2,
+  ScrollText,
+  Activity,
   Users,
-  Settings,
-  Palette,
-  Command,
+  Shield,
   Zap,
   FileCode,
   FolderOpen,
   Radio,
+  ListTodo,
+  Terminal,
+  Bot,
+  BookOpen,
+  Wrench,
   Key,
   KeyRound,
-  Shield,
-  Webhook,
-  Activity,
-  Code,
-  Mail,
-  ShieldCheck,
-  ListTodo,
-  Bot,
-  Terminal,
-  HardDrive,
-  Puzzle,
-  BookOpen,
-  ScrollText,
-  Lock,
-  Wrench,
-  GitFork,
   ShieldAlert,
+  ShieldCheck,
+  Webhook,
+  Lock,
+  Settings,
+  Palette,
+  Puzzle,
+  Mail,
+  HardDrive,
+  Command,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -46,13 +47,19 @@ export const sidebarData: SidebarData = {
   ],
   navGroups: [
     {
-      title: 'General',
+      title: 'Overview',
       items: [
         {
-          title: 'Overview',
+          title: 'Dashboard',
           url: '/',
           icon: LayoutDashboard,
         },
+      ],
+    },
+    {
+      title: 'Database',
+      collapsible: true,
+      items: [
         {
           title: 'Tables',
           url: '/tables',
@@ -68,30 +75,58 @@ export const sidebarData: SidebarData = {
           url: '/sql-editor',
           icon: Code,
         },
-        {
-          title: 'Monitoring',
-          url: '/monitoring',
-          icon: Activity,
-        },
-        {
-          title: 'Log Stream',
-          url: '/logs',
-          icon: ScrollText,
-        },
+      ],
+    },
+    {
+      title: 'Users & Authentication',
+      collapsible: true,
+      items: [
         {
           title: 'Users',
           url: '/users',
           icon: Users,
         },
+        {
+          title: 'Authentication',
+          url: '/authentication',
+          icon: Shield,
+        },
+      ],
+    },
+    {
+      title: 'AI',
+      collapsible: true,
+      items: [
+        {
+          title: 'Knowledge Bases',
+          url: '/knowledge-bases',
+          icon: BookOpen,
+        },
+        {
+          title: 'AI Chatbots',
+          url: '/chatbots',
+          icon: Bot,
+        },
+        {
+          title: 'Quotas',
+          url: '/quotas',
+          icon: Shield,
+        },
+        {
+          title: 'MCP Tools',
+          url: '/mcp-tools',
+          icon: Wrench,
+        },
       ],
     },
     {
       title: 'API & Services',
+      collapsible: true,
       items: [
         {
-          title: 'REST API',
+          title: 'API Explorer',
           url: '/api/rest',
-          icon: Zap,
+          icon: Code2,
         },
         {
           title: 'Realtime',
@@ -119,27 +154,7 @@ export const sidebarData: SidebarData = {
           icon: Terminal,
         },
         {
-          title: 'AI Chatbots',
-          url: '/chatbots',
-          icon: Bot,
-        },
-        {
-          title: 'Knowledge Bases',
-          url: '/knowledge-bases',
-          icon: BookOpen,
-        },
-        {
-          title: 'MCP Tools',
-          url: '/mcp-tools',
-          icon: Wrench,
-        },
-      ],
-    },
-    {
-      title: 'Configuration',
-      items: [
-        {
-          title: 'Features',
+          title: 'Configuration',
           url: '/features',
           icon: Zap,
         },
@@ -149,17 +164,12 @@ export const sidebarData: SidebarData = {
           icon: Puzzle,
         },
         {
-          title: 'Database',
-          url: '/database-config',
-          icon: Database,
-        },
-        {
           title: 'Email',
           url: '/email-settings',
           icon: Mail,
         },
         {
-          title: 'Storage',
+          title: 'Storage Config',
           url: '/storage-config',
           icon: HardDrive,
         },
@@ -168,16 +178,17 @@ export const sidebarData: SidebarData = {
           url: '/ai-providers',
           icon: Bot,
         },
+        {
+          title: 'Database Config',
+          url: '/database-config',
+          icon: Database,
+        },
       ],
     },
     {
       title: 'Security',
+      collapsible: true,
       items: [
-        {
-          title: 'Authentication',
-          url: '/authentication',
-          icon: Shield,
-        },
         {
           title: 'RLS Policies',
           url: '/policies',
@@ -211,7 +222,24 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
-      title: 'Settings',
+      title: 'Monitoring',
+      collapsible: true,
+      items: [
+        {
+          title: 'Log Stream',
+          url: '/logs',
+          icon: ScrollText,
+        },
+        {
+          title: 'Monitoring',
+          url: '/monitoring',
+          icon: Activity,
+        },
+      ],
+    },
+    {
+      title: 'Account settings',
+      collapsible: true,
       items: [
         {
           title: 'Account',

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -68,7 +69,7 @@ func (h *StorageHandler) ShareObject(c fiber.Ctx) error {
 	`, bucket, key).Scan(&objectID)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "file not found or insufficient permissions",
 			})
@@ -158,7 +159,7 @@ func (h *StorageHandler) RevokeShare(c fiber.Ctx) error {
 	`, bucket, key).Scan(&objectID)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "file not found or insufficient permissions",
 			})
@@ -246,7 +247,7 @@ func (h *StorageHandler) ListShares(c fiber.Ctx) error {
 	`, bucket, key).Scan(&objectID)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "file not found or insufficient permissions",
 			})

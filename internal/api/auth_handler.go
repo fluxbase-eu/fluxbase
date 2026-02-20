@@ -1120,10 +1120,9 @@ func (h *AuthHandler) StartImpersonation(c fiber.Ctx) error {
 	resp, err := h.authService.StartImpersonation(c.RequestCtx(), adminUserID.(string), req)
 	if err != nil {
 		statusCode := fiber.StatusInternalServerError
-		switch err {
-		case auth.ErrNotAdmin:
+		if errors.Is(err, auth.ErrNotAdmin) {
 			statusCode = fiber.StatusForbidden
-		case auth.ErrSelfImpersonation:
+		} else if errors.Is(err, auth.ErrSelfImpersonation) {
 			statusCode = fiber.StatusBadRequest
 		}
 		return c.Status(statusCode).JSON(fiber.Map{
@@ -1146,7 +1145,7 @@ func (h *AuthHandler) StopImpersonation(c fiber.Ctx) error {
 
 	err := h.authService.StopImpersonation(c.RequestCtx(), adminUserID.(string))
 	if err != nil {
-		if err == auth.ErrNoActiveImpersonation {
+		if errors.Is(err, auth.ErrNoActiveImpersonation) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": err.Error(),
 			})
@@ -1173,7 +1172,7 @@ func (h *AuthHandler) GetActiveImpersonation(c fiber.Ctx) error {
 
 	session, err := h.authService.GetActiveImpersonation(c.RequestCtx(), adminUserID.(string))
 	if err != nil {
-		if err == auth.ErrNoActiveImpersonation {
+		if errors.Is(err, auth.ErrNoActiveImpersonation) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": err.Error(),
 			})
@@ -1241,7 +1240,7 @@ func (h *AuthHandler) StartAnonImpersonation(c fiber.Ctx) error {
 	resp, err := h.authService.StartAnonImpersonation(c.RequestCtx(), adminUserID.(string), req.Reason, ipAddress, userAgent)
 	if err != nil {
 		statusCode := fiber.StatusInternalServerError
-		if err == auth.ErrNotAdmin {
+		if errors.Is(err, auth.ErrNotAdmin) {
 			statusCode = fiber.StatusForbidden
 		}
 		return c.Status(statusCode).JSON(fiber.Map{
@@ -1284,7 +1283,7 @@ func (h *AuthHandler) StartServiceImpersonation(c fiber.Ctx) error {
 	resp, err := h.authService.StartServiceImpersonation(c.RequestCtx(), adminUserID.(string), req.Reason, ipAddress, userAgent)
 	if err != nil {
 		statusCode := fiber.StatusInternalServerError
-		if err == auth.ErrNotAdmin {
+		if errors.Is(err, auth.ErrNotAdmin) {
 			statusCode = fiber.StatusForbidden
 		}
 		return c.Status(statusCode).JSON(fiber.Map{
@@ -1491,6 +1490,13 @@ func (h *AuthHandler) SendOTP(c fiber.Ctx) error {
 		})
 	}
 
+	// Validate auth service is initialized (after input validation)
+	if h.authService == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Authentication service not available",
+		})
+	}
+
 	// Send OTP
 	var err error
 	purpose := "signin" // Default purpose
@@ -1508,12 +1514,14 @@ func (h *AuthHandler) SendOTP(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to send OTP")
+		log.Error().Str("error", err.Error()).Msg("Failed to send OTP")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to send OTP code",
 		})
 	}
 
+	// Return Supabase-compatible OTP response
+	// For send requests, user and session are both nil (OTP delivered but not verified yet)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"user":    nil,
 		"session": nil,

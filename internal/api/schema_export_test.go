@@ -307,9 +307,6 @@ func TestNewSchemaExportHandler(t *testing.T) {
 	t.Run("creates handler with nil dependencies", func(t *testing.T) {
 		handler := NewSchemaExportHandler(nil, nil)
 
-		if handler == nil {
-			t.Error("Expected non-nil handler")
-		}
 		if handler.schemaCache != nil {
 			t.Error("Expected nil schemaCache")
 		}

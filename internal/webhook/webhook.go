@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -234,12 +235,18 @@ func NewWebhookService(db *database.Connection) *WebhookService {
 }
 
 // parseTableReference splits a table reference into schema and table name
-// e.g., "auth.users" -> ("auth", "users"), "users" -> ("auth", "users")
+// e.g.:
+//   - "auth.users" -> ("auth", "users")
+//   - "ai.documents" -> ("ai", "documents")
+//   - "users" -> ("auth", "users") - defaults to auth schema for backward compatibility
+//
+// For AI schema tables, always use the full reference "ai.documents", "ai.chunks", etc.
 func parseTableReference(tableRef string) (schema, table string) {
 	if idx := strings.Index(tableRef, "."); idx > 0 {
 		return tableRef[:idx], tableRef[idx+1:]
 	}
-	// Default to auth schema since most webhook targets are auth tables
+	// Default to auth schema for backward compatibility
+	// For AI schema tables, use explicit "ai.documents" format
 	return "auth", tableRef
 }
 
@@ -457,7 +464,7 @@ func (s *WebhookService) Get(ctx context.Context, id uuid.UUID) (*Webhook, error
 		)
 	})
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("webhook not found")
 	}
 	if err != nil {
@@ -717,7 +724,9 @@ func (s *WebhookService) sendWebhookSync(ctx context.Context, webhook *Webhook, 
 	return nil
 }
 
-// sendWebhook sends the actual HTTP request (runs asynchronously)
+// sendWebhook sends the actual HTTP request (runs asynchronously).
+// Note: Currently unused but kept for potential future async webhook delivery implementation.
+/*
 func (s *WebhookService) sendWebhook(ctx context.Context, deliveryID uuid.UUID, webhook *Webhook, payloadJSON []byte) {
 	// SECURITY FIX: Validate webhook URL at request time to prevent DNS rebinding attacks
 	if !s.AllowPrivateIPs {
@@ -777,6 +786,7 @@ func (s *WebhookService) sendWebhook(ctx context.Context, deliveryID uuid.UUID, 
 		s.markDeliveryFailed(ctx, deliveryID, resp.StatusCode, &bodyStr, fmt.Sprintf("HTTP %d", resp.StatusCode))
 	}
 }
+*/
 
 // generateSignature generates HMAC SHA256 signature (legacy, without timestamp)
 func (s *WebhookService) generateSignature(payload []byte, secret string) string {

@@ -303,13 +303,10 @@ func TestDashboardImpersonation_AdminRequired(t *testing.T) {
 func TestDashboardImpersonation_CannotImpersonateSelf(t *testing.T) {
 	// Test admin cannot impersonate themselves
 	adminID := uuid.New().String()
+	targetID := adminID // Target is the same as admin
 
 	// Cannot impersonate self
-	canImpersonate := adminID != uuid.New().String()
-	assert.True(t, canImpersonate)
-
-	// Same user
-	canImpersonate = adminID != adminID
+	canImpersonate := adminID != targetID
 	assert.False(t, canImpersonate)
 }
 

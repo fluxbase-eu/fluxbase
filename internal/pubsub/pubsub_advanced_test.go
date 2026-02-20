@@ -309,7 +309,8 @@ func TestLocalPubSub_ContextAlreadyCancelled(t *testing.T) {
 	cancel() // Cancel immediately
 
 	_, err := pubsub.Subscribe(ctx, "test-channel")
-	assert.NoError(t, err) // Should succeed, but channel will close immediately
+	assert.Error(t, err) // Should return error for already-cancelled context
+	assert.Equal(t, context.Canceled, err)
 }
 
 func TestLocalPubSub_OrderedDelivery(t *testing.T) {
@@ -389,7 +390,7 @@ func TestNewPubSub_EmptyBackendDefaultsToLocal(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, ps)
 	assert.IsType(t, &LocalPubSub{}, ps)
-	ps.Close()
+	_ = ps.Close()
 }
 
 // =============================================================================
@@ -416,6 +417,7 @@ func TestLocalPubSub_AtMostOnceDelivery(t *testing.T) {
 	received1 := false
 	received2 := false
 
+Loop:
 	for i := 0; i < 2; i++ {
 		select {
 		case <-ch1:
@@ -429,7 +431,7 @@ func TestLocalPubSub_AtMostOnceDelivery(t *testing.T) {
 			}
 			received2 = true
 		case <-time.After(100 * time.Millisecond):
-			break
+			break Loop
 		}
 	}
 
@@ -665,13 +667,15 @@ func TestLocalPubSub_VeryLongChannelName(t *testing.T) {
 	}
 }
 
-func TestLocalPubSub_NilContext(t *testing.T) {
-	// Test with nil context (should return error)
+func TestLocalPubSub_CanceledContext(t *testing.T) {
+	// Test with canceled context (should return error)
 	pubsub := NewLocalPubSub()
 
-	_, err := pubsub.Subscribe(nil, "test-channel")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	_, err := pubsub.Subscribe(ctx, "test-channel")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "context cannot be nil")
 }
 
 func TestLocalPubSub_RepeatedClose(t *testing.T) {
@@ -760,7 +764,7 @@ func TestLocalPubSub_ChannelCleanup(t *testing.T) {
 	}
 
 	// Close to trigger cleanup
-	pubsub.Close()
+	_ = pubsub.Close()
 
 	pubsub.mu.Lock()
 	defer pubsub.mu.Unlock()

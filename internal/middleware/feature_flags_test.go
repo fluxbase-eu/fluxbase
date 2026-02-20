@@ -99,7 +99,7 @@ func TestFeatureFlag_DisabledResponse(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
@@ -127,7 +127,7 @@ func TestFeatureFlag_ResponseFormat(t *testing.T) {
 			req := httptest.NewRequest("GET", endpoint, nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// All should return 404 when cache is nil
 			assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
