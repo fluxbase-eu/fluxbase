@@ -38,6 +38,7 @@ DECLARE
     );
 
     is_hypertable BOOLEAN := FALSE;
+    pk_constraint_name TEXT;
 BEGIN
     -- Only proceed with TimescaleDB-specific logic if extension is available
     IF timescaledb_available AND entries_table_exists THEN
@@ -61,21 +62,16 @@ BEGIN
 
             -- Remove primary key constraint from parent table (required for hypertable conversion)
             -- The constraint name might be auto-generated, so we find it dynamically
-            DO $$
-            DECLARE
-                pk_constraint_name TEXT;
-            BEGIN
-                SELECT conname INTO pk_constraint_name
-                FROM pg_constraint
-                WHERE conrelid = 'logging.entries'::regclass
-                AND contype = 'p'
-                LIMIT 1;
+            SELECT conname INTO pk_constraint_name
+            FROM pg_constraint
+            WHERE conrelid = 'logging.entries'::regclass
+            AND contype = 'p'
+            LIMIT 1;
 
-                IF pk_constraint_name IS NOT NULL THEN
-                    EXECUTE format('ALTER TABLE logging.entries DROP CONSTRAINT %I', pk_constraint_name);
-                    RAISE NOTICE 'Dropped primary key constraint: %', pk_constraint_name;
-                END IF;
-            END $$;
+            IF pk_constraint_name IS NOT NULL THEN
+                EXECUTE format('ALTER TABLE logging.entries DROP CONSTRAINT %I', pk_constraint_name);
+                RAISE NOTICE 'Dropped primary key constraint: %', pk_constraint_name;
+            END IF;
 
             -- Add primary key without partitioning
             ALTER TABLE logging.entries ADD PRIMARY KEY (id);
