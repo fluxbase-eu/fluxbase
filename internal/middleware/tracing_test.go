@@ -88,7 +88,7 @@ func TestTracingMiddleware_Disabled(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, 200, resp.StatusCode)
 
@@ -125,7 +125,7 @@ func TestTracingMiddleware_SkipPaths(t *testing.T) {
 		req := httptest.NewRequest("GET", "/health", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 		// Skip paths should not have trace ID header
@@ -136,7 +136,7 @@ func TestTracingMiddleware_SkipPaths(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/users", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -161,7 +161,7 @@ func TestGetTraceContext(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.False(t, hasTraceID)
 		assert.False(t, hasSpanID)
@@ -181,7 +181,7 @@ func TestGetTraceContext(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.False(t, hasTraceID)
 	})
@@ -204,7 +204,7 @@ func TestGetTraceID(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Empty(t, traceID)
 	})
@@ -227,7 +227,7 @@ func TestGetSpanID(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Empty(t, spanID)
 	})
@@ -250,7 +250,7 @@ func TestAddSpanEvent(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -267,7 +267,7 @@ func TestAddSpanEvent(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -289,7 +289,7 @@ func TestSetSpanError(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -311,7 +311,7 @@ func TestSetSpanAttributes(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -339,7 +339,7 @@ func TestStartChildSpan(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.True(t, spanNotNil)
 		assert.True(t, cleanupNotNil)
@@ -367,7 +367,7 @@ func TestTracingMiddleware_RequestLifecycle(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -385,7 +385,7 @@ func TestTracingMiddleware_RequestLifecycle(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/error", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 500, resp.StatusCode)
 	})
@@ -403,7 +403,7 @@ func TestTracingMiddleware_RequestLifecycle(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/fiber-error", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 400, resp.StatusCode)
 	})
@@ -434,7 +434,7 @@ func TestTracingMiddleware_UserContext(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -461,7 +461,7 @@ func TestTracingMiddleware_BodyRecording(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -482,7 +482,7 @@ func TestTracingMiddleware_BodyRecording(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/test", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, 200, resp.StatusCode)
 	})
@@ -506,7 +506,7 @@ func BenchmarkTracingMiddleware_Disabled(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -527,7 +527,7 @@ func BenchmarkTracingMiddleware_SkipPath(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		resp, _ := app.Test(req)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -543,7 +543,7 @@ func BenchmarkGetTraceID_NoSpan(b *testing.B) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, _ := app.Test(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func BenchmarkGetSpanID_NoSpan(b *testing.B) {
@@ -558,7 +558,7 @@ func BenchmarkGetSpanID_NoSpan(b *testing.B) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	resp, _ := app.Test(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func BenchmarkDefaultTracingConfig(b *testing.B) {

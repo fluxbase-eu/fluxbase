@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -31,17 +32,18 @@ func ClientKeyAuth(clientKeyService *auth.ClientKeyService) fiber.Handler {
 		if err != nil {
 			log.Debug().Err(err).Msg("Invalid client key")
 
-			// Return specific error messages
-			switch err {
-			case auth.ErrClientKeyRevoked:
+			// Return specific error messages using errors.Is for proper error wrapping
+			if errors.Is(err, auth.ErrClientKeyRevoked) {
 				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 					"error": "Client key has been revoked",
 				})
-			case auth.ErrClientKeyExpired:
+			}
+			if errors.Is(err, auth.ErrClientKeyExpired) {
 				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 					"error": "Client key has expired",
 				})
-			case auth.ErrUserClientKeysDisabled:
+			}
+			if errors.Is(err, auth.ErrUserClientKeysDisabled) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error": "User client keys are disabled. Contact an administrator.",
 				})
@@ -181,7 +183,7 @@ func RequireEitherAuth(authService *auth.Service, clientKeyService *auth.ClientK
 			}
 
 			// Return specific error for disabled user keys
-			if err == auth.ErrUserClientKeysDisabled {
+			if errors.Is(err, auth.ErrUserClientKeysDisabled) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error": "User client keys are disabled. Contact an administrator.",
 				})
@@ -471,7 +473,7 @@ func RequireAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.C
 				return c.Next()
 			}
 			// Client key was provided but invalid - return specific error
-			if err == auth.ErrUserClientKeysDisabled {
+			if errors.Is(err, auth.ErrUserClientKeysDisabled) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error": "User client keys are disabled. Contact an administrator.",
 				})
@@ -730,7 +732,7 @@ func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.
 			}
 			// If client key was provided but invalid, return specific error
 			// Don't fall back to anonymous access when invalid credentials are provided
-			if err == auth.ErrUserClientKeysDisabled {
+			if errors.Is(err, auth.ErrUserClientKeysDisabled) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error": "User client keys are disabled. Contact an administrator.",
 				})

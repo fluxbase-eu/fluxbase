@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -157,12 +158,12 @@ func (l *Listener) listen() {
 				}
 
 				// Timeout is expected, continue
-				if err == context.DeadlineExceeded {
+				if errors.Is(err, context.DeadlineExceeded) {
 					continue
 				}
 
 				// Check if it's a context error
-				if ctx.Err() == context.DeadlineExceeded {
+				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 					continue
 				}
 
@@ -227,13 +228,11 @@ func (l *Listener) processNotification(notification *pgconn.Notification) {
 				Int("subscribers", len(filteredEvents)).
 				Msg("Filtered and sent RLS-aware change event")
 		}
-	} else {
-		if !isWorkerHeartbeat {
-			log.Debug().
-				Str("table", fmt.Sprintf("%s.%s", event.Schema, event.Table)).
-				Str("type", event.Type).
-				Msg("No subscription manager - change event not processed")
-		}
+	} else if !isWorkerHeartbeat {
+		log.Debug().
+			Str("table", fmt.Sprintf("%s.%s", event.Schema, event.Table)).
+			Str("type", event.Type).
+			Msg("No subscription manager - change event not processed")
 	}
 }
 

@@ -9,10 +9,12 @@ import (
 
 func TestNewDocumentProcessor(t *testing.T) {
 	t.Run("creates processor with nil dependencies", func(t *testing.T) {
-		processor := NewDocumentProcessor(nil, nil)
+		processor := NewDocumentProcessor(nil, nil, nil, nil)
 		assert.NotNil(t, processor)
 		assert.Nil(t, processor.storage)
 		assert.Nil(t, processor.embeddingService)
+		assert.Nil(t, processor.entityExtractor)
+		assert.Nil(t, processor.knowledgeGraph)
 	})
 }
 

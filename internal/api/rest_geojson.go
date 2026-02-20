@@ -82,6 +82,7 @@ func buildSelectColumnsWithTruncation(table database.TableInfo, truncateLength *
 		if quotedName == "" {
 			continue // Skip invalid column names
 		}
+		//nolint:gocritic // Column type checking, not switch-compatible
 		if isGeometryColumn(col.DataType) {
 			// Convert geometry to GeoJSON
 			columns = append(columns, fmt.Sprintf("ST_AsGeoJSON(%s)::jsonb AS %s", quotedName, quotedName))

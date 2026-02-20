@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -98,7 +99,8 @@ func setupAuthTestServer(t *testing.T) (*fiber.App, *auth.Service, *database.Con
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
-			if e, ok := err.(*fiber.Error); ok {
+			var e *fiber.Error
+			if errors.As(err, &e) {
 				code = e.Code
 			}
 			return c.Status(code).JSON(fiber.Map{
@@ -145,7 +147,7 @@ func TestOTPFlow(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -160,7 +162,7 @@ func TestOTPFlow(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -183,13 +185,13 @@ func TestOTPFlow(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// Parse response to check for tokens
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 		assert.NotNil(t, result["access_token"])
 		assert.NotNil(t, result["refresh_token"])
 	})
@@ -206,7 +208,7 @@ func TestOTPFlow(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -215,7 +217,7 @@ func TestOTPFlow(t *testing.T) {
 	userRepo := auth.NewUserRepository(db)
 	user, _ := userRepo.GetByEmail(ctx, testEmail)
 	if user != nil {
-		userRepo.Delete(ctx, user.ID)
+		_ = userRepo.Delete(ctx, user.ID)
 	}
 }
 
@@ -238,7 +240,7 @@ func TestReauthenticate(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Sign in to get token
 	signinReq := map[string]interface{}{
@@ -253,8 +255,8 @@ func TestReauthenticate(t *testing.T) {
 	require.NoError(t, err)
 
 	var signinResult map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&signinResult)
-	resp.Body.Close()
+	_ = json.NewDecoder(resp.Body).Decode(&signinResult)
+	_ = resp.Body.Close()
 
 	accessToken := signinResult["access_token"].(string)
 
@@ -264,12 +266,12 @@ func TestReauthenticate(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 		assert.NotNil(t, result["nonce"])
 	})
 
@@ -278,7 +280,7 @@ func TestReauthenticate(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
@@ -287,7 +289,7 @@ func TestReauthenticate(t *testing.T) {
 	userRepo := auth.NewUserRepository(db)
 	user, _ := userRepo.GetByEmail(ctx, testEmail)
 	if user != nil {
-		userRepo.Delete(ctx, user.ID)
+		_ = userRepo.Delete(ctx, user.ID)
 	}
 }
 
@@ -310,7 +312,7 @@ func TestIdentityRoutes(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Sign in to get token
 	signinReq := map[string]interface{}{
@@ -325,8 +327,8 @@ func TestIdentityRoutes(t *testing.T) {
 	require.NoError(t, err)
 
 	var signinResult map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&signinResult)
-	resp.Body.Close()
+	_ = json.NewDecoder(resp.Body).Decode(&signinResult)
+	_ = resp.Body.Close()
 
 	accessToken := signinResult["access_token"].(string)
 
@@ -335,12 +337,12 @@ func TestIdentityRoutes(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 		// A new user has no identities, so identities should be an empty array or nil
 		// Just verify the response structure is valid
 		if result["identities"] != nil {
@@ -362,21 +364,22 @@ func TestIdentityRoutes(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// If OAuth is not configured, should return 400
 		// If OAuth is configured, should return 200 with URL
 		// We just verify the endpoint is accessible and returns a valid response
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 
-		if resp.StatusCode == http.StatusBadRequest {
+		switch resp.StatusCode {
+		case http.StatusBadRequest:
 			// OAuth not configured - this is expected in test environment
 			assert.Contains(t, result["error"], "invalid OAuth provider")
-		} else if resp.StatusCode == http.StatusOK {
+		case http.StatusOK:
 			// OAuth configured - should have URL
 			assert.NotNil(t, result["url"])
-		} else {
+		default:
 			t.Fatalf("Unexpected status code: %d, response: %v", resp.StatusCode, result)
 		}
 	})
@@ -385,7 +388,7 @@ func TestIdentityRoutes(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/user/identities", nil)
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 30 * time.Second})
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
@@ -394,6 +397,6 @@ func TestIdentityRoutes(t *testing.T) {
 	userRepo := auth.NewUserRepository(db)
 	user, _ := userRepo.GetByEmail(ctx, testEmail)
 	if user != nil {
-		userRepo.Delete(ctx, user.ID)
+		_ = userRepo.Delete(ctx, user.ID)
 	}
 }

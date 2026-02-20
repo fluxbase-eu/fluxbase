@@ -304,15 +304,16 @@ func (c *SettingsCache) GetEnvVarName(key string) string {
 	// Convert to uppercase and replace dots with underscores
 	envVar := "FLUXBASE_"
 	for _, char := range viperKey {
-		if char == '.' {
+		switch {
+		case char == '.':
 			envVar += "_"
-		} else if char >= 'a' && char <= 'z' {
+		case char >= 'a' && char <= 'z':
 			envVar += string(char - 32) // Convert to uppercase
-		} else if char >= 'A' && char <= 'Z' {
+		case char >= 'A' && char <= 'Z':
 			envVar += string(char)
-		} else if char >= '0' && char <= '9' {
+		case char >= '0' && char <= '9':
 			envVar += string(char)
-		} else {
+		default:
 			envVar += "_"
 		}
 	}

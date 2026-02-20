@@ -302,7 +302,7 @@ func TestOpenAPIHandler_GetOpenAPISpec(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -319,7 +319,7 @@ func TestOpenAPIHandler_GetOpenAPISpec(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})

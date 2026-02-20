@@ -18,6 +18,7 @@ type KnowledgeBaseHandler struct {
 	storageService *storage.Service
 	textExtractor  *TextExtractor
 	ocrService     *OCRService
+	tableExporter  *TableExporter
 }
 
 // NewKnowledgeBaseHandler creates a new knowledge base handler
@@ -541,6 +542,71 @@ func (h *KnowledgeBaseHandler) DeleteDocument(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+// DeleteDocumentsByFilter deletes documents matching a metadata filter
+// POST /api/v1/admin/ai/knowledge-bases/:id/documents/delete-by-filter
+func (h *KnowledgeBaseHandler) DeleteDocumentsByFilter(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if kbID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Knowledge base ID is required",
+		})
+	}
+
+	var req struct {
+		Tags           []string             `json:"tags"`
+		Metadata       map[string]string    `json:"metadata"`
+		MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
+	}
+
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Get user ID from context (for user isolation)
+	var userID *string
+	if uid := c.Locals("user_id"); uid != nil {
+		if uidStr, ok := uid.(string); ok && uidStr != "" {
+			userID = &uidStr
+		}
+	}
+
+	// Build the filter
+	filter := &MetadataFilter{
+		Tags:           req.Tags,
+		Metadata:       req.Metadata,
+		AdvancedFilter: req.MetadataFilter,
+		IncludeGlobal:  false, // Only delete user's own documents
+	}
+
+	// Only non-admin users are filtered by user_id
+	if userID != nil {
+		isAdmin := false
+		if role := c.Locals("role"); role != nil {
+			isAdmin = role == "service_role" || role == "dashboard_admin"
+		}
+		if !isAdmin {
+			filter.UserID = userID
+		}
+	}
+
+	// Delete documents
+	count, err := h.storage.DeleteDocumentsByFilter(ctx, kbID, filter)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Msg("Failed to delete documents by filter")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete documents",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"deleted_count": count,
+	})
+}
+
 // UpdateDocument updates a document's metadata and tags
 // PATCH /api/v1/admin/ai/knowledge-bases/:id/documents/:doc_id
 func (h *KnowledgeBaseHandler) UpdateDocument(c fiber.Ctx) error {
@@ -703,7 +769,14 @@ func (h *KnowledgeBaseHandler) UpdateChatbotKnowledgeBase(c fiber.Ctx) error {
 		})
 	}
 
-	link, err := h.storage.UpdateChatbotKnowledgeBaseLink(ctx, chatbotID, kbID, UpdateChatbotKnowledgeBaseOptions(req))
+	opts := UpdateChatbotKnowledgeBaseOptions{
+		Priority:            req.Priority,
+		MaxChunks:           req.MaxChunks,
+		SimilarityThreshold: req.SimilarityThreshold,
+		Enabled:             req.Enabled,
+	}
+
+	link, err := h.storage.UpdateChatbotKnowledgeBaseLink(ctx, chatbotID, kbID, opts)
 	if err != nil {
 		log.Error().Err(err).
 			Str("chatbot_id", chatbotID).
@@ -1046,11 +1119,12 @@ func (h *KnowledgeBaseHandler) DebugSearch(c fiber.Ctx) error {
 		response.ChunksWithoutEmbedding = stats.ChunksWithoutEmbedding
 
 		// Check for problematic state
-		if stats.TotalChunks == 0 {
+		switch {
+		case stats.TotalChunks == 0:
 			response.ErrorMessage = "No chunks in knowledge base"
-		} else if stats.ChunksWithEmbedding == 0 {
+		case stats.ChunksWithEmbedding == 0:
 			response.ErrorMessage = "All chunks have NULL embeddings - document processing may have failed"
-		} else if stats.ChunksWithoutEmbedding > 0 {
+		case stats.ChunksWithoutEmbedding > 0:
 			response.ErrorMessage = fmt.Sprintf("%d chunks have NULL embeddings", stats.ChunksWithoutEmbedding)
 		}
 	}
@@ -1083,6 +1157,164 @@ func (h *KnowledgeBaseHandler) DebugSearch(c fiber.Ctx) error {
 	}
 
 	return c.JSON(response)
+}
+
+// ============================================================================
+// DOCUMENT PERMISSION ENDPOINTS
+// ============================================================================
+
+// GrantDocumentPermission grants permission on a document to a user
+// POST /api/v1/admin/ai/knowledge-bases/:kb_id/documents/:doc_id/permissions
+func (h *KnowledgeBaseHandler) GrantDocumentPermission(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	userID := c.Locals("user_id").(string)
+	_ = c.Params("kb_id") // kb_id is part of the route but not used directly
+	docID := c.Params("doc_id")
+
+	var req GrantDocumentPermissionRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	grant, err := h.storage.GrantDocumentPermission(ctx, docID, req.UserID, string(req.Permission), userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to grant permission: " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(grant)
+}
+
+// ListDocumentPermissions lists permissions for a document
+// GET /api/v1/admin/ai/knowledge-bases/:kb_id/documents/:doc_id/permissions
+func (h *KnowledgeBaseHandler) ListDocumentPermissions(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	docID := c.Params("doc_id")
+
+	perms, err := h.storage.ListDocumentPermissions(ctx, docID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to list permissions",
+		})
+	}
+
+	return c.JSON(perms)
+}
+
+// RevokeDocumentPermission revokes permission from a user on a document
+// DELETE /api/v1/admin/ai/knowledge-bases/:kb_id/documents/:doc_id/permissions/:user_id
+func (h *KnowledgeBaseHandler) RevokeDocumentPermission(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	docID := c.Params("doc_id")
+	targetUserID := c.Params("user_id")
+
+	err := h.storage.RevokeDocumentPermission(ctx, docID, targetUserID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to revoke permission",
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// SetTableExporter sets the table exporter for database schema export
+func (h *KnowledgeBaseHandler) SetTableExporter(exporter *TableExporter) {
+	h.tableExporter = exporter
+}
+
+// ============================================================================
+// TABLE EXPORT ENDPOINTS
+// ============================================================================
+
+// ExportTableToKnowledgeBase exports a database table as a knowledge base document
+// POST /api/v1/admin/ai/knowledge-bases/:id/tables/export
+func (h *KnowledgeBaseHandler) ExportTableToKnowledgeBase(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if kbID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Knowledge base ID is required",
+		})
+	}
+
+	var req ExportTableRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	req.KnowledgeBaseID = kbID
+
+	// Set defaults
+	if req.SampleRowCount == 0 {
+		req.SampleRowCount = 5
+	}
+
+	if h.tableExporter == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Table export service not configured",
+		})
+	}
+
+	result, err := h.tableExporter.ExportTable(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Str("table", req.Table).Msg("Failed to export table")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to export table: %v", err),
+		})
+	}
+
+	return c.JSON(result)
+}
+
+// ListExportableTables lists all tables that can be exported to knowledge bases
+// GET /api/v1/admin/ai/tables
+func (h *KnowledgeBaseHandler) ListExportableTables(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	schema := c.Query("schema", "public")
+
+	if h.tableExporter == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Table export service not configured",
+		})
+	}
+
+	tables, err := h.tableExporter.ListExportableTables(ctx, []string{schema})
+	if err != nil {
+		log.Error().Err(err).Str("schema", schema).Msg("Failed to list tables")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to list tables",
+		})
+	}
+
+	// Return simplified table info
+	type TableSummary struct {
+		Schema      string `json:"schema"`
+		Name        string `json:"name"`
+		Columns     int    `json:"columns"`
+		ForeignKeys int    `json:"foreign_keys"`
+	}
+
+	summaries := make([]TableSummary, len(tables))
+	for i, t := range tables {
+		summaries[i] = TableSummary{
+			Schema:      t.Schema,
+			Name:        t.Name,
+			Columns:     len(t.Columns),
+			ForeignKeys: len(t.ForeignKeys),
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"tables": summaries,
+		"count":  len(summaries),
+	})
 }
 
 // fiber:context-methods migrated

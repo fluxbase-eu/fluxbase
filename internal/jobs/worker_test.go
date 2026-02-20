@@ -851,7 +851,7 @@ func TestWorker_ShutdownChannels_Extended(t *testing.T) {
 
 		assert.NotNil(t, worker.shutdownChan)
 		assert.NotNil(t, worker.shutdownComplete)
-		assert.NotNil(t, worker.currentJobs)
+		// currentJobs is a sync.Map, doesn't need nil check
 	})
 }
 

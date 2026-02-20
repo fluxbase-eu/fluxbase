@@ -20,7 +20,6 @@ import {
 import { Plus, Trash2, ShieldAlert, Rows3, Rows4 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiClient } from '@/lib/api'
-import { syncAuthToken } from '@/lib/fluxbase-client'
 import { cn } from '@/lib/utils'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { Button } from '@/components/ui/button'
@@ -40,8 +39,6 @@ import {
   DataTablePagination,
   DataTableColumnHeader,
 } from '@/components/data-table'
-import { ImpersonationPopover } from '@/features/impersonation/components/impersonation-popover'
-import { useImpersonation } from '@/features/impersonation/hooks/use-impersonation'
 import { EditableCell } from './editable-cell'
 import { RecordEditDialog } from './record-edit-dialog'
 import { TableRowActions } from './table-row-actions'
@@ -65,12 +62,6 @@ export function TableViewer({ tableName, schema }: TableViewerProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [density, setDensity] = useState<TableDensity>('compact')
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
-
-  // Impersonation state for access denied message
-  const { isImpersonating, impersonationType, stopImpersonation } =
-    useImpersonation({
-      defaultReason: 'Testing RLS policies in Tables view',
-    })
 
   // Get table metadata from React Query cache (already fetched by TableSelector)
   // Fetch specific table schema to ensure columns are available even when table is empty
@@ -443,14 +434,6 @@ export function TableViewer({ tableName, schema }: TableViewerProps) {
             </p>
           </div>
 
-          {/* Impersonation selector */}
-          <ImpersonationPopover
-            contextLabel='Viewing as'
-            defaultReason='Testing RLS policies in Tables view'
-            onImpersonationStart={() => syncAuthToken()}
-            onImpersonationStop={() => syncAuthToken()}
-          />
-
           <div className='flex shrink-0 gap-2'>
             {selectedCount > 0 && (
               <Button
@@ -522,20 +505,9 @@ export function TableViewer({ tableName, schema }: TableViewerProps) {
                           Access Denied
                         </p>
                         <p className='text-muted-foreground mt-1 text-sm'>
-                          {isImpersonating
-                            ? `The ${impersonationType === 'anon' ? 'anonymous user' : impersonationType === 'service' ? 'service role' : 'impersonated user'} does not have permission to view this table.`
-                            : 'You do not have permission to view this table.'}
+                          You do not have permission to view this table.
                         </p>
                       </div>
-                      {isImpersonating && (
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={stopImpersonation}
-                        >
-                          Stop Impersonation
-                        </Button>
-                      )}
                     </div>
                   </TableCell>
                 </TableRow>

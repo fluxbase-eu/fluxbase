@@ -127,6 +127,13 @@ func (h *DDLHandler) CreateSchema(c fiber.Ctx) error {
 		})
 	}
 
+	// Set up default privileges for tables created in this schema by the admin user
+	// This ensures that future tables created via DDL API will automatically get grants to service_role
+	if err := h.setupSchemaDefaultPrivileges(ctx, req.Name); err != nil {
+		log.Error().Err(err).Str("schema", req.Name).Msg("Failed to set up default privileges")
+		// Don't fail the request - schema was created successfully, just log the error
+	}
+
 	log.Info().Str("schema", req.Name).Msg("Schema created successfully")
 	return c.Status(201).JSON(fiber.Map{
 		"success": true,
@@ -226,6 +233,14 @@ func (h *DDLHandler) CreateTable(c fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to create table: %v", err),
 		})
+	}
+
+	// Grant permissions to service_role for dashboard_admin access
+	// This is necessary because tables created via ExecuteWithAdminRole don't
+	// inherit default privileges from migration 027 (which only applies to CURRENT_USER)
+	if err := h.grantTablePermissions(ctx, req.Schema, req.Name); err != nil {
+		log.Error().Err(err).Str("table", req.Schema+"."+req.Name).Msg("Failed to grant permissions to service_role")
+		// Don't fail the request - table was created successfully, just log the error
 	}
 
 	log.Info().Str("table", req.Schema+"."+req.Name).Msg("Table created successfully")
@@ -666,6 +681,113 @@ func escapeLiteral(value string) string {
 	// Replace single quotes with double single quotes
 	escaped := strings.ReplaceAll(value, "'", "''")
 	return fmt.Sprintf("'%s'", escaped)
+}
+
+// grantTablePermissions grants necessary permissions on a table to service_role
+// This ensures that dashboard_admin (which maps to service_role) can access the table
+func (h *DDLHandler) grantTablePermissions(ctx context.Context, schema, table string) error {
+	// Grant SELECT, INSERT, UPDATE, DELETE on the table to service_role
+	grantTableQuery := fmt.Sprintf(
+		"GRANT SELECT, INSERT, UPDATE, DELETE ON %s.%s TO service_role",
+		quoteIdentifier(schema),
+		quoteIdentifier(table),
+	)
+
+	err := h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
+		_, err := conn.Exec(ctx, grantTableQuery)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("failed to grant table permissions: %w", err)
+	}
+
+	// Grant USAGE on all sequences for this table (for auto-increment/identity columns)
+	// This query finds all sequences belonging to the table and grants USAGE
+	grantSequencesQuery := `
+		SELECT sequence_name
+		FROM information_schema.sequences
+		WHERE sequence_schema = $1
+		  AND sequence_name LIKE $2
+	`
+
+	rows, err := h.db.Pool().Query(ctx, grantSequencesQuery, schema, table+"_%")
+	if err != nil {
+		// Don't fail if we can't query sequences - table permissions are already granted
+		log.Debug().Err(err).Str("table", schema+"."+table).Msg("Failed to query sequences for table")
+		return nil
+	}
+	defer rows.Close()
+
+	var sequenceNames []string
+	for rows.Next() {
+		var seqName string
+		if err := rows.Scan(&seqName); err != nil {
+			continue
+		}
+		sequenceNames = append(sequenceNames, seqName)
+	}
+
+	// Grant USAGE on each sequence
+	for _, seqName := range sequenceNames {
+		grantSeqQuery := fmt.Sprintf(
+			"GRANT USAGE, SELECT ON SEQUENCE %s.%s TO service_role",
+			quoteIdentifier(schema),
+			quoteIdentifier(seqName),
+		)
+		err := h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
+			_, err := conn.Exec(ctx, grantSeqQuery)
+			return err
+		})
+		if err != nil {
+			log.Debug().Err(err).Str("sequence", schema+"."+seqName).Msg("Failed to grant sequence permissions")
+		}
+	}
+
+	log.Debug().
+		Str("table", schema+"."+table).
+		Int("sequences_granted", len(sequenceNames)).
+		Msg("Granted permissions to service_role for table")
+
+	return nil
+}
+
+// setupSchemaDefaultPrivileges sets up default privileges for a schema
+// so that tables created by the admin user automatically get grants to service_role
+func (h *DDLHandler) setupSchemaDefaultPrivileges(ctx context.Context, schema string) error {
+	// Set up default privileges for tables created in this schema
+	// This ensures that future tables created via DDL API will automatically get grants to service_role
+	queries := []string{
+		// Grant ALL on future tables to service_role
+		fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA %s GRANT ALL ON TABLES TO service_role", quoteIdentifier(schema)),
+		// Grant USAGE on future functions to service_role
+		fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA %s GRANT ALL ON FUNCTIONS TO service_role", quoteIdentifier(schema)),
+		// Grant USAGE on future sequences to service_role
+		fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE CURRENT_USER IN SCHEMA %s GRANT USAGE, SELECT ON SEQUENCES TO service_role", quoteIdentifier(schema)),
+	}
+
+	for _, query := range queries {
+		err := h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
+			_, err := conn.Exec(ctx, query)
+			return err
+		})
+		if err != nil {
+			return fmt.Errorf("failed to set up default privileges: %w", err)
+		}
+	}
+
+	// Also grant USAGE on the schema itself to service_role, anon, and authenticated
+	grantSchemaQuery := fmt.Sprintf("GRANT USAGE ON SCHEMA %s TO service_role, anon, authenticated", quoteIdentifier(schema))
+	err := h.db.ExecuteWithAdminRole(ctx, func(conn *pgx.Conn) error {
+		_, err := conn.Exec(ctx, grantSchemaQuery)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("failed to grant schema usage: %w", err)
+	}
+
+	log.Debug().Str("schema", schema).Msg("Set up default privileges for schema")
+
+	return nil
 }
 
 // ListSchemas returns all user schemas (excluding system schemas)

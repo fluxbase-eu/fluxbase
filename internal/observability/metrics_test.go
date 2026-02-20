@@ -1,6 +1,7 @@
 package observability
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -331,7 +332,7 @@ func TestMetricsServer_Shutdown(t *testing.T) {
 		}
 
 		// Should not panic and return nil
-		err := ms.Shutdown(nil)
+		err := ms.Shutdown(context.TODO())
 		assert.NoError(t, err)
 	})
 }

@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
+	"github.com/fluxbase-eu/fluxbase/internal/jobs"
 	"github.com/fluxbase-eu/fluxbase/internal/logging"
 	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/fluxbase-eu/fluxbase/internal/realtime"
@@ -20,6 +22,7 @@ type MonitoringHandler struct {
 	realtimeHandler *realtime.RealtimeHandler
 	storageProvider storage.Provider
 	loggingService  *logging.Service // Optional - may be nil if logging not configured
+	jobsStorage     *jobs.Storage    // Optional - may be nil if jobs not enabled
 }
 
 // NewMonitoringHandler creates a new monitoring handler
@@ -34,6 +37,11 @@ func NewMonitoringHandler(db *pgxpool.Pool, realtimeHandler *realtime.RealtimeHa
 // SetLoggingService sets the logging service for log queries
 func (h *MonitoringHandler) SetLoggingService(loggingService *logging.Service) {
 	h.loggingService = loggingService
+}
+
+// SetJobsStorage sets the jobs storage for job health monitoring
+func (h *MonitoringHandler) SetJobsStorage(jobsStorage *jobs.Storage) {
+	h.jobsStorage = jobsStorage
 }
 
 // RegisterRoutes registers monitoring routes with authentication
@@ -291,6 +299,37 @@ func (h *MonitoringHandler) GetHealth(c fiber.Ctx) error {
 			health.Services["storage"] = HealthStatus{
 				Status:  "healthy",
 				Latency: storageLatency,
+			}
+		}
+	}
+
+	// Check jobs health (if available)
+	if h.jobsStorage != nil {
+		stats, err := h.jobsStorage.GetJobStats(c.RequestCtx(), nil)
+		if err != nil {
+			health.Services["jobs"] = HealthStatus{
+				Status:  "degraded",
+				Message: err.Error(),
+			}
+			if health.Status == "healthy" {
+				health.Status = "degraded"
+			}
+		} else {
+			// Determine health based on pending/running job count
+			pendingJobs := stats.PendingJobs + stats.RunningJobs
+
+			jobsStatus := "healthy"
+			jobsMessage := "Processing queue"
+
+			// Consider degraded if too many pending jobs
+			if pendingJobs > 100 {
+				jobsStatus = "degraded"
+				jobsMessage = fmt.Sprintf("%d pending jobs", pendingJobs)
+			}
+
+			health.Services["jobs"] = HealthStatus{
+				Status:  jobsStatus,
+				Message: jobsMessage,
 			}
 		}
 	}

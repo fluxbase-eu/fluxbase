@@ -2,6 +2,7 @@ package custom
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -440,7 +441,7 @@ func (m *Manager) AutoLoadFromDir(ctx context.Context, toolsDir string) error {
 	for _, loadedTool := range tools {
 		// Check if tool already exists
 		existing, err := m.storage.GetToolByName(ctx, loadedTool.Name, loadedTool.Namespace)
-		if err != nil && err != ErrToolNotFound {
+		if err != nil && !errors.Is(err, ErrToolNotFound) {
 			log.Error().Err(err).Str("name", loadedTool.Name).Msg("Failed to check existing MCP tool")
 			continue
 		}

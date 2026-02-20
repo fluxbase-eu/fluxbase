@@ -23,7 +23,7 @@ type BodyLimitConfig struct {
 	// MaxJSONDepth limits nesting depth to prevent stack overflow (0 = unlimited)
 	MaxJSONDepth int
 
-	// ErrorHandler is called when the request body exceeds the limit
+	// ErrorHandler is called when request body exceeds limit
 	// If nil, a default 413 response is sent
 	ErrorHandler func(c fiber.Ctx, limit int64) error
 }
@@ -33,7 +33,7 @@ type BodyLimitPattern struct {
 	// Pattern is a glob-style path pattern (e.g., "/api/v1/storage/**", "/api/v1/rest/*")
 	Pattern string
 
-	// Limit is the maximum body size in bytes
+	// Limit is maximum body size in bytes
 	Limit int64
 
 	// Description is used for logging and error messages
@@ -42,7 +42,7 @@ type BodyLimitPattern struct {
 
 // Default body limits for different endpoint types
 const (
-	// DefaultBodyLimit is the default for most endpoints (1MB)
+	// DefaultBodyLimit is default for most endpoints (1MB)
 	DefaultBodyLimit int64 = 1 * 1024 * 1024
 
 	// RESTBodyLimit is for REST API CRUD operations (1MB)
@@ -71,7 +71,7 @@ const (
 	DefaultMaxJSONDepth = 64
 )
 
-// DefaultBodyLimitPatterns returns the default patterns for Fluxbase endpoints
+// DefaultBodyLimitPatterns returns default patterns for Fluxbase endpoints
 func DefaultBodyLimitPatterns() []BodyLimitPattern {
 	return []BodyLimitPattern{
 		// Storage uploads - larger limits
@@ -119,7 +119,7 @@ func DefaultBodyLimitPatterns() []BodyLimitPattern {
 	}
 }
 
-// DefaultBodyLimitConfig returns the default body limit configuration
+// DefaultBodyLimitConfig returns default body limit configuration
 func DefaultBodyLimitConfig() BodyLimitConfig {
 	return BodyLimitConfig{
 		DefaultLimit: DefaultBodyLimit,
@@ -129,7 +129,7 @@ func DefaultBodyLimitConfig() BodyLimitConfig {
 }
 
 // BodyLimitsFromConfig creates a BodyLimitConfig from configurable limits.
-// This allows overriding the default limits per endpoint type via configuration.
+// This allows overriding default limits per endpoint type via configuration.
 func BodyLimitsFromConfig(defaultLimit, restLimit, authLimit, storageLimit, bulkLimit, adminLimit int64, maxJSONDepth int) BodyLimitConfig {
 	// Use defaults if not specified
 	if defaultLimit <= 0 {
@@ -266,28 +266,29 @@ func (l *PatternBodyLimiter) matchPattern(path string, pattern compiledPattern) 
 	patternIdx := 0
 
 	for patternIdx < len(patternParts) && pathIdx < len(pathParts) {
-		if pattern.isDoubleWildcard[patternIdx] {
+		switch {
+		case pattern.isDoubleWildcard[patternIdx]:
 			// ** matches zero or more segments
-			// If this is the last pattern part, it matches everything
+			// If this is last pattern part, it matches everything
 			if patternIdx == len(patternParts)-1 {
 				return true
 			}
-			// Try to match the rest of the pattern against remaining path parts
+			// Try to match rest of pattern against remaining path parts
 			for i := pathIdx; i <= len(pathParts); i++ {
 				if l.matchRemainingPattern(pathParts, i, patternParts, patternIdx+1, pattern) {
 					return true
 				}
 			}
 			return false
-		} else if pattern.isWildcard[patternIdx] {
+		case pattern.isWildcard[patternIdx]:
 			// * matches exactly one segment
 			pathIdx++
 			patternIdx++
-		} else if patternParts[patternIdx] == pathParts[pathIdx] {
+		case patternParts[patternIdx] == pathParts[pathIdx]:
 			// Exact match
 			pathIdx++
 			patternIdx++
-		} else {
+		default:
 			return false
 		}
 	}
@@ -299,7 +300,8 @@ func (l *PatternBodyLimiter) matchPattern(path string, pattern compiledPattern) 
 // matchRemainingPattern is a helper for ** matching
 func (l *PatternBodyLimiter) matchRemainingPattern(pathParts []string, pathIdx int, patternParts []string, patternIdx int, pattern compiledPattern) bool {
 	for patternIdx < len(patternParts) && pathIdx < len(pathParts) {
-		if pattern.isDoubleWildcard[patternIdx] {
+		switch {
+		case pattern.isDoubleWildcard[patternIdx]:
 			// Another ** - recurse
 			if patternIdx == len(patternParts)-1 {
 				return true
@@ -310,13 +312,13 @@ func (l *PatternBodyLimiter) matchRemainingPattern(pathParts []string, pathIdx i
 				}
 			}
 			return false
-		} else if pattern.isWildcard[patternIdx] {
+		case pattern.isWildcard[patternIdx]:
 			pathIdx++
 			patternIdx++
-		} else if patternParts[patternIdx] == pathParts[pathIdx] {
+		case patternParts[patternIdx] == pathParts[pathIdx]:
 			pathIdx++
 			patternIdx++
-		} else {
+		default:
 			return false
 		}
 	}
@@ -324,7 +326,7 @@ func (l *PatternBodyLimiter) matchRemainingPattern(pathParts []string, pathIdx i
 	return pathIdx == len(pathParts) && patternIdx == len(patternParts)
 }
 
-// GetLimit returns the body limit for a given path
+// GetLimit returns body limit for a given path
 func (l *PatternBodyLimiter) GetLimit(path string) (limit int64, description string) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -377,7 +379,7 @@ func (l *PatternBodyLimiter) sendLimitExceeded(c fiber.Ctx, limit int64, descrip
 		"error":   "Payload Too Large",
 		"code":    "PAYLOAD_TOO_LARGE",
 		"message": fmt.Sprintf("Request body exceeds maximum size of %s for %s endpoints", formatBytes(limit), description),
-		"hint":    "Reduce the size of your request body or use chunked upload for large files",
+		"hint":    "Reduce size of your request body or use chunked upload for large files",
 		"details": fiber.Map{
 			"max_bytes":     limit,
 			"endpoint_type": description,
@@ -412,7 +414,7 @@ func NewJSONDepthLimiter(maxDepth int) *JSONDepthLimiter {
 	return &JSONDepthLimiter{maxDepth: maxDepth}
 }
 
-// CheckDepth validates JSON depth for the request body and returns an error response if exceeded
+// CheckDepth validates JSON depth for request body and returns an error response if exceeded
 func (l *JSONDepthLimiter) CheckDepth(c fiber.Ctx) error {
 	// Only check JSON content
 	contentType := string(c.Request().Header.ContentType())
@@ -464,7 +466,7 @@ func (l *JSONDepthLimiter) Middleware() fiber.Handler {
 }
 
 // checkJSONDepth validates that JSON doesn't exceed max nesting depth
-// Returns the max depth encountered and error if exceeded
+// Returns max depth encountered and error if exceeded
 func checkJSONDepth(data []byte, maxDepth int) (int, error) {
 	decoder := json.NewDecoder(strings.NewReader(string(data)))
 	depth := 0
@@ -476,7 +478,7 @@ func checkJSONDepth(data []byte, maxDepth int) (int, error) {
 			break
 		}
 		if err != nil {
-			// Invalid JSON - let the handler deal with it
+			// Invalid JSON - let handler deal with it
 			return maxFound, nil
 		}
 

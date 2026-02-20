@@ -342,6 +342,229 @@ useEffect(() => {
 }, []);
 ```
 
+## Presence Tracking
+
+Presence tracking enables real-time user online/offline status and custom state sharing. This is useful for collaborative applications, chat systems, and multiplayer features.
+
+### Tracking User Presence
+
+Track when users join and leave channels:
+
+```typescript
+import { createClient } from '@fluxbase/sdk'
+
+const client = createClient('http://localhost:8080', 'your-anon-key')
+
+// Track presence with custom state
+const channel = client.realtime
+  .channel('presence:online_users')
+  .on('presence', { event: 'sync' }, (payload) => {
+    // Initial presence state (all users currently online)
+    console.log('Current users:', payload.presences)
+  })
+  .on('presence', { event: 'join' }, (payload) => {
+    // User came online
+    console.log('User joined:', payload.key)
+    console.log('User state:', payload.presence)
+  })
+  .on('presence', { event: 'leave' }, (payload) => {
+    // User went offline
+    console.log('User left:', payload.key)
+  })
+  .subscribe()
+
+// Track your own presence with custom state
+channel.track({
+  online: true,
+  last_seen: new Date().toISOString(),
+  status: 'working',
+})
+```
+
+### Presence State Structure
+
+Presence data is sent as JSON objects:
+
+```typescript
+interface PresenceState {
+  online: boolean
+  last_seen: string
+  status?: 'online' | 'away' | 'busy' | 'offline'
+  custom_field?: string  // Any custom data
+}
+
+interface PresencePayload {
+  event: 'sync' | 'join' | 'leave'
+  key: string          // Unique identifier (user ID, session ID, etc.)
+  presence: PresenceState
+  presences: Record<string, PresenceState[]>  // All presences for 'sync' event
+}
+```
+
+### Presence Events
+
+| Event | Description | When It Fires |
+|-------|-------------|--------------|
+| `sync` | Initial presence state | When you first subscribe |
+| `join` | User came online | When a user tracks their presence |
+| `leave` | User went offline | When a user disconnects or untracks |
+
+### Custom Presence State
+
+Update your presence state in real-time:
+
+```typescript
+// Update presence state
+channel.track({
+  online: true,
+  status: 'busy',
+  inMeeting: true,
+  meetingId: 'abc-123',
+})
+
+// Update state later
+channel.track({
+  online: true,
+  status: 'available',
+  inMeeting: false,
+})
+```
+
+### Untracking Presence
+
+Remove your presence when done:
+
+```typescript
+// Stop being tracked
+channel.untrack()
+
+// Or unsubscribe to automatically untrack
+channel.unsubscribe()
+```
+
+### Channel Patterns
+
+Presence works with any channel name:
+
+```typescript
+// Global presence across app
+const globalPresence = client.realtime
+  .channel('presence:global')
+
+// Room-specific presence
+const roomPresence = client.realtime
+  .channel('presence:room:123')
+
+// Document collaboration presence
+const docPresence = client.realtime
+  .channel('presence:document:abc')
+```
+
+### React Example
+
+Build a user list with online indicators:
+
+```typescript
+import { useEffect, useState } from 'react'
+import { createClient } from '@fluxbase/sdk'
+
+interface UserPresence {
+  key: string
+  state: {
+    online: boolean
+    status: string
+    last_seen: string
+  }
+}
+
+function OnlineUsers({ documentId }: { documentId: string }) {
+  const [users, setUsers] = useState<UserPresence[]>([])
+  const client = createClient('http://localhost:8080', 'your-anon-key')
+
+  useEffect(() => {
+    const channel = client.realtime
+      .channel(`presence:document:${documentId}`)
+      .on('presence', { event: 'sync' }, (payload) => {
+        // Convert presences object to array
+        const userArray = Object.entries(payload.presences).map(([key, states]) => ({
+          key,
+          state: states[0],
+        }))
+        setUsers(userArray)
+      })
+      .on('presence', { event: 'join' }, (payload) => {
+        setUsers(prev => [...prev, {
+          key: payload.key,
+          state: payload.presence,
+        }])
+      })
+      .on('presence', { event: 'leave' }, (payload) => {
+        setUsers(prev => prev.filter(u => u.key !== payload.key))
+      })
+      .subscribe()
+
+    // Track your own presence
+    channel.track({
+      online: true,
+      last_seen: new Date().toISOString(),
+    })
+
+    return () => {
+      channel.untrack()
+      channel.unsubscribe()
+    }
+  }, [documentId])
+
+  return (
+    <div>
+      <h3>Online Users ({users.filter(u => u.state.online).length})</h3>
+      <ul>
+        {users.map(user => (
+          <li key={user.key}>
+            <span style={{
+              display: 'inline-block',
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: user.state.online ? 'green' : 'gray',
+              marginRight: 8,
+            }} />
+            {user.key} ({user.state.status})
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+### Presence with RLS
+
+Presence channels respect authentication but not RLS policies:
+
+```typescript
+// Authenticated presence
+const authChannel = client.realtime
+  .channel('presence:room:private')
+  .subscribe()  // Requires authentication
+
+// Anonymous presence (if allowed)
+const anonChannel = client.realtime
+  .channel('presence:public')
+  .subscribe()
+```
+
+### Rate Limiting
+
+Presence tracking is subject to rate limits:
+
+```yaml
+realtime:
+  presence:
+    max_presences_per_channel: 1000  # Max users tracking presence in a channel
+    max_channels_per_connection: 10   # Max presence channels per connection
+```
+
 ## Security
 
 Realtime subscriptions respect Row-Level Security policies. Users only receive updates for rows they have permission to view.

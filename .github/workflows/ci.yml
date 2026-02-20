@@ -2,9 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      postgres_tag:
+        description: "Custom Postgres image tag (e.g., add-new-feature)"
+        required: false
+        default: "18"
+        type: string
 
 env:
   GO_VERSION: "1.25.7"
@@ -156,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: ghcr.io/fluxbase-eu/fluxbase-postgres:18
+        image: ghcr.io/fluxbase-eu/fluxbase-postgres:${{ inputs.postgres_tag || '18' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -231,23 +238,6 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          # Increase max_connections significantly for parallel test execution
-          # ALTER SYSTEM requires a restart, so we'll apply settings and restart the container
-          psql -h localhost -U postgres -d fluxbase_test -c "ALTER SYSTEM SET max_connections = 200;"
-          psql -h localhost -U postgres -d fluxbase_test -c "ALTER SYSTEM SET superuser_reserved_connections = 1;"
-
-          # Restart PostgreSQL to apply settings
-          # Find the container ID for postgres service and restart it
-          POSTGRES_CONTAINER=$(docker ps --filter "ancestor=ghcr.io/fluxbase-eu/fluxbase-postgres:18" --format "{{.ID}}")
-          docker restart $POSTGRES_CONTAINER
-
-          # Wait for postgres to be ready after restart
-          sleep 5
-          until pg_isready -h localhost -p 5432 -U postgres; do
-            echo "Waiting for postgres to be ready..."
-            sleep 2
-          done
-
           # Create fluxbase_app user with BYPASSRLS for migrations and general testing
           # This user can bypass RLS policies to manage data freely (like in production)
           # Note: No CONNECTION LIMIT to allow tests to create many concurrent connections

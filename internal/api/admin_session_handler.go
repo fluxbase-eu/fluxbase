@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
@@ -74,7 +75,7 @@ func (h *AdminSessionHandler) RevokeSession(c fiber.Ctx) error {
 
 	err := h.sessionRepo.Delete(ctx, sessionID)
 	if err != nil {
-		if err == auth.ErrSessionNotFound {
+		if errors.Is(err, auth.ErrSessionNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Session not found",
 			})

@@ -54,6 +54,8 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedApiRestRouteImport } from './routes/_authenticated/api/rest'
 import { Route as AuthenticatedKnowledgeBasesIdIndexRouteImport } from './routes/_authenticated/knowledge-bases/$id/index'
+import { Route as AuthenticatedAiKnowledgeBasesIndexRouteImport } from './routes/_authenticated/ai/knowledge-bases/index'
+import { Route as AuthenticatedKnowledgeBasesIdTablesRouteImport } from './routes/_authenticated/knowledge-bases/$id/tables'
 import { Route as AuthenticatedKnowledgeBasesIdSettingsRouteImport } from './routes/_authenticated/knowledge-bases/$id/settings'
 import { Route as AuthenticatedKnowledgeBasesIdSearchRouteImport } from './routes/_authenticated/knowledge-bases/$id/search'
 
@@ -308,6 +310,18 @@ const AuthenticatedKnowledgeBasesIdIndexRoute =
     path: '/knowledge-bases/$id/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAiKnowledgeBasesIndexRoute =
+  AuthenticatedAiKnowledgeBasesIndexRouteImport.update({
+    id: '/ai/knowledge-bases/',
+    path: '/ai/knowledge-bases/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedKnowledgeBasesIdTablesRoute =
+  AuthenticatedKnowledgeBasesIdTablesRouteImport.update({
+    id: '/knowledge-bases/$id/tables',
+    path: '/knowledge-bases/$id/tables',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKnowledgeBasesIdSettingsRoute =
   AuthenticatedKnowledgeBasesIdSettingsRouteImport.update({
     id: '/knowledge-bases/$id/settings',
@@ -367,6 +381,8 @@ export interface FileRoutesByFullPath {
   '/webhooks/': typeof AuthenticatedWebhooksIndexRoute
   '/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  '/knowledge-bases/$id/tables': typeof AuthenticatedKnowledgeBasesIdTablesRoute
+  '/ai/knowledge-bases/': typeof AuthenticatedAiKnowledgeBasesIndexRoute
   '/knowledge-bases/$id/': typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -415,6 +431,8 @@ export interface FileRoutesByTo {
   '/webhooks': typeof AuthenticatedWebhooksIndexRoute
   '/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  '/knowledge-bases/$id/tables': typeof AuthenticatedKnowledgeBasesIdTablesRoute
+  '/ai/knowledge-bases': typeof AuthenticatedAiKnowledgeBasesIndexRoute
   '/knowledge-bases/$id': typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 export interface FileRoutesById {
@@ -465,6 +483,8 @@ export interface FileRoutesById {
   '/_authenticated/webhooks/': typeof AuthenticatedWebhooksIndexRoute
   '/_authenticated/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/_authenticated/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  '/_authenticated/knowledge-bases/$id/tables': typeof AuthenticatedKnowledgeBasesIdTablesRoute
+  '/_authenticated/ai/knowledge-bases/': typeof AuthenticatedAiKnowledgeBasesIndexRoute
   '/_authenticated/knowledge-bases/$id/': typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -515,6 +535,8 @@ export interface FileRouteTypes {
     | '/webhooks/'
     | '/knowledge-bases/$id/search'
     | '/knowledge-bases/$id/settings'
+    | '/knowledge-bases/$id/tables'
+    | '/ai/knowledge-bases/'
     | '/knowledge-bases/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -563,6 +585,8 @@ export interface FileRouteTypes {
     | '/webhooks'
     | '/knowledge-bases/$id/search'
     | '/knowledge-bases/$id/settings'
+    | '/knowledge-bases/$id/tables'
+    | '/ai/knowledge-bases'
     | '/knowledge-bases/$id'
   id:
     | '__root__'
@@ -612,6 +636,8 @@ export interface FileRouteTypes {
     | '/_authenticated/webhooks/'
     | '/_authenticated/knowledge-bases/$id/search'
     | '/_authenticated/knowledge-bases/$id/settings'
+    | '/_authenticated/knowledge-bases/$id/tables'
+    | '/_authenticated/ai/knowledge-bases/'
     | '/_authenticated/knowledge-bases/$id/'
   fileRoutesById: FileRoutesById
 }
@@ -947,6 +973,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKnowledgeBasesIdIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ai/knowledge-bases/': {
+      id: '/_authenticated/ai/knowledge-bases/'
+      path: '/ai/knowledge-bases'
+      fullPath: '/ai/knowledge-bases/'
+      preLoaderRoute: typeof AuthenticatedAiKnowledgeBasesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/knowledge-bases/$id/tables': {
+      id: '/_authenticated/knowledge-bases/$id/tables'
+      path: '/knowledge-bases/$id/tables'
+      fullPath: '/knowledge-bases/$id/tables'
+      preLoaderRoute: typeof AuthenticatedKnowledgeBasesIdTablesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/knowledge-bases/$id/settings': {
       id: '/_authenticated/knowledge-bases/$id/settings'
       path: '/knowledge-bases/$id/settings'
@@ -999,6 +1039,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedWebhooksIndexRoute: typeof AuthenticatedWebhooksIndexRoute
   AuthenticatedKnowledgeBasesIdSearchRoute: typeof AuthenticatedKnowledgeBasesIdSearchRoute
   AuthenticatedKnowledgeBasesIdSettingsRoute: typeof AuthenticatedKnowledgeBasesIdSettingsRoute
+  AuthenticatedKnowledgeBasesIdTablesRoute: typeof AuthenticatedKnowledgeBasesIdTablesRoute
+  AuthenticatedAiKnowledgeBasesIndexRoute: typeof AuthenticatedAiKnowledgeBasesIndexRoute
   AuthenticatedKnowledgeBasesIdIndexRoute: typeof AuthenticatedKnowledgeBasesIdIndexRoute
 }
 
@@ -1040,6 +1082,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedKnowledgeBasesIdSearchRoute,
   AuthenticatedKnowledgeBasesIdSettingsRoute:
     AuthenticatedKnowledgeBasesIdSettingsRoute,
+  AuthenticatedKnowledgeBasesIdTablesRoute:
+    AuthenticatedKnowledgeBasesIdTablesRoute,
+  AuthenticatedAiKnowledgeBasesIndexRoute:
+    AuthenticatedAiKnowledgeBasesIndexRoute,
   AuthenticatedKnowledgeBasesIdIndexRoute:
     AuthenticatedKnowledgeBasesIdIndexRoute,
 }

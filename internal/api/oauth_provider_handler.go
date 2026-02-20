@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -351,7 +352,7 @@ func (h *OAuthProviderHandler) GetOAuthProvider(c fiber.Ctx) error {
 		&p.CreatedAt, &p.UpdatedAt, &p.HasSecret,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "OAuth provider not found",
 		})
@@ -638,7 +639,7 @@ func (h *OAuthProviderHandler) UpdateOAuthProvider(c fiber.Ctx) error {
 	var displayName string
 	err = h.db.QueryRow(ctx, query, args...).Scan(&displayName)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "OAuth provider not found",
 		})
@@ -682,7 +683,7 @@ func (h *OAuthProviderHandler) DeleteOAuthProvider(c fiber.Ctx) error {
 	var displayName string
 	err = h.db.QueryRow(ctx, query, providerID).Scan(&displayName)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "OAuth provider not found",
 		})

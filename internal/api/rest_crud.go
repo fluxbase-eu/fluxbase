@@ -180,6 +180,7 @@ func (h *RESTHandler) makePostHandler(table database.TableInfo) fiber.Handler {
 			columnNames = append(columnNames, col)
 
 			// Check if value is GeoJSON and needs PostGIS conversion
+			//nolint:gocritic // Error handling flow, not switch-compatible
 			if isGeoJSON(val) {
 				// Convert GeoJSON to JSON string and use ST_GeomFromGeoJSON
 				geoJSON, err := json.Marshal(val)

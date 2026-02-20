@@ -18,7 +18,7 @@ func TestLoadFunctionCodeWithFiles_Integration(t *testing.T) {
 	t.Run("flat file pattern", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create a flat file function
 		testCode := `export async function handler(req) {
@@ -37,7 +37,7 @@ func TestLoadFunctionCodeWithFiles_Integration(t *testing.T) {
 	t.Run("directory-based pattern with index.ts", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create directory structure
 		funcDir := filepath.Join(tmpDir, "test-function")
@@ -69,7 +69,7 @@ export async function handler(req) {
 	t.Run("directory-based with nested subdirectories", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create directory structure with nested folders
 		funcDir := filepath.Join(tmpDir, "test-function")
@@ -96,7 +96,7 @@ export async function handler(req) {
 	t.Run("function not found", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		_, _, err = LoadFunctionCodeWithFiles(tmpDir, "non-existent")
 		assert.Error(t, err)
@@ -112,7 +112,7 @@ func TestLoadSharedModules_Integration(t *testing.T) {
 	t.Run("no shared directory", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		modules, err := LoadSharedModulesFromFilesystem(tmpDir)
 		require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestLoadSharedModules_Integration(t *testing.T) {
 	t.Run("load shared modules", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create _shared directory
 		sharedDir := filepath.Join(tmpDir, "_shared")
@@ -155,7 +155,7 @@ func TestLoadSharedModules_Integration(t *testing.T) {
 	t.Run("load nested shared modules", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create _shared directory with nested structure
 		sharedDir := filepath.Join(tmpDir, "_shared")
@@ -179,7 +179,7 @@ func TestLoadSharedModules_Integration(t *testing.T) {
 	t.Run("_shared is not a directory", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create _shared as a file instead of directory
 		sharedPath := filepath.Join(tmpDir, "_shared")
@@ -200,7 +200,7 @@ func TestResolveFunctionPath_Integration(t *testing.T) {
 	t.Run("resolves flat file", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create flat file
 		testCode := "export async function handler() { return {}; }"
@@ -216,7 +216,7 @@ func TestResolveFunctionPath_Integration(t *testing.T) {
 	t.Run("resolves directory-based function", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create directory with index.ts
 		funcDir := filepath.Join(tmpDir, "test-function")
@@ -235,7 +235,7 @@ func TestResolveFunctionPath_Integration(t *testing.T) {
 	t.Run("prioritizes flat file over directory", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create both flat file and directory
 		testCode := "// Flat file version"
@@ -266,7 +266,7 @@ func TestDeleteFunctionCode_Integration(t *testing.T) {
 	t.Run("delete flat file", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create file
 		testCode := "export async function handler() { return {}; }"
@@ -290,7 +290,7 @@ func TestDeleteFunctionCode_Integration(t *testing.T) {
 	t.Run("delete directory-based function", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create directory with index.ts
 		funcDir := filepath.Join(tmpDir, "test-function")
@@ -318,7 +318,7 @@ func TestDeleteFunctionCode_Integration(t *testing.T) {
 	t.Run("delete non-existent function", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		err = DeleteFunctionCode(tmpDir, "non-existent")
 		assert.Error(t, err)
@@ -334,7 +334,7 @@ func TestListFunctionFiles_Integration(t *testing.T) {
 	t.Run("list empty directory", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		files, err := ListFunctionFiles(tmpDir)
 		require.NoError(t, err)
@@ -344,7 +344,7 @@ func TestListFunctionFiles_Integration(t *testing.T) {
 	t.Run("list mixed files and directories", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create flat file function
 		flatCode := "export async function handler() { return {}; }"
@@ -397,7 +397,7 @@ func TestFunctionFileTypeDetection_Integration(t *testing.T) {
 	t.Run("detects TypeScript files", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		funcDir := filepath.Join(tmpDir, "test-function")
 		err = os.MkdirAll(funcDir, 0755)
@@ -443,7 +443,7 @@ func TestLoadFunctionCode_Integration_EdgeCases(t *testing.T) {
 	t.Run("load function with special characters in name", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create function with special characters
 		testCode := "export async function handler() { return {}; }"
@@ -459,7 +459,7 @@ func TestLoadFunctionCode_Integration_EdgeCases(t *testing.T) {
 	t.Run("load function with very long name", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Function names have a max length of 64 characters
 		// Test a name that's close to but within the limit
@@ -479,7 +479,7 @@ func TestSaveFunctionCode_Integration_EdgeCases(t *testing.T) {
 	t.Run("update existing function", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create initial function
 		initialCode := "export async function handler() { return { status: 200 }; }"
@@ -500,7 +500,7 @@ func TestSaveFunctionCode_Integration_EdgeCases(t *testing.T) {
 	t.Run("save function with very large code", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Create large code (1MB)
 		largeCode := strings.Repeat("export async function handler() { return {}; }\n", 10000)
@@ -523,7 +523,7 @@ func TestFunctionSecurity_Integration(t *testing.T) {
 	t.Run("path traversal prevention in load", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		// Try to load file outside functions directory
 		_, err = LoadFunctionCode(tmpDir, "../../../etc/passwd")
@@ -533,7 +533,7 @@ func TestFunctionSecurity_Integration(t *testing.T) {
 	t.Run("path traversal prevention in save", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		code := "export async function handler() { return {}; }"
 		err = SaveFunctionCode(tmpDir, "../malicious", code)
@@ -543,7 +543,7 @@ func TestFunctionSecurity_Integration(t *testing.T) {
 	t.Run("path traversal prevention in delete", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "functions-test-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		err = DeleteFunctionCode(tmpDir, "../../etc/passwd")
 		assert.Error(t, err)
@@ -559,7 +559,7 @@ func BenchmarkLoadFunctionCode(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	testCode := "export async function handler(req) { return { status: 200, body: 'Hello' }; }"
 	testFilePath := filepath.Join(tmpDir, "bench-function.ts")
@@ -570,7 +570,7 @@ func BenchmarkLoadFunctionCode(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		LoadFunctionCode(tmpDir, "bench-function")
+		_, _ = LoadFunctionCode(tmpDir, "bench-function")
 	}
 }
 
@@ -579,7 +579,7 @@ func BenchmarkLoadFunctionCodeWithFiles(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	funcDir := filepath.Join(tmpDir, "bench-function")
 	err = os.MkdirAll(funcDir, 0755)
@@ -601,7 +601,7 @@ func BenchmarkLoadFunctionCodeWithFiles(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		LoadFunctionCodeWithFiles(tmpDir, "bench-function")
+		_, _, _ = LoadFunctionCodeWithFiles(tmpDir, "bench-function")
 	}
 }
 
@@ -610,7 +610,7 @@ func BenchmarkSaveFunctionCode(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	code := "export async function handler(req) { return { status: 200, body: 'Hello' }; }"
 
@@ -620,6 +620,6 @@ func BenchmarkSaveFunctionCode(b *testing.B) {
 		if i > 0 {
 			funcName = "bench-function-" + string(rune(i))
 		}
-		SaveFunctionCode(tmpDir, funcName, code)
+		_ = SaveFunctionCode(tmpDir, funcName, code)
 	}
 }

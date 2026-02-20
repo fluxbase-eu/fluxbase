@@ -19,14 +19,17 @@ func randomEmail() string {
 	return fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
 }
 
-// createTestTable creates a test table and sets up necessary permissions and schema cache refresh
+// createTestTable creates a test table and sets up necessary permissions and schema cache refresh.
 // This is a convenience function that combines all the setup steps needed for creating
-// tables during integration tests
+// tables during integration tests.
+// Note: Currently unused but kept for potential future use.
+/*
 func createTestTable(tc *testutil.IntegrationTestContext, schema, table, createSQL string) {
 	tc.ExecuteSQL(createSQL)
 	refreshSchemaCache(tc)
 	grantTablePermissions(tc, schema, table)
 }
+*/
 
 // refreshSchemaCache refreshes the REST API schema cache so that newly created tables
 // can be discovered. This is necessary because the schema cache is populated at server
@@ -532,7 +535,7 @@ func TestRESTHandler_DeleteSingleRecord_Integration(t *testing.T) {
 	_, token := tc.CreateTestUser(randomEmail(), "password123")
 
 	// Verify record exists before deletion
-	verifyResp := tc.NewRequest("GET", "/api/v1/tables/public/temp_data/"+tempID.(string)).
+	tc.NewRequest("GET", "/api/v1/tables/public/temp_data/"+tempID.(string)).
 		WithAuth(token).
 		Send().
 		AssertStatus(200)
@@ -544,7 +547,7 @@ func TestRESTHandler_DeleteSingleRecord_Integration(t *testing.T) {
 		AssertStatus(204)
 
 	// Verify record is deleted
-	verifyResp = tc.NewRequest("GET", "/api/v1/tables/public/temp_data/"+tempID.(string)).
+	verifyResp := tc.NewRequest("GET", "/api/v1/tables/public/temp_data/"+tempID.(string)).
 		WithAuth(token).
 		Send()
 	assert.Equal(t, 404, verifyResp.Status(), "Record should be deleted")

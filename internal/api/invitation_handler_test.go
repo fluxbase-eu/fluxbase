@@ -208,7 +208,7 @@ func TestValidateInvitation_EmptyToken(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/invitations//validate", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Fiber treats empty param as route not found
 	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
@@ -230,7 +230,7 @@ func TestAcceptInvitation_EmptyToken(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Fiber treats empty param as route not found
 	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
@@ -247,7 +247,7 @@ func TestAcceptInvitation_InvalidBody(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -275,7 +275,7 @@ func TestRevokeInvitation_EmptyToken(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Fiber treats empty param as route not found
 	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
@@ -297,7 +297,7 @@ func TestCreateInvitation_NoUserID(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
@@ -328,7 +328,7 @@ func TestCreateInvitation_InvalidBody(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -360,7 +360,7 @@ func TestCreateInvitation_InvalidUserID(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 

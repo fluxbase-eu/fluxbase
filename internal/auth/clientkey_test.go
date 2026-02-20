@@ -76,8 +76,8 @@ func TestMain(m *testing.M) {
 
 	// Clean up test data before closing
 	ctx := context.Background()
-	sharedTestDB.Exec(ctx, "DELETE FROM auth.client_keys WHERE name LIKE 'test-%'")
-	sharedTestDB.Exec(ctx, "DELETE FROM auth.users WHERE email LIKE '%@example.com'")
+	_, _ = sharedTestDB.Exec(ctx, "DELETE FROM auth.client_keys WHERE name LIKE 'test-%'")
+	_, _ = sharedTestDB.Exec(ctx, "DELETE FROM auth.users WHERE email LIKE '%@example.com'")
 
 	// Close shared connection
 	sharedTestDB.Close()
@@ -86,9 +86,8 @@ func TestMain(m *testing.M) {
 }
 
 var (
-	sharedTestDB     *database.Connection
-	sharedTestDBMu   sync.Mutex
-	sharedTestDBOnce sync.Once
+	sharedTestDB   *database.Connection
+	sharedTestDBMu sync.Mutex
 )
 
 // getSharedTestDB returns a shared database connection for all tests in the package
@@ -129,7 +128,10 @@ func getSharedTestDB(t *testing.T) *pgxpool.Pool {
 }
 
 // setupClientKeyTestDB creates a test database connection for client key tests
-// DEPRECATED: Use getSharedTestDB instead for better connection pooling
+//
+// Deprecated: Use getSharedTestDB instead for better connection pooling.
+// Note: Currently unused but kept for reference.
+/*
 func setupClientKeyTestDB(t *testing.T) *pgxpool.Pool {
 	cfg := &config.DatabaseConfig{
 		Host:            "postgres",
@@ -158,8 +160,11 @@ func setupClientKeyTestDB(t *testing.T) *pgxpool.Pool {
 
 	return db.Pool()
 }
+*/
 
-// cleanupClientKeys removes all test client keys and users
+// cleanupClientKeys removes all test client keys and users.
+// Note: Currently unused but kept for reference.
+/*
 func cleanupClientKeys(t *testing.T, db *pgxpool.Pool) {
 	ctx := context.Background()
 	// Delete client keys first (foreign key constraint)
@@ -169,6 +174,7 @@ func cleanupClientKeys(t *testing.T, db *pgxpool.Pool) {
 	_, err = db.Exec(ctx, "DELETE FROM auth.users WHERE email LIKE '%@example.com'")
 	require.NoError(t, err, "Failed to cleanup test users")
 }
+*/
 
 // createTestUser creates a test user and returns the ID
 func createTestUser(t *testing.T, db *pgxpool.Pool, email string) uuid.UUID {

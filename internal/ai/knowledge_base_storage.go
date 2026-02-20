@@ -3,7 +3,9 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -40,8 +42,8 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 			id, name, namespace, description,
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
-			enabled, source, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			enabled, source, created_by, visibility, default_user_permission
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING created_at, updated_at
 	`
 
@@ -49,7 +51,7 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Namespace, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Source, kb.CreatedBy,
+		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility, kb.DefaultUserPermission,
 	).Scan(&kb.CreatedAt, &kb.UpdatedAt)
 }
 
@@ -60,7 +62,8 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
 			enabled, document_count, total_chunks,
-			source, created_by, created_at, updated_at
+			source, created_by, created_at, updated_at,
+			visibility, owner_id, default_user_permission
 		FROM ai.knowledge_bases
 		WHERE id = $1
 	`
@@ -72,8 +75,9 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 		&kb.ChunkSize, &kb.ChunkOverlap, &kb.ChunkStrategy,
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
 		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
+		&kb.Visibility, &kb.OwnerID, &kb.DefaultUserPermission,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -89,7 +93,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBaseByName(ctx context.Context, name,
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
 			enabled, document_count, total_chunks,
-			source, created_by, created_at, updated_at
+			source, created_by, created_at, updated_at, visibility
 		FROM ai.knowledge_bases
 		WHERE name = $1 AND namespace = $2
 	`
@@ -100,9 +104,9 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBaseByName(ctx context.Context, name,
 		&kb.EmbeddingModel, &kb.EmbeddingDimensions,
 		&kb.ChunkSize, &kb.ChunkOverlap, &kb.ChunkStrategy,
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
-		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
+		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt, &kb.Visibility,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -154,10 +158,17 @@ func (s *KnowledgeBaseStorage) ListKnowledgeBases(ctx context.Context, namespace
 func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *KnowledgeBase) error {
 	query := `
 		UPDATE ai.knowledge_bases SET
-			name = $2, description = $3,
-			embedding_model = $4, embedding_dimensions = $5,
-			chunk_size = $6, chunk_overlap = $7, chunk_strategy = $8,
-			enabled = $9, updated_at = NOW()
+			name = $2,
+			description = $3,
+			embedding_model = $4,
+			embedding_dimensions = $5,
+			chunk_size = $6,
+			chunk_overlap = $7,
+			chunk_strategy = $8,
+			enabled = $9,
+			visibility = $10,
+			default_user_permission = $11,
+			updated_at = NOW()
 		WHERE id = $1
 		RETURNING updated_at
 	`
@@ -166,7 +177,7 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled,
+		kb.Enabled, kb.Visibility, kb.DefaultUserPermission,
 	).Scan(&kb.UpdatedAt)
 }
 
@@ -225,7 +236,7 @@ func (s *KnowledgeBaseStorage) GetDocument(ctx context.Context, id string) (*Doc
 		&doc.MimeType, &doc.Content, &doc.ContentHash, &doc.Status, &doc.ErrorMessage,
 		&doc.ChunksCount, &doc.Metadata, &doc.Tags, &doc.CreatedBy, &doc.CreatedAt, &doc.UpdatedAt, &doc.IndexedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -294,6 +305,75 @@ func (s *KnowledgeBaseStorage) MarkDocumentIndexed(ctx context.Context, id strin
 func (s *KnowledgeBaseStorage) DeleteDocument(ctx context.Context, id string) error {
 	_, err := s.db.Exec(ctx, "DELETE FROM ai.documents WHERE id = $1", id)
 	return err
+}
+
+// DeleteDocumentsByFilter deletes documents matching the given metadata filter
+// Returns the number of documents deleted
+func (s *KnowledgeBaseStorage) DeleteDocumentsByFilter(
+	ctx context.Context,
+	knowledgeBaseID string,
+	filter *MetadataFilter,
+) (int, error) {
+	// Build WHERE clause for filtering
+	whereConditions := []string{
+		"knowledge_base_id = $1",
+	}
+	args := []interface{}{knowledgeBaseID}
+	argIndex := 2
+
+	// User isolation filter
+	if filter != nil && filter.UserID != nil {
+		whereConditions = append(whereConditions, fmt.Sprintf(`(
+			metadata->>'user_id' = $%d OR
+			metadata->>'user_id' IS NULL OR
+			NOT (metadata ? 'user_id')
+		)`, argIndex))
+		args = append(args, *filter.UserID)
+		argIndex++
+	}
+
+	// Tag filter - documents must have ALL specified tags
+	if filter != nil && len(filter.Tags) > 0 {
+		whereConditions = append(whereConditions, fmt.Sprintf("tags @> $%d", argIndex))
+		args = append(args, filter.Tags)
+		argIndex++
+	}
+
+	// Advanced metadata filter with operators and logical combinations
+	if filter != nil && filter.AdvancedFilter != nil {
+		// We need to use 'd' as the table alias for consistency, but here we're querying documents directly
+		// So we need to adjust the SQL builder or prefix the table name
+		metadataSQL, metadataArgs, err := buildMetadataFilterSQLForTable(*filter.AdvancedFilter, &argIndex, "")
+		if err != nil {
+			return 0, fmt.Errorf("failed to build metadata filter: %w", err)
+		}
+		if metadataSQL != "" {
+			whereConditions = append(whereConditions, metadataSQL)
+			args = append(args, metadataArgs...)
+		}
+	}
+
+	// Legacy simple metadata filter (exact match only)
+	if filter != nil && filter.AdvancedFilter == nil && len(filter.Metadata) > 0 {
+		for key, value := range filter.Metadata {
+			escapedKey := escapeStringLiteral(key)
+			whereConditions = append(whereConditions, fmt.Sprintf("metadata->>'%s' = $%d", escapedKey, argIndex))
+			args = append(args, value)
+			argIndex++
+		}
+	}
+
+	whereClause := strings.Join(whereConditions, " AND ")
+
+	query := fmt.Sprintf("DELETE FROM ai.documents WHERE %s", whereClause)
+
+	result, err := s.db.Exec(ctx, query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete documents by filter: %w", err)
+	}
+
+	rowsAffected := result.RowsAffected()
+	return int(rowsAffected), nil
 }
 
 // UpdateDocumentMetadata updates a document's title, metadata, and tags
@@ -439,34 +519,61 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBase(ctx context.Context, lin
 		link.ID = uuid.New().String()
 	}
 	link.CreatedAt = time.Now()
+	link.UpdatedAt = time.Now()
+
+	// Set defaults
+	if link.AccessLevel == "" {
+		link.AccessLevel = "full"
+	}
+	if link.ContextWeight == 0 {
+		link.ContextWeight = 1.0
+	}
+	if link.Priority == 0 {
+		link.Priority = 100
+	}
 
 	query := `
 		INSERT INTO ai.chatbot_knowledge_bases (
-			id, chatbot_id, knowledge_base_id, enabled,
-			max_chunks, similarity_threshold, priority
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			id, chatbot_id, knowledge_base_id,
+			access_level, filter_expression, context_weight, priority,
+			intent_keywords, max_chunks, similarity_threshold,
+			enabled, metadata
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		ON CONFLICT (chatbot_id, knowledge_base_id) DO UPDATE SET
-			enabled = EXCLUDED.enabled,
+			access_level = EXCLUDED.access_level,
+			filter_expression = EXCLUDED.filter_expression,
+			context_weight = EXCLUDED.context_weight,
+			priority = EXCLUDED.priority,
+			intent_keywords = EXCLUDED.intent_keywords,
 			max_chunks = EXCLUDED.max_chunks,
 			similarity_threshold = EXCLUDED.similarity_threshold,
-			priority = EXCLUDED.priority
-		RETURNING created_at
+			enabled = EXCLUDED.enabled,
+			metadata = EXCLUDED.metadata,
+			updated_at = NOW()
+		RETURNING created_at, updated_at
 	`
 
 	return s.db.QueryRow(ctx, query,
-		link.ID, link.ChatbotID, link.KnowledgeBaseID, link.Enabled,
-		link.MaxChunks, link.SimilarityThreshold, link.Priority,
-	).Scan(&link.CreatedAt)
+		link.ID, link.ChatbotID, link.KnowledgeBaseID,
+		link.AccessLevel, link.FilterExpression, link.ContextWeight, link.Priority,
+		link.IntentKeywords, link.MaxChunks, link.SimilarityThreshold,
+		link.Enabled, link.Metadata,
+	).Scan(&link.CreatedAt, &link.UpdatedAt)
 }
 
 // GetChatbotKnowledgeBases retrieves all knowledge base links for a chatbot
 func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBases(ctx context.Context, chatbotID string) ([]ChatbotKnowledgeBase, error) {
 	query := `
-		SELECT id, chatbot_id, knowledge_base_id, enabled,
-			max_chunks, similarity_threshold, priority, created_at
-		FROM ai.chatbot_knowledge_bases
-		WHERE chatbot_id = $1
-		ORDER BY priority DESC
+		SELECT ckb.id, ckb.chatbot_id, ckb.knowledge_base_id,
+			ckb.access_level, ckb.filter_expression, ckb.context_weight,
+			ckb.priority, ckb.intent_keywords, ckb.max_chunks,
+			ckb.similarity_threshold, ckb.enabled, ckb.metadata,
+			ckb.created_at, ckb.updated_at,
+			kb.name as knowledge_base_name
+		FROM ai.chatbot_knowledge_bases ckb
+		JOIN ai.knowledge_bases kb ON kb.id = ckb.knowledge_base_id
+		WHERE ckb.chatbot_id = $1
+		ORDER BY ckb.priority DESC
 	`
 
 	rows, err := s.db.Query(ctx, query, chatbotID)
@@ -479,8 +586,12 @@ func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBases(ctx context.Context, cha
 	for rows.Next() {
 		var link ChatbotKnowledgeBase
 		if err := rows.Scan(
-			&link.ID, &link.ChatbotID, &link.KnowledgeBaseID, &link.Enabled,
-			&link.MaxChunks, &link.SimilarityThreshold, &link.Priority, &link.CreatedAt,
+			&link.ID, &link.ChatbotID, &link.KnowledgeBaseID,
+			&link.AccessLevel, &link.FilterExpression, &link.ContextWeight,
+			&link.Priority, &link.IntentKeywords, &link.MaxChunks,
+			&link.SimilarityThreshold, &link.Enabled, &link.Metadata,
+			&link.CreatedAt, &link.UpdatedAt,
+			&link.KnowledgeBaseName,
 		); err != nil {
 			log.Warn().Err(err).Msg("Failed to scan chatbot knowledge base link")
 			continue
@@ -489,6 +600,11 @@ func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBases(ctx context.Context, cha
 	}
 
 	return links, nil
+}
+
+// GetChatbotKnowledgeBaseLinks is an alias for GetChatbotKnowledgeBases for the query router
+func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBaseLinks(ctx context.Context, chatbotID string) ([]ChatbotKnowledgeBase, error) {
+	return s.GetChatbotKnowledgeBases(ctx, chatbotID)
 }
 
 // UnlinkChatbotKnowledgeBase removes a link between chatbot and knowledge base
@@ -596,6 +712,15 @@ type HybridSearchOptions struct {
 	SemanticWeight float64         // Weight for semantic score (0-1), keyword weight = 1 - semantic
 	KeywordBoost   float64         // Boost factor for exact keyword matches
 	Filter         *MetadataFilter // Optional metadata filter for user isolation
+}
+
+// GraphBoostOptions contains options for graph-boosted search
+type GraphBoostOptions struct {
+	QueryEmbedding   []float32 // Query vector embedding
+	QueryText        string    // Query text for entity extraction
+	Limit            int       // Maximum number of results to return
+	Threshold        float64   // Minimum similarity threshold (0-1)
+	GraphBoostWeight float64   // How much to weight entity matches vs vector similarity (0.0-1.0)
 }
 
 // SearchChunksHybrid performs hybrid search combining vector similarity with full-text search
@@ -805,6 +930,502 @@ func (s *KnowledgeBaseStorage) searchHybrid(ctx context.Context, knowledgeBaseID
 	return results, nil
 }
 
+// SearchChunksWithGraphBoost performs vector search with entity-based boosting
+// This combines semantic similarity with knowledge graph entity salience
+// Entities are extracted from the query and documents mentioning those entities receive a ranking boost
+func (s *KnowledgeBaseStorage) SearchChunksWithGraphBoost(
+	ctx context.Context,
+	knowledgeBaseID string,
+	knowledgeGraph *KnowledgeGraph,
+	entityExtractor EntityExtractor,
+	opts GraphBoostOptions,
+) ([]RetrievalResult, error) {
+	// Apply defaults and validate
+	if opts.GraphBoostWeight < 0 {
+		opts.GraphBoostWeight = 0
+	} else if opts.GraphBoostWeight > 1 {
+		opts.GraphBoostWeight = 1
+	}
+
+	// If no boosting requested, use regular search for efficiency
+	if opts.GraphBoostWeight == 0 {
+		return s.SearchChunks(ctx, knowledgeBaseID, opts.QueryEmbedding, opts.Limit, opts.Threshold)
+	}
+
+	log.Debug().
+		Str("kb_id", knowledgeBaseID).
+		Float64("boost_weight", opts.GraphBoostWeight).
+		Str("query", opts.QueryText).
+		Msg("SearchChunksWithGraphBoost starting")
+
+	// Step 1: Extract entities from query text
+	var queryEntities []Entity
+	if entityExtractor != nil && opts.QueryText != "" {
+		extracted, err := entityExtractor.ExtractEntities(opts.QueryText, knowledgeBaseID)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to extract entities from query, using vector-only search")
+			return s.SearchChunks(ctx, knowledgeBaseID, opts.QueryEmbedding, opts.Limit, opts.Threshold)
+		}
+		queryEntities = extracted.Entities
+		log.Debug().Int("entity_count", len(queryEntities)).Msg("Extracted entities from query")
+	}
+
+	// Step 2: Get more results than needed (for re-ranking)
+	retrievalLimit := opts.Limit * 3 // Get 3x results for re-ranking
+	if retrievalLimit < 10 {
+		retrievalLimit = 10
+	}
+	if retrievalLimit > 100 {
+		retrievalLimit = 100
+	}
+
+	chunks, err := s.SearchChunks(ctx, knowledgeBaseID, opts.QueryEmbedding, retrievalLimit, opts.Threshold)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(chunks) == 0 {
+		return chunks, nil
+	}
+
+	// Step 3: Calculate entity salience per document
+	documentEntitySalience := make(map[string]float64) // document_id -> salience sum
+
+	if len(queryEntities) > 0 && knowledgeGraph != nil {
+		// For each query entity, find documents that mention it
+		for _, queryEntity := range queryEntities {
+			// Search for exact entity matches in the knowledge base
+			matchingEntities, err := knowledgeGraph.SearchEntities(ctx, knowledgeBaseID, queryEntity.CanonicalName, nil, 50)
+			if err != nil {
+				log.Warn().Err(err).Str("entity", queryEntity.CanonicalName).Msg("Failed to search for entity")
+				continue
+			}
+
+			// For each matching entity, get documents mentioning it with salience
+			for _, entity := range matchingEntities {
+				docEntities, err := knowledgeGraph.GetDocumentEntities(ctx, "")
+				if err != nil {
+					continue
+				}
+
+				// Aggregate salience per document
+				for _, de := range docEntities {
+					if de.EntityID == entity.ID {
+						documentEntitySalience[de.DocumentID] += de.Salience
+					}
+				}
+			}
+		}
+	}
+
+	log.Debug().
+		Int("documents_with_entities", len(documentEntitySalience)).
+		Msg("Found documents with entity matches")
+
+	// Step 4: Apply entity boost and re-rank
+	type boostedResult struct {
+		result      RetrievalResult
+		entityBoost float64
+		finalScore  float64
+	}
+
+	boosted := make([]boostedResult, 0, len(chunks))
+
+	// Find max salience for normalization
+	maxSalience := 0.0
+	for _, salience := range documentEntitySalience {
+		if salience > maxSalience {
+			maxSalience = salience
+		}
+	}
+
+	for _, chunk := range chunks {
+		entityBoost := 0.0
+		if salience, ok := documentEntitySalience[chunk.DocumentID]; ok && maxSalience > 0 {
+			// Normalize to 0-1
+			entityBoost = (salience / maxSalience)
+		}
+
+		// Combined score: weighted average of vector similarity and entity boost
+		vectorWeight := 1.0 - opts.GraphBoostWeight
+		finalScore := (chunk.Similarity * vectorWeight) + (entityBoost * opts.GraphBoostWeight)
+
+		boosted = append(boosted, boostedResult{
+			result:      chunk,
+			entityBoost: entityBoost,
+			finalScore:  finalScore,
+		})
+	}
+
+	// Sort by final score (descending)
+	sort.Slice(boosted, func(i, j int) bool {
+		return boosted[i].finalScore > boosted[j].finalScore
+	})
+
+	// Step 5: Return top N results
+	resultCount := opts.Limit
+	if resultCount > len(boosted) {
+		resultCount = len(boosted)
+	}
+
+	results := make([]RetrievalResult, resultCount)
+	for i := 0; i < resultCount; i++ {
+		results[i] = boosted[i].result
+		// Update similarity to the final score for consistency
+		results[i].Similarity = boosted[i].finalScore
+		// Store boost info in metadata for debugging (serialize as JSON)
+		metadataMap := make(map[string]any)
+		if len(results[i].Metadata) > 0 {
+			// Parse existing metadata if present (ignore errors - this is just for debugging)
+			_ = json.Unmarshal(results[i].Metadata, &metadataMap)
+		}
+		metadataMap["entity_boost"] = boosted[i].entityBoost
+		metadataMap["final_score"] = boosted[i].finalScore
+		metadataJSON, _ := json.Marshal(metadataMap)
+		results[i].Metadata = json.RawMessage(metadataJSON)
+	}
+
+	log.Debug().
+		Int("results_count", len(results)).
+		Float64("top_boost", boosted[0].entityBoost).
+		Float64("top_final_score", boosted[0].finalScore).
+		Msg("SearchChunksWithGraphBoost completed")
+
+	return results, nil
+}
+
+// buildMetadataFilterSQL builds SQL WHERE conditions and args from a MetadataFilterGroup
+// Returns (WHERE clause fragment, args, error)
+func buildMetadataFilterSQL(group MetadataFilterGroup, argIndex *int) (string, []interface{}, error) {
+	var conditions []string
+	var args []interface{}
+
+	// Process all conditions in this group
+	for _, cond := range group.Conditions {
+		conditionSQL, conditionArgs, err := buildConditionSQL(cond, argIndex)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to build condition for key '%s': %w", cond.Key, err)
+		}
+		conditions = append(conditions, conditionSQL)
+		args = append(args, conditionArgs...)
+	}
+
+	// Process nested groups recursively
+	for _, nestedGroup := range group.Groups {
+		nestedSQL, nestedArgs, err := buildMetadataFilterSQL(nestedGroup, argIndex)
+		if err != nil {
+			return "", nil, err
+		}
+		if nestedSQL != "" {
+			conditions = append(conditions, fmt.Sprintf("(%s)", nestedSQL))
+			args = append(args, nestedArgs...)
+		}
+	}
+
+	if len(conditions) == 0 {
+		return "", args, nil
+	}
+
+	logicalOp := string(group.LogicalOp)
+	if logicalOp == "" {
+		logicalOp = "AND" // Default to AND
+	}
+
+	whereClause := strings.Join(conditions, fmt.Sprintf(" %s ", logicalOp))
+	return whereClause, args, nil
+}
+
+// buildConditionSQL builds SQL for a single MetadataCondition
+func buildConditionSQL(cond MetadataCondition, argIndex *int) (string, []interface{}, error) {
+	var args []interface{}
+	var sqlCond string
+
+	// Use d.metadata->>'key' syntax to extract metadata as text
+	metadataRef := fmt.Sprintf("d.metadata->>'%s'", escapeStringLiteral(cond.Key))
+
+	switch cond.Operator {
+	case MetadataOpEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s = $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpNotEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for not equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s != $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpILike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for ilike operator")
+		}
+		sqlCond = fmt.Sprintf("%s ILIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for like operator")
+		}
+		sqlCond = fmt.Sprintf("%s LIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpNotIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for NOT IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s NOT IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpGreaterThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than operator")
+		}
+		sqlCond = fmt.Sprintf("%s > $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpGreaterThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s >= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than operator")
+		}
+		sqlCond = fmt.Sprintf("%s < $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s <= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpBetween:
+		if cond.Min == nil || cond.Max == nil {
+			return "", nil, errors.New("min and max are required for BETWEEN operator")
+		}
+		sqlCond = fmt.Sprintf("%s BETWEEN $%d AND $%d", metadataRef, *argIndex, *argIndex+1)
+		args = append(args, fmt.Sprintf("%v", cond.Min), fmt.Sprintf("%v", cond.Max))
+		*argIndex += 2
+
+	case MetadataOpIsNull:
+		sqlCond = fmt.Sprintf("%s IS NULL", metadataRef)
+
+	case MetadataOpIsNotNull:
+		sqlCond = fmt.Sprintf("%s IS NOT NULL", metadataRef)
+
+	default:
+		return "", nil, fmt.Errorf("unsupported operator: %s", cond.Operator)
+	}
+
+	return sqlCond, args, nil
+}
+
+// escapeStringLiteral escapes single quotes in a string literal for SQL
+func escapeStringLiteral(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
+}
+
+// buildMetadataFilterSQLForTable builds SQL WHERE conditions and args from a MetadataFilterGroup
+// tablePrefix is the table alias prefix (e.g., "d" for "d.metadata") or empty string for direct table access
+func buildMetadataFilterSQLForTable(group MetadataFilterGroup, argIndex *int, tablePrefix string) (string, []interface{}, error) {
+	// Reuse the existing function with proper table prefix
+	// For backward compatibility, when tablePrefix is empty, we use "metadata" directly
+	prefix := tablePrefix
+	if prefix == "" {
+		prefix = "" // No prefix needed
+	} else if prefix != "" && !strings.HasSuffix(prefix, ".") {
+		prefix += "."
+	}
+
+	// Build conditions using the modified prefix
+	var conditions []string
+	var args []interface{}
+
+	for _, cond := range group.Conditions {
+		conditionSQL, conditionArgs, err := buildConditionSQLForTable(cond, argIndex, prefix)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to build condition for key '%s': %w", cond.Key, err)
+		}
+		conditions = append(conditions, conditionSQL)
+		args = append(args, conditionArgs...)
+	}
+
+	// Process nested groups recursively
+	for _, nestedGroup := range group.Groups {
+		nestedSQL, nestedArgs, err := buildMetadataFilterSQLForTable(nestedGroup, argIndex, tablePrefix)
+		if err != nil {
+			return "", nil, err
+		}
+		if nestedSQL != "" {
+			conditions = append(conditions, fmt.Sprintf("(%s)", nestedSQL))
+			args = append(args, nestedArgs...)
+		}
+	}
+
+	if len(conditions) == 0 {
+		return "", args, nil
+	}
+
+	logicalOp := string(group.LogicalOp)
+	if logicalOp == "" {
+		logicalOp = "AND"
+	}
+
+	whereClause := strings.Join(conditions, fmt.Sprintf(" %s ", logicalOp))
+	return whereClause, args, nil
+}
+
+// buildConditionSQLForTable builds SQL for a single MetadataCondition with a table prefix
+func buildConditionSQLForTable(cond MetadataCondition, argIndex *int, tablePrefix string) (string, []interface{}, error) {
+	var args []interface{}
+	var sqlCond string
+
+	// Use prefix + metadata->>'key' syntax
+	metadataRef := fmt.Sprintf("%smetadata->>'%s'", tablePrefix, escapeStringLiteral(cond.Key))
+
+	switch cond.Operator {
+	case MetadataOpEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s = $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpNotEquals:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for not equals operator")
+		}
+		sqlCond = fmt.Sprintf("%s != $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpILike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for ilike operator")
+		}
+		sqlCond = fmt.Sprintf("%s ILIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLike:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for like operator")
+		}
+		sqlCond = fmt.Sprintf("%s LIKE $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpNotIn:
+		if len(cond.Values) == 0 {
+			return "", nil, errors.New("values are required for NOT IN operator")
+		}
+		placeholders := make([]string, len(cond.Values))
+		for i, v := range cond.Values {
+			placeholders[i] = fmt.Sprintf("$%d", *argIndex)
+			args = append(args, fmt.Sprintf("%v", v))
+			*argIndex++
+		}
+		sqlCond = fmt.Sprintf("%s NOT IN (%s)", metadataRef, strings.Join(placeholders, ", "))
+
+	case MetadataOpGreaterThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than operator")
+		}
+		sqlCond = fmt.Sprintf("%s > $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpGreaterThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for greater than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s >= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThan:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than operator")
+		}
+		sqlCond = fmt.Sprintf("%s < $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpLessThanOr:
+		if cond.Value == nil {
+			return "", nil, errors.New("value is required for less than or equal operator")
+		}
+		sqlCond = fmt.Sprintf("%s <= $%d", metadataRef, *argIndex)
+		args = append(args, fmt.Sprintf("%v", cond.Value))
+		*argIndex++
+
+	case MetadataOpBetween:
+		if cond.Min == nil || cond.Max == nil {
+			return "", nil, errors.New("min and max are required for BETWEEN operator")
+		}
+		sqlCond = fmt.Sprintf("%s BETWEEN $%d AND $%d", metadataRef, *argIndex, *argIndex+1)
+		args = append(args, fmt.Sprintf("%v", cond.Min), fmt.Sprintf("%v", cond.Max))
+		*argIndex += 2
+
+	case MetadataOpIsNull:
+		sqlCond = fmt.Sprintf("%s IS NULL", metadataRef)
+
+	case MetadataOpIsNotNull:
+		sqlCond = fmt.Sprintf("%s IS NOT NULL", metadataRef)
+
+	default:
+		return "", nil, fmt.Errorf("unsupported operator: %s", cond.Operator)
+	}
+
+	return sqlCond, args, nil
+}
+
 // SearchChunksWithFilter searches for similar chunks with metadata filtering for user isolation
 func (s *KnowledgeBaseStorage) SearchChunksWithFilter(
 	ctx context.Context,
@@ -841,6 +1462,29 @@ func (s *KnowledgeBaseStorage) SearchChunksWithFilter(
 	if filter != nil && len(filter.Tags) > 0 {
 		whereConditions = append(whereConditions, fmt.Sprintf("d.tags @> $%d", argIndex))
 		args = append(args, filter.Tags)
+		argIndex++
+	}
+
+	// Advanced metadata filter with operators and logical combinations
+	if filter != nil && filter.AdvancedFilter != nil {
+		metadataSQL, metadataArgs, err := buildMetadataFilterSQL(*filter.AdvancedFilter, &argIndex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build metadata filter: %w", err)
+		}
+		if metadataSQL != "" {
+			whereConditions = append(whereConditions, metadataSQL)
+			args = append(args, metadataArgs...)
+		}
+	}
+
+	// Legacy simple metadata filter (exact match only) - for backward compatibility
+	if filter != nil && filter.AdvancedFilter == nil && len(filter.Metadata) > 0 {
+		for key, value := range filter.Metadata {
+			escapedKey := escapeStringLiteral(key)
+			whereConditions = append(whereConditions, fmt.Sprintf("d.metadata->>'%s' = $%d", escapedKey, argIndex))
+			args = append(args, value)
+			argIndex++
+		}
 	}
 
 	whereClause := strings.Join(whereConditions, " AND ")
@@ -906,7 +1550,18 @@ func (s *KnowledgeBaseStorage) SearchChatbotKnowledge(ctx context.Context, chatb
 			continue
 		}
 
-		results, err := s.SearchChunks(ctx, link.KnowledgeBaseID, queryEmbedding, link.MaxChunks, link.SimilarityThreshold)
+		// Use link defaults or fall back to system defaults
+		maxChunks := 5
+		if link.MaxChunks != nil {
+			maxChunks = *link.MaxChunks
+		}
+
+		threshold := 0.7
+		if link.SimilarityThreshold != nil {
+			threshold = *link.SimilarityThreshold
+		}
+
+		results, err := s.SearchChunks(ctx, link.KnowledgeBaseID, queryEmbedding, maxChunks, threshold)
 		if err != nil {
 			log.Warn().Err(err).Str("kb_id", link.KnowledgeBaseID).Msg("Failed to search knowledge base")
 			continue
@@ -1135,6 +1790,15 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBaseFromRequest(ctx context.Contex
 	if req.Description != "" {
 		kb.Description = req.Description
 	}
+	if req.Visibility != nil {
+		kb.Visibility = *req.Visibility
+	} else {
+		kb.Visibility = KBVisibilityPrivate
+	}
+	kb.DefaultUserPermission = req.DefaultUserPermission
+	if kb.DefaultUserPermission == "" {
+		kb.DefaultUserPermission = KBPermissionViewer
+	}
 	if req.EmbeddingModel != "" {
 		kb.EmbeddingModel = req.EmbeddingModel
 	} else {
@@ -1186,6 +1850,12 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBaseByID(ctx context.Context, id s
 	if req.Description != nil {
 		kb.Description = *req.Description
 	}
+	if req.Visibility != nil {
+		kb.Visibility = *req.Visibility
+	}
+	if req.DefaultUserPermission != nil {
+		kb.DefaultUserPermission = *req.DefaultUserPermission
+	}
 	if req.EmbeddingModel != nil {
 		kb.EmbeddingModel = *req.EmbeddingModel
 	}
@@ -1219,7 +1889,11 @@ func (s *KnowledgeBaseStorage) ListAllKnowledgeBases(ctx context.Context) ([]Kno
 
 // UpdateChatbotKnowledgeBaseOptions represents options for updating a link
 type UpdateChatbotKnowledgeBaseOptions struct {
+	AccessLevel         *string
+	FilterExpression    map[string]interface{}
+	ContextWeight       *float64
 	Priority            *int
+	IntentKeywords      []string
 	MaxChunks           *int
 	SimilarityThreshold *float64
 	Enabled             *bool
@@ -1246,14 +1920,26 @@ func (s *KnowledgeBaseStorage) UpdateChatbotKnowledgeBaseLink(ctx context.Contex
 	}
 
 	// Apply updates
+	if opts.AccessLevel != nil {
+		existingLink.AccessLevel = *opts.AccessLevel
+	}
+	if opts.FilterExpression != nil {
+		existingLink.FilterExpression = opts.FilterExpression
+	}
+	if opts.ContextWeight != nil {
+		existingLink.ContextWeight = *opts.ContextWeight
+	}
 	if opts.Priority != nil {
 		existingLink.Priority = *opts.Priority
 	}
+	if opts.IntentKeywords != nil {
+		existingLink.IntentKeywords = opts.IntentKeywords
+	}
 	if opts.MaxChunks != nil {
-		existingLink.MaxChunks = *opts.MaxChunks
+		existingLink.MaxChunks = opts.MaxChunks
 	}
 	if opts.SimilarityThreshold != nil {
-		existingLink.SimilarityThreshold = *opts.SimilarityThreshold
+		existingLink.SimilarityThreshold = opts.SimilarityThreshold
 	}
 	if opts.Enabled != nil {
 		existingLink.Enabled = *opts.Enabled
@@ -1272,10 +1958,11 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBaseSimple(ctx context.Contex
 	link := &ChatbotKnowledgeBase{
 		ChatbotID:           chatbotID,
 		KnowledgeBaseID:     kbID,
+		AccessLevel:         "full",
 		Enabled:             true,
 		Priority:            priority,
-		MaxChunks:           maxChunks,
-		SimilarityThreshold: similarityThreshold,
+		MaxChunks:           &maxChunks,
+		SimilarityThreshold: &similarityThreshold,
 	}
 
 	if err := s.LinkChatbotKnowledgeBase(ctx, link); err != nil {
@@ -1283,4 +1970,327 @@ func (s *KnowledgeBaseStorage) LinkChatbotKnowledgeBaseSimple(ctx context.Contex
 	}
 
 	return link, nil
+}
+
+// ============================================================================
+// Knowledge Base Ownership and Permissions
+// ============================================================================
+
+// ListUserKnowledgeBases returns KBs accessible to user
+func (s *KnowledgeBaseStorage) ListUserKnowledgeBases(ctx context.Context, userID string) ([]KnowledgeBaseSummary, error) {
+	query := `
+		SELECT kb.id, kb.name, kb.namespace, kb.description, kb.enabled,
+			   kb.document_count, kb.total_chunks, kb.visibility,
+			   kb.updated_at,
+			   CASE
+				   WHEN kbp.permission IS NOT NULL THEN kbp.permission
+				   WHEN kb.visibility = 'public' THEN 'viewer'
+				   ELSE NULL
+			   END as user_permission
+		FROM ai.knowledge_bases kb
+		LEFT JOIN ai.knowledge_base_permissions kbp
+			   ON kbp.knowledge_base_id = kb.id AND kbp.user_id = $1
+		WHERE kb.enabled = true
+		  AND (kbp.user_id = $1 OR kb.visibility = 'public')
+		ORDER BY kb.name
+	`
+
+	rows, err := s.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list user knowledge bases: %w", err)
+	}
+	defer rows.Close()
+
+	var kbs []KnowledgeBaseSummary
+	for rows.Next() {
+		var kb KnowledgeBase
+		var userPermission string
+		if err := rows.Scan(
+			&kb.ID, &kb.Name, &kb.Namespace, &kb.Description,
+			&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
+			&kb.UpdatedAt,
+			&userPermission,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan knowledge base row")
+			continue
+		}
+		summary := kb.ToSummary()
+		summary.UserPermission = userPermission
+		if kb.Visibility != "" {
+			summary.Visibility = string(kb.Visibility)
+		}
+		kbs = append(kbs, summary)
+	}
+
+	return kbs, nil
+}
+
+// CanUserAccessKB checks if user has access
+func (s *KnowledgeBaseStorage) CanUserAccessKB(ctx context.Context, kbID, userID string) bool {
+	var hasAccess bool
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM ai.knowledge_bases kb
+			LEFT JOIN ai.knowledge_base_permissions kbp
+				   ON kbp.knowledge_base_id = kb.id AND kbp.user_id = $2
+			WHERE kb.id = $1
+			  AND kb.enabled = true
+			  AND (kbp.user_id = $2 OR kb.visibility = 'public')
+		)
+	`
+	err := s.db.QueryRow(ctx, query, kbID, userID).Scan(&hasAccess)
+	return err == nil && hasAccess
+}
+
+// GrantKBPermission grants permission to user
+func (s *KnowledgeBaseStorage) GrantKBPermission(ctx context.Context, kbID, userID, permission string, grantedBy *string) (*KBPermissionGrant, error) {
+	// Upsert permission
+	query := `
+		INSERT INTO ai.knowledge_base_permissions (knowledge_base_id, user_id, permission, granted_by)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (knowledge_base_id, user_id)
+		DO UPDATE SET permission = $3, granted_by = $4, granted_at = NOW()
+		RETURNING id, knowledge_base_id, user_id, permission, granted_by, granted_at
+	`
+
+	var grant KBPermissionGrant
+	err := s.db.QueryRow(ctx, query, kbID, userID, permission, grantedBy).Scan(
+		&grant.ID, &grant.KnowledgeBaseID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to grant permission: %w", err)
+	}
+
+	return &grant, nil
+}
+
+// ListKBPermissions lists all permissions for a KB
+func (s *KnowledgeBaseStorage) ListKBPermissions(ctx context.Context, kbID string) ([]KBPermissionGrant, error) {
+	query := `
+		SELECT id, knowledge_base_id, user_id, permission, granted_by, granted_at
+		FROM ai.knowledge_base_permissions
+		WHERE knowledge_base_id = $1
+		ORDER BY granted_at DESC
+	`
+
+	rows, err := s.db.Query(ctx, query, kbID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list permissions: %w", err)
+	}
+	defer rows.Close()
+
+	var grants []KBPermissionGrant
+	for rows.Next() {
+		var grant KBPermissionGrant
+		if err := rows.Scan(
+			&grant.ID, &grant.KnowledgeBaseID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan permission row")
+			continue
+		}
+		grants = append(grants, grant)
+	}
+
+	return grants, nil
+}
+
+// RevokeKBPermission revokes permission from user
+func (s *KnowledgeBaseStorage) RevokeKBPermission(ctx context.Context, kbID, userID string) error {
+	query := `DELETE FROM ai.knowledge_base_permissions WHERE knowledge_base_id = $1 AND user_id = $2`
+	_, err := s.db.Exec(ctx, query, kbID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke permission: %w", err)
+	}
+	return nil
+}
+
+// ============================================================================
+// DOCUMENT PERMISSIONS
+// ============================================================================
+
+// GrantDocumentPermission grants permission on a document to a user
+func (s *KnowledgeBaseStorage) GrantDocumentPermission(ctx context.Context, documentID, userID, permission, grantedBy string) (*DocumentPermissionGrant, error) {
+	// First check if the requester owns the document
+	var ownerID string
+	checkQuery := `SELECT owner_id FROM ai.documents WHERE id = $1`
+	err := s.db.QueryRow(ctx, checkQuery, documentID).Scan(&ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("document not found: %w", err)
+	}
+
+	// Verify ownership (service role and dashboard admins bypass this check in the handler)
+	if ownerID != grantedBy {
+		// Check if grantedBy is dashboard admin or service role
+		// This is a simple check - in production you'd want proper auth context
+		return nil, fmt.Errorf("only document owner can grant permissions")
+	}
+
+	// Upsert permission
+	query := `
+		INSERT INTO ai.document_permissions (document_id, user_id, permission, granted_by)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (document_id, user_id)
+		DO UPDATE SET permission = $3, granted_by = $4, granted_at = NOW()
+		RETURNING id, document_id, user_id, permission, granted_by, granted_at
+	`
+
+	var grant DocumentPermissionGrant
+	err = s.db.QueryRow(ctx, query, documentID, userID, permission, grantedBy).Scan(
+		&grant.ID, &grant.DocumentID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to grant document permission: %w", err)
+	}
+
+	return &grant, nil
+}
+
+// ListDocumentPermissions lists all permissions for a document
+func (s *KnowledgeBaseStorage) ListDocumentPermissions(ctx context.Context, documentID string) ([]DocumentPermissionGrant, error) {
+	query := `
+		SELECT id, document_id, user_id, permission, granted_by, granted_at
+		FROM ai.document_permissions
+		WHERE document_id = $1
+		ORDER BY granted_at DESC
+	`
+
+	rows, err := s.db.Query(ctx, query, documentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list document permissions: %w", err)
+	}
+	defer rows.Close()
+
+	var grants []DocumentPermissionGrant
+	for rows.Next() {
+		var grant DocumentPermissionGrant
+		if err := rows.Scan(
+			&grant.ID, &grant.DocumentID, &grant.UserID, &grant.Permission, &grant.GrantedBy, &grant.GrantedAt,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan document permission row")
+			continue
+		}
+		grants = append(grants, grant)
+	}
+
+	return grants, nil
+}
+
+// RevokeDocumentPermission revokes permission from a user on a document
+func (s *KnowledgeBaseStorage) RevokeDocumentPermission(ctx context.Context, documentID, userID string) error {
+	query := `DELETE FROM ai.document_permissions WHERE document_id = $1 AND user_id = $2`
+	_, err := s.db.Exec(ctx, query, documentID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke document permission: %w", err)
+	}
+	return nil
+}
+
+// CanUserAccessDocument checks if a user can access a document
+func (s *KnowledgeBaseStorage) CanUserAccessDocument(ctx context.Context, documentID, userID string) (bool, error) {
+	// Check if user owns the document
+	var ownerID *string
+	checkQuery := `SELECT owner_id FROM ai.documents WHERE id = $1`
+	err := s.db.QueryRow(ctx, checkQuery, documentID).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check document ownership: %w", err)
+	}
+
+	// User owns the document
+	if ownerID != nil && *ownerID == userID {
+		return true, nil
+	}
+
+	// Check if user has been granted permission
+	var hasPermission bool
+	permQuery := `
+		SELECT EXISTS(
+			SELECT 1 FROM ai.document_permissions
+			WHERE document_id = $1 AND user_id = $2
+		)
+	`
+	err = s.db.QueryRow(ctx, permQuery, documentID, userID).Scan(&hasPermission)
+	if err != nil {
+		return false, fmt.Errorf("failed to check document permission: %w", err)
+	}
+
+	return hasPermission, nil
+}
+
+// GetUserQuota retrieves quota information for a user
+func (s *KnowledgeBaseStorage) GetUserQuota(ctx context.Context, userID string) (*UserQuota, error) {
+	query := `
+		SELECT user_id, max_documents, max_chunks, max_storage_bytes,
+		       used_documents, used_chunks, used_storage_bytes,
+		       created_at, updated_at
+		FROM ai.user_quotas
+		WHERE user_id = $1
+	`
+
+	var quota UserQuota
+	err := s.db.QueryRow(ctx, query, userID).Scan(
+		&quota.UserID,
+		&quota.MaxDocuments,
+		&quota.MaxChunks,
+		&quota.MaxStorageBytes,
+		&quota.UsedDocuments,
+		&quota.UsedChunks,
+		&quota.UsedStorageBytes,
+		&quota.CreatedAt,
+		&quota.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &quota, nil
+}
+
+// SetUserQuota creates or updates quota for a user
+func (s *KnowledgeBaseStorage) SetUserQuota(ctx context.Context, quota *UserQuota) error {
+	query := `
+		INSERT INTO ai.user_quotas (user_id, max_documents, max_chunks, max_storage_bytes)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id) DO UPDATE
+		SET max_documents = COALESCE(EXCLUDED.max_documents, ai.user_quotas.max_documents),
+		    max_chunks = COALESCE(EXCLUDED.max_chunks, ai.user_quotas.max_chunks),
+		    max_storage_bytes = COALESCE(EXCLUDED.max_storage_bytes, ai.user_quotas.max_storage_bytes),
+		    updated_at = NOW()
+	`
+
+	_, err := s.db.Exec(ctx, query,
+		quota.UserID,
+		quota.MaxDocuments,
+		quota.MaxChunks,
+		quota.MaxStorageBytes,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to set user quota: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateUserQuotaUsage updates quota usage counters for a user
+func (s *KnowledgeBaseStorage) UpdateUserQuotaUsage(ctx context.Context, userID string, docsDelta int, chunksDelta int, storageDelta int64) error {
+	query := `
+		INSERT INTO ai.user_quotas (user_id, used_documents, used_chunks, used_storage_bytes)
+		VALUES ($1, GREATEST(0, $2), GREATEST(0, $3), GREATEST(0, $4))
+		ON CONFLICT (user_id) DO UPDATE
+		SET used_documents = GREATEST(0, ai.user_quotas.used_documents + $2),
+		    used_chunks = GREATEST(0, ai.user_quotas.used_chunks + $3),
+		    used_storage_bytes = GREATEST(0, ai.user_quotas.used_storage_bytes + $4),
+		    updated_at = NOW()
+	`
+
+	_, err := s.db.Exec(ctx, query, userID, docsDelta, chunksDelta, storageDelta)
+	if err != nil {
+		return fmt.Errorf("failed to update quota usage: %w", err)
+	}
+
+	return nil
 }

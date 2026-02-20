@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -218,7 +219,7 @@ func (m *IdempotencyMiddleware) Middleware() fiber.Handler {
 
 		// Check if key exists
 		record, err := m.getRecord(c.RequestCtx(), key)
-		if err != nil && err != pgx.ErrNoRows {
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			log.Error().Err(err).Str("key", key).Msg("Failed to check idempotency key")
 			// Continue without idempotency on DB error to avoid blocking
 			return c.Next()

@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // TestSecretsHandler_CreateSecret_Integration tests POST /secrets endpoint
@@ -31,11 +32,12 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 
 	// Create test user and get auth token
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	t.Run("create global secret", func(t *testing.T) {
+		secretName := fmt.Sprintf("TEST_API_KEY_%s", uuid.New().String()[:8])
 		reqBody := map[string]interface{}{
-			"name":  "TEST_API_KEY",
+			"name":  secretName,
 			"value": "sk-1234567890abcdef",
 			"scope": "global",
 		}
@@ -46,7 +48,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		var result secrets.Secret
 		err := json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
-		assert.Equal(t, "TEST_API_KEY", result.Name)
+		assert.Equal(t, secretName, result.Name)
 		assert.Equal(t, "global", result.Scope)
 		assert.Equal(t, 1, result.Version)
 		assert.NotEqual(t, uuid.UUID{}, result.ID)
@@ -55,8 +57,9 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 
 	t.Run("create namespace secret", func(t *testing.T) {
 		namespace := "production"
+		secretName := fmt.Sprintf("DB_PASSWORD_%s", uuid.New().String()[:8])
 		reqBody := map[string]interface{}{
-			"name":      "DB_PASSWORD",
+			"name":      secretName,
 			"value":     "supersecret",
 			"scope":     "namespace",
 			"namespace": namespace,
@@ -68,6 +71,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		var result secrets.Secret
 		err := json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
+		assert.Equal(t, secretName, result.Name)
 		assert.Equal(t, "namespace", result.Scope)
 		assert.Equal(t, &namespace, result.Namespace)
 	})
@@ -75,9 +79,10 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 	t.Run("create secret with all fields", func(t *testing.T) {
 		expiresAt := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 		description := "Production API key for external service"
+		secretName := fmt.Sprintf("FULL_SECRET_%s", uuid.New().String()[:8])
 
 		reqBody := map[string]interface{}{
-			"name":        "FULL_SECRET",
+			"name":        secretName,
 			"value":       "full-secret-value",
 			"scope":       "global",
 			"description": description,
@@ -90,7 +95,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		var result secrets.Secret
 		err := json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
-		assert.Equal(t, "FULL_SECRET", result.Name)
+		assert.Equal(t, secretName, result.Name)
 		assert.Equal(t, &description, result.Description)
 		assert.NotNil(t, result.ExpiresAt)
 	})
@@ -105,7 +110,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Name")
 	})
 
@@ -119,7 +124,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Value")
 	})
 
@@ -145,7 +150,7 @@ func TestSecretsHandler_CreateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Namespace")
 	})
 
@@ -182,7 +187,7 @@ func TestSecretsHandler_ListSecrets_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	// Setup: create test secrets via storage
 	encryptionKey := "12345678901234567890123456789012"
@@ -250,7 +255,7 @@ func TestSecretsHandler_GetSecret_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -282,7 +287,7 @@ func TestSecretsHandler_GetSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		assert.Contains(t, errResp["error"], "Invalid")
 	})
 }
@@ -294,7 +299,7 @@ func TestSecretsHandler_UpdateSecret_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -370,8 +375,8 @@ func TestSecretsHandler_UpdateSecret_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		var errResp map[string]string
-		json.NewDecoder(resp.Body).Decode(&errResp)
-		assert.Contains(t, errResp["error"], "at least one field")
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
+		assert.Contains(t, errResp["error"], "At least one field")
 	})
 
 	t.Run("update non-existent secret returns 404", func(t *testing.T) {
@@ -390,7 +395,7 @@ func TestSecretsHandler_DeleteSecret_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -437,7 +442,7 @@ func TestSecretsHandler_GetVersions_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -449,10 +454,10 @@ func TestSecretsHandler_GetVersions_Integration(t *testing.T) {
 
 		// Create more versions
 		v2 := "v2"
-		storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
 
 		v3 := "v3"
-		storage.UpdateSecret(context.Background(), secret.ID, &v3, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v3, nil, nil, nil)
 
 		resp := makeRequest(t, app, "GET", "/api/v1/secrets/"+secret.ID.String()+"/versions", nil, token)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -482,7 +487,7 @@ func TestSecretsHandler_Rollback_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -494,7 +499,7 @@ func TestSecretsHandler_Rollback_Integration(t *testing.T) {
 
 		// Update to v2
 		v2 := "updated"
-		storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
+		_ = storage.UpdateSecret(context.Background(), secret.ID, &v2, nil, nil, nil)
 
 		// Rollback to v1
 		resp := makeRequest(t, app, "POST", "/api/v1/secrets/"+secret.ID.String()+"/rollback/1", nil, token)
@@ -532,7 +537,7 @@ func TestSecretsHandler_GetStats_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -544,18 +549,18 @@ func TestSecretsHandler_GetStats_Integration(t *testing.T) {
 		// Create test secrets
 		for i := 0; i < 3; i++ {
 			secret := &secrets.Secret{Name: uuid.New().String(), Scope: "global"}
-			storage.CreateSecret(context.Background(), secret, "value", nil)
+			_ = storage.CreateSecret(context.Background(), secret, "value", nil)
 		}
 
 		// Create expiring soon
 		expiringSoon := time.Now().Add(3 * 24 * time.Hour)
 		secret := &secrets.Secret{Name: "EXPIRING_SOON_STATS", Scope: "global", ExpiresAt: &expiringSoon}
-		storage.CreateSecret(context.Background(), secret, "value", nil)
+		_ = storage.CreateSecret(context.Background(), secret, "value", nil)
 
 		// Create expired
 		expired := time.Now().Add(-1 * time.Hour)
 		secret = &secrets.Secret{Name: "EXPIRED_STATS", Scope: "global", ExpiresAt: &expired}
-		storage.CreateSecret(context.Background(), secret, "value", nil)
+		_ = storage.CreateSecret(context.Background(), secret, "value", nil)
 
 		resp := makeRequest(t, app, "GET", "/api/v1/secrets/stats", nil, token)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -590,7 +595,7 @@ func TestSecretsHandler_Expiration_Integration(t *testing.T) {
 
 	app := setupSecretsApp(t, tc)
 	uniqueEmail := fmt.Sprintf("test-%s@example.com", uuid.New().String()[:8])
-	_, token := tc.CreateTestUser(uniqueEmail, "password123")
+	_, token := createTestUserWithToken(t, tc, uniqueEmail, "password123")
 
 	encryptionKey := "12345678901234567890123456789012"
 	storage := secrets.NewStorage(tc.DB, encryptionKey)
@@ -686,4 +691,53 @@ func makeRequest(t *testing.T, app *fiber.App, method, path string, body interfa
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	return resp
+}
+
+// createTestUserWithToken creates a test user and returns a valid JWT token
+// The token is generated using the same JWT config as the test app
+func createTestUserWithToken(t *testing.T, tc *testutil.IntegrationTestContext, email, password string) (userID, token string) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	// Generate user ID
+	userID = uuid.New().String()
+
+	// Hash password using bcrypt
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	require.NoError(t, err, "Failed to hash password")
+
+	// Insert user into both auth.users (for auth/JWT) and dashboard.users (for FK constraint)
+	// The secrets table's created_by/updated_by fields reference dashboard.users
+	_, err = tc.DB.Pool().Exec(ctx,
+		"INSERT INTO auth.users (id, email, password_hash, email_verified, role, created_at) VALUES ($1, $2, $3, true, 'authenticated', NOW())",
+		userID, email, string(hashedPassword))
+	require.NoError(t, err, "Failed to create auth user")
+
+	// Create matching dashboard user for the FK constraint
+	// Dashboard users need a password hash (NOT NULL constraint)
+	dashboardPasswordHash, err := bcrypt.GenerateFromPassword([]byte("test-password"), bcrypt.DefaultCost)
+	require.NoError(t, err, "Failed to hash dashboard password")
+
+	_, err = tc.DB.Pool().Exec(ctx,
+		"INSERT INTO dashboard.users (id, email, password_hash, full_name, role, created_at) VALUES ($1, $2, $3, $4, 'dashboard_admin', NOW()) ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, password_hash = EXCLUDED.password_hash",
+		userID, email, string(dashboardPasswordHash), "Test User")
+	require.NoError(t, err, "Failed to create dashboard user")
+
+	// Generate JWT token using the same secret as the test app
+	jwtSecret := "test-jwt-secret-for-integration-tests-32-chars"
+	jwtManager := auth.NewJWTManager(jwtSecret, time.Hour, 24*time.Hour)
+
+	accessToken, _, err := jwtManager.GenerateAccessToken(userID, email, "authenticated", nil, nil)
+	require.NoError(t, err, "Failed to generate access token")
+
+	// Create a session record so the token is valid
+	sessionID := uuid.New().String()
+	tokenHash := uuid.New().String()
+	_, err = tc.DB.Pool().Exec(ctx,
+		"INSERT INTO auth.sessions (id, user_id, access_token_hash, expires_at, created_at) VALUES ($1, $2, $3, NOW() + interval '1 hour', NOW())",
+		sessionID, userID, tokenHash)
+	require.NoError(t, err, "Failed to create session")
+
+	return userID, accessToken
 }

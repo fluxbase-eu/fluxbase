@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -265,7 +266,7 @@ func (s *Storage) GetChatbot(ctx context.Context, id string) (*Chatbot, error) {
 		&chatbot.CreatedBy, &chatbot.CreatedAt, &chatbot.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -329,7 +330,7 @@ func (s *Storage) GetChatbotByName(ctx context.Context, namespace, name string) 
 		&chatbot.CreatedBy, &chatbot.CreatedAt, &chatbot.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -725,7 +726,7 @@ func (s *Storage) GetProvider(ctx context.Context, id string) (*ProviderRecord, 
 		&provider.CreatedAt, &provider.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -758,7 +759,7 @@ func (s *Storage) GetProviderByName(ctx context.Context, name string) (*Provider
 		&provider.CreatedAt, &provider.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("provider not found: %s", name)
 	}
 	if err != nil {
@@ -784,7 +785,7 @@ func (s *Storage) GetDefaultProvider(ctx context.Context) (*ProviderRecord, erro
 		&provider.CreatedAt, &provider.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -1059,7 +1060,7 @@ func (s *Storage) GetEmbeddingProviderPreference(ctx context.Context) (*Provider
 		&provider.CreatedAt, &provider.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		// No explicit preference set - return nil without error (auto mode)
 		return nil, nil
 	}
@@ -1327,7 +1328,7 @@ func (s *Storage) GetUserConversation(ctx context.Context, userID, conversationI
 		&conv.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

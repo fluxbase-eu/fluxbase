@@ -2,6 +2,7 @@ package branching
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -83,12 +84,12 @@ func (m *Manager) CreateBranch(ctx context.Context, req CreateBranchRequest, cre
 	// Generate slug from name
 	slug := GenerateSlug(req.Name)
 	if err := ValidateSlug(slug); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidSlug, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidSlug, err)
 	}
 
 	// Check if slug already exists
 	existing, err := m.storage.GetBranchBySlug(ctx, slug)
-	if err != nil && err != ErrBranchNotFound {
+	if err != nil && !errors.Is(err, ErrBranchNotFound) {
 		return nil, fmt.Errorf("failed to check existing branch: %w", err)
 	}
 	if existing != nil {
@@ -709,7 +710,7 @@ func sanitizeIdentifier(name string) string {
 func (m *Manager) CreateBranchFromGitHubPR(ctx context.Context, repo string, prNumber int, prURL string) (*Branch, error) {
 	// Get GitHub config for the repository
 	ghConfig, err := m.storage.GetGitHubConfig(ctx, repo)
-	if err != nil && err != ErrGitHubConfigNotFound {
+	if err != nil && !errors.Is(err, ErrGitHubConfigNotFound) {
 		return nil, fmt.Errorf("failed to get GitHub config: %w", err)
 	}
 
@@ -725,7 +726,7 @@ func (m *Manager) CreateBranchFromGitHubPR(ctx context.Context, repo string, prN
 
 	// Check if branch already exists
 	existing, err := m.storage.GetBranchBySlug(ctx, slug)
-	if err != nil && err != ErrBranchNotFound {
+	if err != nil && !errors.Is(err, ErrBranchNotFound) {
 		return nil, fmt.Errorf("failed to check existing branch: %w", err)
 	}
 	if existing != nil {
@@ -750,7 +751,7 @@ func (m *Manager) DeleteBranchForGitHubPR(ctx context.Context, repo string, prNu
 	// Find branch by GitHub PR
 	branch, err := m.storage.GetBranchByGitHubPR(ctx, repo, prNumber)
 	if err != nil {
-		if err == ErrBranchNotFound {
+		if errors.Is(err, ErrBranchNotFound) {
 			// Branch doesn't exist, nothing to delete
 			return nil
 		}

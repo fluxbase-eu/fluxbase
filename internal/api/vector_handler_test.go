@@ -628,7 +628,7 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/capabilities/vector", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
@@ -671,7 +671,7 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/capabilities/vector", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 

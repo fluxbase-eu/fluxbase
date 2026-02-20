@@ -312,6 +312,7 @@ func (s *StateStore) Cleanup(ctx context.Context) error {
 }
 
 // SetLegacy stores a state token with optional redirect URI (legacy method for backward compatibility)
+//
 // Deprecated: Use Set(ctx context.Context, state string, metadata StateMetadata) instead
 func (s *StateStore) SetLegacy(state string, redirectURI ...string) {
 	s.mu.Lock()
@@ -330,18 +331,21 @@ func (s *StateStore) SetLegacy(state string, redirectURI ...string) {
 }
 
 // ValidateLegacy checks if a state token is valid and removes it (legacy method)
+//
 // Deprecated: Use Validate(ctx context.Context, state string) instead
 func (s *StateStore) ValidateLegacy(state string) bool {
 	return s.Validate(context.Background(), state)
 }
 
 // GetAndValidateLegacy checks if a state token is valid and returns metadata (legacy method)
+//
 // Deprecated: Use GetAndValidate(ctx context.Context, state string) instead
 func (s *StateStore) GetAndValidateLegacy(state string) (*StateMetadata, bool) {
 	return s.GetAndValidate(context.Background(), state)
 }
 
 // CleanupLegacy removes expired state tokens (legacy method)
+//
 // Deprecated: Use Cleanup(ctx context.Context) instead
 func (s *StateStore) CleanupLegacy() {
 	_ = s.Cleanup(context.Background())

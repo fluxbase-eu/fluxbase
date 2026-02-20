@@ -389,9 +389,9 @@ func (s *Storage) GetSecretsForNamespace(ctx context.Context, namespace string) 
 		FROM functions.secrets
 		WHERE (scope = 'global' OR (scope = 'namespace' AND namespace = $1))
 		  AND (expires_at IS NULL OR expires_at > NOW())
-		ORDER BY scope DESC
+		ORDER BY scope ASC
 	`
-	// scope DESC ensures namespace-specific secrets override global ones
+	// scope ASC ensures global secrets come first, then namespace secrets override them
 
 	secrets := make(map[string]string)
 	err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {

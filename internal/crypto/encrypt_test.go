@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"encoding/base64"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -116,12 +117,12 @@ func TestInvalidKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := Encrypt("test", tt.key)
-			if err != ErrInvalidKey {
+			if !errors.Is(err, ErrInvalidKey) {
 				t.Errorf("Expected ErrInvalidKey, got %v", err)
 			}
 
 			_, err = Decrypt("test", tt.key)
-			if err != ErrInvalidKey {
+			if !errors.Is(err, ErrInvalidKey) {
 				t.Errorf("Expected ErrInvalidKey, got %v", err)
 			}
 		})
@@ -138,7 +139,7 @@ func TestWrongKeyDecryption(t *testing.T) {
 	}
 
 	_, err = Decrypt(encrypted, key2)
-	if err != ErrDecryptionFailed {
+	if !errors.Is(err, ErrDecryptionFailed) {
 		t.Errorf("Expected ErrDecryptionFailed, got %v", err)
 	}
 }
@@ -296,7 +297,7 @@ func TestDeriveUserKey_InvalidMasterKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := DeriveUserKey(tt.masterKey, userID)
-			if err != ErrInvalidKey {
+			if !errors.Is(err, ErrInvalidKey) {
 				t.Errorf("Expected ErrInvalidKey, got %v", err)
 			}
 		})
@@ -346,7 +347,7 @@ func TestDeriveUserKey_WrongUserCannotDecrypt(t *testing.T) {
 
 	// Try to decrypt with user2's key
 	_, err := Decrypt(encrypted, key2)
-	if err != ErrDecryptionFailed {
+	if !errors.Is(err, ErrDecryptionFailed) {
 		t.Errorf("Expected ErrDecryptionFailed, got %v", err)
 	}
 }
@@ -445,7 +446,7 @@ func TestDecrypt_CorruptedData(t *testing.T) {
 	corrupted := base64.StdEncoding.EncodeToString(data)
 
 	_, err := Decrypt(corrupted, key)
-	if err != ErrDecryptionFailed {
+	if !errors.Is(err, ErrDecryptionFailed) {
 		t.Errorf("Expected ErrDecryptionFailed for corrupted data, got %v", err)
 	}
 }
@@ -647,7 +648,7 @@ func TestEncryptWithBytesKey_InvalidKeyLength(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := EncryptWithBytesKey(plaintext, tt.key)
-			if err != ErrInvalidKey {
+			if !errors.Is(err, ErrInvalidKey) {
 				t.Errorf("Expected ErrInvalidKey, got %v", err)
 			}
 		})
@@ -672,7 +673,7 @@ func TestDecryptWithBytesKey_InvalidKeyLength(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := DecryptWithBytesKey(encrypted, tt.key)
-			if err != ErrInvalidKey {
+			if !errors.Is(err, ErrInvalidKey) {
 				t.Errorf("Expected ErrInvalidKey, got %v", err)
 			}
 		})

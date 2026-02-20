@@ -1,6 +1,7 @@
 package branching
 
 import (
+	"context"
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
@@ -68,7 +69,7 @@ func TestRouter_GetPool_MainBranch(t *testing.T) {
 		router := NewRouter(nil, cfg, nil, "postgresql://localhost/fluxbase")
 
 		// With nil main pool, this should return nil
-		pool, err := router.GetPool(nil, "")
+		pool, err := router.GetPool(context.TODO(), "")
 		assert.NoError(t, err)
 		assert.Nil(t, pool) // main pool is nil in this test
 	})
@@ -80,7 +81,7 @@ func TestRouter_GetPool_MainBranch(t *testing.T) {
 
 		router := NewRouter(nil, cfg, nil, "postgresql://localhost/fluxbase")
 
-		pool, err := router.GetPool(nil, "main")
+		pool, err := router.GetPool(context.TODO(), "main")
 		assert.NoError(t, err)
 		assert.Nil(t, pool) // main pool is nil in this test
 	})
@@ -94,7 +95,7 @@ func TestRouter_GetPool_BranchingDisabled(t *testing.T) {
 
 		router := NewRouter(nil, cfg, nil, "postgresql://localhost/fluxbase")
 
-		_, err := router.GetPool(nil, "feature-branch")
+		_, err := router.GetPool(context.TODO(), "feature-branch")
 		assert.Error(t, err)
 		assert.Equal(t, ErrBranchingDisabled, err)
 	})

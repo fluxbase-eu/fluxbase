@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -33,6 +34,34 @@ func NewInvitationHandler(
 		dashboardAuth:     dashboardAuth,
 		emailService:      emailService,
 		baseURL:           baseURL,
+	}
+}
+
+// invitationErrorDetails maps invitation errors to user-friendly messages
+func invitationErrorDetails(err error) string {
+	switch {
+	case errors.Is(err, auth.ErrInvitationExpired):
+		return "Invitation has expired"
+	case errors.Is(err, auth.ErrInvitationAlreadyAccepted):
+		return "Invitation has already been accepted"
+	case errors.Is(err, auth.ErrInvitationNotFound):
+		return "Invitation not found"
+	default:
+		return "Invalid token"
+	}
+}
+
+// invitationErrorStatus maps invitation errors to HTTP status codes
+func invitationErrorStatus(err error) int {
+	switch {
+	case errors.Is(err, auth.ErrInvitationExpired):
+		return 410 // StatusGone
+	case errors.Is(err, auth.ErrInvitationAlreadyAccepted):
+		return 409 // StatusConflict
+	case errors.Is(err, auth.ErrInvitationNotFound):
+		return 404 // StatusNotFound
+	default:
+		return 400 // StatusBadRequest
 	}
 }
 
@@ -164,19 +193,9 @@ func (h *InvitationHandler) ValidateInvitation(c fiber.Ctx) error {
 
 	invitation, err := h.invitationService.ValidateToken(ctx, token)
 	if err != nil {
-		errorMessage := "Invalid token"
-		switch err {
-		case auth.ErrInvitationExpired:
-			errorMessage = "Invitation has expired"
-		case auth.ErrInvitationAlreadyAccepted:
-			errorMessage = "Invitation has already been accepted"
-		case auth.ErrInvitationNotFound:
-			errorMessage = "Invitation not found"
-		}
-
 		return c.JSON(ValidateInvitationResponse{
 			Valid: false,
-			Error: errorMessage,
+			Error: invitationErrorDetails(err),
 		})
 	}
 
@@ -219,22 +238,8 @@ func (h *InvitationHandler) AcceptInvitation(c fiber.Ctx) error {
 	// Validate invitation token
 	invitation, err := h.invitationService.ValidateToken(ctx, token)
 	if err != nil {
-		errorMessage := "Invalid token"
-		statusCode := http.StatusBadRequest
-		switch err {
-		case auth.ErrInvitationExpired:
-			errorMessage = "Invitation has expired"
-			statusCode = http.StatusGone
-		case auth.ErrInvitationAlreadyAccepted:
-			errorMessage = "Invitation has already been accepted"
-			statusCode = http.StatusConflict
-		case auth.ErrInvitationNotFound:
-			errorMessage = "Invitation not found"
-			statusCode = http.StatusNotFound
-		}
-
-		return c.Status(statusCode).JSON(fiber.Map{
-			"error": errorMessage,
+		return c.Status(invitationErrorStatus(err)).JSON(fiber.Map{
+			"error": invitationErrorDetails(err),
 		})
 	}
 
@@ -332,7 +337,7 @@ func (h *InvitationHandler) RevokeInvitation(c fiber.Ctx) error {
 	}
 
 	if err := h.invitationService.RevokeInvitation(ctx, token); err != nil {
-		if err == auth.ErrInvitationNotFound {
+		if errors.Is(err, auth.ErrInvitationNotFound) {
 			return c.Status(http.StatusNotFound).JSON(fiber.Map{
 				"error": "Invitation not found",
 			})

@@ -1,22 +1,26 @@
 import { cn } from '@/lib/utils'
+import { ThemeProvider } from '@/contexts/theme-context'
 
-type MainProps = React.HTMLAttributes<HTMLElement> & {
+interface MainProps {
   fixed?: boolean
   fluid?: boolean
-  ref?: React.Ref<HTMLElement>
+  className?: string
+  children?: React.ReactNode
 }
 
-export function Main({ fixed, className, fluid, ...props }: MainProps) {
+export function Main({ fixed, className, fluid, children }: MainProps) {
   return (
-    <main
-      data-layout={fixed ? 'fixed' : 'auto'}
-      className={cn(
-        'px-4 py-6',
-        fixed && 'flex grow flex-col overflow-hidden',
-        !fluid && '@7xl/content:mx-auto @7xl/content:w-full',
-        className
-      )}
-      {...props}
-    />
+    <ThemeProvider>
+      <main
+        className={cn(
+          'flex-1',
+          fixed && 'fixed inset-0 overflow-auto',
+          fluid ? 'w-full' : 'container mx-auto px-4',
+          className
+        )}
+      >
+        {children}
+      </main>
+    </ThemeProvider>
   )
 }

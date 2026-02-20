@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/pganalyze/pg_query_go/v6"
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/rs/zerolog/log"
 )
 
@@ -324,13 +325,14 @@ func (c *Connection) runSystemMigrations() error {
 			needsReset := false
 			reason := ""
 
-			if recordedVersion > int64(highestAvailable) {
+			switch {
+			case recordedVersion > int64(highestAvailable):
 				needsReset = true
 				reason = "version higher than available migrations"
-			} else if !fileExists {
+			case !fileExists:
 				needsReset = true
 				reason = "migration file does not exist"
-			} else if dirty {
+			case dirty:
 				// If dirty but file exists, just clear the dirty flag
 				// This happens when a previous migration was interrupted
 				log.Warn().
@@ -502,6 +504,7 @@ func (c *Connection) scanMigrationFiles(dir string) ([]migrationFile, error) {
 		var migName string
 		var isUp bool
 
+		//nolint:gocritic
 		if strings.HasSuffix(name, ".up.sql") {
 			migName = strings.TrimSuffix(name, ".up.sql")
 			isUp = true
@@ -629,7 +632,7 @@ func (c *Connection) logMigrationExecution(ctx context.Context, conn *pgx.Conn, 
 func (c *Connection) applyMigrations(m *migrate.Migrate, source string) error {
 	// Check current version and dirty state
 	version, dirty, err := m.Version()
-	if err != nil && err != migrate.ErrNilVersion {
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
 		return fmt.Errorf("failed to get migration version: %w", err)
 	}
 
@@ -642,7 +645,7 @@ func (c *Connection) applyMigrations(m *migrate.Migrate, source string) error {
 	}
 
 	// Run migrations
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		// Check if error is due to missing migration file
 		if strings.Contains(err.Error(), "file does not exist") || strings.Contains(err.Error(), "no migration found") {
 			// Find the highest available migration version
@@ -660,7 +663,7 @@ func (c *Connection) applyMigrations(m *migrate.Migrate, source string) error {
 				}
 
 				// Try running migrations again
-				if retryErr := m.Up(); retryErr != nil && retryErr != migrate.ErrNoChange {
+				if retryErr := m.Up(); retryErr != nil && !errors.Is(retryErr, migrate.ErrNoChange) {
 					return fmt.Errorf("failed to run %s migrations after version reset: %w", source, retryErr)
 				}
 				log.Info().Str("source", source).Int("version", highestVersion).Msg("Migrations recovered after version reset")
@@ -670,7 +673,7 @@ func (c *Connection) applyMigrations(m *migrate.Migrate, source string) error {
 		return fmt.Errorf("failed to run %s migrations: %w", source, err)
 	}
 
-	if err == migrate.ErrNoChange {
+	if errors.Is(err, migrate.ErrNoChange) {
 		log.Info().Str("source", source).Msg("No new migrations to apply")
 	} else {
 		version, _, _ := m.Version()

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/database"
@@ -56,7 +57,7 @@ func (r *NonceRepository) Validate(ctx context.Context, nonce, userID string) (b
 
 	err := database.WrapWithServiceRole(ctx, r.db, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, query, nonce, userID).Scan(&deletedNonce)
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Nonce doesn't exist, doesn't match user, or is expired
 			valid = false
 			return nil

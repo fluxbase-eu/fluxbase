@@ -481,12 +481,15 @@ func parseOrder(orderStr string) ([]query.OrderBy, error) {
 		desc := false
 
 		// Try dot-separated format first (e.g., "column.desc")
-		if strings.HasSuffix(part, ".desc") {
+
+		// Try dot-separated format first (e.g., "column.desc")
+		switch {
+		case strings.HasSuffix(part, ".desc"):
 			column = strings.TrimSuffix(part, ".desc")
 			desc = true
-		} else if strings.HasSuffix(part, ".asc") {
+		case strings.HasSuffix(part, ".asc"):
 			column = strings.TrimSuffix(part, ".asc")
-		} else {
+		default:
 			// Try space-separated format (e.g., "column desc" or "column DESC")
 			parts := strings.Fields(part)
 			if len(parts) == 2 {

@@ -1,0 +1,69 @@
+name: Cleanup CI Images
+
+on:
+  schedule:
+    # Run weekly on Sunday at 00:00 UTC
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    name: Delete Old CI Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old CI images for fluxbase-postgres
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: fluxbase-postgres
+          package-type: container
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Delete versions tagged with 'ci-*' older than 7 days
+          min-versions-to-keep: 0
+          delete-untagged-versions: false
+          # Only delete versions with ci- prefix in tags
+          # Note: This action doesn't support tag filtering directly,
+          # so we use a script approach instead
+
+      - name: Clean up ci-* tagged images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fetching all versions of fluxbase-postgres package..."
+
+          # Get all versions with their tags
+          VERSIONS=$(gh api /user/packages/container/fluxbase-postgres/versions \
+            --jq '.[] | select(.metadata.container.tags[] | startswith("ci-")) | {id: .id, tags: .metadata.container.tags, created: .created_at}')
+
+          if [ -z "$VERSIONS" ]; then
+            echo "No CI images found."
+            exit 0
+          fi
+
+          # Current time in seconds since epoch
+          NOW=$(date +%s)
+          # 7 days in seconds
+          SEVEN_DAYS=$((7 * 24 * 60 * 60))
+
+          echo "$VERSIONS" | jq -c '.' | while read -r version; do
+            ID=$(echo "$version" | jq -r '.id')
+            CREATED=$(echo "$version" | jq -r '.created')
+            TAGS=$(echo "$version" | jq -r '.tags | join(", ")')
+
+            # Convert created date to seconds
+            CREATED_SECONDS=$(date -d "$CREATED" +%s 2>/dev/null || echo "0")
+
+            # Calculate age
+            AGE=$((NOW - CREATED_SECONDS))
+
+            if [ $AGE -gt $SEVEN_DAYS ]; then
+              echo "Deleting version $ID (tags: $TAGS, age: $((AGE / 86400)) days old)"
+              gh api --method DELETE /user/packages/container/fluxbase-postgres/versions/$ID || echo "Failed to delete $ID"
+            else
+              echo "Keeping version $ID (tags: $TAGS, age: $((AGE / 86400)) days old)"
+            fi
+          done
+
+          echo "Cleanup complete!"

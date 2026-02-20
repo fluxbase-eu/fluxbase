@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -373,7 +374,7 @@ func (cm *ConversationManager) loadConversation(ctx context.Context, id string) 
 		&conv.CreatedAt, &conv.UpdatedAt, &conv.LastMessageAt, &conv.ExpiresAt,
 	)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -256,7 +257,7 @@ func (h *SAMLProviderHandler) GetSAMLProvider(c fiber.Ctx) error {
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "SAML provider not found",
 		})
@@ -445,7 +446,7 @@ func (h *SAMLProviderHandler) UpdateSAMLProvider(c fiber.Ctx) error {
 	var source string
 	var providerName string
 	err = h.db.QueryRow(ctx, "SELECT name, COALESCE(source, 'database') FROM auth.saml_providers WHERE id = $1", providerID).Scan(&providerName, &source)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "SAML provider not found",
 		})
@@ -581,7 +582,7 @@ func (h *SAMLProviderHandler) UpdateSAMLProvider(c fiber.Ctx) error {
 	var displayName string
 	err = h.db.QueryRow(ctx, query, args...).Scan(&displayName)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "SAML provider not found",
 		})
@@ -631,7 +632,7 @@ func (h *SAMLProviderHandler) DeleteSAMLProvider(c fiber.Ctx) error {
 	var source string
 	var providerName string
 	err = h.db.QueryRow(ctx, "SELECT name, COALESCE(source, 'database') FROM auth.saml_providers WHERE id = $1", providerID).Scan(&providerName, &source)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "SAML provider not found",
 		})
@@ -647,7 +648,7 @@ func (h *SAMLProviderHandler) DeleteSAMLProvider(c fiber.Ctx) error {
 	var displayName string
 	err = h.db.QueryRow(ctx, query, providerID).Scan(&displayName)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "SAML provider not found",
 		})
@@ -794,6 +795,7 @@ func (h *SAMLProviderHandler) validateMetadata(ctx context.Context, metadataURL,
 	var xmlData []byte
 	var err error
 
+	//nolint:gocritic // Conditions check different pointer vars, not switch-compatible
 	if metadataURL != nil && *metadataURL != "" {
 		// Validate URL
 		if !strings.HasPrefix(*metadataURL, "https://") {

@@ -186,7 +186,7 @@ func runSecretsList(cmd *cobra.Command, args []string) error {
 			if expiresAt == "" {
 				expiresAt = "never"
 			} else if secret["is_expired"] == true {
-				expiresAt = expiresAt + " (expired)"
+				expiresAt += " (expired)"
 			}
 			updatedAt := getStringValue(secret, "updated_at")
 

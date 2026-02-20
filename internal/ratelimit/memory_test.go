@@ -16,27 +16,27 @@ func TestNewMemoryStore(t *testing.T) {
 		require.NotNil(t, store)
 		assert.NotNil(t, store.data)
 		assert.Equal(t, 10*time.Minute, store.gcInterval)
-		store.Close()
+		_ = store.Close()
 	})
 
 	t.Run("creates store with custom gc interval", func(t *testing.T) {
 		store := NewMemoryStore(5 * time.Minute)
 		require.NotNil(t, store)
 		assert.Equal(t, 5*time.Minute, store.gcInterval)
-		store.Close()
+		_ = store.Close()
 	})
 
 	t.Run("creates store with negative gc interval uses default", func(t *testing.T) {
 		store := NewMemoryStore(-1 * time.Minute)
 		require.NotNil(t, store)
 		assert.Equal(t, 10*time.Minute, store.gcInterval)
-		store.Close()
+		_ = store.Close()
 	})
 }
 
 func TestMemoryStore_Increment(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -61,9 +61,9 @@ func TestMemoryStore_Increment(t *testing.T) {
 	})
 
 	t.Run("different keys have independent counters", func(t *testing.T) {
-		store.Increment(ctx, "keyA", time.Minute)
-		store.Increment(ctx, "keyA", time.Minute)
-		store.Increment(ctx, "keyA", time.Minute)
+		_, _ = store.Increment(ctx, "keyA", time.Minute)
+		_, _ = store.Increment(ctx, "keyA", time.Minute)
+		_, _ = store.Increment(ctx, "keyA", time.Minute)
 
 		countA, err := store.Increment(ctx, "keyA", time.Minute)
 		require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestMemoryStore_Increment(t *testing.T) {
 
 func TestMemoryStore_IncrementExpiration(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -101,7 +101,7 @@ func TestMemoryStore_IncrementExpiration(t *testing.T) {
 
 func TestMemoryStore_Get(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -143,13 +143,13 @@ func TestMemoryStore_Get(t *testing.T) {
 
 func TestMemoryStore_Reset(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
 	// Create some entries
-	store.Increment(ctx, "reset-test", time.Minute)
-	store.Increment(ctx, "reset-test", time.Minute)
+	_, _ = store.Increment(ctx, "reset-test", time.Minute)
+	_, _ = store.Increment(ctx, "reset-test", time.Minute)
 
 	count, _, err := store.Get(ctx, "reset-test")
 	require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestMemoryStore_Reset(t *testing.T) {
 
 func TestMemoryStore_ResetNonExistent(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -188,14 +188,14 @@ func TestMemoryStore_Close(t *testing.T) {
 
 func TestMemoryStore_Cleanup(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
 	// Create some entries with short expiration
-	store.Increment(ctx, "cleanup-1", 50*time.Millisecond)
-	store.Increment(ctx, "cleanup-2", 50*time.Millisecond)
-	store.Increment(ctx, "cleanup-3", time.Hour) // This one should survive
+	_, _ = store.Increment(ctx, "cleanup-1", 50*time.Millisecond)
+	_, _ = store.Increment(ctx, "cleanup-2", 50*time.Millisecond)
+	_, _ = store.Increment(ctx, "cleanup-3", time.Hour) // This one should survive
 
 	// Verify entries exist
 	store.mu.RLock()
@@ -218,7 +218,7 @@ func TestMemoryStore_Cleanup(t *testing.T) {
 
 func TestMemoryStore_ConcurrentAccess(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	var wg sync.WaitGroup
@@ -247,7 +247,7 @@ func TestMemoryStore_ConcurrentAccess(t *testing.T) {
 
 func TestMemoryStore_ConcurrentMixedOperations(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	var wg sync.WaitGroup
@@ -260,7 +260,7 @@ func TestMemoryStore_ConcurrentMixedOperations(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 50; j++ {
-				store.Increment(ctx, "mixed-ops", time.Minute)
+				_, _ = store.Increment(ctx, "mixed-ops", time.Minute)
 			}
 		}()
 
@@ -268,7 +268,7 @@ func TestMemoryStore_ConcurrentMixedOperations(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 50; j++ {
-				store.Get(ctx, "mixed-ops")
+				_, _, _ = store.Get(ctx, "mixed-ops")
 			}
 		}()
 
@@ -276,7 +276,7 @@ func TestMemoryStore_ConcurrentMixedOperations(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			time.Sleep(10 * time.Millisecond)
-			store.Reset(ctx, "mixed-ops")
+			_ = store.Reset(ctx, "mixed-ops")
 		}()
 	}
 
@@ -286,7 +286,7 @@ func TestMemoryStore_ConcurrentMixedOperations(t *testing.T) {
 
 func TestMemoryStore_MultipleKeys(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -306,7 +306,7 @@ func TestMemoryStore_MultipleKeys(t *testing.T) {
 
 func TestMemoryStore_RateLimitScenario(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	limit := int64(10)
@@ -339,7 +339,7 @@ func TestMemoryStore_RateLimitScenario(t *testing.T) {
 
 func TestMemoryStore_ExpiryTiming(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	expiration := 200 * time.Millisecond
@@ -359,7 +359,7 @@ func TestMemoryStore_ExpiryTiming(t *testing.T) {
 
 func TestMemoryStore_ContextCancellation(t *testing.T) {
 	store := NewMemoryStore(time.Minute)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Operations should still work even with cancelled context
 	// (the in-memory store doesn't actually check context for basic ops)

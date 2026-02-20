@@ -267,30 +267,30 @@ export const tools = [
 
 Available metadata annotations:
 
-| Annotation                           | Description                                               | Default         |
-| ------------------------------------ | --------------------------------------------------------- | --------------- |
-| `@fluxbase:description`              | Short description of the chatbot                          | Required        |
-| `@fluxbase:allowed-tables`           | Comma-separated table names or `*`                        | `*`             |
-| `@fluxbase:allowed-operations`       | Allowed SQL operations (SELECT, INSERT, etc.)             | `SELECT`        |
-| `@fluxbase:allowed-schemas`          | Allowed database schemas                                  | `public`        |
-| `@fluxbase:max-tokens`               | Maximum tokens per response                               | `4096`          |
-| `@fluxbase:temperature`              | LLM temperature (0.0-2.0)                                 | `0.7`           |
-| `@fluxbase:response-language`        | Response language: `auto` (match user), ISO code, or name | `auto`          |
-| `@fluxbase:persist-conversations`    | Save conversation history                                 | `false`         |
-| `@fluxbase:conversation-ttl`         | Conversation TTL in hours                                 | `24`            |
-| `@fluxbase:max-turns`                | Max messages in conversation                              | `50`            |
-| `@fluxbase:rate-limit`               | Requests per minute                                       | `10`            |
-| `@fluxbase:daily-limit`              | Requests per day                                          | `100`           |
-| `@fluxbase:token-budget`             | Max tokens per day                                        | `50000`         |
-| `@fluxbase:allow-unauthenticated`    | Allow anonymous access                                    | `false`         |
-| `@fluxbase:public`                   | Show in public chatbot list                               | `true`          |
-| `@fluxbase:http-allowed-domains`     | Domains chatbot can fetch (comma-separated)               | `""` (disabled) |
-| `@fluxbase:knowledge-base`           | Name of knowledge base for RAG (can specify multiple)     | -               |
-| `@fluxbase:rag-max-chunks`           | Maximum chunks to retrieve for RAG context                | `5`             |
-| `@fluxbase:rag-similarity-threshold` | Minimum similarity score for RAG (0.0-1.0)                | `0.7`           |
-| `@fluxbase:required-settings`        | Setting keys to load for template resolution              | -               |
-| `@fluxbase:mcp-tools`                | Comma-separated MCP tools to enable (see [MCP Tools](#mcp-tools)) | `""` (legacy execute_sql) |
-| `@fluxbase:use-mcp-schema`           | Fetch schema from MCP resources instead of direct DB introspection | `false`         |
+| Annotation                           | Description                                                        | Default                   |
+| ------------------------------------ | ------------------------------------------------------------------ | ------------------------- |
+| `@fluxbase:description`              | Short description of the chatbot                                   | Required                  |
+| `@fluxbase:allowed-tables`           | Comma-separated table names or `*`                                 | `*`                       |
+| `@fluxbase:allowed-operations`       | Allowed SQL operations (SELECT, INSERT, etc.)                      | `SELECT`                  |
+| `@fluxbase:allowed-schemas`          | Allowed database schemas                                           | `public`                  |
+| `@fluxbase:max-tokens`               | Maximum tokens per response                                        | `4096`                    |
+| `@fluxbase:temperature`              | LLM temperature (0.0-2.0)                                          | `0.7`                     |
+| `@fluxbase:response-language`        | Response language: `auto` (match user), ISO code, or name          | `auto`                    |
+| `@fluxbase:persist-conversations`    | Save conversation history                                          | `false`                   |
+| `@fluxbase:conversation-ttl`         | Conversation TTL in hours                                          | `24`                      |
+| `@fluxbase:max-turns`                | Max messages in conversation                                       | `50`                      |
+| `@fluxbase:rate-limit`               | Requests per minute                                                | `10`                      |
+| `@fluxbase:daily-limit`              | Requests per day                                                   | `100`                     |
+| `@fluxbase:token-budget`             | Max tokens per day                                                 | `50000`                   |
+| `@fluxbase:allow-unauthenticated`    | Allow anonymous access                                             | `false`                   |
+| `@fluxbase:public`                   | Show in public chatbot list                                        | `true`                    |
+| `@fluxbase:http-allowed-domains`     | Domains chatbot can fetch (comma-separated)                        | `""` (disabled)           |
+| `@fluxbase:knowledge-base`           | Name of knowledge base for RAG (can specify multiple)              | -                         |
+| `@fluxbase:rag-max-chunks`           | Maximum chunks to retrieve for RAG context                         | `5`                       |
+| `@fluxbase:rag-similarity-threshold` | Minimum similarity score for RAG (0.0-1.0)                         | `0.7`                     |
+| `@fluxbase:required-settings`        | Setting keys to load for template resolution                       | -                         |
+| `@fluxbase:mcp-tools`                | Comma-separated MCP tools to enable (see [MCP Tools](#mcp-tools))  | `""` (legacy execute_sql) |
+| `@fluxbase:use-mcp-schema`           | Fetch schema from MCP resources instead of direct DB introspection | `false`                   |
 
 ### HTTP Tool
 
@@ -375,6 +375,54 @@ Current user ID: {{user_id}}
 | `@fluxbase:rag-max-chunks`           | Maximum chunks to retrieve                 | `5`     |
 | `@fluxbase:rag-similarity-threshold` | Minimum similarity (0.0-1.0)               | `0.7`   |
 
+**Advanced RAG Linking:**
+
+For more control over how knowledge bases are accessed, use the admin API:
+
+```typescript
+// Tiered access - retrieve from KBs in priority order
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "priority-kb",
+  access_level: "tiered",
+  priority: 1, // Lower number = higher priority
+  max_chunks: 5,
+  context_weight: 1.0, // Higher weight = prioritize this KB's chunks
+});
+
+// Filtered access - retrieve chunks matching specific criteria
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "technical-docs",
+  access_level: "filtered",
+  filter_expression: {
+    category: "api",
+    level: "advanced",
+  },
+});
+
+// Intent-based routing - route queries to specific KBs
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "sales-kb",
+  intent_keywords: ["pricing", "sales", "quote"],
+});
+
+await client.admin.ai.linkKnowledgeBaseToChatbot("chatbot-id", {
+  knowledge_base_id: "support-kb",
+  intent_keywords: ["help", "troubleshooting", "error"],
+});
+```
+
+**Knowledge Graph Integration:**
+
+When knowledge bases have entity extraction enabled, the RAG system can also leverage entity relationships to provide more context-aware responses:
+
+```typescript
+// The RAG system automatically:
+// 1. Extracts entities from the user query
+// 2. Finds related entities through the knowledge graph
+// 3. Retrieves chunks mentioning those entities
+// 4. Provides entity context in the system prompt
+```
+
 For detailed documentation on creating knowledge bases, adding documents, and configuring RAG, see the [Knowledge Bases & RAG](/guides/knowledge-bases) guide.
 
 ### MCP Tools
@@ -400,25 +448,25 @@ Current user: {{user_id}}`;
 
 **Available MCP tools:**
 
-| Tool | Description | Required Scope |
-|------|-------------|----------------|
-| **Data Tools** | | |
-| `query_table` | Query a table with filters, ordering, pagination, and optional vector search | `read:tables` |
-| `insert_record` | Insert a new record into a table | `write:tables` |
-| `update_record` | Update records matching filters | `write:tables` |
-| `delete_record` | Delete records matching filters | `write:tables` |
-| **Execution Tools** | | |
-| `invoke_function` | Call an edge function with body/headers | `execute:functions` |
-| `invoke_rpc` | Execute an RPC procedure with parameters | `execute:rpc` |
-| `submit_job` | Queue a background job for async execution | `execute:jobs` |
-| `get_job_status` | Check the status of a submitted job | `execute:jobs` |
-| **Storage Tools** | | |
-| `list_objects` | List objects in a storage bucket | `read:storage` |
-| `upload_object` | Upload a file to a storage bucket | `write:storage` |
-| `download_object` | Download a file from a storage bucket | `read:storage` |
-| `delete_object` | Delete a file from a storage bucket | `write:storage` |
-| **Vector Search** | | |
-| `search_vectors` | Semantic search over vector embeddings | `read:vectors` |
+| Tool                | Description                                                                  | Required Scope      |
+| ------------------- | ---------------------------------------------------------------------------- | ------------------- |
+| **Data Tools**      |                                                                              |                     |
+| `query_table`       | Query a table with filters, ordering, pagination, and optional vector search | `read:tables`       |
+| `insert_record`     | Insert a new record into a table                                             | `write:tables`      |
+| `update_record`     | Update records matching filters                                              | `write:tables`      |
+| `delete_record`     | Delete records matching filters                                              | `write:tables`      |
+| **Execution Tools** |                                                                              |                     |
+| `invoke_function`   | Call an edge function with body/headers                                      | `execute:functions` |
+| `invoke_rpc`        | Execute an RPC procedure with parameters                                     | `execute:rpc`       |
+| `submit_job`        | Queue a background job for async execution                                   | `execute:jobs`      |
+| `get_job_status`    | Check the status of a submitted job                                          | `execute:jobs`      |
+| **Storage Tools**   |                                                                              |                     |
+| `list_objects`      | List objects in a storage bucket                                             | `read:storage`      |
+| `upload_object`     | Upload a file to a storage bucket                                            | `write:storage`     |
+| `download_object`   | Download a file from a storage bucket                                        | `read:storage`      |
+| `delete_object`     | Delete a file from a storage bucket                                          | `write:storage`     |
+| **Vector Search**   |                                                                              |                     |
+| `search_vectors`    | Semantic search over vector embeddings                                       | `read:vectors`      |
 
 **Benefits of MCP tools over `execute_sql`:**
 

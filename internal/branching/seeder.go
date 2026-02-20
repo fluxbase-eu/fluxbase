@@ -2,6 +2,7 @@ package branching
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -134,7 +135,7 @@ func (s *Seeder) executeSingleSeed(ctx context.Context, pool *pgxpool.Pool, bran
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			log.Warn().Err(err).Msg("Failed to rollback transaction")
 		}
 	}()

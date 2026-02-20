@@ -37,6 +37,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// getEnvOrDefault returns the value of an environment variable or a default value.
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 // getDatabase creates a database connection for setup/teardown operations.
 func getDatabase(cfg *config.Config) (*database.Connection, error) {
 	return database.NewConnection(cfg.Database)
@@ -60,14 +68,13 @@ func TestMain(m *testing.M) {
 	// Initialize shared test context for connection pooling
 	// This reduces connection pool exhaustion across tests
 	test.InitSharedTestContext()
-	defer test.CleanupSharedTestContext()
 
 	// NOTE: RLS shared context is initialized lazily on first use by NewRLSTestContext()
 	// This avoids having two shared contexts competing for resources
 
 	// Setup: Create test tables before running tests
 	if !setupTestTables() {
-		log.Fatal().Msg("Failed to setup test tables - cannot run tests")
+		log.Error().Msg("Failed to setup test tables - cannot run tests")
 		os.Exit(1)
 	}
 
@@ -89,6 +96,10 @@ func TestMain(m *testing.M) {
 	} else {
 		log.Info().Msg("Parallel test mode detected - skipping test table teardown")
 	}
+
+	// Clean up shared test context before exit
+	// (Must be called explicitly since os.Exit will not run defers)
+	test.CleanupSharedTestContext()
 
 	// Exit with the test result code
 	os.Exit(code)
@@ -119,9 +130,10 @@ func enablePostGISExtension() {
 	ctx := context.Background()
 
 	cfg := test.GetTestConfig()
-	cfg.Database.User = "postgres"
-	cfg.Database.AdminUser = "postgres"
-	cfg.Database.Password = "postgres"
+	// Use postgres superuser from environment variables (with defaults for local dev)
+	cfg.Database.User = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+	cfg.Database.AdminUser = cfg.Database.User
+	cfg.Database.Password = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
 
 	db, err := getDatabase(cfg)
 	if err != nil {
@@ -354,10 +366,10 @@ func setupTestTables() bool {
 	}
 
 	// Drop existing RLS policies if they exist (to avoid conflicts)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_select_own ON public.tasks`)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_insert_own ON public.tasks`)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_update_own ON public.tasks`)
-	db.Exec(ctx, `DROP POLICY IF EXISTS tasks_delete_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_select_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_insert_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_update_own ON public.tasks`)
+	_, _ = db.Exec(ctx, `DROP POLICY IF EXISTS tasks_delete_own ON public.tasks`)
 
 	// Create RLS policies for tasks
 	_, err = db.Exec(ctx, `
@@ -473,9 +485,10 @@ func grantRLSTestPermissions() {
 	// Connect as postgres superuser to grant permissions
 	// fluxbase_app cannot grant permissions on schemas it doesn't own
 	cfg := test.GetTestConfig()
-	cfg.Database.User = "postgres"
-	cfg.Database.AdminUser = "postgres"
-	cfg.Database.Password = "postgres"
+	// Use postgres superuser from environment variables (with defaults for local dev)
+	cfg.Database.User = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+	cfg.Database.AdminUser = cfg.Database.User
+	cfg.Database.Password = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
 
 	db, err := getDatabase(cfg)
 	if err != nil {
@@ -603,9 +616,10 @@ func teardownTestTables() {
 	// Connect as postgres superuser to drop tables that may be owned by postgres
 	// (e.g., tasks table created by EnsureRLSTestTables())
 	cfg := test.GetTestConfig()
-	cfg.Database.User = "postgres"
-	cfg.Database.AdminUser = "postgres"
-	cfg.Database.Password = "postgres"
+	// Use postgres superuser from environment variables (with defaults for local dev)
+	cfg.Database.User = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+	cfg.Database.AdminUser = cfg.Database.User
+	cfg.Database.Password = getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
 	db, err := getDatabase(cfg)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to connect to database for test teardown")

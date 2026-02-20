@@ -305,13 +305,14 @@ func runMigrationsSync(cmd *cobra.Command, args []string) error {
 		var migName string
 		var sqlType string
 
-		if strings.HasSuffix(name, ".up.sql") {
+		switch {
+		case strings.HasSuffix(name, ".up.sql"):
 			migName = strings.TrimSuffix(name, ".up.sql")
 			sqlType = "up"
-		} else if strings.HasSuffix(name, ".down.sql") {
+		case strings.HasSuffix(name, ".down.sql"):
 			migName = strings.TrimSuffix(name, ".down.sql")
 			sqlType = "down"
-		} else {
+		default:
 			continue
 		}
 

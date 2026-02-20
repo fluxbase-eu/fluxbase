@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -276,6 +277,15 @@ func (s *Service) EnableExtension(ctx context.Context, name string, userID *stri
 
 // DisableExtension disables a PostgreSQL extension
 func (s *Service) DisableExtension(ctx context.Context, name string, userID *string) (*DisableExtensionResponse, error) {
+	// Validate extension name is a safe identifier (defense in depth)
+	if !isValidIdentifier(name) {
+		return &DisableExtensionResponse{
+			Name:    name,
+			Success: false,
+			Message: "Invalid extension name: must contain only letters, digits, and underscores",
+		}, nil
+	}
+
 	// Validate extension exists in catalog
 	available, err := s.getAvailableExtension(ctx, name)
 	if err != nil {
@@ -308,15 +318,6 @@ func (s *Service) DisableExtension(ctx context.Context, name string, userID *str
 			Name:    name,
 			Success: true,
 			Message: "Extension is not currently enabled",
-		}, nil
-	}
-
-	// Validate extension name is a safe identifier (defense in depth)
-	if !isValidIdentifier(name) {
-		return &DisableExtensionResponse{
-			Name:    name,
-			Success: false,
-			Message: "Invalid extension name: must contain only letters, digits, and underscores",
 		}, nil
 	}
 
@@ -415,7 +416,7 @@ func (s *Service) getAvailableExtension(ctx context.Context, name string) (*Avai
 		&ext.ID, &ext.Name, &ext.DisplayName, &ext.Description, &ext.Category,
 		&ext.IsCore, &ext.RequiresRestart, &ext.DocumentationURL, &ext.CreatedAt, &ext.UpdatedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

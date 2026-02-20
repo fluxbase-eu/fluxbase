@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -95,7 +96,7 @@ func (h *SAMLHandler) GetSPMetadata(c fiber.Ctx) error {
 
 	metadata, err := h.samlService.GetSPMetadata(providerName)
 	if err != nil {
-		if err == auth.ErrSAMLProviderNotFound {
+		if errors.Is(err, auth.ErrSAMLProviderNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "SAML provider not found",
 			})
@@ -154,12 +155,12 @@ func (h *SAMLHandler) InitiateSAMLLogin(c fiber.Ctx) error {
 	// Generate AuthnRequest and get redirect URL
 	authURL, _, err := h.samlService.GenerateAuthRequest(providerName, relayState)
 	if err != nil {
-		if err == auth.ErrSAMLProviderNotFound {
+		if errors.Is(err, auth.ErrSAMLProviderNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "SAML provider not found",
 			})
 		}
-		if err == auth.ErrSAMLProviderDisabled {
+		if errors.Is(err, auth.ErrSAMLProviderDisabled) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": "SAML provider is disabled",
 			})

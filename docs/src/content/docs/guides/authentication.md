@@ -378,8 +378,93 @@ sequenceDiagram
 
 This flow ensures that user identity is consistently available throughout the request lifecycle, enabling secure data access control via Row-Level Security policies.
 
+## Enterprise Authentication
+
+Fluxbase supports enterprise-grade authentication methods:
+
+### SAML SSO
+
+Configure SAML 2.0 Single Sign-On for enterprise authentication with providers like Okta, Azure AD, OneLogin, and more.
+
+**See:** [SAML SSO Guide](/guides/saml-sso/) for complete setup instructions.
+
+### OAuth Providers & OIDC
+
+Configure OAuth 2.0 and OpenID Connect authentication with social providers and enterprise IdPs.
+
+**See:** [OAuth Providers Guide](/guides/oauth-providers/) for provider-specific setup instructions.
+
+## CAPTCHA Integration
+
+Protect your authentication flows from automated attacks with CAPTCHA verification.
+
+Fluxbase supports multiple CAPTCHA providers:
+
+| Provider | Description |
+|----------|-------------|
+| **Cloudflare Turnstile** | Invisible CAPTCHA, user-friendly |
+| **Google reCAPTCHA v2** | Classic "I'm not a robot" checkbox |
+| **Google reCAPTCHA v3** | Invisible CAPTCHA, score-based |
+| **hCaptcha** | Privacy-focused CAPTCHA |
+| **Cap (self-hosted)** | Self-hosted CAPTCHA solution |
+
+### Configuration
+
+```yaml
+security:
+  captcha:
+    enabled: true
+    provider: turnstile            # recaptcha, hcaptcha, turnstile, captcha-v2, cap
+    site_key: your-site-key
+    secret_key: your-secret-key
+```
+
+### Usage
+
+CAPTCHA is automatically verified during:
+
+- User signup
+- User login (when adaptive trust determines it's needed)
+- Password reset requests
+- Magic link requests
+
+For more details, see [Security Best Practices](/security/best-practices/).
+
+## User Impersonation
+
+Administrators can impersonate other users for debugging and support purposes.
+
+### Enable Impersonation
+
+```yaml
+auth:
+  impersonation_enabled: true
+```
+
+### Usage (Admin Dashboard)
+
+```typescript
+// Start impersonation
+const { impersonation } = await client.auth.impersonateUser({
+  userId: 'target-user-id'
+})
+
+// Stop impersonation
+await client.auth.stopImpersonation()
+```
+
+### Security Notes
+
+⚠️ **Impersonation is a powerful feature - use with caution:**
+
+- Only enable `impersonation_enabled` for admin users
+- All impersonation actions are logged
+- Requires dashboard admin role
+- Cannot impersonate other admins (prevents privilege escalation)
+
 ## Next Steps
 
 - [Row-Level Security](/guides/row-level-security) - Secure data with RLS policies
 - [OAuth Providers](/guides/oauth-providers) - Configure social login
-- [Email Services](/guides/email-services) - Set up email for password reset
+- [SAML SSO](/guides/saml-sso/) - Configure enterprise SSO
+- [Security Best Practices](/security/best-practices/) - Security hardening guide

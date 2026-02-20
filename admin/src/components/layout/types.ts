@@ -26,6 +26,7 @@ type NavLink = BaseNavItem & {
 type NavCollapsible = BaseNavItem & {
   items: (BaseNavItem & { url: LinkProps['to'] | (string & {}) })[]
   url?: never
+  collapsible?: boolean
 }
 
 type NavItem = NavCollapsible | NavLink
@@ -33,6 +34,7 @@ type NavItem = NavCollapsible | NavLink
 type NavGroup = {
   title: string
   items: NavItem[]
+  collapsible?: boolean
 }
 
 type SidebarData = {

@@ -37,6 +37,16 @@ services:
       FLUXBASE_STORAGE_S3_REGION: us-east-1
       FLUXBASE_REALTIME_ENABLED: "true"
 
+      # Logging backend configuration (for testing different backends)
+      # Uncomment to test different backends:
+      # FLUXBASE_LOGGING_BACKEND: "elasticsearch"
+      # FLUXBASE_LOGGING_BACKEND: "clickhouse"
+      # FLUXBASE_LOGGING_BACKEND: "loki"
+      # FLUXBASE_LOGGING_ELASTICSEARCH_URLS: "http://elasticsearch:9200"
+      # FLUXBASE_LOGGING_CLICKHOUSE_ADDRESSES: "clickhouse:9000"
+      # FLUXBASE_LOGGING_CLICKHOUSE_DATABASE: "fluxbase"
+      # FLUXBASE_LOGGING_LOKI_URL: "http://loki:3100"
+
       # Development tools
       COLORTERM: truecolor
       TERM: xterm-256color
@@ -90,12 +100,79 @@ services:
       timeout: 5s
       retries: 5
 
+  # Elasticsearch Service (for logging backend testing)
+  elasticsearch:
+    image: elasticsearch:9.3.0
+    container_name: fluxbase-elasticsearch-dev
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - fluxbase-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ClickHouse Service (for logging backend testing)
+  clickhouse:
+    image: clickhouse:26.1
+    container_name: fluxbase-clickhouse-dev
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: fluxbase
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    networks:
+      - fluxbase-dev-network
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Grafana Loki Service (for logging backend testing)
+  loki:
+    image: grafana/loki:3.5.10
+    container_name: fluxbase-loki-dev
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - fluxbase-dev-network
+    volumes:
+      - ./loki-config:/etc/loki-config:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "--tries=1", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
 volumes:
   go-modules:
   vscode-extensions:
   postgres-data:
   minio-data:
   storage:
+  elasticsearch-data:
+  clickhouse-data:
+  loki-data:
 
 networks:
   fluxbase-dev-network:

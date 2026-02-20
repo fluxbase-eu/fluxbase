@@ -56,7 +56,7 @@ func TestLoggingHandler_QueryLogs(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/logs", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 	})
@@ -76,7 +76,7 @@ func TestLoggingHandler_GetExecutionLogs(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/logs/executions/exec-123", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 	})
@@ -90,7 +90,7 @@ func TestLoggingHandler_GetExecutionLogs(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/logs/executions/", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Empty param, route handler still called
 		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
@@ -111,7 +111,7 @@ func TestLoggingHandler_GetLogStats(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/logs/stats", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 	})
@@ -131,7 +131,7 @@ func TestLoggingHandler_FlushLogs(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/logs/flush", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 	})

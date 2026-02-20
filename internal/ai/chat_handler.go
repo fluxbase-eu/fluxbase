@@ -51,7 +51,10 @@ func NewChatHandler(
 	var ragService *RAGService
 	if embeddingService != nil {
 		kbStorage := NewKnowledgeBaseStorage(db)
-		ragService = NewRAGService(kbStorage, embeddingService)
+		// Initialize knowledge graph and entity extractor for graph-boosted search
+		knowledgeGraph := NewKnowledgeGraph(kbStorage)
+		entityExtractor := NewRuleBasedExtractor()
+		ragService = NewRAGService(kbStorage, embeddingService, knowledgeGraph, entityExtractor)
 	}
 
 	return &ChatHandler{
@@ -489,11 +492,9 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 					Function: ToolFunction(def),
 				})
 			}
-		} else {
+		} else if !isToolForbidden("execute_sql") {
 			// Fallback: add legacy execute_sql if no MCP tools configured
-			if !isToolForbidden("execute_sql") {
-				tools = append(tools, ExecuteSQLTool)
-			}
+			tools = append(tools, ExecuteSQLTool)
 		}
 
 		log.Debug().
@@ -1042,24 +1043,25 @@ func (h *ChatHandler) getProvider(ctx context.Context, chatbot *Chatbot) (Provid
 
 		// Load chatbot-specific provider from database
 		providerRecord, err := h.storage.GetProvider(ctx, providerID)
-		if err != nil {
+		switch {
+		case err != nil:
 			log.Warn().
 				Err(err).
 				Str("chatbot", chatbot.Name).
 				Str("provider_id", providerID).
 				Msg("Failed to get chatbot's configured provider, falling back to default")
-		} else if providerRecord == nil {
+		case providerRecord == nil:
 			log.Warn().
 				Str("chatbot", chatbot.Name).
 				Str("provider_id", providerID).
 				Msg("Chatbot's configured provider not found, falling back to default")
-		} else if !providerRecord.Enabled {
+		case !providerRecord.Enabled:
 			log.Warn().
 				Str("chatbot", chatbot.Name).
 				Str("provider_id", providerID).
 				Str("provider_name", providerRecord.Name).
 				Msg("Chatbot's configured provider is disabled, falling back to default")
-		} else {
+		default:
 			// Create and cache the chatbot-specific provider
 			return h.createAndCacheProvider(providerRecord)
 		}

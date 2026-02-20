@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"strings"
@@ -48,7 +49,7 @@ func (h *StorageHandler) MultipartUpload(c fiber.Ctx) error {
 		`SELECT allowed_mime_types FROM storage.get_bucket_settings($1)`,
 		bucket,
 	).Scan(&bucketAllowedMimeTypes)
-	if err != nil && err != pgx.ErrNoRows {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		log.Error().Err(err).Str("bucket", bucket).Msg("Failed to get bucket settings")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to validate bucket settings",

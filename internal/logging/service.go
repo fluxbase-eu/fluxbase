@@ -19,7 +19,7 @@ import (
 type Service struct {
 	config       *config.LoggingConfig
 	storage      storage.LogStorage
-	batcher      *Batcher
+	batcher      *storage.Batcher
 	notifier     *PubSubNotifier
 	writer       *Writer
 	mu           sync.RWMutex
@@ -76,7 +76,7 @@ func New(cfg *config.LoggingConfig, db *database.Connection, fileStorage storage
 		bufferSize = 10000
 	}
 
-	s.batcher = NewBatcher(batchSize, flushInterval, bufferSize, s.writeBatch)
+	s.batcher = storage.NewBatcher(batchSize, flushInterval, bufferSize, s.writeBatch)
 
 	// Create zerolog writer
 	s.writer = NewWriter(s, cfg.ConsoleEnabled, cfg.ConsoleFormat)

@@ -438,7 +438,7 @@ func BenchmarkParseToolCall_Simple(b *testing.B) {
 	argsJSON := `{"table": "users", "limit": 10}`
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ParseToolCall("query_table", argsJSON)
+		_, _, _ = ParseToolCall("query_table", argsJSON)
 	}
 }
 
@@ -446,6 +446,6 @@ func BenchmarkParseToolCall_Complex(b *testing.B) {
 	argsJSON := `{"table": "users", "values": {"name": "John", "email": "john@example.com", "age": 30}}`
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ParseToolCall("insert_record", argsJSON)
+		_, _, _ = ParseToolCall("insert_record", argsJSON)
 	}
 }

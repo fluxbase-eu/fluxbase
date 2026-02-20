@@ -344,13 +344,13 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 		assert.Contains(t, result["error"], "Invalid request body")
 	})
 
@@ -366,13 +366,13 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Invalid provider")
 		assert.Equal(t, "INVALID_PROVIDER", result["code"])
 	})
@@ -389,7 +389,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -406,13 +406,13 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Invalid endpoint")
 		assert.Equal(t, "INVALID_ENDPOINT", result["code"])
 	})
@@ -429,13 +429,13 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Score threshold must be between 0.0 and 1.0")
 		assert.Equal(t, "INVALID_SCORE_THRESHOLD", result["code"])
 	})
@@ -452,13 +452,13 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(respBody, &result)
+		_ = json.Unmarshal(respBody, &result)
 		assert.Contains(t, result["error"], "Score threshold must be between 0.0 and 1.0")
 	})
 
@@ -475,7 +475,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should pass validation (not StatusBadRequest)
 		// Will fail later due to nil settingsService
@@ -495,7 +495,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should pass validation
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -513,7 +513,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should pass validation
 		assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -535,7 +535,7 @@ func TestUpdateCaptchaSettings_Validation(t *testing.T) {
 
 				resp, err := app.Test(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 
 				// Should pass validation
 				assert.NotEqual(t, fiber.StatusBadRequest, resp.StatusCode)

@@ -11,7 +11,7 @@ cat >> "$PGDATA/postgresql.conf" << EOF
 # =============================================================================
 
 # Preload extensions that require shared memory allocation
-shared_preload_libraries = 'pg_stat_statements,pg_cron,pgaudit'
+shared_preload_libraries = 'pg_stat_statements,pg_cron,pgaudit,timescaledb'
 
 # pg_stat_statements configuration
 pg_stat_statements.track = all

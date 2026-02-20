@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { EmptyState } from '@/components/empty-state'
 import { createFileRoute } from '@tanstack/react-router'
 import {
   Play,
@@ -713,7 +714,7 @@ async function handler(req: Request) {
   return (
     <>
       {/* Stats (Past 24 hours) */}
-      <Card className='!gap-0 !py-0'>
+      <Card className='!gap-0 !py-0 mb-6'>
         <CardContent className='px-4 py-2'>
           <div className='flex items-center gap-4'>
             <span className='text-muted-foreground text-xs'>
@@ -1131,21 +1132,26 @@ async function handler(req: Request) {
           <ScrollArea className='h-[calc(100vh-20rem)]'>
             <div className='grid gap-1'>
               {edgeFunctions.length === 0 ? (
-                <Card>
-                  <CardContent className='p-12 text-center'>
-                    <Zap className='text-muted-foreground mx-auto mb-4 h-12 w-12' />
-                    <p className='mb-2 text-lg font-medium'>
-                      No edge functions yet
-                    </p>
-                    <p className='text-muted-foreground mb-4 text-sm'>
-                      Create your first edge function to get started
-                    </p>
-                    <Button onClick={() => setShowCreateDialog(true)}>
-                      <Plus className='mr-2 h-4 w-4' />
-                      Create Edge Function
-                    </Button>
-                  </CardContent>
-                </Card>
+                <div className='p-2'>
+                  <EmptyState
+                    icon={Zap}
+                    title='No edge functions yet'
+                    description='Deploy serverless functions or start from a template'
+                    templates={[
+                      { label: 'HTTP Handler', onClick: () => setShowCreateDialog(true) },
+                      { label: 'Webhook', onClick: () => setShowCreateDialog(true) },
+                      { label: 'Scheduled Job', onClick: () => setShowCreateDialog(true) },
+                      { label: 'Auth Middleware', onClick: () => setShowCreateDialog(true) },
+                    ]}
+                    actions={[
+                      {
+                        label: 'Create Function',
+                        onClick: () => setShowCreateDialog(true),
+                        icon: <Plus className='h-4 w-4' />,
+                      },
+                    ]}
+                  />
+                </div>
               ) : (
                 edgeFunctions.map((fn) => (
                   <div

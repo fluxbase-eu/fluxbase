@@ -282,7 +282,7 @@ func TestAdminLogin_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
@@ -322,7 +322,7 @@ func TestAdminRefreshToken_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
@@ -353,7 +353,7 @@ func TestAdminLogout_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
@@ -378,7 +378,7 @@ func TestAdminLogout_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
@@ -403,7 +403,7 @@ func TestAdminLogout_Validation(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 	})
@@ -432,7 +432,7 @@ func TestGetCurrentAdmin_Authorization(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
@@ -464,7 +464,7 @@ func TestGetCurrentAdmin_Authorization(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
 
@@ -496,7 +496,7 @@ func TestGetCurrentAdmin_Authorization(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
@@ -533,7 +533,7 @@ func TestGetCurrentAdmin_Authorization(t *testing.T) {
 
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should still succeed - email is optional in the response
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -597,7 +597,7 @@ func TestAuthorizationHeaderParsing(t *testing.T) {
 
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 		})
@@ -629,7 +629,7 @@ func TestRoleValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/me", nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, fiber.StatusOK, resp.StatusCode, "Role %q should be allowed", role)
 		}
@@ -652,7 +652,7 @@ func TestRoleValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/me", nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, fiber.StatusForbidden, resp.StatusCode, "Role %q should be denied", role)
 		}

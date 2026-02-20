@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/branching"
@@ -131,28 +132,28 @@ func (h *BranchHandler) CreateBranch(c fiber.Ctx) error {
 	if err != nil {
 		log.Error().Err(err).Str("name", req.Name).Msg("Failed to create branch")
 
-		switch err {
-		case branching.ErrBranchExists:
+		if errors.Is(err, branching.ErrBranchExists) {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"error":   "branch_exists",
 				"message": "A branch with this name already exists",
 			})
-		case branching.ErrMaxBranchesReached:
+		}
+		if errors.Is(err, branching.ErrMaxBranchesReached) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error":   "max_branches_reached",
 				"message": "Maximum number of branches has been reached",
 			})
-		case branching.ErrInvalidSlug:
+		}
+		if errors.Is(err, branching.ErrInvalidSlug) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   "invalid_slug",
 				"message": err.Error(),
 			})
-		default:
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "create_failed",
-				"message": "Failed to create branch: " + err.Error(),
-			})
 		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "create_failed",
+			"message": "Failed to create branch: " + err.Error(),
+		})
 	}
 
 	// Warmup the connection pool
@@ -258,7 +259,7 @@ func (h *BranchHandler) GetBranch(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "branch_not_found",
 				"message": "Branch not found",
@@ -303,7 +304,7 @@ func (h *BranchHandler) DeleteBranch(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "branch_not_found",
 				"message": "Branch not found",
@@ -355,7 +356,7 @@ func (h *BranchHandler) DeleteBranch(c fiber.Ctx) error {
 	if err := h.manager.DeleteBranch(c.RequestCtx(), branchID, userID); err != nil {
 		log.Error().Err(err).Str("id", idParam).Msg("Failed to delete branch")
 
-		if err == branching.ErrCannotDeleteMainBranch {
+		if errors.Is(err, branching.ErrCannotDeleteMainBranch) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error":   "cannot_delete_main",
 				"message": "Cannot delete the main branch",
@@ -400,7 +401,7 @@ func (h *BranchHandler) ResetBranch(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "branch_not_found",
 				"message": "Branch not found",
@@ -452,7 +453,7 @@ func (h *BranchHandler) ResetBranch(c fiber.Ctx) error {
 	if err := h.manager.ResetBranch(c.RequestCtx(), branchID, userID); err != nil {
 		log.Error().Err(err).Str("id", idParam).Msg("Failed to reset branch")
 
-		if err == branching.ErrCannotDeleteMainBranch {
+		if errors.Is(err, branching.ErrCannotDeleteMainBranch) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error":   "cannot_reset_main",
 				"message": "Cannot reset the main branch",
@@ -502,7 +503,7 @@ func (h *BranchHandler) GetBranchActivity(c fiber.Ctx) error {
 		// Try as slug
 		branch, err := h.manager.GetStorage().GetBranchBySlug(c.RequestCtx(), idParam)
 		if err != nil {
-			if err == branching.ErrBranchNotFound {
+			if errors.Is(err, branching.ErrBranchNotFound) {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 					"error":   "branch_not_found",
 					"message": "Branch not found",
@@ -610,7 +611,7 @@ func (h *BranchHandler) SetActiveBranch(c fiber.Ctx) error {
 	if req.Branch != "main" {
 		_, err := h.manager.GetStorage().GetBranchBySlug(c.RequestCtx(), req.Branch)
 		if err != nil {
-			if err == branching.ErrBranchNotFound {
+			if errors.Is(err, branching.ErrBranchNotFound) {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 					"error":   "branch_not_found",
 					"message": "Branch not found: " + req.Branch,
@@ -776,7 +777,7 @@ func (h *BranchHandler) DeleteGitHubConfig(c fiber.Ctx) error {
 	repository := c.Params("repository")
 
 	if err := h.manager.GetStorage().DeleteGitHubConfig(c.RequestCtx(), repository); err != nil {
-		if err == branching.ErrGitHubConfigNotFound {
+		if errors.Is(err, branching.ErrGitHubConfigNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "config_not_found",
 				"message": "GitHub configuration not found",
@@ -817,7 +818,7 @@ func (h *BranchHandler) ListBranchAccess(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "branch_not_found",
 				"message": "Branch not found",
@@ -900,7 +901,7 @@ func (h *BranchHandler) GrantBranchAccess(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "branch_not_found",
 				"message": "Branch not found",
@@ -1033,7 +1034,7 @@ func (h *BranchHandler) RevokeBranchAccess(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		if err == branching.ErrBranchNotFound {
+		if errors.Is(err, branching.ErrBranchNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "branch_not_found",
 				"message": "Branch not found",

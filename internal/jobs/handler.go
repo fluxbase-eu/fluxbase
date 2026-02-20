@@ -180,6 +180,11 @@ func (h *Handler) SetScheduler(scheduler *Scheduler) {
 	h.scheduler = scheduler
 }
 
+// GetStorage returns the jobs storage
+func (h *Handler) GetStorage() *Storage {
+	return h.storage
+}
+
 // roleSatisfiesRequirements checks if the user's role satisfies ANY of the required roles (OR semantics)
 // using a hierarchy where: service_role/dashboard_admin > admin > authenticated > anon
 func roleSatisfiesRequirements(userRole string, requiredRoles []string) bool {

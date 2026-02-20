@@ -130,6 +130,106 @@ CREATE POLICY user_isolation ON public.user_data
 
 [Learn more about RLS →](/guides/row-level-security/)
 
+### 7. Service Role Security
+
+The `service_role` and `dashboard_admin` roles have unrestricted access to all database operations and bypass RLS policies. This is necessary for administrative tasks but requires strict security measures.
+
+**⚠️ CRITICAL SECURITY IMPLICATIONS:**
+
+- Service roles have **unrestricted access** to ALL data and procedures
+- If service role credentials are compromised, an attacker gains full database access
+- Service role tokens should **NEVER** be exposed to client-side code
+- Service role usage should be restricted to server-side code only
+
+**Safeguards for Service Role Usage:**
+
+```yaml
+# fluxbase.yaml - Environment-specific restrictions
+security:
+  # Restrict service role to specific IP addresses (if possible)
+  service_role_allowed_ips:
+    - "10.0.0.0/8"    # Internal network only
+    - "172.16.0.0/12" # Private network
+
+  # Enable additional audit logging for service role operations
+  audit_service_role: true
+```
+
+**Best Practices:**
+
+1. **Store credentials securely:**
+   ```bash
+   # Use environment variables (never commit to git)
+   export FLUXBASE_SERVICE_ROLE_KEY="your-service-role-key"
+
+   # Or use secret management
+   kubectl create secret generic fluxbase-service-role \
+     --from-literal=key="your-service-role-key"
+   ```
+
+2. **Implement IP whitelisting:**
+   ```typescript
+   // Server-side middleware to restrict service role usage
+   function restrictServiceRole(req: Request, res: Response, next: NextFunction) {
+     const token = getAuthToken(req);
+     const payload = decodeJwt(token);
+
+     if (payload.role === 'service_role') {
+       const allowedIPs = ['10.0.0.0/8', '172.16.0.0/12'];
+       const clientIP = req.ip;
+
+       if (!isIPInCIDR(clientIP, allowedIPs)) {
+         return res.status(403).json({ error: 'Service role not allowed from this IP' });
+       }
+     }
+
+     next();
+   }
+   ```
+
+3. **Enable comprehensive audit logging:**
+   ```sql
+   -- Track all service role operations
+   CREATE TABLE audit.service_role_log (
+     id BIGSERIAL PRIMARY KEY,
+     user_id UUID,
+     operation TEXT,
+     table_name TEXT,
+     ip_address INET,
+     user_agent TEXT,
+     created_at TIMESTAMPTZ DEFAULT NOW()
+   );
+
+   -- Create index for monitoring
+   CREATE INDEX idx_service_role_log_created_at ON audit.service_role_log(created_at DESC);
+   ```
+
+4. **Implement rate limiting for service roles:**
+   ```yaml
+   # Even service roles should have rate limits to prevent abuse
+   rate_limiting:
+     service_role_per_minute: 1000  # Still limit, but higher than regular users
+   ```
+
+5. **Rotate service role secrets regularly:**
+   ```bash
+   # Example: Rotate service role keys monthly
+   # 1. Generate new key
+   # 2. Update application configuration
+   # 3. Rolling restart of services
+   # 4. Revoke old key after 24 hours
+   ```
+
+6. **Never expose service role tokens to clients:**
+   ```typescript
+   // ❌ NEVER: Send service role token to client
+   res.json({ service_token: serviceRoleToken });
+
+   // ✅ CORRECT: Keep service role on server only
+   const data = await serverSideQuery(serviceRoleToken);
+   res.json({ data }); // Only send results, not the token
+   ```
+
 ---
 
 ## SAML SSO Security

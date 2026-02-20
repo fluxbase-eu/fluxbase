@@ -3944,13 +3944,14 @@ func (h *OpenAPIHandler) addTableToSpec(spec *OpenAPISpec, table database.TableI
 func (h *OpenAPIHandler) buildTablePath(table database.TableInfo) string {
 	tableName := table.Name
 	if !strings.HasSuffix(tableName, "s") {
-		if strings.HasSuffix(tableName, "y") {
+		switch {
+		case strings.HasSuffix(tableName, "y"):
 			tableName = strings.TrimSuffix(tableName, "y") + "ies"
-		} else if strings.HasSuffix(tableName, "x") ||
+		case strings.HasSuffix(tableName, "x") ||
 			strings.HasSuffix(tableName, "ch") ||
-			strings.HasSuffix(tableName, "sh") {
+			strings.HasSuffix(tableName, "sh"):
 			tableName += "es"
-		} else {
+		default:
 			tableName += "s"
 		}
 	}

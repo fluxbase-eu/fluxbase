@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"testing"
 
 	"github.com/fluxbase-eu/fluxbase/internal/ai"
@@ -340,7 +341,7 @@ func TestVectorManager_RefreshFromDatabase_SkipsWithEnvConfig(t *testing.T) {
 		manager := NewVectorManager(cfg, nil, nil, nil)
 
 		// This should return nil without error because env config takes priority
-		err := manager.RefreshFromDatabase(nil)
+		err := manager.RefreshFromDatabase(context.TODO())
 
 		assert.NoError(t, err)
 	})
@@ -352,7 +353,7 @@ func TestVectorManager_RefreshFromDatabase_SkipsWithEnvConfig(t *testing.T) {
 		manager := NewVectorManager(cfg, nil, nil, nil)
 
 		// This should return nil without error because env config takes priority
-		err := manager.RefreshFromDatabase(nil)
+		err := manager.RefreshFromDatabase(context.TODO())
 
 		assert.NoError(t, err)
 	})

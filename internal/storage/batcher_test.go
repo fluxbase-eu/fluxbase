@@ -1,4 +1,4 @@
-package logging
+package storage
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,14 +15,14 @@ import (
 func TestNewBatcher(t *testing.T) {
 	t.Run("creates batcher with default values", func(t *testing.T) {
 		var called bool
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			called = true
 			return nil
 		}
 
 		batcher := NewBatcher(0, 0, 0, writeFunc)
 		require.NotNil(t, batcher)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		assert.Equal(t, 100, batcher.batchSize)
 		assert.Equal(t, time.Second, batcher.flushInterval)
@@ -32,13 +31,13 @@ func TestNewBatcher(t *testing.T) {
 	})
 
 	t.Run("creates batcher with custom values", func(t *testing.T) {
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			return nil
 		}
 
 		batcher := NewBatcher(50, 2*time.Second, 5000, writeFunc)
 		require.NotNil(t, batcher)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		assert.Equal(t, 50, batcher.batchSize)
 		assert.Equal(t, 2*time.Second, batcher.flushInterval)
@@ -46,13 +45,13 @@ func TestNewBatcher(t *testing.T) {
 	})
 
 	t.Run("negative values use defaults", func(t *testing.T) {
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			return nil
 		}
 
 		batcher := NewBatcher(-10, -5*time.Second, -100, writeFunc)
 		require.NotNil(t, batcher)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		assert.Equal(t, 100, batcher.batchSize)
 		assert.Equal(t, time.Second, batcher.flushInterval)
@@ -62,9 +61,9 @@ func TestNewBatcher(t *testing.T) {
 
 func TestBatcher_Add(t *testing.T) {
 	t.Run("adds entries to buffer", func(t *testing.T) {
-		var received []*storage.LogEntry
+		var received []*LogEntry
 		var mu sync.Mutex
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			mu.Lock()
 			received = append(received, entries...)
 			mu.Unlock()
@@ -72,13 +71,13 @@ func TestBatcher_Add(t *testing.T) {
 		}
 
 		batcher := NewBatcher(10, 100*time.Millisecond, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
-		entry := &storage.LogEntry{
+		entry := &LogEntry{
 			ID:       uuid.New(),
 			Message:  "test message",
-			Level:    storage.LogLevelInfo,
-			Category: storage.LogCategorySystem,
+			Level:    LogLevelInfo,
+			Category: LogCategorySystem,
 		}
 
 		batcher.Add(entry)
@@ -94,20 +93,20 @@ func TestBatcher_Add(t *testing.T) {
 
 	t.Run("drops entries when buffer is full", func(t *testing.T) {
 		// Use a very slow writeFunc to block the channel
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			time.Sleep(time.Second)
 			return nil
 		}
 
 		// Create batcher with very small buffer
 		batcher := NewBatcher(1000, time.Hour, 5, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Try to add more than buffer size - should not block
 		done := make(chan bool)
 		go func() {
 			for i := 0; i < 20; i++ {
-				batcher.Add(&storage.LogEntry{
+				batcher.Add(&LogEntry{
 					ID:      uuid.New(),
 					Message: "test",
 				})
@@ -124,17 +123,17 @@ func TestBatcher_Add(t *testing.T) {
 	})
 
 	t.Run("ignores adds after close", func(t *testing.T) {
-		var received []*storage.LogEntry
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		var received []*LogEntry
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			received = append(received, entries...)
 			return nil
 		}
 
 		batcher := NewBatcher(100, time.Hour, 100, writeFunc)
-		batcher.Close(context.Background())
+		_ = batcher.Close(context.Background())
 
 		// Add after close should not panic or add to buffer
-		batcher.Add(&storage.LogEntry{
+		batcher.Add(&LogEntry{
 			ID:      uuid.New(),
 			Message: "after close",
 		})
@@ -144,9 +143,9 @@ func TestBatcher_Add(t *testing.T) {
 	})
 
 	t.Run("nil entries are handled gracefully", func(t *testing.T) {
-		var received []*storage.LogEntry
+		var received []*LogEntry
 		var mu sync.Mutex
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			mu.Lock()
 			received = append(received, entries...)
 			mu.Unlock()
@@ -154,13 +153,13 @@ func TestBatcher_Add(t *testing.T) {
 		}
 
 		batcher := NewBatcher(10, 50*time.Millisecond, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Add nil entry
 		batcher.Add(nil)
 
 		// Add valid entry
-		batcher.Add(&storage.LogEntry{
+		batcher.Add(&LogEntry{
 			ID:      uuid.New(),
 			Message: "valid",
 		})
@@ -180,7 +179,7 @@ func TestBatcher_BatchSizeFlush(t *testing.T) {
 		var mu sync.Mutex
 		var batches []int
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			atomic.AddInt32(&flushCount, 1)
 			mu.Lock()
 			batches = append(batches, len(entries))
@@ -190,11 +189,11 @@ func TestBatcher_BatchSizeFlush(t *testing.T) {
 
 		batchSize := 5
 		batcher := NewBatcher(batchSize, time.Hour, 100, writeFunc) // Long interval to avoid time-based flush
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Add exactly batch size entries
 		for i := 0; i < batchSize; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "test",
 			})
@@ -214,7 +213,7 @@ func TestBatcher_BatchSizeFlush(t *testing.T) {
 		var mu sync.Mutex
 		var batches []int
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			atomic.AddInt32(&flushCount, 1)
 			mu.Lock()
 			batches = append(batches, len(entries))
@@ -224,11 +223,11 @@ func TestBatcher_BatchSizeFlush(t *testing.T) {
 
 		batchSize := 3
 		batcher := NewBatcher(batchSize, time.Hour, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Add 9 entries (should trigger 3 flushes)
 		for i := 0; i < 9; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "test",
 			})
@@ -249,7 +248,7 @@ func TestBatcher_IntervalFlush(t *testing.T) {
 		var mu sync.Mutex
 		var batches []int
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			atomic.AddInt32(&flushCount, 1)
 			mu.Lock()
 			batches = append(batches, len(entries))
@@ -259,11 +258,11 @@ func TestBatcher_IntervalFlush(t *testing.T) {
 
 		// Small interval, large batch size
 		batcher := NewBatcher(100, 50*time.Millisecond, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Add only 3 entries (less than batch size)
 		for i := 0; i < 3; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "test",
 			})
@@ -283,10 +282,10 @@ func TestBatcher_IntervalFlush(t *testing.T) {
 
 func TestBatcher_Flush(t *testing.T) {
 	t.Run("manual flush flushes all entries", func(t *testing.T) {
-		var received []*storage.LogEntry
+		var received []*LogEntry
 		var mu sync.Mutex
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			mu.Lock()
 			received = append(received, entries...)
 			mu.Unlock()
@@ -294,11 +293,11 @@ func TestBatcher_Flush(t *testing.T) {
 		}
 
 		batcher := NewBatcher(100, time.Hour, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Add entries
 		for i := 0; i < 5; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "test",
 			})
@@ -315,24 +314,24 @@ func TestBatcher_Flush(t *testing.T) {
 	})
 
 	t.Run("flush respects context timeout", func(t *testing.T) {
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			// Slow write
 			time.Sleep(time.Second)
 			return nil
 		}
 
 		batcher := NewBatcher(100, time.Hour, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Add multiple entries to ensure one is picked up by flush
 		for i := 0; i < 5; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "test",
 			})
 		}
 
-		// Short timeout - but long enough for flush to start the write
+		// Short timeout - but long enough for flush to start write
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
 
@@ -346,12 +345,12 @@ func TestBatcher_Flush(t *testing.T) {
 	})
 
 	t.Run("flush with empty buffer returns immediately", func(t *testing.T) {
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			return nil
 		}
 
 		batcher := NewBatcher(100, time.Hour, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Flush empty buffer
 		start := time.Now()
@@ -365,10 +364,10 @@ func TestBatcher_Flush(t *testing.T) {
 
 func TestBatcher_Close(t *testing.T) {
 	t.Run("close flushes remaining entries", func(t *testing.T) {
-		var received []*storage.LogEntry
+		var received []*LogEntry
 		var mu sync.Mutex
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			mu.Lock()
 			received = append(received, entries...)
 			mu.Unlock()
@@ -379,7 +378,7 @@ func TestBatcher_Close(t *testing.T) {
 
 		// Add entries
 		for i := 0; i < 5; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "test",
 			})
@@ -395,7 +394,7 @@ func TestBatcher_Close(t *testing.T) {
 	})
 
 	t.Run("double close is idempotent", func(t *testing.T) {
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			return nil
 		}
 
@@ -409,7 +408,7 @@ func TestBatcher_Close(t *testing.T) {
 	})
 
 	t.Run("close respects context timeout", func(t *testing.T) {
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			time.Sleep(time.Second)
 			return nil
 		}
@@ -417,7 +416,7 @@ func TestBatcher_Close(t *testing.T) {
 		batcher := NewBatcher(100, time.Hour, 100, writeFunc)
 
 		// Add entry to force flush on close
-		batcher.Add(&storage.LogEntry{
+		batcher.Add(&LogEntry{
 			ID:      uuid.New(),
 			Message: "test",
 		})
@@ -435,12 +434,12 @@ func TestBatcher_Close(t *testing.T) {
 
 func TestBatcher_Stats(t *testing.T) {
 	t.Run("returns correct statistics", func(t *testing.T) {
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			return nil
 		}
 
 		batcher := NewBatcher(100, time.Hour, 50, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// Check initial stats
 		stats := batcher.Stats()
@@ -450,7 +449,7 @@ func TestBatcher_Stats(t *testing.T) {
 
 		// Add some entries
 		for i := 0; i < 10; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "test",
 			})
@@ -469,7 +468,7 @@ func TestBatcher_ConcurrentAccess(t *testing.T) {
 	t.Run("handles concurrent adds safely", func(t *testing.T) {
 		var totalReceived int64
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			atomic.AddInt64(&totalReceived, int64(len(entries)))
 			return nil
 		}
@@ -485,7 +484,7 @@ func TestBatcher_ConcurrentAccess(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				for j := 0; j < entriesPerGoroutine; j++ {
-					batcher.Add(&storage.LogEntry{
+					batcher.Add(&LogEntry{
 						ID:      uuid.New(),
 						Message: "concurrent test",
 					})
@@ -506,7 +505,7 @@ func TestBatcher_ConcurrentAccess(t *testing.T) {
 	t.Run("handles concurrent adds and flushes", func(t *testing.T) {
 		var totalReceived int64
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			atomic.AddInt64(&totalReceived, int64(len(entries)))
 			return nil
 		}
@@ -521,7 +520,7 @@ func TestBatcher_ConcurrentAccess(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				for j := 0; j < 50; j++ {
-					batcher.Add(&storage.LogEntry{
+					batcher.Add(&LogEntry{
 						ID:      uuid.New(),
 						Message: "test",
 					})
@@ -536,14 +535,14 @@ func TestBatcher_ConcurrentAccess(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				for j := 0; j < 10; j++ {
-					batcher.Flush(context.Background())
+					_ = batcher.Flush(context.Background())
 					time.Sleep(5 * time.Millisecond)
 				}
 			}()
 		}
 
 		wg.Wait()
-		batcher.Close(context.Background())
+		_ = batcher.Close(context.Background())
 
 		// Should receive all 250 entries (5 goroutines * 50 entries)
 		assert.Equal(t, int64(250), atomic.LoadInt64(&totalReceived))
@@ -556,7 +555,7 @@ func TestBatcher_WriteErrors(t *testing.T) {
 		var mu sync.Mutex
 		var batches []int
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			count := atomic.AddInt32(&callCount, 1)
 			mu.Lock()
 			batches = append(batches, len(entries))
@@ -570,11 +569,11 @@ func TestBatcher_WriteErrors(t *testing.T) {
 		}
 
 		batcher := NewBatcher(3, time.Hour, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
 		// First batch - will fail
 		for i := 0; i < 3; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "batch1",
 			})
@@ -584,7 +583,7 @@ func TestBatcher_WriteErrors(t *testing.T) {
 
 		// Second batch - should succeed
 		for i := 0; i < 3; i++ {
-			batcher.Add(&storage.LogEntry{
+			batcher.Add(&LogEntry{
 				ID:      uuid.New(),
 				Message: "batch2",
 			})
@@ -601,10 +600,10 @@ func TestBatcher_WriteErrors(t *testing.T) {
 
 func TestBatcher_EntryContent(t *testing.T) {
 	t.Run("preserves entry content through batching", func(t *testing.T) {
-		var received []*storage.LogEntry
+		var received []*LogEntry
 		var mu sync.Mutex
 
-		writeFunc := func(ctx context.Context, entries []*storage.LogEntry) error {
+		writeFunc := func(ctx context.Context, entries []*LogEntry) error {
 			mu.Lock()
 			received = append(received, entries...)
 			mu.Unlock()
@@ -612,14 +611,14 @@ func TestBatcher_EntryContent(t *testing.T) {
 		}
 
 		batcher := NewBatcher(10, 50*time.Millisecond, 100, writeFunc)
-		defer batcher.Close(context.Background())
+		defer func() { _ = batcher.Close(context.Background()) }()
 
-		testEntries := []*storage.LogEntry{
+		testEntries := []*LogEntry{
 			{
 				ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
 				Timestamp: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
-				Category:  storage.LogCategorySystem,
-				Level:     storage.LogLevelInfo,
+				Category:  LogCategorySystem,
+				Level:     LogLevelInfo,
 				Message:   "System log message",
 				Component: "api",
 				Fields:    map[string]any{"key": "value"},
@@ -627,8 +626,8 @@ func TestBatcher_EntryContent(t *testing.T) {
 			{
 				ID:            uuid.MustParse("550e8400-e29b-41d4-a716-446655440002"),
 				Timestamp:     time.Date(2024, 1, 15, 10, 31, 0, 0, time.UTC),
-				Category:      storage.LogCategoryExecution,
-				Level:         storage.LogLevelDebug,
+				Category:      LogCategoryExecution,
+				Level:         LogLevelDebug,
 				Message:       "Execution log",
 				ExecutionID:   "exec-123",
 				ExecutionType: "function",
@@ -637,8 +636,8 @@ func TestBatcher_EntryContent(t *testing.T) {
 			{
 				ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440003"),
 				Timestamp: time.Date(2024, 1, 15, 10, 32, 0, 0, time.UTC),
-				Category:  storage.LogCategoryHTTP,
-				Level:     storage.LogLevelWarn,
+				Category:  LogCategoryHTTP,
+				Level:     LogLevelWarn,
 				Message:   "HTTP warning",
 				RequestID: "req-456",
 				UserID:    "user-789",

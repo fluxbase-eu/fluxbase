@@ -28,7 +28,7 @@ func TestStreamUpload_EmptyKeyValidation(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should get 400 for empty key
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -92,7 +92,7 @@ func TestStreamUpload_RouteMatching(t *testing.T) {
 				t.Logf("Request error (may be expected): %v", err)
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, tt.expectStatus, resp.StatusCode,
 				"Path: %s, expected status: %d, got: %d", tt.path, tt.expectStatus, resp.StatusCode)
@@ -147,7 +147,7 @@ func TestStreamUpload_ParameterExtraction(t *testing.T) {
 			req := httptest.NewRequest("POST", tt.path, nil)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, 200, resp.StatusCode)
 		})

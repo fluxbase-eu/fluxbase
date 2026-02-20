@@ -375,6 +375,10 @@ const (
 	// Schema scopes (for resources)
 	ScopeReadSchema = "read:schema"
 
+	// Project scopes
+	ScopeReadProjects  = "read:projects"
+	ScopeWriteProjects = "write:projects"
+
 	// Admin scopes
 	ScopeAdminSchemas = "admin:schemas" // Access to internal schemas
 	ScopeAdminDDL     = "admin:ddl"     // DDL operations (create/drop tables, etc.)

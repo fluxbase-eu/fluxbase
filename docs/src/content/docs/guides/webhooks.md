@@ -496,6 +496,79 @@ app.listen(3000);
 
 ---
 
+## Security & SSRF Protection
+
+Fluxbase includes built-in protection against Server-Side Request Forgery (SSRF) attacks for webhooks.
+
+### What is SSRF?
+
+SSRF allows attackers to trick your server into making requests to internal resources (databases, admin panels, cloud metadata services).
+
+### Automatic Protection
+
+Fluxbase automatically blocks webhook requests to:
+
+| Type | Blocked Resources |
+|------|-------------------|
+| **Private IP ranges** | `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8` |
+| **Cloud metadata** | `169.254.169.254` (AWS), `metadata.google.internal` |
+| **Internal services** | `localhost`, `kubernetes.default.svc` |
+| **Private hostnames** | Subdomains of internal services |
+
+### Configuration
+
+SSRF protection is **enabled by default**:
+
+```yaml
+webhook:
+  # ⚠️ WARNING: Only disable in development/testing
+  allow_private_ips: false  # Default: false (SSRF protection enabled)
+```
+
+### Example: Blocked URLs
+
+```typescript
+// ❌ BLOCKED: Private IP
+await client.webhooks.create({
+  url: 'http://192.168.1.1/webhook',
+  // Error: "URL resolves to private IP address"
+});
+
+// ❌ BLOCKED: Cloud metadata
+await client.webhooks.create({
+  url: 'http://169.254.169.254/latest/meta-data/',
+  // Error: "URL resolves to private IP address"
+});
+
+// ❌ BLOCKED: Localhost
+await client.webhooks.create({
+  url: 'http://localhost:3000/webhook',
+  // Error: "localhost URLs are not allowed"
+});
+
+// ✅ ALLOWED: Public URLs
+await client.webhooks.create({
+  url: 'https://api.example.com/webhook',
+  // Success!
+});
+```
+
+### Testing SSRF Protection
+
+For local development with internal services:
+
+```yaml
+# Development config (NOT for production)
+webhook:
+  allow_private_ips: true
+```
+
+**Never enable `allow_private_ips: true` in production.**
+
+For more details, see [SSRF Protection Guide](/security/ssrf-protection/).
+
+---
+
 ## Best Practices
 
 | Practice | Description |

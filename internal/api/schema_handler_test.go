@@ -424,7 +424,7 @@ func TestGetSchemaGraph_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/schema/graph", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Without DB, will return internal server error
 		// But we verify the handler was reached
@@ -440,7 +440,7 @@ func TestGetSchemaGraph_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/schema/graph?schemas=public,auth,storage", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Handler should accept comma-separated schemas
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
@@ -455,7 +455,7 @@ func TestGetSchemaGraph_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/schema/graph?schemas=auth", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -470,7 +470,7 @@ func TestGetSchemaGraph_ParameterParsing(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/schema/graph?schemas=public,%20auth,%20storage", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
 	})
@@ -491,7 +491,7 @@ func TestGetTableRelationships_ParameterValidation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tables//users/relationships", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Fiber treats empty param as route not found or bad request
 		assert.True(t, resp.StatusCode == fiber.StatusNotFound || resp.StatusCode == fiber.StatusBadRequest)
@@ -507,7 +507,7 @@ func TestGetTableRelationships_ParameterValidation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tables/public//relationships", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Fiber treats empty param as route not found or bad request
 		assert.True(t, resp.StatusCode == fiber.StatusNotFound || resp.StatusCode == fiber.StatusBadRequest)
@@ -522,7 +522,7 @@ func TestGetTableRelationships_ParameterValidation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tables/public/users/relationships", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Without DB, will return internal server error
 		// But we verify parameters were parsed correctly
@@ -539,7 +539,7 @@ func TestGetTableRelationships_ParameterValidation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/tables/my_schema/my_table/relationships", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Parameters with underscores should be valid
 		assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)

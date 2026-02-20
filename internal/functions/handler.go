@@ -2,6 +2,7 @@ package functions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -185,11 +186,12 @@ func (h *Handler) applyCorsHeaders(c fiber.Ctx, fn *EdgeFunction) {
 	}
 
 	var allowedOrigin string
-	if hasWildcard {
+	switch {
+	case hasWildcard:
 		allowedOrigin = "*"
-	} else if len(origins) == 1 {
+	case len(origins) == 1:
 		allowedOrigin = origins[0]
-	} else {
+	default:
 		requestOrigin := c.Get("Origin")
 		if requestOrigin != "" {
 			// Check if request origin is in the allowed list
@@ -2065,7 +2067,7 @@ func (h *Handler) GetSharedModule(c fiber.Ctx) error {
 
 	module, err := h.storage.GetSharedModule(c.RequestCtx(), modulePath)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(404).JSON(fiber.Map{"error": "Shared module not found"})
 		}
 		log.Error().Err(err).Str("module_path", modulePath).Msg("Failed to get shared module")
@@ -2095,7 +2097,7 @@ func (h *Handler) UpdateSharedModule(c fiber.Ctx) error {
 	}
 
 	if err := h.storage.UpdateSharedModule(c.RequestCtx(), modulePath, req.Content, req.Description); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(404).JSON(fiber.Map{"error": "Shared module not found"})
 		}
 		log.Error().Err(err).Str("module_path", modulePath).Msg("Failed to update shared module")

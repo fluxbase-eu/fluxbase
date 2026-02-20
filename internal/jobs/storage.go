@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -131,7 +132,7 @@ func (s *Storage) GetJobFunction(ctx context.Context, namespace, name string) (*
 		&fn.Version, &fn.CreatedBy, &fn.Source, &fn.CreatedAt, &fn.UpdatedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("job function not found: %s/%s", namespace, name)
 		}
 		return nil, err
@@ -163,7 +164,7 @@ func (s *Storage) GetJobFunctionByName(ctx context.Context, name string) (*JobFu
 		&fn.Version, &fn.CreatedBy, &fn.Source, &fn.CreatedAt, &fn.UpdatedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("job function not found: %s", name)
 		}
 		return nil, err
@@ -192,7 +193,7 @@ func (s *Storage) GetJobFunctionByID(ctx context.Context, id uuid.UUID) (*JobFun
 		&fn.Version, &fn.CreatedBy, &fn.Source, &fn.CreatedAt, &fn.UpdatedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("job function not found: %s", id)
 		}
 		return nil, err
@@ -387,7 +388,7 @@ func (s *Storage) IsDuplicateJob(ctx context.Context, namespace, jobName string,
 	var existingID uuid.UUID
 	err := s.conn.Pool().QueryRow(ctx, query, namespace, jobName, JobStatusPending, JobStatusRunning, payload).Scan(&existingID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil, nil
 		}
 		return false, nil, err
@@ -447,7 +448,7 @@ func (s *Storage) ClaimNextJob(ctx context.Context, workerID uuid.UUID) (*Job, e
 		&job.CreatedAt, &job.ScheduledAt, &job.StartedAt, &job.LastProgressAt, &job.CompletedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil // No jobs available
 		}
 		return nil, err
@@ -650,7 +651,7 @@ func (s *Storage) GetJob(ctx context.Context, jobID uuid.UUID) (*Job, error) {
 		&job.CreatedAt, &job.ScheduledAt, &job.StartedAt, &job.LastProgressAt, &job.CompletedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("job not found: %s", jobID)
 		}
 		return nil, err
@@ -805,7 +806,7 @@ func (s *Storage) GetJobByIDAdmin(ctx context.Context, jobID uuid.UUID) (*Job, e
 	})
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("job not found: %s", jobID)
 		}
 		return nil, err
@@ -1124,7 +1125,7 @@ func (s *Storage) GetWorker(ctx context.Context, workerID uuid.UUID) (*WorkerRec
 		&worker.LastHeartbeatAt, &worker.StartedAt, &worker.Metadata,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("worker not found: %s", workerID)
 		}
 		return nil, err

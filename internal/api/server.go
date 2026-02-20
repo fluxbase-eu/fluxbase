@@ -2,7 +2,9 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -38,6 +40,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
+	"github.com/gofiber/storage/memory/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -59,6 +62,7 @@ type Server struct {
 	webhookHandler         *WebhookHandler
 	monitoringHandler      *MonitoringHandler
 	userManagementHandler  *UserManagementHandler
+	quotaHandler           *QuotaHandler
 	invitationHandler      *InvitationHandler
 	ddlHandler             *DDLHandler
 	oauthProviderHandler   *OAuthProviderHandler
@@ -92,6 +96,7 @@ type Server struct {
 	aiConversations        *ai.ConversationManager
 	aiMetrics              *observability.Metrics
 	knowledgeBaseHandler   *ai.KnowledgeBaseHandler
+	kbStorage              *ai.KnowledgeBaseStorage
 	rpcHandler             *rpc.Handler
 	rpcScheduler           *rpc.Scheduler
 	graphqlHandler         *GraphQLHandler
@@ -137,6 +142,10 @@ type Server struct {
 	rateLimiter ratelimit.Store
 	pubSub      pubsub.PubSub
 
+	// Shared storage for middleware (rate limiter, CSRF, etc.)
+	// This prevents creating multiple GC goroutines from Fiber's memory.New()
+	sharedMiddlewareStorage fiber.Storage
+
 	// Test transaction support (for HTTP API tests with transaction isolation)
 	// When set, HTTP requests use this transaction instead of the connection pool
 	testTx pgx.Tx
@@ -152,7 +161,8 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		StreamRequestBody: true, // Required for chunked upload streaming
 		ReadTimeout:       cfg.Server.ReadTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
-		IdleTimeout:       cfg.Server.IdleTimeout, ErrorHandler: customErrorHandler,
+		IdleTimeout:       cfg.Server.IdleTimeout,
+		ErrorHandler:      customErrorHandler,
 	})
 
 	// In debug mode, add no-cache headers to prevent browser from caching
@@ -197,6 +207,18 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	} else {
 		log.Info().Str("backend", cfg.Scaling.Backend).Msg("Pub/sub initialized for cross-instance broadcasting")
 	}
+
+	// Initialize shared middleware storage to prevent multiple GC goroutines
+	// Fiber's memory.New() spawns GC goroutines that cannot be stopped
+	// By using a single shared storage, we only get one set of GC goroutines per server
+	// In test mode, use a very long GC interval to effectively disable GC
+	gcInterval := 10 * time.Minute
+	if os.Getenv("FLUXBASE_TEST_MODE") == "1" {
+		gcInterval = 24 * time.Hour
+	}
+	sharedMiddlewareStorage := memory.New(memory.Config{
+		GCInterval: gcInterval,
+	})
 
 	// Initialize email manager (handles dynamic refresh from settings)
 	// The settings cache and secrets service will be injected later once they're initialized
@@ -246,6 +268,24 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 				Bool("pubsub_enabled", cfg.Logging.PubSubEnabled).
 				Int("batch_size", cfg.Logging.BatchSize).
 				Msg("Central logging service initialized")
+
+			// Log diagnostic info about log streaming capability
+			log.Info().
+				Bool("pubsub_enabled", cfg.Logging.PubSubEnabled).
+				Bool("pubsub_available", ps != nil).
+				Msg("Logging service streaming capability")
+
+			// Test PubSub by publishing a test log (diagnostic)
+			if cfg.Logging.PubSubEnabled && ps != nil {
+				testLog := &storage.LogEntry{
+					Category: storage.LogCategorySystem,
+					Level:    storage.LogLevelInfo,
+					Message:  "Log streaming test - system initialized",
+					Fields:   map[string]any{"test": true, "component": "logging_diagnostic"},
+				}
+				loggingService.Log(context.Background(), testLog)
+				log.Info().Msg("Published test log to verify streaming - check /admin/logs page")
+			}
 
 			// Create logging handler for API routes
 			loggingHandler = NewLoggingHandler(loggingService)
@@ -451,6 +491,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	// Embedding can be enabled explicitly (EmbeddingEnabled=true) or via fallback from AI provider
 	var vectorHandler *VectorHandler
 	vectorHandler, err = NewVectorHandler(vectorManager, db.Inspector(), db)
+	//nolint:gocritic // Initialization state checks, not switch-compatible
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to initialize vector handler")
 	} else if vectorHandler.IsEmbeddingConfigured() {
@@ -516,7 +557,9 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 
 	// Create knowledge base handler for RAG management
 	var knowledgeBaseHandler *ai.KnowledgeBaseHandler
+	var kbStorage *ai.KnowledgeBaseStorage
 	var ocrService *ai.OCRService
+	var quotaHandler *QuotaHandler
 	if cfg.AI.Enabled {
 		// Initialize OCR service for image-based PDF extraction
 		if cfg.AI.OCREnabled {
@@ -536,10 +579,19 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			}
 		}
 
-		kbStorage := ai.NewKnowledgeBaseStorage(db)
+		kbStorage = ai.NewKnowledgeBaseStorage(db)
+
+		// Initialize knowledge graph for entity and relationship storage
+		knowledgeGraph := ai.NewKnowledgeGraph(kbStorage)
+		log.Info().Msg("Knowledge graph initialized")
+
+		// Initialize entity extractor for extracting entities from documents
+		entityExtractor := ai.NewRuleBasedExtractor()
+		log.Info().Msg("Entity extractor initialized")
+
 		var docProcessor *ai.DocumentProcessor
 		if vectorHandler != nil && vectorHandler.GetEmbeddingService() != nil {
-			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService())
+			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService(), entityExtractor, knowledgeGraph)
 		}
 
 		// Use OCR-enabled handler if OCR service is available
@@ -549,10 +601,23 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			knowledgeBaseHandler = ai.NewKnowledgeBaseHandler(kbStorage, docProcessor)
 		}
 		knowledgeBaseHandler.SetStorageService(storageService)
+
+		// Initialize table exporter for database schema export
+		tableExporter := ai.NewTableExporter(db, docProcessor, knowledgeGraph, kbStorage)
+		knowledgeBaseHandler.SetTableExporter(tableExporter)
+		log.Info().Msg("Table exporter initialized")
+
 		log.Info().
 			Bool("processing_enabled", docProcessor != nil).
 			Bool("ocr_enabled", ocrService != nil && ocrService.IsEnabled()).
+			Bool("entity_extraction_enabled", true).
+			Bool("table_export_enabled", true).
 			Msg("Knowledge base handler initialized")
+
+		// Initialize quota service and handler
+		quotaService := ai.NewQuotaService(kbStorage)
+		quotaHandler = NewQuotaHandler(quotaService, userMgmtService)
+		log.Info().Msg("Quota service and handler initialized")
 	}
 
 	// Create internal AI handler for custom MCP tools, edge functions, and jobs
@@ -647,6 +712,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		webhookHandler:         webhookHandler,
 		monitoringHandler:      monitoringHandler,
 		userManagementHandler:  userMgmtHandler,
+		quotaHandler:           quotaHandler,
 		invitationHandler:      invitationHandler,
 		ddlHandler:             ddlHandler,
 		realtimeAdminHandler:   realtimeAdminHandler,
@@ -680,6 +746,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		aiConversations:        aiConversations,
 		aiMetrics:              aiMetrics,
 		knowledgeBaseHandler:   knowledgeBaseHandler,
+		kbStorage:              kbStorage,
 		rpcHandler:             rpcHandler,
 		rpcScheduler:           rpcScheduler,
 		extensionsHandler:      extensions.NewHandler(extensions.NewService(db)),
@@ -699,8 +766,9 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		metrics:                observability.NewMetrics(),
 		startTime:              time.Now(),
 		// Server-owned dependencies
-		rateLimiter: rateLimitStore,
-		pubSub:      ps,
+		rateLimiter:             rateLimitStore,
+		pubSub:                  ps,
+		sharedMiddlewareStorage: sharedMiddlewareStorage,
 	}
 
 	// Initialize MCP Server if enabled
@@ -1120,6 +1188,15 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 		}
 	}
 
+	// Knowledge graph tools
+	if s.kbStorage != nil {
+		knowledgeGraph := ai.NewKnowledgeGraph(s.kbStorage)
+		toolRegistry.Register(mcptools.NewQueryKnowledgeGraphTool(knowledgeGraph))
+		toolRegistry.Register(mcptools.NewFindRelatedEntitiesTool(knowledgeGraph))
+		toolRegistry.Register(mcptools.NewBrowseKnowledgeGraphTool(knowledgeGraph))
+		log.Debug().Msg("MCP: Registered knowledge graph tools")
+	}
+
 	// DDL tools (schema/table management)
 	toolRegistry.Register(mcptools.NewListSchemasTool(s.db))
 	toolRegistry.Register(mcptools.NewCreateSchemaTool(s.db))
@@ -1352,7 +1429,8 @@ func (s *Server) setupMiddlewares() {
 	// Global rate limiting - 100 requests per minute per IP
 	// Uses dynamic limiter that checks settings cache on each request
 	// This allows toggling rate limiting via admin UI without server restart
-	s.app.Use(middleware.DynamicGlobalAPILimiter(s.authHandler.authService.GetSettingsCache()))
+	// Pass shared storage to prevent multiple GC goroutines
+	s.app.Use(middleware.DynamicGlobalAPILimiter(s.authHandler.authService.GetSettingsCache(), s.sharedMiddlewareStorage))
 
 	// Per-endpoint body size limits and JSON depth protection
 	if s.config.Server.BodyLimits.Enabled {
@@ -1562,25 +1640,15 @@ func (s *Server) setupRoutes() {
 		log.Debug().Str("base_path", s.config.MCP.BasePath).Msg("MCP routes registered")
 	}
 
-	// Database Branching routes
-	// Admin endpoints require service key or dashboard admin
-	if s.config.Branching.Enabled && s.branchHandler != nil {
-		// Create API group with auth for branch management
-		// RequireAdmin ensures only dashboard_admins and service_role can access
-		branchAPI := s.app.Group("/api/v1",
-			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-			middleware.RequireAdmin(),
-		)
-		s.branchHandler.RegisterRoutes(branchAPI)
-
+	// Database Branching routes - GitHub webhook only
+	// Branch management routes are registered later after admin group is created
+	if s.config.Branching.Enabled && s.githubWebhook != nil {
 		// GitHub webhook endpoint (no auth, uses signature verification)
 		// Rate limited to prevent abuse - use specific path to avoid affecting other /api/v1 routes
 		s.app.Post("/api/v1/webhooks/github",
-			middleware.GitHubWebhookLimiter(),
+			middleware.GitHubWebhookLimiter(s.sharedMiddlewareStorage),
 			s.githubWebhook.HandleWebhook,
 		)
-
-		log.Debug().Msg("Database Branching routes registered")
 	}
 
 	// Realtime WebSocket endpoint (not versioned as it's WebSocket)
@@ -1664,6 +1732,16 @@ func (s *Server) setupRoutes() {
 			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
 			s.aiHandler.UpdateUserConversation,
 		)
+
+		// User-facing Knowledge Base routes (require authentication)
+		if s.kbStorage != nil {
+			userKBRouter := s.app.Group("/api/v1/ai",
+				middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
+				middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+			)
+			ai.RegisterUserKnowledgeBaseRoutes(userKBRouter, s.kbStorage)
+			log.Info().Msg("User-facing knowledge base routes registered")
+		}
 	}
 
 	// Public RPC endpoints (only if RPC is enabled) with scope enforcement
@@ -1816,6 +1894,18 @@ func (s *Server) setupRoutes() {
 		)
 	}
 
+	// Database Branching routes (require authentication)
+	// Registered under /api/v1 with auth middleware
+	if s.config.Branching.Enabled && s.branchHandler != nil {
+		// Create a group at /api/v1 for branch routes with auth middleware
+		// Routes will be at /api/v1/admin/branches (from branch handler's RegisterRoutes)
+		branchAuthGroup := v1.Group("/",
+			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		)
+		s.branchHandler.RegisterRoutes(branchAuthGroup)
+		log.Debug().Msg("Database Branching routes registered")
+	}
+
 	// OpenAPI specification
 	// Uses optional auth middleware to detect admin users and provide full spec with database schema
 	// Non-admin users get minimal spec with only auth endpoints
@@ -1908,14 +1998,15 @@ func (s *Server) setupRESTRoutes(router fiber.Router) {
 // setupAuthRoutes sets up authentication routes
 func (s *Server) setupAuthRoutes(router fiber.Router) {
 	// Import rate limiters from middleware package using config values
+	// Pass shared storage to prevent multiple GC goroutines
 	rateLimiters := map[string]fiber.Handler{
-		"signup":         middleware.AuthSignupLimiterWithConfig(s.config.Security.AuthSignupRateLimit, s.config.Security.AuthSignupRateWindow),
-		"login":          middleware.AuthLoginLimiterWithConfig(s.config.Security.AuthLoginRateLimit, s.config.Security.AuthLoginRateWindow),
-		"refresh":        middleware.AuthRefreshLimiterWithConfig(s.config.Security.AuthRefreshRateLimit, s.config.Security.AuthRefreshRateWindow),
-		"magiclink":      middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow),
-		"password_reset": middleware.AuthPasswordResetLimiterWithConfig(s.config.Security.AuthPasswordResetRateLimit, s.config.Security.AuthPasswordResetRateWindow),
-		"otp":            middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow), // Use same rate limit as magic link
-		"2fa":            middleware.Auth2FALimiterWithConfig(s.config.Security.Auth2FARateLimit, s.config.Security.Auth2FARateWindow),                   // Strict rate limit for 2FA verification
+		"signup":         middleware.AuthSignupLimiterWithConfig(s.config.Security.AuthSignupRateLimit, s.config.Security.AuthSignupRateWindow, s.sharedMiddlewareStorage),
+		"login":          middleware.AuthLoginLimiterWithConfig(s.config.Security.AuthLoginRateLimit, s.config.Security.AuthLoginRateWindow, s.sharedMiddlewareStorage),
+		"refresh":        middleware.AuthRefreshLimiterWithConfig(s.config.Security.AuthRefreshRateLimit, s.config.Security.AuthRefreshRateWindow, s.sharedMiddlewareStorage),
+		"magiclink":      middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow, s.sharedMiddlewareStorage),
+		"password_reset": middleware.AuthPasswordResetLimiterWithConfig(s.config.Security.AuthPasswordResetRateLimit, s.config.Security.AuthPasswordResetRateWindow, s.sharedMiddlewareStorage),
+		"otp":            middleware.AuthMagicLinkLimiterWithConfig(s.config.Security.AuthMagicLinkRateLimit, s.config.Security.AuthMagicLinkRateWindow, s.sharedMiddlewareStorage), // Use same rate limit as magic link
+		"2fa":            middleware.Auth2FALimiterWithConfig(s.config.Security.Auth2FARateLimit, s.config.Security.Auth2FARateWindow, s.sharedMiddlewareStorage),                   // Strict rate limit for 2FA verification
 	}
 
 	// Use the auth handler's RegisterRoutes method with rate limiters
@@ -1966,11 +2057,11 @@ func (s *Server) setupStorageRoutes(router fiber.Router) {
 
 	// Streaming upload (must come before /:bucket/*)
 	// Apply storage upload rate limiting before authentication to prevent abuse
-	router.Post("/:bucket/stream/*", middleware.StorageUploadLimiter(), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.StreamUpload)
+	router.Post("/:bucket/stream/*", middleware.StorageUploadLimiter(s.sharedMiddlewareStorage), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.StreamUpload)
 
 	// Chunked upload routes (for resumable large file uploads, must come before /:bucket/*)
 	// Apply storage upload rate limiting to chunked upload init
-	router.Post("/:bucket/chunked/init", middleware.StorageUploadLimiter(), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.InitChunkedUpload)
+	router.Post("/:bucket/chunked/init", middleware.StorageUploadLimiter(s.sharedMiddlewareStorage), middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.InitChunkedUpload)
 	router.Put("/:bucket/chunked/:uploadId/:chunkIndex", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.UploadChunk)
 	router.Post("/:bucket/chunked/:uploadId/complete", middleware.RequireScope(auth.ScopeStorageWrite), s.storageHandler.CompleteChunkedUpload)
 	router.Get("/:bucket/chunked/:uploadId/status", middleware.RequireScope(auth.ScopeStorageRead), s.storageHandler.GetChunkedUploadStatus)
@@ -1986,17 +2077,23 @@ func (s *Server) setupStorageRoutes(router fiber.Router) {
 // setupDashboardAuthRoutes sets up dashboard authentication routes
 // These are only available when admin UI is enabled
 func (s *Server) setupDashboardAuthRoutes(router fiber.Router) {
+	log.Debug().Msg("setupDashboardAuthRoutes called - registering public routes")
+
 	// Public dashboard auth routes (no authentication required)
 	router.Get("/setup/status", s.adminAuthHandler.GetSetupStatus)
 	router.Post("/setup", middleware.AdminSetupLimiterWithConfig(
 		s.config.Security.AdminSetupRateLimit,
 		s.config.Security.AdminSetupRateWindow,
+		s.sharedMiddlewareStorage,
 	), s.adminAuthHandler.InitialSetup)
 	router.Post("/login", middleware.AdminLoginLimiterWithConfig(
 		s.config.Security.AdminLoginRateLimit,
 		s.config.Security.AdminLoginRateWindow,
+		s.sharedMiddlewareStorage,
 	), s.adminAuthHandler.AdminLogin)
 	router.Post("/refresh", s.adminAuthHandler.AdminRefreshToken)
+
+	log.Debug().Msg("Dashboard auth routes registered: GET /setup/status, POST /setup, POST /login, POST /refresh")
 
 	// Protected dashboard auth routes
 	unifiedAuth := UnifiedAuthMiddleware(s.authHandler.authService, s.dashboardAuthHandler.jwtManager, s.db.Pool())
@@ -2117,6 +2214,13 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 	router.Patch("/users/:id/role", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.userManagementHandler.UpdateUserRole)
 	router.Post("/users/:id/reset-password", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.userManagementHandler.ResetUserPassword)
 
+	// Quota management routes (require admin, dashboard_admin, or service_role)
+	if s.quotaHandler != nil {
+		router.Get("/users-with-quotas", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.quotaHandler.ListUsersWithQuotas)
+		router.Get("/users/:id/quota", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.quotaHandler.GetUserQuota)
+		router.Put("/users/:id/quota", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.quotaHandler.SetUserQuota)
+	}
+
 	// Invitation management routes (require admin or dashboard_admin role)
 	router.Post("/invitations", unifiedAuth, RequireRole("admin", "dashboard_admin"), s.invitationHandler.CreateInvitation)
 	router.Get("/invitations", unifiedAuth, RequireRole("admin", "dashboard_admin"), s.invitationHandler.ListInvitations)
@@ -2220,6 +2324,11 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			router.Patch("/ai/knowledge-bases/:id/documents/:doc_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UpdateDocument)
 			router.Post("/ai/knowledge-bases/:id/documents/upload", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UploadDocument)
 
+			// Document permissions
+			router.Post("/ai/knowledge-bases/:id/documents/:doc_id/permissions", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.GrantDocumentPermission)
+			router.Get("/ai/knowledge-bases/:id/documents/:doc_id/permissions", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListDocumentPermissions)
+			router.Delete("/ai/knowledge-bases/:id/documents/:doc_id/permissions/:user_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.RevokeDocumentPermission)
+
 			// Search/test endpoint
 			router.Post("/ai/knowledge-bases/:id/search", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.SearchKnowledgeBase)
 			router.Post("/ai/knowledge-bases/:id/debug-search", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.DebugSearch)
@@ -2229,6 +2338,10 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			router.Post("/ai/chatbots/:id/knowledge-bases", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.LinkKnowledgeBase)
 			router.Put("/ai/chatbots/:id/knowledge-bases/:kb_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UpdateChatbotKnowledgeBase)
 			router.Delete("/ai/chatbots/:id/knowledge-bases/:kb_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UnlinkKnowledgeBase)
+
+			// Table export routes
+			router.Post("/ai/knowledge-bases/:id/tables/export", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ExportTableToKnowledgeBase)
+			router.Get("/ai/tables", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListExportableTables)
 		}
 	}
 
@@ -2293,7 +2406,7 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			middleware.RequireMigrationsIPAllowlist(&s.config.Migrations),
 			middleware.RequireServiceKeyOnly(s.db.Pool(), s.authHandler.authService),
 			middleware.RequireMigrationScope(),
-			middleware.MigrationAPILimiterWithConfig(s.config.Security.ServiceRoleRateLimit, s.config.Security.ServiceRoleRateWindow),
+			middleware.MigrationAPILimiterWithConfig(s.config.Security.ServiceRoleRateLimit, s.config.Security.ServiceRoleRateWindow, s.sharedMiddlewareStorage),
 			middleware.MigrationsAuditLog(),
 		}
 
@@ -2314,6 +2427,7 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 		router.Get("/logs/stats", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.GetLogStats)
 		router.Get("/logs/executions/:execution_id", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.GetExecutionLogs)
 		router.Post("/logs/flush", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.FlushLogs)
+		router.Post("/logs/test", unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.loggingHandler.GenerateTestLogs)
 	}
 
 	// Schema refresh endpoint (require admin, dashboard_admin, or service_role)
@@ -2472,6 +2586,22 @@ func (s *Server) handleGetSchemas(c fiber.Ctx) error {
 
 func (s *Server) handleExecuteQuery(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Execute query endpoint - to be implemented"})
+}
+
+// InvalidateSchemaCache invalidates the REST API schema cache.
+// This should be called after schema changes (e.g., migrations, DDL operations)
+// to ensure the cached metadata is refreshed.
+func (s *Server) InvalidateSchemaCache(ctx context.Context) error {
+	schemaCache := s.rest.SchemaCache()
+	if schemaCache == nil {
+		return fmt.Errorf("schema cache not initialized")
+	}
+
+	// Invalidate and refresh the schema cache
+	schemaCache.InvalidateAll(ctx)
+	log.Debug().Msg("Schema cache invalidated and refresh triggered")
+
+	return nil
 }
 
 // handleRefreshSchema refreshes the REST API schema cache without requiring a server restart
@@ -2723,7 +2853,8 @@ func customErrorHandler(c fiber.Ctx, err error) error {
 	message := "Internal Server Error"
 
 	// Check if it's a Fiber error
-	if e, ok := err.(*fiber.Error); ok {
+	var e *fiber.Error
+	if errors.As(err, &e) {
 		code = e.Code
 		message = e.Message
 	}

@@ -227,13 +227,14 @@ func syncMigrationsFromDir(ctx context.Context, dir, namespace string, dryRun, _
 		var migName string
 		var sqlType string
 
-		if strings.HasSuffix(name, ".up.sql") {
+		switch {
+		case strings.HasSuffix(name, ".up.sql"):
 			migName = strings.TrimSuffix(name, ".up.sql")
 			sqlType = "up"
-		} else if strings.HasSuffix(name, ".down.sql") {
+		case strings.HasSuffix(name, ".down.sql"):
 			migName = strings.TrimSuffix(name, ".down.sql")
 			sqlType = "down"
-		} else {
+		default:
 			continue
 		}
 
@@ -821,11 +822,12 @@ func printSyncSummary(result map[string]interface{}, resourceType string) {
 					name = getStringValue(err, "procedure")
 				}
 				errMsg := getStringValue(err, "error")
-				if name != "" && errMsg != "" {
+				switch {
+				case name != "" && errMsg != "":
 					fmt.Printf("    - %s: %s\n", name, errMsg)
-				} else if errMsg != "" {
+				case errMsg != "":
 					fmt.Printf("    - %s\n", errMsg)
-				} else {
+				default:
 					fmt.Printf("    - %v\n", err)
 				}
 			default:
