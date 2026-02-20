@@ -174,12 +174,24 @@ func TestCreateDocumentEntities(t *testing.T) {
 		docEntities := extractor.createDocumentEntities(documentID, result.Entities, text)
 		assert.NotEmpty(t, docEntities)
 
-		// Google should be mentioned twice
-		for _, de := range docEntities {
-			if de.EntityID == result.Entities[0].ID {
-				assert.Equal(t, 2, de.MentionCount)
+		// Find the Google entity (entity order is non-deterministic due to map iteration)
+		var googleEntityID string
+		for _, e := range result.Entities {
+			if e.Name == "Google" {
+				googleEntityID = e.ID
+				break
 			}
 		}
+		require.NotEmpty(t, googleEntityID, "Should find Google entity")
+
+		// Google should be mentioned twice
+		for _, de := range docEntities {
+			if de.EntityID == googleEntityID {
+				assert.Equal(t, 2, de.MentionCount)
+				return
+			}
+		}
+		t.Fatal("Google entity not found in document entities")
 	})
 }
 
