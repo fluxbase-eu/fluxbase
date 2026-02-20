@@ -7,13 +7,18 @@ BEGIN;
 -- Try to enable TimescaleDB (optional - fails gracefully if not available)
 DO $$
 BEGIN
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-        RAISE NOTICE 'TimescaleDB extension available';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'TimescaleDB extension not available, using regular PostgreSQL';
-    END;
+    -- Check if timescaledb is available before attempting to create it
+    IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'timescaledb') THEN
+        BEGIN
+            CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+            RAISE NOTICE 'TimescaleDB extension available';
+        EXCEPTION
+            WHEN OTHERS THEN
+                RAISE NOTICE 'TimescaleDB extension could not be created: %', SQLERRM;
+        END;
+    ELSE
+        RAISE NOTICE 'TimescaleDB extension not available on this server';
+    END IF;
 END $$;
 
 -- Check if TimescaleDB is available
@@ -54,15 +59,23 @@ BEGIN
             DROP TABLE IF EXISTS logging.entries_ai CASCADE;
             DROP TABLE IF EXISTS logging.entries_custom CASCADE;
 
-            -- Remove partitioning constraint from parent table (if exists)
-            -- Note: Can't use DROP CONSTRAINT IF EXISTS in older PostgreSQL versions
-            IF EXISTS (
-                SELECT 1 FROM pg_constraint
-                WHERE conname = 'logging_entries_pkey'
-                AND conrelid = 'logging.entries'::regclass
-            ) THEN
-                ALTER TABLE logging.entries DROP CONSTRAINT logging_entries_pkey;
-            END IF;
+            -- Remove primary key constraint from parent table (required for hypertable conversion)
+            -- The constraint name might be auto-generated, so we find it dynamically
+            DO $$
+            DECLARE
+                pk_constraint_name TEXT;
+            BEGIN
+                SELECT conname INTO pk_constraint_name
+                FROM pg_constraint
+                WHERE conrelid = 'logging.entries'::regclass
+                AND contype = 'p'
+                LIMIT 1;
+
+                IF pk_constraint_name IS NOT NULL THEN
+                    EXECUTE format('ALTER TABLE logging.entries DROP CONSTRAINT %I', pk_constraint_name);
+                    RAISE NOTICE 'Dropped primary key constraint: %', pk_constraint_name;
+                END IF;
+            END $$;
 
             -- Add primary key without partitioning
             ALTER TABLE logging.entries ADD PRIMARY KEY (id);
