@@ -5,22 +5,29 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
-	"github.com/elastic/go-elasticsearch/v8"
+	elasticsearch8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/elastic/go-elasticsearch/v8/esutil"
+
+	elasticsearch9 "github.com/elastic/go-elasticsearch/v9"
+	esapi9 "github.com/elastic/go-elasticsearch/v9/esapi"
+	esutil9 "github.com/elastic/go-elasticsearch/v9/esutil"
+
 	"github.com/google/uuid"
 )
 
 // ElasticsearchLogStorage implements LogStorage using Elasticsearch.
 type ElasticsearchLogStorage struct {
-	client   *elasticsearch.Client
+	clientV8 *elasticsearch8.Client
+	clientV9 *elasticsearch9.Client
 	index    string
 	username string
 	password string
-	version  int // ES version (8 or 9) for potential version-specific handling
+	version  int // ES version (8 or 9)
 }
 
 // newElasticsearchLogStorage creates a new Elasticsearch-backed log storage.
@@ -37,31 +44,49 @@ func newElasticsearchLogStorage(cfg LogStorageConfig) (*ElasticsearchLogStorage,
 		index = "fluxbase-logs"
 	}
 
-	// Default version to 8 if not provided
+	// Default version to 9 if not provided
 	version := cfg.ElasticsearchVersion
 	if version == 0 {
-		version = 8
+		version = 9
 	}
 
-	// Create Elasticsearch client configuration
-	esCfg := elasticsearch.Config{
-		Addresses: urls,
-		Username:  cfg.ElasticsearchUsername,
-		Password:  cfg.ElasticsearchPassword,
+	// Validate version
+	if version != 8 && version != 9 {
+		return nil, fmt.Errorf("unsupported elasticsearch version: %d (must be 8 or 9)", version)
 	}
 
-	client, err := elasticsearch.NewClient(esCfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create elasticsearch client: %w", err)
-	}
-
-	return &ElasticsearchLogStorage{
-		client:   client,
+	storage := &ElasticsearchLogStorage{
 		index:    index,
 		username: cfg.ElasticsearchUsername,
 		password: cfg.ElasticsearchPassword,
 		version:  version,
-	}, nil
+	}
+
+	if version == 8 {
+		esCfg := elasticsearch8.Config{
+			Addresses: urls,
+			Username:  cfg.ElasticsearchUsername,
+			Password:  cfg.ElasticsearchPassword,
+		}
+		client, err := elasticsearch8.NewClient(esCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create elasticsearch v8 client: %w", err)
+		}
+		storage.clientV8 = client
+	} else {
+		esCfg := elasticsearch9.Config{
+			Addresses: urls,
+			Username:  cfg.ElasticsearchUsername,
+			Password:  cfg.ElasticsearchPassword,
+		}
+		client, err := elasticsearch9.NewClient(esCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create elasticsearch v9 client: %w", err)
+		}
+		storage.clientV9 = client
+	}
+
+	return storage, nil
 }
 
 // Name returns the backend identifier.
@@ -75,9 +100,16 @@ func (s *ElasticsearchLogStorage) Write(ctx context.Context, entries []*LogEntry
 		return nil
 	}
 
-	// Create bulk indexer
+	if s.version == 9 {
+		return s.writeV9(ctx, entries)
+	}
+	return s.writeV8(ctx, entries)
+}
+
+// writeV8 writes entries using the v8 client.
+func (s *ElasticsearchLogStorage) writeV8(ctx context.Context, entries []*LogEntry) error {
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
-		Client:        s.client,
+		Client:        s.clientV8,
 		NumWorkers:    1,
 		FlushBytes:    5e+6, // 5MB
 		FlushInterval: time.Second,
@@ -87,47 +119,78 @@ func (s *ElasticsearchLogStorage) Write(ctx context.Context, entries []*LogEntry
 	}
 	defer func() { _ = bi.Close(ctx) }()
 
-	// Index each entry
 	for _, entry := range entries {
-		// Ensure ID is set
 		if entry.ID == uuid.Nil {
 			entry.ID = uuid.New()
 		}
-
-		// Ensure timestamp is set
 		if entry.Timestamp.IsZero() {
 			entry.Timestamp = time.Now()
 		}
 
-		// Convert to document format
 		doc := s.toDocument(entry)
-
-		// Serialize document
 		data, err := json.Marshal(doc)
 		if err != nil {
 			return fmt.Errorf("failed to marshal log entry: %w", err)
 		}
 
-		// Add to bulk indexer
-		err = bi.Add(
-			ctx,
-			esutil.BulkIndexerItem{
-				Action:     "index",
-				Index:      s.index,
-				DocumentID: entry.ID.String(),
-				Body:       bytes.NewReader(data),
-			},
-		)
+		err = bi.Add(ctx, esutil.BulkIndexerItem{
+			Action:     "index",
+			Index:      s.index,
+			DocumentID: entry.ID.String(),
+			Body:       bytes.NewReader(data),
+		})
 		if err != nil {
 			return fmt.Errorf("failed to add entry to bulk indexer: %w", err)
 		}
 	}
 
-	// Flush any remaining items
 	if err := bi.Close(ctx); err != nil {
 		return fmt.Errorf("bulk indexer close failed: %w", err)
 	}
+	return nil
+}
 
+// writeV9 writes entries using the v9 client.
+func (s *ElasticsearchLogStorage) writeV9(ctx context.Context, entries []*LogEntry) error {
+	bi, err := esutil9.NewBulkIndexer(esutil9.BulkIndexerConfig{
+		Client:        s.clientV9,
+		NumWorkers:    1,
+		FlushBytes:    5e+6, // 5MB
+		FlushInterval: time.Second,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create bulk indexer: %w", err)
+	}
+	defer func() { _ = bi.Close(ctx) }()
+
+	for _, entry := range entries {
+		if entry.ID == uuid.Nil {
+			entry.ID = uuid.New()
+		}
+		if entry.Timestamp.IsZero() {
+			entry.Timestamp = time.Now()
+		}
+
+		doc := s.toDocument(entry)
+		data, err := json.Marshal(doc)
+		if err != nil {
+			return fmt.Errorf("failed to marshal log entry: %w", err)
+		}
+
+		err = bi.Add(ctx, esutil9.BulkIndexerItem{
+			Action:     "index",
+			Index:      s.index,
+			DocumentID: entry.ID.String(),
+			Body:       bytes.NewReader(data),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to add entry to bulk indexer: %w", err)
+		}
+	}
+
+	if err := bi.Close(ctx); err != nil {
+		return fmt.Errorf("bulk indexer close failed: %w", err)
+	}
 	return nil
 }
 
@@ -159,23 +222,42 @@ func (s *ElasticsearchLogStorage) Query(ctx context.Context, opts LogQueryOption
 		sortOrder = "asc"
 	}
 
-	// Execute search
-	req := esapi.SearchRequest{
-		Index: []string{s.index},
-		Body:  &buf,
-		Size:  &size,
-		From:  &from,
-		Sort:  []string{sortField + ":" + sortOrder},
-	}
-
-	res, err := req.Do(ctx, s.client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute search: %w", err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.IsError() {
-		return nil, fmt.Errorf("elasticsearch search error: %s", res.String())
+	// Execute search based on version
+	var body io.ReadCloser
+	if s.version == 9 {
+		req := esapi9.SearchRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+			Size:  &size,
+			From:  &from,
+			Sort:  []string{sortField + ":" + sortOrder},
+		}
+		res, err := req.Do(ctx, s.clientV9)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute search: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return nil, fmt.Errorf("elasticsearch search error: %s", res.String())
+		}
+		body = res.Body
+	} else {
+		req := esapi.SearchRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+			Size:  &size,
+			From:  &from,
+			Sort:  []string{sortField + ":" + sortOrder},
+		}
+		res, err := req.Do(ctx, s.clientV8)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute search: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return nil, fmt.Errorf("elasticsearch search error: %s", res.String())
+		}
+		body = res.Body
 	}
 
 	// Parse response
@@ -190,7 +272,7 @@ func (s *ElasticsearchLogStorage) Query(ctx context.Context, opts LogQueryOption
 		} `json:"hits"`
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&searchResponse); err != nil {
+	if err := json.NewDecoder(body).Decode(&searchResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode search response: %w", err)
 	}
 
@@ -259,20 +341,36 @@ func (s *ElasticsearchLogStorage) Delete(ctx context.Context, opts LogQueryOptio
 		return 0, fmt.Errorf("failed to encode delete query: %w", err)
 	}
 
-	// Execute delete by query
-	req := esapi.DeleteByQueryRequest{
-		Index: []string{s.index},
-		Body:  &buf,
-	}
-
-	res, err := req.Do(ctx, s.client)
-	if err != nil {
-		return 0, fmt.Errorf("failed to execute delete: %w", err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.IsError() {
-		return 0, fmt.Errorf("elasticsearch delete error: %s", res.String())
+	// Execute delete by query based on version
+	var body io.ReadCloser
+	if s.version == 9 {
+		req := esapi9.DeleteByQueryRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+		}
+		res, err := req.Do(ctx, s.clientV9)
+		if err != nil {
+			return 0, fmt.Errorf("failed to execute delete: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return 0, fmt.Errorf("elasticsearch delete error: %s", res.String())
+		}
+		body = res.Body
+	} else {
+		req := esapi.DeleteByQueryRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+		}
+		res, err := req.Do(ctx, s.clientV8)
+		if err != nil {
+			return 0, fmt.Errorf("failed to execute delete: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return 0, fmt.Errorf("elasticsearch delete error: %s", res.String())
+		}
+		body = res.Body
 	}
 
 	// Parse response
@@ -280,7 +378,7 @@ func (s *ElasticsearchLogStorage) Delete(ctx context.Context, opts LogQueryOptio
 		Deleted int64 `json:"deleted"`
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&deleteResponse); err != nil {
+	if err := json.NewDecoder(body).Decode(&deleteResponse); err != nil {
 		return 0, fmt.Errorf("failed to decode delete response: %w", err)
 	}
 
@@ -326,20 +424,36 @@ func (s *ElasticsearchLogStorage) Stats(ctx context.Context) (*LogStats, error) 
 		return nil, fmt.Errorf("failed to encode stats query: %w", err)
 	}
 
-	// Execute search
-	req := esapi.SearchRequest{
-		Index: []string{s.index},
-		Body:  &buf,
-	}
-
-	res, err := req.Do(ctx, s.client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute stats query: %w", err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.IsError() {
-		return nil, fmt.Errorf("elasticsearch stats error: %s", res.String())
+	// Execute search based on version
+	var body io.ReadCloser
+	if s.version == 9 {
+		req := esapi9.SearchRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+		}
+		res, err := req.Do(ctx, s.clientV9)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute stats query: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return nil, fmt.Errorf("elasticsearch stats error: %s", res.String())
+		}
+		body = res.Body
+	} else {
+		req := esapi.SearchRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+		}
+		res, err := req.Do(ctx, s.clientV8)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute stats query: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return nil, fmt.Errorf("elasticsearch stats error: %s", res.String())
+		}
+		body = res.Body
 	}
 
 	// Parse response
@@ -371,7 +485,7 @@ func (s *ElasticsearchLogStorage) Stats(ctx context.Context) (*LogStats, error) 
 		} `json:"aggregations"`
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&searchResponse); err != nil {
+	if err := json.NewDecoder(body).Decode(&searchResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode stats response: %w", err)
 	}
 
@@ -404,17 +518,27 @@ func (s *ElasticsearchLogStorage) Stats(ctx context.Context) (*LogStats, error) 
 
 // Health checks if the Elasticsearch cluster is operational.
 func (s *ElasticsearchLogStorage) Health(ctx context.Context) error {
-	// Ping the cluster
-	req := esapi.PingRequest{}
-
-	res, err := req.Do(ctx, s.client)
-	if err != nil {
-		return fmt.Errorf("elasticsearch ping failed: %w", err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.IsError() {
-		return fmt.Errorf("elasticsearch health check failed: %s", res.String())
+	// Ping the cluster based on version
+	if s.version == 9 {
+		req := esapi9.PingRequest{}
+		res, err := req.Do(ctx, s.clientV9)
+		if err != nil {
+			return fmt.Errorf("elasticsearch ping failed: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return fmt.Errorf("elasticsearch health check failed: %s", res.String())
+		}
+	} else {
+		req := esapi.PingRequest{}
+		res, err := req.Do(ctx, s.clientV8)
+		if err != nil {
+			return fmt.Errorf("elasticsearch ping failed: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return fmt.Errorf("elasticsearch health check failed: %s", res.String())
+		}
 	}
 
 	return nil
@@ -648,21 +772,40 @@ func (s *ElasticsearchLogStorage) executeSearch(ctx context.Context, query map[s
 		return nil, fmt.Errorf("failed to encode query: %w", err)
 	}
 
-	req := esapi.SearchRequest{
-		Index: []string{s.index},
-		Body:  &buf,
-		From:  &from,
-		Size:  &size,
-	}
-
-	res, err := req.Do(ctx, s.client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute search: %w", err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.IsError() {
-		return nil, fmt.Errorf("elasticsearch search error: %s", res.String())
+	// Execute search based on version
+	var body io.ReadCloser
+	if s.version == 9 {
+		req := esapi9.SearchRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+			From:  &from,
+			Size:  &size,
+		}
+		res, err := req.Do(ctx, s.clientV9)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute search: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return nil, fmt.Errorf("elasticsearch search error: %s", res.String())
+		}
+		body = res.Body
+	} else {
+		req := esapi.SearchRequest{
+			Index: []string{s.index},
+			Body:  &buf,
+			From:  &from,
+			Size:  &size,
+		}
+		res, err := req.Do(ctx, s.clientV8)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute search: %w", err)
+		}
+		defer func() { _ = res.Body.Close() }()
+		if res.IsError() {
+			return nil, fmt.Errorf("elasticsearch search error: %s", res.String())
+		}
+		body = res.Body
 	}
 
 	// Parse response
@@ -674,7 +817,7 @@ func (s *ElasticsearchLogStorage) executeSearch(ctx context.Context, query map[s
 		} `json:"hits"`
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&searchResponse); err != nil {
+	if err := json.NewDecoder(body).Decode(&searchResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode search response: %w", err)
 	}
 
