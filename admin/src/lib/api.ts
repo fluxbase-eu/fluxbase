@@ -2891,6 +2891,7 @@ export interface TableSummary {
 export interface ExportTableOptions {
   schema: string
   table: string
+  columns?: string[]
   include_sample_rows?: boolean
   sample_row_count?: number
   include_foreign_keys?: boolean
@@ -2901,6 +2902,77 @@ export interface ExportTableResult {
   document_id: string
   entity_id: string
   relationship_ids: string[]
+}
+
+export interface TableColumn {
+  name: string
+  data_type: string
+  is_nullable: boolean
+  default_value?: string
+  is_primary_key: boolean
+  is_foreign_key: boolean
+  is_unique: boolean
+  max_length?: number
+  position: number
+}
+
+export interface TableForeignKey {
+  name: string
+  column_name: string
+  referenced_schema: string
+  referenced_table: string
+  referenced_column: string
+  on_delete: string
+  on_update: string
+}
+
+export interface TableIndex {
+  name: string
+  columns: string[]
+  is_unique: boolean
+  is_primary: boolean
+}
+
+export interface TableDetails {
+  schema: string
+  name: string
+  type: string
+  columns: TableColumn[]
+  primary_key: string[]
+  foreign_keys: TableForeignKey[]
+  indexes: TableIndex[]
+  rls_enabled: boolean
+}
+
+// Table export preset types (saved export configurations)
+export interface TableExportSyncConfig {
+  id: string
+  knowledge_base_id: string
+  schema_name: string
+  table_name: string
+  columns?: string[]
+  include_foreign_keys: boolean
+  include_indexes: boolean
+  last_sync_at?: string
+  last_sync_status?: string
+  last_sync_error?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTableExportSyncConfig {
+  schema_name: string
+  table_name: string
+  columns?: string[]
+  include_foreign_keys?: boolean
+  include_indexes?: boolean
+  export_now?: boolean
+}
+
+export interface UpdateTableExportSyncConfig {
+  columns?: string[]
+  include_foreign_keys?: boolean
+  include_indexes?: boolean
 }
 
 export interface ChatbotKnowledgeBaseLink {
@@ -3371,6 +3443,75 @@ export const knowledgeBasesApi = {
     const response = await api.post<ExportTableResult>(
       `/api/v1/admin/ai/knowledge-bases/${kbId}/tables/export`,
       options
+    )
+    return response.data
+  },
+
+  // Get detailed table information for column selection
+  getTableDetails: async (
+    schema: string,
+    table: string
+  ): Promise<TableDetails> => {
+    const response = await api.get<TableDetails>(
+      `/api/v1/admin/ai/tables/${schema}/${table}`
+    )
+    return response.data
+  },
+
+  // Create a table export sync configuration
+  createTableExportSync: async (
+    kbId: string,
+    config: CreateTableExportSyncConfig
+  ): Promise<TableExportSyncConfig> => {
+    const response = await api.post<TableExportSyncConfig>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs`,
+      config
+    )
+    return response.data
+  },
+
+  // List table export sync configurations
+  listTableExportSyncs: async (
+    kbId: string
+  ): Promise<TableExportSyncConfig[]> => {
+    const response = await api.get<{
+      sync_configs: TableExportSyncConfig[]
+      count: number
+    }>(`/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs`)
+    return response.data.sync_configs || []
+  },
+
+  // Update a table export sync configuration
+  updateTableExportSync: async (
+    kbId: string,
+    syncId: string,
+    updates: UpdateTableExportSyncConfig
+  ): Promise<TableExportSyncConfig> => {
+    const response = await api.patch<TableExportSyncConfig>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}`,
+      updates
+    )
+    return response.data
+  },
+
+  // Delete a table export sync configuration
+  deleteTableExportSync: async (
+    kbId: string,
+    syncId: string
+  ): Promise<void> => {
+    await api.delete(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}`
+    )
+  },
+
+  // Manually trigger a table export sync
+  triggerTableExportSync: async (
+    kbId: string,
+    syncId: string
+  ): Promise<ExportTableResult> => {
+    const response = await api.post<ExportTableResult>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}/trigger`,
+      {}
     )
     return response.data
   },

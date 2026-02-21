@@ -31,6 +31,12 @@ import type {
   Entity,
   EntityRelationship,
   KnowledgeGraphData,
+  ExportTableOptions,
+  ExportTableResult,
+  TableDetails,
+  TableExportSyncConfig,
+  CreateTableExportSyncConfig,
+  UpdateTableExportSyncConfig,
 } from "./types";
 
 /**
@@ -1230,6 +1236,244 @@ export class FluxbaseAdminAI {
         count: number;
       }>(`/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/chatbots`);
       return { data: response.chatbots || [], error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ============================================================================
+  // TABLE EXPORT
+  // ============================================================================
+
+  /**
+   * Export a database table to a knowledge base
+   *
+   * The table schema will be exported as a markdown document and indexed.
+   * Optionally filter which columns to export for security or relevance.
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param options - Export options including column selection
+   * @returns Promise resolving to { data, error } tuple with export result
+   *
+   * @example
+   * ```typescript
+   * // Export all columns
+   * const { data, error } = await client.admin.ai.exportTable('kb-uuid', {
+   *   schema: 'public',
+   *   table: 'users',
+   *   include_foreign_keys: true,
+   * })
+   *
+   * // Export specific columns (recommended for sensitive data)
+   * const { data, error } = await client.admin.ai.exportTable('kb-uuid', {
+   *   schema: 'public',
+   *   table: 'users',
+   *   columns: ['id', 'name', 'email', 'created_at'],
+   * })
+   * ```
+   */
+  async exportTable(
+    knowledgeBaseId: string,
+    options: ExportTableOptions,
+  ): Promise<{ data: ExportTableResult | null; error: Error | null }> {
+    try {
+      const data = await this.fetch.post<ExportTableResult>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/tables/export`,
+        options,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Get detailed table information including columns
+   *
+   * Use this to discover available columns before exporting.
+   *
+   * @param schema - Schema name (e.g., 'public')
+   * @param table - Table name
+   * @returns Promise resolving to { data, error } tuple with table details
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.getTableDetails('public', 'users')
+   * if (data) {
+   *   console.log('Columns:', data.columns.map(c => c.name))
+   *   console.log('Primary key:', data.primary_key)
+   * }
+   * ```
+   */
+  async getTableDetails(
+    schema: string,
+    table: string,
+  ): Promise<{ data: TableDetails | null; error: Error | null }> {
+    try {
+      const data = await this.fetch.get<TableDetails>(
+        `/api/v1/admin/ai/tables/${schema}/${table}`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ============================================================================
+  // TABLE EXPORT PRESETS
+  // ============================================================================
+
+  /**
+   * Create a table export preset
+   *
+   * Saves a table export configuration for easy re-export. Use triggerTableExportSync
+   * to re-export when the schema changes.
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param config - Export preset configuration
+   * @returns Promise resolving to { data, error } tuple with created preset
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.createTableExportSync('kb-uuid', {
+   *   schema_name: 'public',
+   *   table_name: 'products',
+   *   columns: ['id', 'name', 'description', 'price'],
+   *   include_foreign_keys: true,
+   *   export_now: true, // Trigger initial export
+   * })
+   * ```
+   */
+  async createTableExportSync(
+    knowledgeBaseId: string,
+    config: CreateTableExportSyncConfig,
+  ): Promise<{ data: TableExportSyncConfig | null; error: Error | null }> {
+    try {
+      const data = await this.fetch.post<TableExportSyncConfig>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/sync-configs`,
+        config,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * List table export presets for a knowledge base
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @returns Promise resolving to { data, error } tuple with array of presets
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.listTableExportSyncs('kb-uuid')
+   * if (data) {
+   *   data.forEach(config => {
+   *     console.log(`${config.schema_name}.${config.table_name}`)
+   *   })
+   * }
+   * ```
+   */
+  async listTableExportSyncs(
+    knowledgeBaseId: string,
+  ): Promise<{ data: TableExportSyncConfig[] | null; error: Error | null }> {
+    try {
+      const response = await this.fetch.get<{
+        sync_configs: TableExportSyncConfig[];
+        count: number;
+      }>(`/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/sync-configs`);
+      return { data: response.sync_configs || [], error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Update a table export preset
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param syncId - Preset ID
+   * @param updates - Fields to update
+   * @returns Promise resolving to { data, error } tuple with updated preset
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.updateTableExportSync('kb-uuid', 'sync-id', {
+   *   columns: ['id', 'name', 'email', 'updated_at'],
+   * })
+   * ```
+   */
+  async updateTableExportSync(
+    knowledgeBaseId: string,
+    syncId: string,
+    updates: UpdateTableExportSyncConfig,
+  ): Promise<{ data: TableExportSyncConfig | null; error: Error | null }> {
+    try {
+      const data = await this.fetch.patch<TableExportSyncConfig>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/sync-configs/${syncId}`,
+        updates,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Delete a table export sync configuration
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param syncId - Sync config ID
+   * @returns Promise resolving to { data, error } tuple
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.deleteTableExportSync('kb-uuid', 'sync-id')
+   * ```
+   */
+  async deleteTableExportSync(
+    knowledgeBaseId: string,
+    syncId: string,
+  ): Promise<{ data: null; error: Error | null }> {
+    try {
+      await this.fetch.delete(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/sync-configs/${syncId}`,
+      );
+      return { data: null, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Manually trigger a table export sync
+   *
+   * Immediately re-exports the table to the knowledge base,
+   * regardless of the sync mode.
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param syncId - Sync config ID
+   * @returns Promise resolving to { data, error } tuple with export result
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.triggerTableExportSync('kb-uuid', 'sync-id')
+   * if (data) {
+   *   console.log('Exported document:', data.document_id)
+   * }
+   * ```
+   */
+  async triggerTableExportSync(
+    knowledgeBaseId: string,
+    syncId: string,
+  ): Promise<{ data: ExportTableResult | null; error: Error | null }> {
+    try {
+      const data = await this.fetch.post<ExportTableResult>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/sync-configs/${syncId}/trigger`,
+        {},
+      );
+      return { data, error: null };
     } catch (error) {
       return { data: null, error: error as Error };
     }

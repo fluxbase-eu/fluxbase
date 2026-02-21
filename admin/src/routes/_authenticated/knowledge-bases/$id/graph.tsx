@@ -9,11 +9,9 @@ import {
   Background,
   useNodesState,
   useEdgesState,
-  Panel,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import {
-  ArrowLeft,
   RefreshCw,
   Search,
   Filter,
@@ -38,6 +36,7 @@ import {
   type KnowledgeGraphData,
   type EntityType,
   type ChatbotKnowledgeBaseLink,
+  type KnowledgeBase,
 } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -51,7 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { KnowledgeBaseTabs } from '@/components/knowledge-bases/knowledge-base-tabs'
+import { KnowledgeBaseHeader } from '@/components/knowledge-bases/knowledge-base-header'
 
 // Entity type colors
 const ENTITY_COLORS: Record<EntityType, string> = {
@@ -130,6 +129,7 @@ export const Route = createFileRoute(
 function KnowledgeGraphPage() {
   const params = Route.useParams()
   const id = params.id
+  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase | null>(null)
   const [graphData, setGraphData] = useState<KnowledgeGraphData | null>(null)
   const [linkedChatbots, setLinkedChatbots] = useState<ChatbotKnowledgeBaseLink[]>(
     []
@@ -145,10 +145,12 @@ function KnowledgeGraphPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [graph, chatbots] = await Promise.all([
+      const [kb, graph, chatbots] = await Promise.all([
+        knowledgeBasesApi.get(id),
         knowledgeBasesApi.getKnowledgeGraph(id),
         knowledgeBasesApi.listLinkedChatbots(id),
       ])
+      setKnowledgeBase(kb)
       setGraphData(graph)
       setLinkedChatbots(chatbots || [])
     } catch {
@@ -244,21 +246,34 @@ function KnowledgeGraphPage() {
     )
   }
 
+  if (!knowledgeBase) {
+    return (
+      <div className='flex h-96 flex-col items-center justify-center gap-4'>
+        <p className='text-muted-foreground'>Knowledge base not found</p>
+      </div>
+    )
+  }
+
   return (
     <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center gap-4'>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => window.history.back()}
-        >
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back
-        </Button>
-      </div>
-
-      {/* Tab Navigation */}
-      <KnowledgeBaseTabs activeTab='graph' knowledgeBaseId={id} />
+      <KnowledgeBaseHeader
+        knowledgeBase={knowledgeBase}
+        activeTab='graph'
+        actions={
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => {
+              setSearchQuery('')
+              setTypeFilter('all')
+              setSelectedEntity(null)
+            }}
+          >
+            <RefreshCw className='mr-2 h-4 w-4' />
+            Reset View
+          </Button>
+        }
+      />
 
       <div className='grid flex-1 gap-6 lg:grid-cols-[280px_1fr]'>
         {/* Left Sidebar */}
@@ -422,20 +437,6 @@ function KnowledgeGraphPage() {
                   maskColor='rgba(0,0,0,0.1)'
                 />
                 <Background />
-                <Panel position='top-right'>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() => {
-                      setSearchQuery('')
-                      setTypeFilter('all')
-                      setSelectedEntity(null)
-                    }}
-                  >
-                    <RefreshCw className='mr-2 h-4 w-4' />
-                    Reset View
-                  </Button>
-                </Panel>
               </ReactFlow>
             ) : (
               <div className='flex h-full flex-col items-center justify-center gap-4'>

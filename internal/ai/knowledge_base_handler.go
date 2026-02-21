@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
@@ -21,6 +22,7 @@ type KnowledgeBaseHandler struct {
 	ocrService     *OCRService
 	tableExporter  *TableExporter
 	knowledgeGraph *KnowledgeGraph
+	syncService    *TableExportSyncService
 }
 
 // NewKnowledgeBaseHandler creates a new knowledge base handler
@@ -1233,6 +1235,11 @@ func (h *KnowledgeBaseHandler) SetTableExporter(exporter *TableExporter) {
 	h.tableExporter = exporter
 }
 
+// SetSyncService sets the table export sync service
+func (h *KnowledgeBaseHandler) SetSyncService(svc *TableExportSyncService) {
+	h.syncService = svc
+}
+
 // ============================================================================
 // TABLE EXPORT ENDPOINTS
 // ============================================================================
@@ -1322,6 +1329,210 @@ func (h *KnowledgeBaseHandler) ListExportableTables(c fiber.Ctx) error {
 		"tables": summaries,
 		"count":  len(summaries),
 	})
+}
+
+// GetTableDetails returns detailed info about a table for column selection
+// GET /api/v1/admin/ai/tables/:schema/:table
+func (h *KnowledgeBaseHandler) GetTableDetails(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	schema := c.Params("schema")
+	table := c.Params("table")
+
+	if schema == "" || table == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Schema and table parameters are required",
+		})
+	}
+
+	if h.tableExporter == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Table export service not configured",
+		})
+	}
+
+	inspector := database.NewSchemaInspector(h.tableExporter.conn)
+	tableInfo, err := inspector.GetTableInfo(ctx, schema, table)
+	if err != nil {
+		log.Error().Err(err).Str("schema", schema).Str("table", table).Msg("Failed to get table info")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get table info",
+		})
+	}
+	if tableInfo == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Table not found",
+		})
+	}
+
+	return c.JSON(tableInfo)
+}
+
+// ============================================================================
+// TABLE EXPORT SYNC CONFIG ENDPOINTS
+// ============================================================================
+
+// CreateTableExportSync creates a sync config and optionally triggers initial export
+// POST /api/v1/admin/ai/knowledge-bases/:id/sync-configs
+func (h *KnowledgeBaseHandler) CreateTableExportSync(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if kbID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Knowledge base ID is required",
+		})
+	}
+
+	if h.syncService == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Sync service not configured",
+		})
+	}
+
+	var req CreateTableExportSyncConfig
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	req.KnowledgeBaseID = kbID
+
+	config, err := h.syncService.CreateSyncConfig(ctx, &req)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Msg("Failed to create sync config")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to create sync config: %v", err),
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(config)
+}
+
+// ListTableExportSyncs lists sync configs for a knowledge base
+// GET /api/v1/admin/ai/knowledge-bases/:id/sync-configs
+func (h *KnowledgeBaseHandler) ListTableExportSyncs(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if kbID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Knowledge base ID is required",
+		})
+	}
+
+	if h.syncService == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Sync service not configured",
+		})
+	}
+
+	configs, err := h.syncService.GetSyncConfigsByKnowledgeBase(ctx, kbID)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Msg("Failed to list sync configs")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to list sync configs",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"sync_configs": configs,
+		"count":        len(configs),
+	})
+}
+
+// UpdateTableExportSync updates a sync config
+// PATCH /api/v1/admin/ai/knowledge-bases/:id/sync-configs/:syncId
+func (h *KnowledgeBaseHandler) UpdateTableExportSync(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	syncID := c.Params("syncId")
+
+	if syncID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Sync config ID is required",
+		})
+	}
+
+	if h.syncService == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Sync service not configured",
+		})
+	}
+
+	var req UpdateTableExportSyncConfig
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	config, err := h.syncService.UpdateSyncConfig(ctx, syncID, req)
+	if err != nil {
+		log.Error().Err(err).Str("sync_id", syncID).Msg("Failed to update sync config")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to update sync config: %v", err),
+		})
+	}
+
+	return c.JSON(config)
+}
+
+// DeleteTableExportSync deletes a sync config
+// DELETE /api/v1/admin/ai/knowledge-bases/:id/sync-configs/:syncId
+func (h *KnowledgeBaseHandler) DeleteTableExportSync(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	syncID := c.Params("syncId")
+
+	if syncID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Sync config ID is required",
+		})
+	}
+
+	if h.syncService == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Sync service not configured",
+		})
+	}
+
+	err := h.syncService.DeleteSyncConfig(ctx, syncID)
+	if err != nil {
+		log.Error().Err(err).Str("sync_id", syncID).Msg("Failed to delete sync config")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to delete sync config: %v", err),
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// TriggerTableExportSync manually triggers a sync
+// POST /api/v1/admin/ai/knowledge-bases/:id/sync-configs/:syncId/trigger
+func (h *KnowledgeBaseHandler) TriggerTableExportSync(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	syncID := c.Params("syncId")
+
+	if syncID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Sync config ID is required",
+		})
+	}
+
+	if h.syncService == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Sync service not configured",
+		})
+	}
+
+	result, err := h.syncService.TriggerSync(ctx, syncID)
+	if err != nil {
+		log.Error().Err(err).Str("sync_id", syncID).Msg("Failed to trigger sync")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to trigger sync: %v", err),
+		})
+	}
+
+	return c.JSON(result)
 }
 
 // ============================================================================

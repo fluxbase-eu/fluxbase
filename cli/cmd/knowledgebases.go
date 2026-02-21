@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,6 +48,7 @@ var (
 	kbDeleteFilterMetadata string // Metadata filter for delete-by-filter
 	kbTableSchema          string // Schema for export-table
 	kbTableName            string // Table name for export-table
+	kbTableColumns         string // Comma-separated column names for export-table
 	kbTableIncludeFKs      bool   // Include foreign keys
 	kbTableIncludeIdx      bool   // Include indexes
 	kbTableSampleRows      int    // Sample rows for export-table
@@ -251,7 +253,13 @@ var kbExportTableCmd = &cobra.Command{
 Includes schema, columns, relationships, and optional sample data.
 
 Examples:
+  # Export all columns
   fluxbase kb export-table abc123 --table users --schema public
+
+  # Export specific columns (recommended for sensitive data)
+  fluxbase kb export-table abc123 --table users --columns id,name,email
+
+  # Include foreign keys and indexes
   fluxbase kb export-table abc123 --table products --include-fks --include-indexes --sample-rows 10`,
 	Args:    cobra.ExactArgs(1),
 	PreRunE: requireAuth,
@@ -362,6 +370,7 @@ func init() {
 	// Export-table flags
 	kbExportTableCmd.Flags().StringVar(&kbTableName, "table", "", "Table name (required)")
 	kbExportTableCmd.Flags().StringVar(&kbTableSchema, "schema", "public", "Schema name")
+	kbExportTableCmd.Flags().StringVar(&kbTableColumns, "columns", "", "Comma-separated column names (default: all columns)")
 	kbExportTableCmd.Flags().BoolVar(&kbTableIncludeFKs, "include-fks", false, "Include foreign keys")
 	kbExportTableCmd.Flags().BoolVar(&kbTableIncludeIdx, "include-indexes", false, "Include indexes")
 	kbExportTableCmd.Flags().IntVar(&kbTableSampleRows, "sample-rows", 0, "Number of sample rows to include")
@@ -935,28 +944,45 @@ func runKBExportTable(cmd *cobra.Command, args []string) error {
 	}
 
 	body := map[string]interface{}{
-		"table_name":      kbTableName,
-		"include_fks":     kbTableIncludeFKs,
-		"include_indexes": kbTableIncludeIdx,
+		"table_name":          kbTableName,
+		"include_fks":         kbTableIncludeFKs,
+		"include_indexes":     kbTableIncludeIdx,
+		"include_sample_rows": kbTableSampleRows > 0,
 	}
 
 	if kbTableSchema != "" {
 		body["schema"] = kbTableSchema
 	}
 	if kbTableSampleRows > 0 {
-		body["sample_rows"] = kbTableSampleRows
+		body["sample_row_count"] = kbTableSampleRows
+	}
+	if kbTableColumns != "" {
+		columns := strings.Split(kbTableColumns, ",")
+		// Trim whitespace from each column name
+		for i, col := range columns {
+			columns[i] = strings.TrimSpace(col)
+		}
+		body["columns"] = columns
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	var result map[string]interface{}
-	if err := apiClient.DoPost(ctx, "/api/v1/admin/ai/knowledge-bases/"+url.PathEscape(kbID)+"/export-table", body, &result); err != nil {
+	if err := apiClient.DoPost(ctx, "/api/v1/admin/ai/knowledge-bases/"+url.PathEscape(kbID)+"/tables/export", body, &result); err != nil {
 		return err
 	}
 
 	docID := getStringValue(result, "document_id")
-	fmt.Printf("Table '%s' exported as document (ID: %s)\n", kbTableName, docID)
+	entityID := getStringValue(result, "entity_id")
+
+	if kbTableColumns != "" {
+		fmt.Printf("Table '%s.%s' exported with columns [%s] as document (ID: %s, Entity: %s)\n",
+			kbTableSchema, kbTableName, kbTableColumns, docID, entityID)
+	} else {
+		fmt.Printf("Table '%s.%s' exported as document (ID: %s, Entity: %s)\n",
+			kbTableSchema, kbTableName, docID, entityID)
+	}
 	return nil
 }
 

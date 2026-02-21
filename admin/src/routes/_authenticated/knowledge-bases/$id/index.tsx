@@ -50,7 +50,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -64,7 +63,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { KnowledgeBaseTabs } from '@/components/knowledge-bases/knowledge-base-tabs'
+import { KnowledgeBaseHeader } from '@/components/knowledge-bases/knowledge-base-header'
 import { Textarea } from '@/components/ui/textarea'
 
 const SUPPORTED_FILE_TYPES = [
@@ -400,113 +399,79 @@ function KnowledgeBaseDetailPage() {
 
   return (
     <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center gap-4'>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => navigate({ to: '/knowledge-bases' })}
-        >
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back
-        </Button>
-      </div>
+      <KnowledgeBaseHeader
+        knowledgeBase={knowledgeBase}
+        activeTab='documents'
+        actions={
+          <>
+            <Button onClick={() => fetchData()} variant='outline' size='sm'>
+              <RefreshCw className='mr-2 h-4 w-4' />
+              Refresh
+            </Button>
+            <Button size='sm' onClick={() => setAddDialogOpen(true)}>
+              <Plus className='mr-2 h-4 w-4' />
+              Add Document
+            </Button>
+          </>
+        }
+      />
 
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold'>{knowledgeBase.name}</h1>
-          {knowledgeBase.description && (
-            <p className='text-muted-foreground'>{knowledgeBase.description}</p>
-          )}
-        </div>
-      </div>
-
-      <div className='flex items-center justify-between'>
-        <div className='flex gap-4 text-sm'>
-          <div className='flex items-center gap-1.5'>
-            <span className='text-muted-foreground'>Documents:</span>
-            <Badge variant='secondary' className='h-5 px-2'>
-              {knowledgeBase.document_count}
-            </Badge>
-          </div>
-          <div className='flex items-center gap-1.5'>
-            <span className='text-muted-foreground'>Chunks:</span>
-            <Badge variant='secondary' className='h-5 px-2'>
-              {knowledgeBase.total_chunks}
-            </Badge>
-          </div>
-          <div className='flex items-center gap-1.5'>
-            <span className='text-muted-foreground'>Model:</span>
-            <Badge variant='outline' className='h-5 px-2 text-[10px]'>
-              {knowledgeBase.embedding_model || 'Default'}
-            </Badge>
-          </div>
-        </div>
-        <div className='flex items-center gap-2'>
-          <Button onClick={() => fetchData()} variant='outline' size='sm'>
-            <RefreshCw className='mr-2 h-4 w-4' />
-            Refresh
-          </Button>
-          <Dialog
-            open={addDialogOpen}
-            onOpenChange={(open) => {
-              setAddDialogOpen(open)
-              if (open) {
-                // Fetch capabilities when dialog opens
-                knowledgeBasesApi
-                  .getCapabilities()
-                  .then(setCapabilities)
-                  .catch(() => {
-                    // Silently fail - we'll just not show the warning
-                  })
-              } else {
-                setNewDoc({ title: '', content: '' })
-                setNewDocTags('')
-                setNewDocMetadata([])
-                setSelectedFile(null)
-                setUploadMode('paste')
-              }
-            }}
+      {/* Add Document Dialog */}
+      <Dialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          setAddDialogOpen(open)
+          if (open) {
+            // Fetch capabilities when dialog opens
+            knowledgeBasesApi
+              .getCapabilities()
+              .then(setCapabilities)
+              .catch(() => {
+                // Silently fail - we'll just not show the warning
+              })
+          } else {
+            setNewDoc({ title: '', content: '' })
+            setNewDocTags('')
+            setNewDocMetadata([])
+            setSelectedFile(null)
+            setUploadMode('paste')
+          }
+        }}
+      >
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Add Document</DialogTitle>
+            <DialogDescription>
+              Add a new document to this knowledge base. The document will be
+              chunked and embedded for search.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs
+            value={uploadMode}
+            onValueChange={(v) => setUploadMode(v as 'paste' | 'upload')}
+            className='w-full'
           >
-            <DialogTrigger asChild>
-              <Button size='sm'>
-                <Plus className='mr-2 h-4 w-4' />
-                Add Document
-              </Button>
-            </DialogTrigger>
-            <DialogContent className='max-w-2xl'>
-              <DialogHeader>
-                <DialogTitle>Add Document</DialogTitle>
-                <DialogDescription>
-                  Add a new document to this knowledge base. The document will
-                  be chunked and embedded for search.
-                </DialogDescription>
-              </DialogHeader>
-              <Tabs
-                value={uploadMode}
-                onValueChange={(v) => setUploadMode(v as 'paste' | 'upload')}
-                className='w-full'
-              >
-                <TabsList className='grid w-full grid-cols-2'>
-                  <TabsTrigger value='paste'>Paste Text</TabsTrigger>
-                  <TabsTrigger value='upload'>Upload File</TabsTrigger>
-                </TabsList>
-                <TabsContent value='paste' className='mt-4'>
-                  <div className='grid gap-4'>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='title'>Title (optional)</Label>
-                      <Input
-                        id='title'
-                        value={newDoc.title}
-                        onChange={(e) =>
-                          setNewDoc({ ...newDoc, title: e.target.value })
-                        }
-                        placeholder='Document title'
-                      />
-                    </div>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='content'>Content</Label>
-                      <Textarea
-                        id='content'
+            <TabsList className='grid w-full grid-cols-2'>
+              <TabsTrigger value='paste'>Paste Text</TabsTrigger>
+              <TabsTrigger value='upload'>Upload File</TabsTrigger>
+            </TabsList>
+            <TabsContent value='paste' className='mt-4'>
+              <div className='grid gap-4'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='title'>Title (optional)</Label>
+                  <Input
+                    id='title'
+                    value={newDoc.title}
+                    onChange={(e) =>
+                      setNewDoc({ ...newDoc, title: e.target.value })
+                    }
+                    placeholder='Document title'
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='content'>Content</Label>
+                  <Textarea
+                    id='content'
                         value={newDoc.content}
                         onChange={(e) =>
                           setNewDoc({ ...newDoc, content: e.target.value })
@@ -695,11 +660,6 @@ function KnowledgeBaseDetailPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <KnowledgeBaseTabs activeTab='documents' knowledgeBaseId={id} />
 
       <Card>
         <CardHeader>

@@ -3456,6 +3456,127 @@ export interface KnowledgeBaseCapabilities {
 }
 
 // ============================================================================
+// Table Export Types
+// ============================================================================
+
+/**
+ * Options for exporting a table to a knowledge base
+ */
+export interface ExportTableOptions {
+  schema: string;
+  table: string;
+  columns?: string[];
+  include_sample_rows?: boolean;
+  sample_row_count?: number;
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+}
+
+/**
+ * Result of exporting a table to a knowledge base
+ */
+export interface ExportTableResult {
+  document_id: string;
+  entity_id: string;
+  relationship_ids?: string[];
+}
+
+/**
+ * Column information for a table
+ */
+export interface TableColumn {
+  name: string;
+  data_type: string;
+  is_nullable: boolean;
+  default_value?: string;
+  is_primary_key: boolean;
+  is_foreign_key: boolean;
+  is_unique: boolean;
+  max_length?: number;
+  position: number;
+}
+
+/**
+ * Foreign key information for a table
+ */
+export interface TableForeignKey {
+  name: string;
+  column_name: string;
+  referenced_schema: string;
+  referenced_table: string;
+  referenced_column: string;
+  on_delete: string;
+  on_update: string;
+}
+
+/**
+ * Index information for a table
+ */
+export interface TableIndex {
+  name: string;
+  columns: string[];
+  is_unique: boolean;
+  is_primary: boolean;
+}
+
+/**
+ * Detailed table information including columns
+ */
+export interface TableDetails {
+  schema: string;
+  name: string;
+  type: string;
+  columns: TableColumn[];
+  primary_key: string[];
+  foreign_keys: TableForeignKey[];
+  indexes: TableIndex[];
+  rls_enabled: boolean;
+}
+
+// ============================================================================
+// Table Export Preset Types
+// ============================================================================
+
+/**
+ * Saved export configuration (preset) for a table
+ */
+export interface TableExportSyncConfig {
+  id: string;
+  knowledge_base_id: string;
+  schema_name: string;
+  table_name: string;
+  columns?: string[];
+  include_foreign_keys: boolean;
+  include_indexes: boolean;
+  last_sync_at?: string;
+  last_sync_status?: string;
+  last_sync_error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Request to create a table export preset
+ */
+export interface CreateTableExportSyncConfig {
+  schema_name: string;
+  table_name: string;
+  columns?: string[];
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+  export_now?: boolean;
+}
+
+/**
+ * Request to update a table export preset
+ */
+export interface UpdateTableExportSyncConfig {
+  columns?: string[];
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+}
+
+// ============================================================================
 // Health Check Types
 // ============================================================================
 

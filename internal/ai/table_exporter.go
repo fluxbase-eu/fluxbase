@@ -35,13 +35,14 @@ func NewTableExporter(
 
 // ExportTableRequest contains options for table export
 type ExportTableRequest struct {
-	KnowledgeBaseID    string `json:"knowledge_base_id"`
-	Schema             string `json:"schema"`
-	Table              string `json:"table"`
-	IncludeSampleRows  bool   `json:"include_sample_rows"`
-	SampleRowCount     int    `json:"sample_row_count"`
-	IncludeForeignKeys bool   `json:"include_foreign_keys"`
-	IncludeIndexes     bool   `json:"include_indexes"`
+	KnowledgeBaseID    string   `json:"knowledge_base_id"`
+	Schema             string   `json:"schema"`
+	Table              string   `json:"table"`
+	Columns            []string `json:"columns,omitempty"` // Optional: specific columns to export (nil/empty = all)
+	IncludeSampleRows  bool     `json:"include_sample_rows"`
+	SampleRowCount     int      `json:"sample_row_count"`
+	IncludeForeignKeys bool     `json:"include_foreign_keys"`
+	IncludeIndexes     bool     `json:"include_indexes"`
 }
 
 // ExportTableResult contains the export results
@@ -64,6 +65,19 @@ func (e *TableExporter) ExportTable(ctx context.Context, req ExportTableRequest)
 		return nil, fmt.Errorf("table not found: %s.%s", req.Schema, req.Table)
 	}
 
+	// Validate column names if specific columns are requested
+	if len(req.Columns) > 0 {
+		validColumns := make(map[string]bool)
+		for _, col := range tableInfo.Columns {
+			validColumns[col.Name] = true
+		}
+		for _, col := range req.Columns {
+			if !validColumns[col] {
+				return nil, fmt.Errorf("column %q not found in table %s.%s", col, req.Schema, req.Table)
+			}
+		}
+	}
+
 	// Generate document content from schema
 	docContent := e.generateTableDocument(tableInfo, req)
 
@@ -79,13 +93,23 @@ func (e *TableExporter) ExportTable(ctx context.Context, req ExportTableRequest)
 	}
 
 	// Create metadata
+	exportedColumnCount := len(tableInfo.Columns)
+	if len(req.Columns) > 0 {
+		exportedColumnCount = len(req.Columns)
+	}
 	metadataMap := map[string]interface{}{
-		"schema":      req.Schema,
-		"table":       req.Table,
-		"entity_type": "table",
-		"source":      "database_export",
-		"table_type":  tableInfo.Type,
-		"rls_enabled": tableInfo.RLSEnabled,
+		"schema":           req.Schema,
+		"table":            req.Table,
+		"entity_type":      "table",
+		"source":           "database_export",
+		"table_type":       tableInfo.Type,
+		"rls_enabled":      tableInfo.RLSEnabled,
+		"exported_columns": exportedColumnCount,
+		"total_columns":    len(tableInfo.Columns),
+		"columns_filtered": len(req.Columns) > 0,
+	}
+	if len(req.Columns) > 0 {
+		metadataMap["columns"] = req.Columns
 	}
 	if metadataJSON, err := metadataToJSON(metadataMap); err == nil {
 		doc.Metadata = metadataJSON
@@ -118,11 +142,12 @@ func (e *TableExporter) ExportTable(ctx context.Context, req ExportTableRequest)
 		CanonicalName:   fmt.Sprintf("%s.%s", req.Schema, req.Table),
 		Aliases:         []string{req.Table},
 		Metadata: map[string]interface{}{
-			"schema":       req.Schema,
-			"table":        req.Table,
-			"column_count": len(tableInfo.Columns),
-			"primary_key":  tableInfo.PrimaryKey,
-			"table_type":   tableInfo.Type,
+			"schema":             req.Schema,
+			"table":              req.Table,
+			"column_count":       exportedColumnCount,
+			"total_column_count": len(tableInfo.Columns),
+			"primary_key":        tableInfo.PrimaryKey,
+			"table_type":         tableInfo.Type,
 		},
 	}
 
@@ -196,12 +221,29 @@ func (e *TableExporter) generateTableDocument(table *database.TableInfo, req Exp
 		sb.WriteString(fmt.Sprintf("**Primary Key:** `%s`\n\n", strings.Join(table.PrimaryKey, "`, `")))
 	}
 
+	// Filter columns if specific ones are requested
+	columns := table.Columns
+	if len(req.Columns) > 0 {
+		columnSet := make(map[string]bool)
+		for _, col := range req.Columns {
+			columnSet[col] = true
+		}
+		filtered := make([]database.ColumnInfo, 0, len(req.Columns))
+		for _, col := range table.Columns {
+			if columnSet[col.Name] {
+				filtered = append(filtered, col)
+			}
+		}
+		columns = filtered
+		sb.WriteString(fmt.Sprintf("*Exporting %d of %d columns.*\n\n", len(columns), len(table.Columns)))
+	}
+
 	// Columns
 	sb.WriteString("## Columns\n\n")
 	sb.WriteString("| Column | Type | Nullable | Default | Description |\n")
 	sb.WriteString("|--------|------|----------|---------|-------------|\n")
 
-	for _, col := range table.Columns {
+	for _, col := range columns {
 		nullable := "NOT NULL"
 		if col.IsNullable {
 			nullable = "NULL"

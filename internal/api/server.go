@@ -98,6 +98,7 @@ type Server struct {
 	knowledgeBaseHandler   *ai.KnowledgeBaseHandler
 	kbStorage              *ai.KnowledgeBaseStorage
 	docProcessor           *ai.DocumentProcessor
+	tableExportSyncService *ai.TableExportSyncService
 	rpcHandler             *rpc.Handler
 	rpcScheduler           *rpc.Scheduler
 	graphqlHandler         *GraphQLHandler
@@ -560,6 +561,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	var knowledgeBaseHandler *ai.KnowledgeBaseHandler
 	var kbStorage *ai.KnowledgeBaseStorage
 	var docProcessor *ai.DocumentProcessor
+	var tableExportSyncService *ai.TableExportSyncService
 	var ocrService *ai.OCRService
 	var quotaHandler *QuotaHandler
 	if cfg.AI.Enabled {
@@ -609,11 +611,17 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		knowledgeBaseHandler.SetKnowledgeGraph(knowledgeGraph)
 		log.Info().Msg("Table exporter initialized")
 
+		// Initialize table export sync service
+		tableExportSyncService = ai.NewTableExportSyncService(db, tableExporter, kbStorage)
+		knowledgeBaseHandler.SetSyncService(tableExportSyncService)
+		log.Info().Msg("Table export sync service initialized")
+
 		log.Info().
 			Bool("processing_enabled", docProcessor != nil).
 			Bool("ocr_enabled", ocrService != nil && ocrService.IsEnabled()).
 			Bool("entity_extraction_enabled", true).
 			Bool("table_export_enabled", true).
+			Bool("sync_enabled", true).
 			Msg("Knowledge base handler initialized")
 
 		// Initialize quota service and handler
@@ -750,6 +758,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		knowledgeBaseHandler:   knowledgeBaseHandler,
 		kbStorage:              kbStorage,
 		docProcessor:           docProcessor,
+		tableExportSyncService: tableExportSyncService,
 		rpcHandler:             rpcHandler,
 		rpcScheduler:           rpcScheduler,
 		extensionsHandler:      extensions.NewHandler(extensions.NewService(db)),
@@ -2351,6 +2360,14 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			// Table export routes
 			router.Post("/ai/knowledge-bases/:id/tables/export", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ExportTableToKnowledgeBase)
 			router.Get("/ai/tables", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListExportableTables)
+			router.Get("/ai/tables/:schema/:table", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.GetTableDetails)
+
+			// Table export sync config routes
+			router.Post("/ai/knowledge-bases/:id/sync-configs", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.CreateTableExportSync)
+			router.Get("/ai/knowledge-bases/:id/sync-configs", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListTableExportSyncs)
+			router.Patch("/ai/knowledge-bases/:id/sync-configs/:syncId", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UpdateTableExportSync)
+			router.Delete("/ai/knowledge-bases/:id/sync-configs/:syncId", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.DeleteTableExportSync)
+			router.Post("/ai/knowledge-bases/:id/sync-configs/:syncId/trigger", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.TriggerTableExportSync)
 
 			// Knowledge base chatbots (reverse lookup - which chatbots use this KB)
 			router.Get("/ai/knowledge-bases/:id/chatbots", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListKnowledgeBaseChatbots)
