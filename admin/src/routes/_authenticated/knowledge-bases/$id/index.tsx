@@ -14,15 +14,14 @@ import {
   AlertTriangle,
   Pencil,
   X,
-  Database,
-  Search,
-  Settings,
+  Bot,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   knowledgeBasesApi,
   type KnowledgeBase,
   type KnowledgeBaseDocument,
+  type ChatbotKnowledgeBaseLink,
 } from '@/lib/api'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -65,6 +64,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { KnowledgeBaseTabs } from '@/components/knowledge-bases/knowledge-base-tabs'
 import { Textarea } from '@/components/ui/textarea'
 
 const SUPPORTED_FILE_TYPES = [
@@ -113,6 +113,9 @@ function KnowledgeBaseDetailPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [capabilities, setCapabilities] =
     useState<KnowledgeBaseCapabilities | null>(null)
+  const [linkedChatbots, setLinkedChatbots] = useState<ChatbotKnowledgeBaseLink[]>(
+    []
+  )
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Edit document state
@@ -130,12 +133,14 @@ function KnowledgeBaseDetailPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [kb, docs] = await Promise.all([
+      const [kb, docs, chatbots] = await Promise.all([
         knowledgeBasesApi.get(id),
         knowledgeBasesApi.listDocuments(id),
+        knowledgeBasesApi.listLinkedChatbots(id),
       ])
       setKnowledgeBase(kb)
       setDocuments(docs || [])
+      setLinkedChatbots(chatbots || [])
     } catch {
       toast.error('Failed to fetch knowledge base')
     } finally {
@@ -432,7 +437,7 @@ function KnowledgeBaseDetailPage() {
           <div className='flex items-center gap-1.5'>
             <span className='text-muted-foreground'>Model:</span>
             <Badge variant='outline' className='h-5 px-2 text-[10px]'>
-              {knowledgeBase.embedding_model}
+              {knowledgeBase.embedding_model || 'Default'}
             </Badge>
           </div>
         </div>
@@ -694,34 +699,7 @@ function KnowledgeBaseDetailPage() {
       </div>
 
       {/* Tab Navigation */}
-      <Tabs defaultValue='documents' className='w-full'>
-        <TabsList className='grid w-full grid-cols-4'>
-          <TabsTrigger value='documents' asChild>
-            <a href={`/knowledge-bases/${id}`} className='flex items-center gap-2'>
-              <FileText className='h-4 w-4' />
-              Documents
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value='tables' asChild>
-            <a href={`/knowledge-bases/${id}/tables`} className='flex items-center gap-2'>
-              <Database className='h-4 w-4' />
-              Tables
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value='search' asChild>
-            <a href={`/knowledge-bases/${id}/search`} className='flex items-center gap-2'>
-              <Search className='h-4 w-4' />
-              Search
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value='settings' asChild>
-            <a href={`/knowledge-bases/${id}/settings`} className='flex items-center gap-2'>
-              <Settings className='h-4 w-4' />
-              Settings
-            </a>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <KnowledgeBaseTabs activeTab='documents' knowledgeBaseId={id} />
 
       <Card>
         <CardHeader>
@@ -818,6 +796,51 @@ function KnowledgeBaseDetailPage() {
               </div>
               <ScrollBar orientation='horizontal' />
             </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Linked Chatbots Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Bot className='h-5 w-5' />
+            Linked Chatbots
+          </CardTitle>
+          <CardDescription>
+            Chatbots using this knowledge base for RAG retrieval
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {linkedChatbots.length === 0 ? (
+            <p className='text-muted-foreground text-sm'>
+              No chatbots are using this knowledge base
+            </p>
+          ) : (
+            <div className='space-y-2'>
+              {linkedChatbots.map((link) => (
+                <div
+                  key={link.id}
+                  className='flex items-center justify-between rounded-lg border p-3'
+                >
+                  <a
+                    href={`/chatbots/${link.chatbot_id}`}
+                    className='font-medium hover:underline'
+                  >
+                    {link.chatbot_name || link.chatbot_id}
+                  </a>
+                  <div className='flex items-center gap-2'>
+                    <Badge variant='outline'>Priority: {link.priority}</Badge>
+                    {link.max_chunks && (
+                      <Badge variant='secondary'>Chunks: {link.max_chunks}</Badge>
+                    )}
+                    {!link.enabled && (
+                      <Badge variant='destructive'>Disabled</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

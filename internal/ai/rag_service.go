@@ -65,8 +65,17 @@ func (r *RAGService) RetrieveContext(ctx context.Context, opts RetrieveContextOp
 		return nil, fmt.Errorf("failed to embed query: %w", err)
 	}
 
-	// Search for relevant chunks
-	chunks, err := r.storage.SearchChatbotKnowledge(ctx, opts.ChatbotID, queryEmbedding)
+	// Build search options with user context for isolation
+	searchOpts := SearchChatbotKnowledgeOptions{
+		MaxChunks: opts.MaxChunks,
+		Threshold: opts.Threshold,
+	}
+	if opts.UserID != "" {
+		searchOpts.UserID = &opts.UserID
+	}
+
+	// Search for relevant chunks with user isolation
+	chunks, err := r.storage.SearchChatbotKnowledgeWithOptions(ctx, opts.ChatbotID, queryEmbedding, searchOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search knowledge: %w", err)
 	}
@@ -410,6 +419,11 @@ func (r *RAGService) IsRAGEnabled(ctx context.Context, chatbotID string) bool {
 
 // BuildRAGSystemPromptSection builds the RAG section for a system prompt
 func (r *RAGService) BuildRAGSystemPromptSection(ctx context.Context, chatbotID, userQuery string) (string, error) {
+	return r.BuildRAGSystemPromptSectionWithUser(ctx, chatbotID, userQuery, "")
+}
+
+// BuildRAGSystemPromptSectionWithUser builds the RAG section for a system prompt with user context
+func (r *RAGService) BuildRAGSystemPromptSectionWithUser(ctx context.Context, chatbotID, userQuery, userID string) (string, error) {
 	if !r.IsRAGEnabled(ctx, chatbotID) {
 		return "", nil
 	}
@@ -417,6 +431,7 @@ func (r *RAGService) BuildRAGSystemPromptSection(ctx context.Context, chatbotID,
 	result, err := r.RetrieveContext(ctx, RetrieveContextOptions{
 		ChatbotID: chatbotID,
 		Query:     userQuery,
+		UserID:    userID,
 	})
 	if err != nil {
 		log.Warn().Err(err).Str("chatbot_id", chatbotID).Msg("Failed to retrieve RAG context")

@@ -24,6 +24,13 @@ import type {
   LinkKnowledgeBaseRequest,
   UpdateChatbotKnowledgeBaseRequest,
   SearchKnowledgeBaseResponse,
+  UpdateDocumentRequest,
+  DeleteDocumentsByFilterRequest,
+  DeleteDocumentsByFilterResponse,
+  KnowledgeBaseCapabilities,
+  Entity,
+  EntityRelationship,
+  KnowledgeGraphData,
 } from "./types";
 
 /**
@@ -416,9 +423,7 @@ export class FluxbaseAdminAI {
    * const { data, error } = await client.admin.ai.setEmbeddingProvider('uuid')
    * ```
    */
-  async setEmbeddingProvider(
-    id: string,
-  ): Promise<{
+  async setEmbeddingProvider(id: string): Promise<{
     data: { id: string; use_for_embeddings: boolean } | null;
     error: Error | null;
   }> {
@@ -444,9 +449,7 @@ export class FluxbaseAdminAI {
    * const { data, error } = await client.admin.ai.clearEmbeddingProvider('uuid')
    * ```
    */
-  async clearEmbeddingProvider(
-    id: string,
-  ): Promise<{
+  async clearEmbeddingProvider(id: string): Promise<{
     data: { use_for_embeddings: boolean } | null;
     error: Error | null;
   }> {
@@ -933,6 +936,300 @@ export class FluxbaseAdminAI {
         `/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases/${knowledgeBaseId}`,
       );
       return { data: null, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ============================================================================
+  // DOCUMENT UPDATE AND BULK DELETE
+  // ============================================================================
+
+  /**
+   * Update a document in a knowledge base
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param documentId - Document ID
+   * @param updates - Fields to update
+   * @returns Promise resolving to { data, error } tuple with updated document
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.updateDocument('kb-uuid', 'doc-uuid', {
+   *   title: 'Updated Title',
+   *   tags: ['updated', 'tag'],
+   *   metadata: { category: 'updated' },
+   * })
+   * ```
+   */
+  async updateDocument(
+    knowledgeBaseId: string,
+    documentId: string,
+    updates: UpdateDocumentRequest,
+  ): Promise<{ data: KnowledgeBaseDocument | null; error: Error | null }> {
+    try {
+      const data = await this.fetch.patch<KnowledgeBaseDocument>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/documents/${documentId}`,
+        updates,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Delete documents from a knowledge base by filter
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param filter - Filter criteria for deletion
+   * @returns Promise resolving to { data, error } tuple with deletion count
+   *
+   * @example
+   * ```typescript
+   * // Delete by tags
+   * const { data, error } = await client.admin.ai.deleteDocumentsByFilter('kb-uuid', {
+   *   tags: ['deprecated', 'archive'],
+   * })
+   *
+   * // Delete by metadata
+   * const { data, error } = await client.admin.ai.deleteDocumentsByFilter('kb-uuid', {
+   *   metadata: { source: 'legacy-system' },
+   * })
+   *
+   * if (data) {
+   *   console.log(`Deleted ${data.deleted_count} documents`)
+   * }
+   * ```
+   */
+  async deleteDocumentsByFilter(
+    knowledgeBaseId: string,
+    filter: DeleteDocumentsByFilterRequest,
+  ): Promise<{
+    data: DeleteDocumentsByFilterResponse | null;
+    error: Error | null;
+  }> {
+    try {
+      const data = await this.fetch.post<DeleteDocumentsByFilterResponse>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/documents/delete-by-filter`,
+        filter,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ============================================================================
+  // KNOWLEDGE BASE CAPABILITIES
+  // ============================================================================
+
+  /**
+   * Get knowledge base system capabilities
+   *
+   * Returns information about OCR support, supported file types, etc.
+   *
+   * @returns Promise resolving to { data, error } tuple with capabilities
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.getCapabilities()
+   * if (data) {
+   *   console.log('OCR available:', data.ocr_available)
+   *   console.log('Supported types:', data.supported_file_types)
+   * }
+   * ```
+   */
+  async getCapabilities(): Promise<{
+    data: KnowledgeBaseCapabilities | null;
+    error: Error | null;
+  }> {
+    try {
+      const data = await this.fetch.get<KnowledgeBaseCapabilities>(
+        "/api/v1/admin/ai/knowledge-bases/capabilities",
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ============================================================================
+  // KNOWLEDGE GRAPH / ENTITIES
+  // ============================================================================
+
+  /**
+   * List entities in a knowledge base
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param entityType - Optional entity type filter
+   * @returns Promise resolving to { data, error } tuple with array of entities
+   *
+   * @example
+   * ```typescript
+   * // List all entities
+   * const { data, error } = await client.admin.ai.listEntities('kb-uuid')
+   *
+   * // Filter by type
+   * const { data, error } = await client.admin.ai.listEntities('kb-uuid', 'person')
+   *
+   * if (data) {
+   *   console.log('Entities:', data.map(e => e.name))
+   * }
+   * ```
+   */
+  async listEntities(
+    knowledgeBaseId: string,
+    entityType?: string,
+  ): Promise<{ data: Entity[] | null; error: Error | null }> {
+    try {
+      const params = entityType ? `?entity_type=${entityType}` : "";
+      const response = await this.fetch.get<{
+        entities: Entity[];
+        count: number;
+      }>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/entities${params}`,
+      );
+      return { data: response.entities || [], error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Search for entities in a knowledge base
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param query - Search query
+   * @param types - Optional entity type filters
+   * @returns Promise resolving to { data, error } tuple with matching entities
+   *
+   * @example
+   * ```typescript
+   * // Search all entity types
+   * const { data, error } = await client.admin.ai.searchEntities('kb-uuid', 'John')
+   *
+   * // Search specific types
+   * const { data, error } = await client.admin.ai.searchEntities('kb-uuid', 'Apple', ['organization', 'product'])
+   *
+   * if (data) {
+   *   console.log('Found entities:', data.map(e => `${e.name} (${e.entity_type})`))
+   * }
+   * ```
+   */
+  async searchEntities(
+    knowledgeBaseId: string,
+    query: string,
+    types?: string[],
+  ): Promise<{ data: Entity[] | null; error: Error | null }> {
+    try {
+      const params = new URLSearchParams({ query });
+      if (types && types.length > 0) {
+        params.append("types", types.join(","));
+      }
+      const response = await this.fetch.get<{
+        entities: Entity[];
+        count: number;
+      }>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/entities/search?${params.toString()}`,
+      );
+      return { data: response.entities || [], error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Get relationships for a specific entity
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @param entityId - Entity ID
+   * @returns Promise resolving to { data, error } tuple with entity relationships
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.getEntityRelationships('kb-uuid', 'entity-uuid')
+   * if (data) {
+   *   console.log('Relationships:', data.map(r => `${r.relationship_type} -> ${r.target_entity?.name}`))
+   * }
+   * ```
+   */
+  async getEntityRelationships(
+    knowledgeBaseId: string,
+    entityId: string,
+  ): Promise<{ data: EntityRelationship[] | null; error: Error | null }> {
+    try {
+      const response = await this.fetch.get<{
+        relationships: EntityRelationship[];
+        count: number;
+      }>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/entities/${entityId}/relationships`,
+      );
+      return { data: response.relationships || [], error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Get the knowledge graph for a knowledge base
+   *
+   * Returns all entities and relationships for visualization.
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @returns Promise resolving to { data, error } tuple with graph data
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.getKnowledgeGraph('kb-uuid')
+   * if (data) {
+   *   console.log('Graph:', data.entity_count, 'entities,', data.relationship_count, 'relationships')
+   *   // Use with visualization libraries like D3.js, Cytoscape.js, etc.
+   * }
+   * ```
+   */
+  async getKnowledgeGraph(
+    knowledgeBaseId: string,
+  ): Promise<{ data: KnowledgeGraphData | null; error: Error | null }> {
+    try {
+      const data = await this.fetch.get<KnowledgeGraphData>(
+        `/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/graph`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ============================================================================
+  // KNOWLEDGE BASE REVERSE LOOKUP
+  // ============================================================================
+
+  /**
+   * List all chatbots that use a specific knowledge base
+   *
+   * Reverse lookup to find which chatbots are linked to a knowledge base.
+   *
+   * @param knowledgeBaseId - Knowledge base ID
+   * @returns Promise resolving to { data, error } tuple with array of chatbot summaries
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.admin.ai.listChatbotsUsingKB('kb-uuid')
+   * if (data) {
+   *   console.log('Used by chatbots:', data.map(c => c.name))
+   * }
+   * ```
+   */
+  async listChatbotsUsingKB(
+    knowledgeBaseId: string,
+  ): Promise<{ data: AIChatbotSummary[] | null; error: Error | null }> {
+    try {
+      const response = await this.fetch.get<{
+        chatbots: AIChatbotSummary[];
+        count: number;
+      }>(`/api/v1/admin/ai/knowledge-bases/${knowledgeBaseId}/chatbots`);
+      return { data: response.chatbots || [], error: null };
     } catch (error) {
       return { data: null, error: error as Error };
     }

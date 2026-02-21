@@ -107,7 +107,7 @@ func (kg *KnowledgeGraph) ListEntities(ctx context.Context, kbID string, entityT
 	}
 	defer rows.Close()
 
-	var entities []Entity
+	entities := make([]Entity, 0)
 	for rows.Next() {
 		var entity Entity
 		if err := rows.Scan(
@@ -150,7 +150,7 @@ func (kg *KnowledgeGraph) SearchEntities(ctx context.Context, kbID string, query
 	}
 	defer rows.Close()
 
-	var entities []Entity
+	entities := make([]Entity, 0)
 	for rows.Next() {
 		var entity Entity
 		if err := rows.Scan(
@@ -221,7 +221,7 @@ func (kg *KnowledgeGraph) GetRelationships(ctx context.Context, kbID string, ent
 	}
 	defer rows.Close()
 
-	var relationships []EntityRelationship
+	relationships := make([]EntityRelationship, 0)
 	for rows.Next() {
 		var rel EntityRelationship
 		var sourceID, sourceType, sourceName string
@@ -277,7 +277,7 @@ func (kg *KnowledgeGraph) FindRelatedEntities(ctx context.Context, kbID string, 
 	}
 	defer rows.Close()
 
-	var related []RelatedEntity
+	related := make([]RelatedEntity, 0)
 	for rows.Next() {
 		var r RelatedEntity
 		if err := rows.Scan(
@@ -355,7 +355,7 @@ func (kg *KnowledgeGraph) GetDocumentEntities(ctx context.Context, documentID st
 	}
 	defer rows.Close()
 
-	var docEntities []DocumentEntity
+	docEntities := make([]DocumentEntity, 0)
 	for rows.Next() {
 		var de DocumentEntity
 		var entity Entity
@@ -393,7 +393,7 @@ func (kg *KnowledgeGraph) GetEntitiesByDocument(ctx context.Context, documentID 
 	}
 	defer rows.Close()
 
-	var entities []Entity
+	entities := make([]Entity, 0)
 	for rows.Next() {
 		var entity Entity
 		if err := rows.Scan(

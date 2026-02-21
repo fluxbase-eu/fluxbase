@@ -42,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { KnowledgeBaseTabs } from '@/components/knowledge-bases/knowledge-base-tabs'
 
 const RESULTS_PER_PAGE = 5
 
@@ -190,6 +191,9 @@ function KnowledgeBaseSearchPage() {
           hybrid
         </p>
       </div>
+
+      {/* Tab Navigation */}
+      <KnowledgeBaseTabs activeTab='search' knowledgeBaseId={id} />
 
       <Card>
         <CardHeader>

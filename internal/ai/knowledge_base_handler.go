@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/fluxbase-eu/fluxbase/internal/storage"
@@ -19,6 +20,7 @@ type KnowledgeBaseHandler struct {
 	textExtractor  *TextExtractor
 	ocrService     *OCRService
 	tableExporter  *TableExporter
+	knowledgeGraph *KnowledgeGraph
 }
 
 // NewKnowledgeBaseHandler creates a new knowledge base handler
@@ -43,6 +45,11 @@ func NewKnowledgeBaseHandlerWithOCR(storage *KnowledgeBaseStorage, processor *Do
 // SetStorageService sets the storage service for file uploads
 func (h *KnowledgeBaseHandler) SetStorageService(svc *storage.Service) {
 	h.storageService = svc
+}
+
+// SetKnowledgeGraph sets the knowledge graph service for entity operations
+func (h *KnowledgeBaseHandler) SetKnowledgeGraph(kg *KnowledgeGraph) {
+	h.knowledgeGraph = kg
 }
 
 // ============================================================================
@@ -1315,6 +1322,219 @@ func (h *KnowledgeBaseHandler) ListExportableTables(c fiber.Ctx) error {
 		"tables": summaries,
 		"count":  len(summaries),
 	})
+}
+
+// ============================================================================
+// KNOWLEDGE BASE CHATBOTS (Reverse Lookup)
+// ============================================================================
+
+// ListKnowledgeBaseChatbots returns all chatbots linked to a knowledge base
+// GET /api/v1/admin/ai/knowledge-bases/:id/chatbots
+func (h *KnowledgeBaseHandler) ListKnowledgeBaseChatbots(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if kbID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Knowledge base ID is required",
+		})
+	}
+
+	links, err := h.storage.GetKnowledgeBaseChatbots(ctx, kbID)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Msg("Failed to get knowledge base chatbots")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get linked chatbots",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"chatbots": links,
+		"count":    len(links),
+	})
+}
+
+// ============================================================================
+// KNOWLEDGE GRAPH ENDPOINTS
+// ============================================================================
+
+// ListEntities lists all entities in a knowledge base
+// GET /api/v1/admin/ai/knowledge-bases/:id/entities
+func (h *KnowledgeBaseHandler) ListEntities(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+	entityType := c.Query("type")
+
+	if h.knowledgeGraph == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Knowledge graph service not available",
+		})
+	}
+
+	var entityTypeFilter *EntityType
+	if entityType != "" {
+		t := EntityType(entityType)
+		entityTypeFilter = &t
+	}
+
+	entities, err := h.knowledgeGraph.ListEntities(ctx, kbID, entityTypeFilter)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Msg("Failed to list entities")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to list entities",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"entities": entities,
+		"count":    len(entities),
+	})
+}
+
+// SearchEntities searches entities by name
+// GET /api/v1/admin/ai/knowledge-bases/:id/entities/search
+func (h *KnowledgeBaseHandler) SearchEntities(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+	query := c.Query("q")
+	entityTypes := c.Query("types")
+	limitStr := c.Query("limit", "50")
+
+	limit := 50
+	if limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	if h.knowledgeGraph == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Knowledge graph service not available",
+		})
+	}
+
+	if query == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Query parameter 'q' is required",
+		})
+	}
+
+	var types []EntityType
+	if entityTypes != "" {
+		for _, t := range splitCommaList(entityTypes) {
+			types = append(types, EntityType(t))
+		}
+	}
+
+	entities, err := h.knowledgeGraph.SearchEntities(ctx, kbID, query, types, limit)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Str("query", query).Msg("Failed to search entities")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to search entities",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"entities": entities,
+		"count":    len(entities),
+	})
+}
+
+// GetEntityRelationships gets relationships for an entity
+// GET /api/v1/admin/ai/knowledge-bases/:id/entities/:entity_id/relationships
+func (h *KnowledgeBaseHandler) GetEntityRelationships(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+	entityID := c.Params("entity_id")
+
+	if h.knowledgeGraph == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Knowledge graph service not available",
+		})
+	}
+
+	if entityID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Entity ID is required",
+		})
+	}
+
+	relationships, err := h.knowledgeGraph.GetRelationships(ctx, kbID, entityID)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Str("entity_id", entityID).Msg("Failed to get entity relationships")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get entity relationships",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"relationships": relationships,
+		"count":         len(relationships),
+	})
+}
+
+// GetKnowledgeGraph returns the full graph data for visualization
+// GET /api/v1/admin/ai/knowledge-bases/:id/graph
+func (h *KnowledgeBaseHandler) GetKnowledgeGraph(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	kbID := c.Params("id")
+
+	if h.knowledgeGraph == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Knowledge graph service not available",
+		})
+	}
+
+	// Get all entities
+	entities, err := h.knowledgeGraph.ListEntities(ctx, kbID, nil)
+	if err != nil {
+		log.Error().Err(err).Str("kb_id", kbID).Msg("Failed to list entities for graph")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get knowledge graph",
+		})
+	}
+
+	// Get relationships for each entity
+	var allRelationships []EntityRelationship
+	relationshipMap := make(map[string]bool) // Deduplicate relationships
+
+	for _, entity := range entities {
+		relationships, err := h.knowledgeGraph.GetRelationships(ctx, kbID, entity.ID)
+		if err != nil {
+			log.Warn().Err(err).Str("entity_id", entity.ID).Msg("Failed to get relationships for entity")
+			continue
+		}
+		for _, rel := range relationships {
+			key := rel.ID
+			if !relationshipMap[key] {
+				relationshipMap[key] = true
+				allRelationships = append(allRelationships, rel)
+			}
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"entities":           entities,
+		"relationships":      allRelationships,
+		"entity_count":       len(entities),
+		"relationship_count": len(allRelationships),
+	})
+}
+
+// splitCommaList splits a comma-separated string into a slice
+func splitCommaList(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
 }
 
 // fiber:context-methods migrated

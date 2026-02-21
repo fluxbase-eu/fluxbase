@@ -3360,6 +3360,101 @@ export interface SearchKnowledgeBaseResponse {
   query: string;
 }
 
+/**
+ * Entity type classification (matching backend EntityType)
+ */
+export type EntityType =
+  | "person"
+  | "organization"
+  | "location"
+  | "concept"
+  | "product"
+  | "event"
+  | "table"
+  | "url"
+  | "api_endpoint"
+  | "datetime"
+  | "code_reference"
+  | "error"
+  | "other";
+
+/**
+ * Extracted entity from knowledge base documents
+ */
+export interface Entity {
+  id: string;
+  knowledge_base_id: string;
+  entity_type: EntityType;
+  name: string;
+  canonical_name: string;
+  aliases: string[];
+  metadata: Record<string, unknown>;
+  document_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Relationship between two entities
+ */
+export interface EntityRelationship {
+  id: string;
+  knowledge_base_id: string;
+  source_entity_id: string;
+  target_entity_id: string;
+  relationship_type: string;
+  confidence?: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  source_entity?: Entity;
+  target_entity?: Entity;
+}
+
+/**
+ * Knowledge graph data with entities and relationships
+ */
+export interface KnowledgeGraphData {
+  entities: Entity[];
+  relationships: EntityRelationship[];
+  entity_count: number;
+  relationship_count: number;
+}
+
+/**
+ * Request to update a document
+ */
+export interface UpdateDocumentRequest {
+  title?: string;
+  tags?: string[];
+  metadata?: Record<string, string>;
+}
+
+/**
+ * Request to delete documents by filter
+ */
+export interface DeleteDocumentsByFilterRequest {
+  tags?: string[];
+  metadata?: Record<string, string>;
+  metadata_filter?: Record<string, string>;
+}
+
+/**
+ * Response from deleting documents by filter
+ */
+export interface DeleteDocumentsByFilterResponse {
+  deleted_count: number;
+}
+
+/**
+ * Knowledge base capabilities and limits
+ */
+export interface KnowledgeBaseCapabilities {
+  ocr_enabled: boolean;
+  ocr_available: boolean;
+  ocr_languages: string[];
+  supported_file_types: string[];
+}
+
 // ============================================================================
 // Health Check Types
 // ============================================================================

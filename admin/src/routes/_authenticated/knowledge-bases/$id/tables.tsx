@@ -37,6 +37,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { KnowledgeBaseTabs } from '@/components/knowledge-bases/knowledge-base-tabs'
 
 export const Route = createFileRoute('/_authenticated/knowledge-bases/$id/tables')({
   component: KnowledgeBaseTablesPage,
@@ -130,6 +131,9 @@ function KnowledgeBaseTablesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Tab Navigation */}
+      <KnowledgeBaseTabs activeTab='tables' knowledgeBaseId={id} />
 
       <Card>
         <CardHeader>

@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { KnowledgeBaseTabs } from '@/components/knowledge-bases/knowledge-base-tabs'
 
 export const Route = createFileRoute(
   '/_authenticated/knowledge-bases/$id/settings'
@@ -144,6 +145,9 @@ function KnowledgeBaseSettingsPage() {
         </p>
       </div>
 
+      {/* Tab Navigation */}
+      <KnowledgeBaseTabs activeTab='settings' knowledgeBaseId={id} />
+
       <div className='grid gap-6'>
         <Card>
           <CardHeader>
@@ -220,7 +224,7 @@ function KnowledgeBaseSettingsPage() {
                 </Label>
                 <div>
                   <Badge variant='outline'>
-                    {knowledgeBase.embedding_model}
+                    {knowledgeBase.embedding_model || 'Default (not set)'}
                   </Badge>
                 </div>
               </div>

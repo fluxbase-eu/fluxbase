@@ -97,6 +97,7 @@ type Server struct {
 	aiMetrics              *observability.Metrics
 	knowledgeBaseHandler   *ai.KnowledgeBaseHandler
 	kbStorage              *ai.KnowledgeBaseStorage
+	docProcessor           *ai.DocumentProcessor
 	rpcHandler             *rpc.Handler
 	rpcScheduler           *rpc.Scheduler
 	graphqlHandler         *GraphQLHandler
@@ -558,6 +559,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	// Create knowledge base handler for RAG management
 	var knowledgeBaseHandler *ai.KnowledgeBaseHandler
 	var kbStorage *ai.KnowledgeBaseStorage
+	var docProcessor *ai.DocumentProcessor
 	var ocrService *ai.OCRService
 	var quotaHandler *QuotaHandler
 	if cfg.AI.Enabled {
@@ -589,7 +591,6 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		entityExtractor := ai.NewRuleBasedExtractor()
 		log.Info().Msg("Entity extractor initialized")
 
-		var docProcessor *ai.DocumentProcessor
 		if vectorHandler != nil && vectorHandler.GetEmbeddingService() != nil {
 			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService(), entityExtractor, knowledgeGraph)
 		}
@@ -605,6 +606,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		// Initialize table exporter for database schema export
 		tableExporter := ai.NewTableExporter(db, docProcessor, knowledgeGraph, kbStorage)
 		knowledgeBaseHandler.SetTableExporter(tableExporter)
+		knowledgeBaseHandler.SetKnowledgeGraph(knowledgeGraph)
 		log.Info().Msg("Table exporter initialized")
 
 		log.Info().
@@ -747,6 +749,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		aiMetrics:              aiMetrics,
 		knowledgeBaseHandler:   knowledgeBaseHandler,
 		kbStorage:              kbStorage,
+		docProcessor:           docProcessor,
 		rpcHandler:             rpcHandler,
 		rpcScheduler:           rpcScheduler,
 		extensionsHandler:      extensions.NewHandler(extensions.NewService(db)),
@@ -1739,8 +1742,14 @@ func (s *Server) setupRoutes() {
 				middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
 				middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
 			)
-			ai.RegisterUserKnowledgeBaseRoutes(userKBRouter, s.kbStorage)
-			log.Info().Msg("User-facing knowledge base routes registered")
+			// Use document-enabled routes if processor is available
+			if s.docProcessor != nil {
+				ai.RegisterUserKnowledgeBaseRoutesWithDocuments(userKBRouter, s.kbStorage, s.docProcessor)
+				log.Info().Msg("User-facing knowledge base routes registered (with document support)")
+			} else {
+				ai.RegisterUserKnowledgeBaseRoutes(userKBRouter, s.kbStorage)
+				log.Info().Msg("User-facing knowledge base routes registered")
+			}
 		}
 	}
 
@@ -2342,6 +2351,15 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			// Table export routes
 			router.Post("/ai/knowledge-bases/:id/tables/export", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ExportTableToKnowledgeBase)
 			router.Get("/ai/tables", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListExportableTables)
+
+			// Knowledge base chatbots (reverse lookup - which chatbots use this KB)
+			router.Get("/ai/knowledge-bases/:id/chatbots", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListKnowledgeBaseChatbots)
+
+			// Knowledge graph endpoints
+			router.Get("/ai/knowledge-bases/:id/entities", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.ListEntities)
+			router.Get("/ai/knowledge-bases/:id/entities/search", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.SearchEntities)
+			router.Get("/ai/knowledge-bases/:id/entities/:entity_id/relationships", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.GetEntityRelationships)
+			router.Get("/ai/knowledge-bases/:id/graph", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.GetKnowledgeGraph)
 		}
 	}
 
