@@ -166,6 +166,14 @@ func (s *TriggerService) CheckBacklogNow(ctx context.Context) {
 	s.checkForRetries(ctx)
 }
 
+// ProcessWebhookEventsNow synchronously processes all pending events for a specific webhook.
+// This is useful for testing to ensure events are processed immediately without relying on
+// the async worker queue. It bypasses the event channel and directly processes events.
+func (s *TriggerService) ProcessWebhookEventsNow(ctx context.Context, webhookID uuid.UUID) error {
+	s.processWebhookEvents(ctx, webhookID, 0)
+	return nil
+}
+
 // WaitForReady blocks until the LISTEN subscription is established or context is cancelled.
 // This is primarily useful for testing to ensure the listener is ready before triggering events.
 // Returns an error if the listener failed to start.
