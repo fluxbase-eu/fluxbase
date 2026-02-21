@@ -8,10 +8,27 @@
   ],
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
+  "regexManagers": [
+    {
+      "description": "Update GO_VERSION in CI workflow",
+      "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"],
+      "matchStrings": ["GO_VERSION:\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "golang-version"
+    }
+  ],
   "packageRules": [
     {
-      "description": "Group Go dependencies",
+      "description": "Pin Go to 1.25.x until golangci-lint supports 1.26",
+      "matchPackageNames": ["go"],
+      "matchDatasources": ["golang-version", "gomod"],
+      "allowedVersions": "1.25.x",
+      "groupName": "go"
+    },
+    {
+      "description": "Group Go module dependencies",
       "matchManagers": ["gomod"],
+      "matchPackageNames": ["!go"],
       "groupName": "go dependencies"
     },
     {
@@ -35,6 +52,17 @@
       "matchPackageNames": ["eslint", "@eslint/js"],
       "allowedVersions": "9.x",
       "matchManagers": ["npm"]
+    },
+    {
+      "description": "Allow both elasticsearch v8 and v9 as separate major versions",
+      "matchPackageNames": [
+        "github.com/elastic/go-elasticsearch/v8",
+        "github.com/elastic/go-elasticsearch/v9"
+      ],
+      "separateMajorMinor": false,
+      "major": {
+        "enabled": false
+      }
     }
   ]
 }
