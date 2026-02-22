@@ -35,6 +35,7 @@ var (
 	kbDocMetadata     string
 	kbSearchLimit     int
 	kbSearchThreshold float64
+	kbNamespace       string
 
 	// New flags for extended KB functionality
 	kbDocTags              string // Comma-separated tags for upload/add
@@ -330,10 +331,14 @@ Examples:
 }
 
 func init() {
+	// List flags
+	kbListCmd.Flags().StringVar(&kbNamespace, "namespace", "", "Filter by namespace")
+
 	// Create flags
 	kbCreateCmd.Flags().StringVar(&kbDescription, "description", "", "Knowledge base description")
 	kbCreateCmd.Flags().StringVar(&kbEmbeddingModel, "embedding-model", "", "Embedding model to use")
 	kbCreateCmd.Flags().IntVar(&kbChunkSize, "chunk-size", 512, "Document chunk size")
+	kbCreateCmd.Flags().StringVar(&kbNamespace, "namespace", "default", "Target namespace")
 
 	// Update flags
 	kbUpdateCmd.Flags().StringVar(&kbDescription, "description", "", "Knowledge base description")
@@ -408,11 +413,19 @@ func runKBList(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Build URL with optional namespace filter
+	path := "/api/v1/admin/ai/knowledge-bases"
+	if kbNamespace != "" {
+		params := url.Values{}
+		params.Add("namespace", kbNamespace)
+		path += "?" + params.Encode()
+	}
+
 	var response struct {
 		KnowledgeBases []map[string]interface{} `json:"knowledge_bases"`
 		Count          int                      `json:"count"`
 	}
-	if err := apiClient.DoGet(ctx, "/api/v1/admin/ai/knowledge-bases", nil, &response); err != nil {
+	if err := apiClient.DoGet(ctx, path, nil, &response); err != nil {
 		return err
 	}
 	kbs := response.KnowledgeBases
@@ -426,17 +439,18 @@ func runKBList(cmd *cobra.Command, args []string) error {
 
 	if formatter.Format == output.FormatTable {
 		data := output.TableData{
-			Headers: []string{"ID", "NAME", "DOCUMENTS", "CREATED"},
+			Headers: []string{"ID", "NAME", "NAMESPACE", "DOCUMENTS", "CREATED"},
 			Rows:    make([][]string, len(kbs)),
 		}
 
 		for i, kb := range kbs {
 			id := getStringValue(kb, "id")
 			name := getStringValue(kb, "name")
+			namespace := getStringValue(kb, "namespace")
 			docs := fmt.Sprintf("%d", getIntValue(kb, "document_count"))
 			created := getStringValue(kb, "created_at")
 
-			data.Rows[i] = []string{id, name, docs, created}
+			data.Rows[i] = []string{id, name, namespace, docs, created}
 		}
 
 		formatter.PrintTable(data)
@@ -472,6 +486,7 @@ func runKBCreate(cmd *cobra.Command, args []string) error {
 
 	body := map[string]interface{}{
 		"name":       name,
+		"namespace":  kbNamespace,
 		"chunk_size": kbChunkSize,
 	}
 
