@@ -141,16 +141,18 @@ func (h *KnowledgeBaseHandler) CreateKnowledgeBase(c fiber.Ctx) error {
 		})
 	}
 
-	// Set created_by to current user if available, or use system user for service role
+	// Set created_by and owner_id to current user if available, or use system user for service role
 	if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
 		kb.CreatedBy = &uid
+		kb.OwnerID = &uid
 	} else if role := c.Locals("rls_role"); role == "service_role" {
 		systemUserID := SystemUserID
 		kb.CreatedBy = &systemUserID
+		kb.OwnerID = &systemUserID
 	}
 	if kb.CreatedBy != nil {
 		if err := h.storage.UpdateKnowledgeBase(ctx, kb); err != nil {
-			log.Warn().Err(err).Msg("Failed to set KB created_by")
+			log.Warn().Err(err).Msg("Failed to set KB owner")
 		}
 	}
 
