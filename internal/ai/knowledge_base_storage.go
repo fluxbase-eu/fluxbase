@@ -42,8 +42,8 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 			id, name, namespace, description,
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
-			enabled, source, created_by, visibility
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			enabled, source, created_by, visibility, owner_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING created_at, updated_at
 	`
 
@@ -51,7 +51,7 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Namespace, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility,
+		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility, kb.OwnerID,
 	).Scan(&kb.CreatedAt, &kb.UpdatedAt)
 }
 
