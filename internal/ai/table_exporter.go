@@ -122,77 +122,81 @@ func (e *TableExporter) ExportTable(ctx context.Context, req ExportTableRequest)
 		return nil, fmt.Errorf("failed to create document: %w", err)
 	}
 
-	// Process document (chunks + embeddings)
-	opts := ProcessDocumentOptions{
-		ChunkSize:     512,
-		ChunkOverlap:  50,
-		ChunkStrategy: ChunkingStrategyRecursive,
-	}
-	if err := e.processor.ProcessDocument(ctx, doc, opts); err != nil {
-		return nil, fmt.Errorf("failed to process document: %w", err)
+	// Process document (chunks + embeddings) - only if processor is available
+	if e.processor != nil {
+		opts := ProcessDocumentOptions{
+			ChunkSize:     512,
+			ChunkOverlap:  50,
+			ChunkStrategy: ChunkingStrategyRecursive,
+		}
+		if err := e.processor.ProcessDocument(ctx, doc, opts); err != nil {
+			return nil, fmt.Errorf("failed to process document: %w", err)
+		}
 	}
 
 	result := &ExportTableResult{
 		DocumentID: doc.ID,
 	}
 
-	// Create table entity
-	tableEntity := &Entity{
-		ID:              uuid.New().String(),
-		KnowledgeBaseID: req.KnowledgeBaseID,
-		EntityType:      EntityTable,
-		Name:            fmt.Sprintf("%s.%s", req.Schema, req.Table),
-		CanonicalName:   fmt.Sprintf("%s.%s", req.Schema, req.Table),
-		Aliases:         []string{req.Table},
-		Metadata: map[string]interface{}{
-			"schema":             req.Schema,
-			"table":              req.Table,
-			"column_count":       exportedColumnCount,
-			"total_column_count": len(tableInfo.Columns),
-			"primary_key":        tableInfo.PrimaryKey,
-			"table_type":         tableInfo.Type,
-		},
-	}
+	// Create table entity (only if knowledge graph is available)
+	if e.knowledgeGraph != nil {
+		tableEntity := &Entity{
+			ID:              uuid.New().String(),
+			KnowledgeBaseID: req.KnowledgeBaseID,
+			EntityType:      EntityTable,
+			Name:            fmt.Sprintf("%s.%s", req.Schema, req.Table),
+			CanonicalName:   fmt.Sprintf("%s.%s", req.Schema, req.Table),
+			Aliases:         []string{req.Table},
+			Metadata: map[string]interface{}{
+				"schema":             req.Schema,
+				"table":              req.Table,
+				"column_count":       exportedColumnCount,
+				"total_column_count": len(tableInfo.Columns),
+				"primary_key":        tableInfo.PrimaryKey,
+				"table_type":         tableInfo.Type,
+			},
+		}
 
-	if err := e.knowledgeGraph.AddEntity(ctx, tableEntity); err != nil {
-		return nil, fmt.Errorf("failed to add table entity: %w", err)
-	}
-	result.EntityID = tableEntity.ID
+		if err := e.knowledgeGraph.AddEntity(ctx, tableEntity); err != nil {
+			return nil, fmt.Errorf("failed to add table entity: %w", err)
+		}
+		result.EntityID = tableEntity.ID
 
-	// Create foreign key relationships
-	if req.IncludeForeignKeys {
-		for _, fk := range tableInfo.ForeignKeys {
-			// Create entity for referenced table (if different)
-			refTableName := fmt.Sprintf("%s.%s", req.Schema, fk.ReferencedTable)
-			refEntity := &Entity{
-				ID:              uuid.New().String(),
-				KnowledgeBaseID: req.KnowledgeBaseID,
-				EntityType:      EntityTable,
-				Name:            refTableName,
-				CanonicalName:   refTableName,
-				Aliases:         []string{fk.ReferencedTable},
-			}
-			_ = e.knowledgeGraph.AddEntity(ctx, refEntity)
+		// Create foreign key relationships
+		if req.IncludeForeignKeys {
+			for _, fk := range tableInfo.ForeignKeys {
+				// Create entity for referenced table (if different)
+				refTableName := fmt.Sprintf("%s.%s", req.Schema, fk.ReferencedTable)
+				refEntity := &Entity{
+					ID:              uuid.New().String(),
+					KnowledgeBaseID: req.KnowledgeBaseID,
+					EntityType:      EntityTable,
+					Name:            refTableName,
+					CanonicalName:   refTableName,
+					Aliases:         []string{fk.ReferencedTable},
+				}
+				_ = e.knowledgeGraph.AddEntity(ctx, refEntity)
 
-			// Create relationship
-			rel := &EntityRelationship{
-				ID:               uuid.New().String(),
-				KnowledgeBaseID:  req.KnowledgeBaseID,
-				SourceEntityID:   tableEntity.ID,
-				TargetEntityID:   refEntity.ID,
-				RelationshipType: RelForeignKey,
-				Direction:        DirectionForward,
-				Metadata: map[string]interface{}{
-					"column":            fk.ColumnName,
-					"referenced_column": fk.ReferencedColumn,
-					"on_delete":         fk.OnDelete,
-					"on_update":         fk.OnUpdate,
-				},
+				// Create relationship
+				rel := &EntityRelationship{
+					ID:               uuid.New().String(),
+					KnowledgeBaseID:  req.KnowledgeBaseID,
+					SourceEntityID:   tableEntity.ID,
+					TargetEntityID:   refEntity.ID,
+					RelationshipType: RelForeignKey,
+					Direction:        DirectionForward,
+					Metadata: map[string]interface{}{
+						"column":            fk.ColumnName,
+						"referenced_column": fk.ReferencedColumn,
+						"on_delete":         fk.OnDelete,
+						"on_update":         fk.OnUpdate,
+					},
+				}
+				if err := e.knowledgeGraph.AddRelationship(ctx, rel); err != nil {
+					return nil, fmt.Errorf("failed to add FK relationship: %w", err)
+				}
+				result.RelationshipIDs = append(result.RelationshipIDs, rel.ID)
 			}
-			if err := e.knowledgeGraph.AddRelationship(ctx, rel); err != nil {
-				return nil, fmt.Errorf("failed to add FK relationship: %w", err)
-			}
-			result.RelationshipIDs = append(result.RelationshipIDs, rel.ID)
 		}
 	}
 

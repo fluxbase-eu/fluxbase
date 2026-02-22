@@ -141,14 +141,11 @@ func (h *KnowledgeBaseHandler) CreateKnowledgeBase(c fiber.Ctx) error {
 		})
 	}
 
-	// Set created_by and owner_id to current user if available, or use system user for service role
+	// Set created_by and owner_id to current user if available
+	// For service role operations without a user context, these remain NULL
 	if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
 		kb.CreatedBy = &uid
 		kb.OwnerID = &uid
-	} else if role, ok := c.Locals("rls_role").(string); ok && role == "service_role" {
-		systemUserID := SystemUserID
-		kb.CreatedBy = &systemUserID
-		kb.OwnerID = &systemUserID
 	}
 	if kb.CreatedBy != nil {
 		if err := h.storage.UpdateKnowledgeBase(ctx, kb); err != nil {
@@ -1284,7 +1281,7 @@ func (h *KnowledgeBaseHandler) ExportTableToKnowledgeBase(c fiber.Ctx) error {
 	req.KnowledgeBaseID = kbID
 
 	// Determine owner_id for the document
-	// Priority: 1) authenticated user, 2) KB's owner_id, 3) KB's created_by, 4) system user for service role
+	// Priority: 1) authenticated user, 2) KB's owner_id, 3) KB's created_by, 4) nil for system documents
 	if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
 		req.OwnerID = &uid
 	} else if kb, err := h.storage.GetKnowledgeBase(ctx, kbID); err == nil && kb != nil {
@@ -1295,11 +1292,9 @@ func (h *KnowledgeBaseHandler) ExportTableToKnowledgeBase(c fiber.Ctx) error {
 		}
 	}
 
-	// If we still don't have an owner_id, use system user for service role operations
-	if role, ok := c.Locals("rls_role").(string); req.OwnerID == nil && ok && role == "service_role" {
-		systemUserID := SystemUserID
-		req.OwnerID = &systemUserID
-	}
+	// If we still don't have an owner_id, leave it as nil (will be NULL in database)
+	// This is acceptable for system-generated documents created via service role
+	// The database migration 096 allows NULL owner_id for such cases
 
 	// Set defaults
 	if req.SampleRowCount == 0 {
