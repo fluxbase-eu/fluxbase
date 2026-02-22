@@ -18,11 +18,13 @@ import {
   knowledgeBasesApi,
   userKnowledgeBasesApi,
   userManagementApi,
+  aiProvidersApi,
   type KnowledgeBaseSummary,
   type CreateKnowledgeBaseRequest,
   type KBVisibility,
   type KBPermission,
   type EnrichedUser,
+  type AIProvider,
 } from '@/lib/api'
 import {
   AlertDialog,
@@ -81,7 +83,7 @@ function KnowledgeBasesPage() {
     name: '',
     description: '',
     visibility: 'private',
-    default_user_permission: 'viewer',
+    embedding_model: '',
     chunk_size: 512,
     chunk_overlap: 50,
     chunk_strategy: 'recursive',
@@ -91,6 +93,8 @@ function KnowledgeBasesPage() {
     user_id: string
     permission: KBPermission
   }>({ user_id: '', permission: 'viewer' })
+  const [providers, setProviders] = useState<AIProvider[]>([])
+  const [providersLoading, setProvidersLoading] = useState(false)
   const usersLoadedRef = useRef(false)
 
   const fetchKnowledgeBases = async () => {
@@ -116,6 +120,20 @@ function KnowledgeBasesPage() {
       toast.error('Failed to fetch users')
     } finally {
       setUsersLoading(false)
+    }
+  }, [])
+
+  const fetchProviders = useCallback(async () => {
+    setProvidersLoading(true)
+    try {
+      const data = await aiProvidersApi.list()
+      // Filter to only enabled providers
+      const enabledProviders = (data || []).filter((p) => p.enabled)
+      setProviders(enabledProviders)
+    } catch {
+      toast.error('Failed to fetch AI providers')
+    } finally {
+      setProvidersLoading(false)
     }
   }, [])
 
@@ -167,7 +185,7 @@ function KnowledgeBasesPage() {
         name: '',
         description: '',
         visibility: 'private',
-        default_user_permission: 'viewer',
+        embedding_model: '',
         chunk_size: 512,
         chunk_overlap: 50,
         chunk_strategy: 'recursive',
@@ -212,8 +230,9 @@ function KnowledgeBasesPage() {
   useEffect(() => {
     if (createDialogOpen) {
       fetchUsers()
+      fetchProviders()
     }
-  }, [createDialogOpen, fetchUsers])
+  }, [createDialogOpen, fetchUsers, fetchProviders])
 
   if (loading) {
     return (
@@ -348,48 +367,45 @@ function KnowledgeBasesPage() {
                         {newKB.visibility === 'shared' &&
                           'Grant access to specific users below.'}
                         {newKB.visibility === 'public' &&
-                          'All authenticated users can add documents. Each user can only see their own documents unless explicitly shared.'}
+                          'All authenticated users get read-only access. Grant explicit permissions for write access.'}
                       </p>
                     </div>
                     <div className='grid gap-2'>
-                      <Label htmlFor='default_user_permission'>
-                        Default User Permission
-                      </Label>
+                      <Label htmlFor='embedding_model'>Embedding Model</Label>
                       <select
-                        id='default_user_permission'
-                        value={newKB.default_user_permission}
+                        id='embedding_model'
+                        value={newKB.embedding_model || ''}
                         onChange={(e) =>
                           setNewKB({
                             ...newKB,
-                            default_user_permission: e.target
-                              .value as KBPermission,
+                            embedding_model: e.target.value || undefined,
                           })
                         }
-                        className='border-input focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none'
+                        disabled={providersLoading}
+                        className='border-input focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
                       >
-                        <option value='viewer'>
-                          Viewer - Users can add and view their own documents
+                        <option value=''>
+                          {providersLoading
+                            ? 'Loading providers...'
+                            : providers.length === 0
+                              ? 'No AI providers configured'
+                              : 'Use default embedding model'}
                         </option>
-                        <option value='editor'>
-                          Editor - Users can add and edit their own documents
-                        </option>
+                        {providers.map((p) => (
+                          <option key={p.id} value={p.embedding_model || p.id}>
+                            {p.display_name}
+                            {p.embedding_model
+                              ? ` (${p.embedding_model})`
+                              : p.use_for_embeddings
+                                ? ' (embedding provider)'
+                                : ''}
+                          </option>
+                        ))}
                       </select>
                       <p className='text-muted-foreground text-xs'>
-                        Default permission level for all authenticated users.
-                        Users can always see their own documents plus documents
-                        shared with them.
+                        Select an AI provider to use for generating embeddings.
+                        Configure providers in the AI Providers settings.
                       </p>
-                    </div>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='description'>Description</Label>
-                      <Textarea
-                        id='description'
-                        value={newKB.description || ''}
-                        onChange={(e) =>
-                          setNewKB({ ...newKB, description: e.target.value })
-                        }
-                        placeholder='What kind of documents will this knowledge base contain?'
-                      />
                     </div>
                     <div className='grid grid-cols-2 gap-4'>
                       <div className='grid gap-2'>

@@ -1356,6 +1356,320 @@ Browse the knowledge graph from a starting entity:
 
 Knowledge graph tools require the `read:vectors` scope for authorization.
 
+## User-Scoped RAG Retrieval
+
+### Overview
+
+For multi-tenant applications, knowledge bases support user-scoped document isolation. When a chatbot retrieves context from a knowledge base, it can filter documents by user ID, ensuring users only see their own documents.
+
+### How It Works
+
+1. **Adding Documents with User Context**: When adding documents, include `user_id` in the metadata
+2. **Filter Expression**: Configure chatbot-knowledge base links with filter expressions
+3. **Automatic Filtering**: RAG retrieval automatically applies user context during search
+
+### Adding Documents with User Context
+
+```typescript
+// Add document for a specific user
+const { data, error } = await client.admin.ai.addDocument("kb-id", {
+  title: "User's Travel Notes",
+  content: "My favorite restaurants in Tokyo...",
+  metadata: {
+    user_id: "user-123", // User isolation key
+    category: "travel",
+  },
+});
+```
+
+### Configuring Filtered Access
+
+Link a knowledge base with filtered access to enable user-scoped retrieval:
+
+```typescript
+await client.admin.ai.linkKnowledgeBase("chatbot-id", {
+  knowledge_base_id: "kb-id",
+  access_level: "filtered",
+  filter_expression: {
+    user_id: "$user_id", // Substituted at query time
+  },
+  max_chunks: 5,
+  similarity_threshold: 0.7,
+});
+```
+
+**Special Variables:**
+
+| Variable | Description |
+|----------|-------------|
+| `$user_id` | Current authenticated user's ID |
+| `$conversation_id` | Current conversation ID |
+
+### Automatic User Isolation
+
+When a user chats with a RAG-enabled chatbot:
+
+1. The chat handler extracts the user ID from the authentication context
+2. RAG retrieval passes the user ID to the search function
+3. Documents with matching `user_id` in metadata are returned
+4. Documents without `user_id` are excluded unless explicitly allowed
+
+### Bulk Delete by User
+
+Delete all documents for a user (e.g., account deletion):
+
+```typescript
+const { data, error } = await client.admin.ai.deleteDocumentsByFilter("kb-id", {
+  metadata: {
+    user_id: "user-to-delete",
+  },
+});
+
+console.log(`Deleted ${data.deleted_count} documents`);
+```
+
+## Knowledge Graph UI
+
+### Dashboard Visualization
+
+The admin dashboard includes an interactive knowledge graph visualization:
+
+1. Navigate to **Knowledge Bases** → Select a knowledge base
+2. Click the **Knowledge Graph** tab
+3. View entities as interactive nodes with relationship edges
+
+### Features
+
+- **Entity Filtering**: Filter by entity type or search by name
+- **Interactive Navigation**: Click nodes to view entity details
+- **Mini-map**: Overview for large graphs
+- **Zoom & Pan**: Navigate complex graphs easily
+- **Linked Chatbots**: See which chatbots use this knowledge base
+
+### Graph Legend
+
+Entity types are color-coded:
+
+| Type | Color | Icon |
+|------|-------|------|
+| Person | Blue | User |
+| Organization | Purple | Building |
+| Location | Green | Map Pin |
+| Concept | Amber | Lightbulb |
+| Product | Red | Package |
+| Event | Pink | Calendar |
+| Table | Indigo | Table |
+| URL | Teal | Link |
+
+## Linked Chatbots
+
+### Viewing Linked Chatbots
+
+Each knowledge base detail page shows which chatbots are using it:
+
+1. Navigate to **Knowledge Bases** → Select a knowledge base
+2. Scroll to the **Linked Chatbots** section
+3. See chatbot name, priority, and max chunks settings
+
+### Reverse Lookup via API
+
+```typescript
+// List all chatbots using a knowledge base
+const { data, error } = await client.admin.ai.listChatbotsUsingKB("kb-id");
+
+if (data) {
+  for (const chatbot of data) {
+    console.log(`${chatbot.name} - Priority: ${chatbot.priority}`);
+  }
+}
+```
+
+## CLI Commands
+
+The Fluxbase CLI provides commands for managing knowledge bases.
+
+### Basic Commands
+
+```bash
+# List knowledge bases
+fluxbase kb list
+
+# Get knowledge base details
+fluxbase kb get <kb-id>
+
+# Create knowledge base
+fluxbase kb create my-kb --description "My knowledge base"
+
+# Update knowledge base
+fluxbase kb update <kb-id> --description "Updated description"
+
+# Delete knowledge base
+fluxbase kb delete <kb-id>
+
+# Show status and statistics
+fluxbase kb status <kb-id>
+```
+
+### Document Management
+
+```bash
+# List documents
+fluxbase kb documents <kb-id>
+
+# Add document from text
+fluxbase kb add <kb-id> --content "Document content" --title "My Doc"
+
+# Add document from file
+fluxbase kb add <kb-id> --from-file ./doc.txt --title "My Doc"
+
+# Add document from stdin
+echo "Content" | fluxbase kb add <kb-id> --title "Piped Doc"
+
+# Add with user isolation
+fluxbase kb add <kb-id> --content "..." --metadata '{"user_id":"user-123"}'
+
+# Get document details
+fluxbase kb documents get <kb-id> <doc-id>
+
+# Update document metadata
+fluxbase kb documents update <kb-id> <doc-id> --title "New Title" --tags "tag1,tag2"
+
+# Delete single document
+fluxbase kb documents delete <kb-id> <doc-id>
+
+# Bulk delete by filter
+fluxbase kb documents delete-by-filter <kb-id> --metadata-filter "user_id=user-123"
+fluxbase kb documents delete-by-filter <kb-id> --tags "archived,old"
+```
+
+### File Upload
+
+```bash
+# Upload document file
+fluxbase kb upload <kb-id> ./document.pdf --title "My PDF"
+
+# Upload with OCR languages (for scanned PDFs)
+fluxbase kb upload <kb-id> ./scanned.pdf --ocr-languages "eng,deu"
+```
+
+### Search
+
+```bash
+# Search knowledge base
+fluxbase kb search <kb-id> "how to reset password"
+
+# Search with options
+fluxbase kb search <kb-id> "pricing" --limit 5 --threshold 0.7
+```
+
+### Table Export
+
+```bash
+# List exportable tables
+fluxbase kb tables
+fluxbase kb tables auth  # Filter by schema
+
+# Export table as document
+fluxbase kb export-table <kb-id> --schema public --table users \
+  --include-fks --include-indexes --sample-rows 5
+```
+
+### Knowledge Graph
+
+```bash
+# View knowledge graph data
+fluxbase kb graph <kb-id>
+
+# List entities
+fluxbase kb entities <kb-id>
+fluxbase kb entities <kb-id> --type person
+fluxbase kb entities <kb-id> --search "John"
+
+# List chatbots using KB
+fluxbase kb chatbots <kb-id>
+```
+
+### System Capabilities
+
+```bash
+# Show OCR status, supported file types
+fluxbase kb capabilities
+```
+
+## SDK Reference
+
+### Document Operations
+
+```typescript
+// Add document
+const { data, error } = await client.admin.ai.addDocument("kb-id", {
+  title: "Document Title",
+  content: "Document content...",
+  tags: ["tag1", "tag2"],
+  metadata: { category: "guides", user_id: "user-123" },
+});
+
+// Upload file
+const { data, error } = await client.admin.ai.uploadDocument("kb-id", file, "Optional Title");
+
+// Get document
+const { data, error } = await client.admin.ai.getDocument("kb-id", "doc-id");
+
+// Update document
+const { data, error } = await client.admin.ai.updateDocument("kb-id", "doc-id", {
+  title: "New Title",
+  tags: ["updated"],
+  metadata: { updated: true },
+});
+
+// Delete document
+const { data, error } = await client.admin.ai.deleteDocument("kb-id", "doc-id");
+
+// Bulk delete by filter
+const { data, error } = await client.admin.ai.deleteDocumentsByFilter("kb-id", {
+  tags: ["archived"],
+  metadata: { user_id: "user-123" },
+});
+```
+
+### Knowledge Graph Operations
+
+```typescript
+// List entities
+const { data, error } = await client.admin.ai.listEntities("kb-id", "person");
+
+// Search entities
+const { data, error } = await client.admin.ai.searchEntities(
+  "kb-id",
+  "John",
+  ["person", "organization"] // Optional type filter
+);
+
+// Get entity relationships
+const { data, error } = await client.admin.ai.getEntityRelationships("kb-id", "entity-id");
+
+// Get full knowledge graph
+const { data, error } = await client.admin.ai.getKnowledgeGraph("kb-id");
+// Returns: { entities, relationships, entity_count, relationship_count }
+
+// List chatbots using KB
+const { data, error } = await client.admin.ai.listChatbotsUsingKB("kb-id");
+```
+
+### System Capabilities
+
+```typescript
+const { data, error } = await client.admin.ai.getCapabilities();
+
+// Returns:
+// {
+//   ocr_enabled: boolean,
+//   ocr_available: boolean,
+//   ocr_languages: string[],
+//   supported_file_types: string[]
+// }
+```
+
 ## Next Steps
 
 - [AI Chatbots](/guides/ai-chatbots) - Chatbot configuration and usage

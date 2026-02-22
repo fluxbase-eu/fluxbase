@@ -538,8 +538,29 @@ function SchemaViewerPage() {
                               {col.is_indexed && (
                                 <div className='text-gray-500'>Indexed</div>
                               )}
-                              {col.comment && (
-                                <div className='mt-1 italic'>{col.comment}</div>
+                              {col.description && (
+                                <div className='mt-1 italic'>{col.description}</div>
+                              )}
+                              {col.jsonb_schema && (
+                                <div className='mt-2 space-y-1 border-t border-border pt-2'>
+                                  <div className='font-medium text-blue-500'>JSONB Schema</div>
+                                  <div className='space-y-0.5'>
+                                    {Object.entries(col.jsonb_schema.properties || {}).map(([key, prop]) => (
+                                      <div key={key} className='flex gap-2'>
+                                        <span className='font-mono'>{key}</span>
+                                        <span className='text-muted-foreground'>{prop.type}</span>
+                                        {col.jsonb_schema?.required?.includes(key) && (
+                                          <span className='text-red-500'>*</span>
+                                        )}
+                                        {prop.description && (
+                                          <span className='text-muted-foreground italic'>
+                                            {prop.description}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </TooltipContent>

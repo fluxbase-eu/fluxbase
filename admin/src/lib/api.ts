@@ -1826,6 +1826,12 @@ export interface Disable2FARequest {
   password: string
 }
 
+// Helper to get auth headers for dashboard API (protected endpoints)
+const getDashboardAuthHeaders = (): Record<string, string> => {
+  const token = getAccessToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 // Dashboard Auth API methods
 export const dashboardAuthAPI = {
   // Signup for dashboard
@@ -1852,13 +1858,19 @@ export const dashboardAuthAPI = {
 
   // Get current dashboard user
   me: async (): Promise<DashboardUser> => {
-    const response = await api.get('/dashboard/auth/me')
+    const response = await axios.get(`${API_BASE_URL}/dashboard/auth/me`, {
+      headers: getDashboardAuthHeaders(),
+    })
     return response.data
   },
 
   // Update profile
   updateProfile: async (data: UpdateProfileRequest): Promise<DashboardUser> => {
-    const response = await api.put('/dashboard/auth/profile', data)
+    const response = await axios.put(
+      `${API_BASE_URL}/dashboard/auth/profile`,
+      data,
+      { headers: getDashboardAuthHeaders() }
+    )
     return response.data
   },
 
@@ -1866,7 +1878,11 @@ export const dashboardAuthAPI = {
   changePassword: async (
     data: ChangePasswordRequest
   ): Promise<{ message: string }> => {
-    const response = await api.post('/dashboard/auth/password/change', data)
+    const response = await axios.post(
+      `${API_BASE_URL}/dashboard/auth/password/change`,
+      data,
+      { headers: getDashboardAuthHeaders() }
+    )
     return response.data
   },
 
@@ -1874,19 +1890,30 @@ export const dashboardAuthAPI = {
   deleteAccount: async (
     data: DeleteAccountRequest
   ): Promise<{ message: string }> => {
-    const response = await api.delete('/dashboard/auth/account', { data })
+    const response = await axios.delete(
+      `${API_BASE_URL}/dashboard/auth/account`,
+      { data, headers: getDashboardAuthHeaders() }
+    )
     return response.data
   },
 
   // Setup 2FA
   setup2FA: async (): Promise<Setup2FAResponse> => {
-    const response = await api.post('/dashboard/auth/2fa/setup')
+    const response = await axios.post(
+      `${API_BASE_URL}/dashboard/auth/2fa/setup`,
+      {},
+      { headers: getDashboardAuthHeaders() }
+    )
     return response.data
   },
 
   // Enable 2FA
   enable2FA: async (data: Enable2FARequest): Promise<Enable2FAResponse> => {
-    const response = await api.post('/dashboard/auth/2fa/enable', data)
+    const response = await axios.post(
+      `${API_BASE_URL}/dashboard/auth/2fa/enable`,
+      data,
+      { headers: getDashboardAuthHeaders() }
+    )
     return response.data
   },
 
@@ -1903,7 +1930,11 @@ export const dashboardAuthAPI = {
 
   // Disable 2FA
   disable2FA: async (data: Disable2FARequest): Promise<{ message: string }> => {
-    const response = await api.post('/dashboard/auth/2fa/disable', data)
+    const response = await axios.post(
+      `${API_BASE_URL}/dashboard/auth/2fa/disable`,
+      data,
+      { headers: getDashboardAuthHeaders() }
+    )
     return response.data
   },
 
@@ -2266,6 +2297,10 @@ export interface AIProvider {
   display_name: string
   provider_type: 'openai' | 'azure' | 'ollama'
   is_default: boolean
+  /** When true, this provider is explicitly used for embeddings. null means auto (follow default provider) */
+  use_for_embeddings: boolean | null
+  /** Embedding model for this provider. null means use provider-specific default */
+  embedding_model: string | null
   config: Record<string, string>
   enabled: boolean
   from_config: boolean // True if configured via environment/YAML (read-only)
@@ -2744,7 +2779,6 @@ export interface KnowledgeBaseSummary {
   created_at: string
   updated_at: string
   visibility: KBVisibility
-  default_user_permission: KBPermission
   user_permission?: KBPermission
   owner_id?: string
 }
@@ -2775,7 +2809,6 @@ export interface CreateKnowledgeBaseRequest {
   namespace?: string
   description?: string
   visibility?: KBVisibility
-  default_user_permission?: KBPermission
   embedding_model?: string
   embedding_dimensions?: number
   chunk_size?: number
@@ -2792,7 +2825,6 @@ export interface UpdateKnowledgeBaseRequest {
   name?: string
   description?: string
   visibility?: KBVisibility
-  default_user_permission?: KBPermission
   embedding_model?: string
   embedding_dimensions?: number
   chunk_size?: number
@@ -2859,6 +2891,7 @@ export interface TableSummary {
 export interface ExportTableOptions {
   schema: string
   table: string
+  columns?: string[]
   include_sample_rows?: boolean
   sample_row_count?: number
   include_foreign_keys?: boolean
@@ -2871,6 +2904,77 @@ export interface ExportTableResult {
   relationship_ids: string[]
 }
 
+export interface TableColumn {
+  name: string
+  data_type: string
+  is_nullable: boolean
+  default_value?: string
+  is_primary_key: boolean
+  is_foreign_key: boolean
+  is_unique: boolean
+  max_length?: number
+  position: number
+}
+
+export interface TableForeignKey {
+  name: string
+  column_name: string
+  referenced_schema: string
+  referenced_table: string
+  referenced_column: string
+  on_delete: string
+  on_update: string
+}
+
+export interface TableIndex {
+  name: string
+  columns: string[]
+  is_unique: boolean
+  is_primary: boolean
+}
+
+export interface TableDetails {
+  schema: string
+  name: string
+  type: string
+  columns: TableColumn[]
+  primary_key: string[]
+  foreign_keys: TableForeignKey[]
+  indexes: TableIndex[]
+  rls_enabled: boolean
+}
+
+// Table export preset types (saved export configurations)
+export interface TableExportSyncConfig {
+  id: string
+  knowledge_base_id: string
+  schema_name: string
+  table_name: string
+  columns?: string[]
+  include_foreign_keys: boolean
+  include_indexes: boolean
+  last_sync_at?: string
+  last_sync_status?: string
+  last_sync_error?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTableExportSyncConfig {
+  schema_name: string
+  table_name: string
+  columns?: string[]
+  include_foreign_keys?: boolean
+  include_indexes?: boolean
+  export_now?: boolean
+}
+
+export interface UpdateTableExportSyncConfig {
+  columns?: string[]
+  include_foreign_keys?: boolean
+  include_indexes?: boolean
+}
+
 export interface ChatbotKnowledgeBaseLink {
   id: string
   chatbot_id: string
@@ -2880,6 +2984,7 @@ export interface ChatbotKnowledgeBaseLink {
   similarity_threshold: number
   priority: number
   created_at: string
+  chatbot_name?: string
 }
 
 export interface SearchResult {
@@ -2906,6 +3011,57 @@ export interface DebugSearchResult {
   chunks_with_embedding: number
   chunks_without_embedding: number
   error_message?: string
+}
+
+// ============================================================================
+// Knowledge Graph Types
+// ============================================================================
+
+export type EntityType =
+  | 'person'
+  | 'organization'
+  | 'location'
+  | 'concept'
+  | 'product'
+  | 'event'
+  | 'table'
+  | 'url'
+  | 'api_endpoint'
+  | 'datetime'
+  | 'code_reference'
+  | 'error'
+  | 'other'
+
+export interface Entity {
+  id: string
+  knowledge_base_id: string
+  entity_type: EntityType
+  name: string
+  canonical_name: string
+  aliases: string[]
+  metadata: Record<string, unknown>
+  document_count?: number
+  created_at: string
+}
+
+export interface EntityRelationship {
+  id: string
+  knowledge_base_id: string
+  source_entity_id: string
+  target_entity_id: string
+  relationship_type: string
+  confidence?: number
+  metadata: Record<string, unknown>
+  created_at: string
+  source_entity?: Entity
+  target_entity?: Entity
+}
+
+export interface KnowledgeGraphData {
+  entities: Entity[]
+  relationships: EntityRelationship[]
+  entity_count: number
+  relationship_count: number
 }
 
 export const knowledgeBasesApi = {
@@ -3197,6 +3353,78 @@ export const knowledgeBasesApi = {
   },
 
   // ============================================================================
+  // Knowledge Graph / Entities
+  // ============================================================================
+
+  // List entities in a knowledge base
+  listEntities: async (
+    kbId: string,
+    entityType?: string
+  ): Promise<Entity[]> => {
+    const url = entityType
+      ? `/api/v1/admin/ai/knowledge-bases/${kbId}/entities?type=${entityType}`
+      : `/api/v1/admin/ai/knowledge-bases/${kbId}/entities`
+    const response = await api.get<{ entities: Entity[]; count: number }>(url)
+    return response.data.entities || []
+  },
+
+  // Search entities by name/alias
+  searchEntities: async (
+    kbId: string,
+    query: string,
+    types?: string[]
+  ): Promise<Entity[]> => {
+    const params = new URLSearchParams({ q: query })
+    if (types?.length) params.append('types', types.join(','))
+    const response = await api.get<{ entities: Entity[]; count: number }>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/entities/search?${params}`
+    )
+    return response.data.entities || []
+  },
+
+  // Get relationships for a specific entity
+  getEntityRelationships: async (
+    kbId: string,
+    entityId: string
+  ): Promise<EntityRelationship[]> => {
+    const response = await api.get<{ relationships: EntityRelationship[] }>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/entities/${entityId}/relationships`
+    )
+    return response.data.relationships || []
+  },
+
+  // Get full knowledge graph data
+  getKnowledgeGraph: async (kbId: string): Promise<KnowledgeGraphData> => {
+    const response = await api.get<KnowledgeGraphData>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/graph`
+    )
+    return response.data
+  },
+
+  // List chatbots linked to a knowledge base
+  listLinkedChatbots: async (
+    kbId: string
+  ): Promise<ChatbotKnowledgeBaseLink[]> => {
+    const response = await api.get<{
+      chatbots: ChatbotKnowledgeBaseLink[]
+      count: number
+    }>(`/api/v1/admin/ai/knowledge-bases/${kbId}/chatbots`)
+    return response.data.chatbots || []
+  },
+
+  // Bulk delete documents by filter
+  deleteDocumentsByFilter: async (
+    kbId: string,
+    filter: { tags?: string[]; metadata?: Record<string, string> }
+  ): Promise<{ deleted_count: number }> => {
+    const response = await api.post<{ deleted_count: number }>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/delete-by-filter`,
+      filter
+    )
+    return response.data
+  },
+
+  // ============================================================================
   // Table Export
   // ============================================================================
 
@@ -3218,6 +3446,75 @@ export const knowledgeBasesApi = {
     const response = await api.post<ExportTableResult>(
       `/api/v1/admin/ai/knowledge-bases/${kbId}/tables/export`,
       options
+    )
+    return response.data
+  },
+
+  // Get detailed table information for column selection
+  getTableDetails: async (
+    schema: string,
+    table: string
+  ): Promise<TableDetails> => {
+    const response = await api.get<TableDetails>(
+      `/api/v1/admin/ai/tables/${schema}/${table}`
+    )
+    return response.data
+  },
+
+  // Create a table export sync configuration
+  createTableExportSync: async (
+    kbId: string,
+    config: CreateTableExportSyncConfig
+  ): Promise<TableExportSyncConfig> => {
+    const response = await api.post<TableExportSyncConfig>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs`,
+      config
+    )
+    return response.data
+  },
+
+  // List table export sync configurations
+  listTableExportSyncs: async (
+    kbId: string
+  ): Promise<TableExportSyncConfig[]> => {
+    const response = await api.get<{
+      sync_configs: TableExportSyncConfig[]
+      count: number
+    }>(`/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs`)
+    return response.data.sync_configs || []
+  },
+
+  // Update a table export sync configuration
+  updateTableExportSync: async (
+    kbId: string,
+    syncId: string,
+    updates: UpdateTableExportSyncConfig
+  ): Promise<TableExportSyncConfig> => {
+    const response = await api.patch<TableExportSyncConfig>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}`,
+      updates
+    )
+    return response.data
+  },
+
+  // Delete a table export sync configuration
+  deleteTableExportSync: async (
+    kbId: string,
+    syncId: string
+  ): Promise<void> => {
+    await api.delete(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}`
+    )
+  },
+
+  // Manually trigger a table export sync
+  triggerTableExportSync: async (
+    kbId: string,
+    syncId: string
+  ): Promise<ExportTableResult> => {
+    const response = await api.post<ExportTableResult>(
+      `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}/trigger`,
+      {}
     )
     return response.data
   },
@@ -3981,6 +4278,24 @@ export const mcpResourcesApi = {
 // Schema Viewer API Types
 // ============================================
 
+/**
+ * Property definition within a JSONB schema
+ */
+export interface JSONBProperty {
+  type: string
+  description?: string
+  properties?: Record<string, JSONBProperty>
+  items?: JSONBProperty
+}
+
+/**
+ * Schema definition for a JSONB column
+ */
+export interface JSONBSchema {
+  properties?: Record<string, JSONBProperty>
+  required?: string[]
+}
+
 export interface SchemaNodeColumn {
   name: string
   data_type: string
@@ -3992,6 +4307,10 @@ export interface SchemaNodeColumn {
   is_unique: boolean
   is_indexed: boolean
   comment?: string
+  /** Column description (parsed from comment if not a JSONB schema) */
+  description?: string
+  /** JSONB schema if this is a JSONB/JSON column with schema annotation */
+  jsonb_schema?: JSONBSchema
 }
 
 export interface SchemaNode {

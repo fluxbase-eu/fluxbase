@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,7 +60,11 @@ function calculatePercentage(used: number, limit: number): number {
   return Math.min(100, (used / limit) * 100)
 }
 
-export default function UserQuotasPage() {
+export const Route = createFileRoute('/_authenticated/quotas/')({
+  component: UserQuotasPage,
+})
+
+function UserQuotasPage() {
   const queryClient = useQueryClient()
   const [editingUser, setEditingUser] = useState<UserWithQuota | null>(null)
   const [editedQuota, setEditedQuota] = useState({

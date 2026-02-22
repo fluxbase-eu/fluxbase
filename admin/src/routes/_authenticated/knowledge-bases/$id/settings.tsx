@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, RefreshCw, Save, Trash2, Loader2 } from 'lucide-react'
+import { RefreshCw, Save, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { knowledgeBasesApi, type KnowledgeBase } from '@/lib/api'
 import {
@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { KnowledgeBaseHeader } from '@/components/knowledge-bases/knowledge-base-header'
 
 export const Route = createFileRoute(
   '/_authenticated/knowledge-bases/$id/settings'
@@ -113,36 +114,13 @@ function KnowledgeBaseSettingsPage() {
     return (
       <div className='flex h-96 flex-col items-center justify-center gap-4'>
         <p className='text-muted-foreground'>Knowledge base not found</p>
-        <Button
-          variant='outline'
-          onClick={() => navigate({ to: '/knowledge-bases' })}
-        >
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back to Knowledge Bases
-        </Button>
       </div>
     )
   }
 
   return (
     <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center gap-4'>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => navigate({ to: '/knowledge-bases' })}
-        >
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back
-        </Button>
-      </div>
-
-      <div>
-        <h1 className='text-3xl font-bold'>Settings: {knowledgeBase.name}</h1>
-        <p className='text-muted-foreground'>
-          Configure settings for this knowledge base
-        </p>
-      </div>
+      <KnowledgeBaseHeader knowledgeBase={knowledgeBase} activeTab='settings' />
 
       <div className='grid gap-6'>
         <Card>
@@ -220,7 +198,7 @@ function KnowledgeBaseSettingsPage() {
                 </Label>
                 <div>
                   <Badge variant='outline'>
-                    {knowledgeBase.embedding_model}
+                    {knowledgeBase.embedding_model || 'Default (not set)'}
                   </Badge>
                 </div>
               </div>

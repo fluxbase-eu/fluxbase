@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -60,15 +61,31 @@ func (t *TableInfo) HasColumn(name string) bool {
 
 // ColumnInfo represents metadata about a table column
 type ColumnInfo struct {
-	Name         string  `json:"name"`
-	DataType     string  `json:"data_type"`
-	IsNullable   bool    `json:"is_nullable"`
-	DefaultValue *string `json:"default_value"`
-	IsPrimaryKey bool    `json:"is_primary_key"`
-	IsForeignKey bool    `json:"is_foreign_key"`
-	IsUnique     bool    `json:"is_unique"`
-	MaxLength    *int    `json:"max_length"`
-	Position     int     `json:"position"`
+	Name         string           `json:"name"`
+	DataType     string           `json:"data_type"`
+	IsNullable   bool             `json:"is_nullable"`
+	DefaultValue *string          `json:"default_value"`
+	IsPrimaryKey bool             `json:"is_primary_key"`
+	IsForeignKey bool             `json:"is_foreign_key"`
+	IsUnique     bool             `json:"is_unique"`
+	MaxLength    *int             `json:"max_length"`
+	Position     int              `json:"position"`
+	Description  string           `json:"description,omitempty"`
+	JSONBSchema  *JSONBSchemaInfo `json:"jsonb_schema,omitempty"`
+}
+
+// JSONBSchemaInfo represents the schema of a JSONB column
+type JSONBSchemaInfo struct {
+	Properties map[string]JSONBProperty `json:"properties,omitempty"`
+	Required   []string                 `json:"required,omitempty"`
+}
+
+// JSONBProperty represents a single property in a JSONB schema
+type JSONBProperty struct {
+	Type        string                   `json:"type"`
+	Description string                   `json:"description,omitempty"`
+	Properties  map[string]JSONBProperty `json:"properties,omitempty"` // For nested objects
+	Items       *JSONBProperty           `json:"items,omitempty"`      // For arrays
 }
 
 // ForeignKey represents a foreign key relationship
@@ -239,18 +256,22 @@ func (si *SchemaInspector) getColumns(ctx context.Context, schema, table string)
 	// First try information_schema.columns (works for tables and regular views)
 	query := `
 		SELECT
-			column_name,
+			c.column_name,
 			CASE
-				WHEN data_type = 'USER-DEFINED' THEN udt_name
-				ELSE data_type
+				WHEN c.data_type = 'USER-DEFINED' THEN c.udt_name
+				ELSE c.data_type
 			END as data_type,
-			is_nullable,
-			column_default,
-			character_maximum_length,
-			ordinal_position
-		FROM information_schema.columns
-		WHERE table_schema = $1 AND table_name = $2
-		ORDER BY ordinal_position
+			c.is_nullable,
+			c.column_default,
+			c.character_maximum_length,
+			c.ordinal_position,
+			COALESCE(pg_catalog.col_description(
+				(c.table_schema || '.' || c.table_name)::regclass::oid,
+				c.ordinal_position
+			), '') as column_comment
+		FROM information_schema.columns c
+		WHERE c.table_schema = $1 AND c.table_name = $2
+		ORDER BY c.ordinal_position
 	`
 
 	rows, err := si.conn.Query(ctx, query, schema, table)
@@ -264,6 +285,7 @@ func (si *SchemaInspector) getColumns(ctx context.Context, schema, table string)
 		var col ColumnInfo
 		var isNullable string
 		var maxLength *int32
+		var comment string
 
 		err := rows.Scan(
 			&col.Name,
@@ -272,6 +294,7 @@ func (si *SchemaInspector) getColumns(ctx context.Context, schema, table string)
 			&col.DefaultValue,
 			&maxLength,
 			&col.Position,
+			&comment,
 		)
 		if err != nil {
 			return nil, err
@@ -282,6 +305,9 @@ func (si *SchemaInspector) getColumns(ctx context.Context, schema, table string)
 			length := int(*maxLength)
 			col.MaxLength = &length
 		}
+
+		// Parse column comment for description and/or JSONB schema
+		col.Description, col.JSONBSchema = parseColumnComment(comment)
 
 		columns = append(columns, col)
 	}
@@ -306,7 +332,8 @@ func (si *SchemaInspector) getMaterializedViewColumns(ctx context.Context, schem
 			pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
 			NOT a.attnotnull AS is_nullable,
 			pg_get_expr(d.adbin, d.adrelid) AS column_default,
-			a.attnum AS ordinal_position
+			a.attnum AS ordinal_position,
+			COALESCE(pg_catalog.col_description(c.oid, a.attnum), '') as column_comment
 		FROM pg_catalog.pg_attribute a
 		JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
 		JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -329,6 +356,7 @@ func (si *SchemaInspector) getMaterializedViewColumns(ctx context.Context, schem
 	for rows.Next() {
 		var col ColumnInfo
 		var isNullable bool
+		var comment string
 
 		err := rows.Scan(
 			&col.Name,
@@ -336,16 +364,44 @@ func (si *SchemaInspector) getMaterializedViewColumns(ctx context.Context, schem
 			&isNullable,
 			&col.DefaultValue,
 			&col.Position,
+			&comment,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		col.IsNullable = isNullable
+
+		// Parse column comment for description and/or JSONB schema
+		col.Description, col.JSONBSchema = parseColumnComment(comment)
+
 		columns = append(columns, col)
 	}
 
 	return columns, nil
+}
+
+// parseColumnComment parses a column comment to extract description and/or JSONB schema.
+// If the comment contains a _fluxbase_jsonb_schema marker, it extracts the schema.
+// Otherwise, it returns the comment as a plain description.
+func parseColumnComment(comment string) (description string, schema *JSONBSchemaInfo) {
+	if comment == "" {
+		return "", nil
+	}
+
+	// Check for Fluxbase JSONB schema marker
+	if strings.Contains(comment, "_fluxbase_jsonb_schema") {
+		var data struct {
+			FluxbaseJSONBSchema *JSONBSchemaInfo `json:"_fluxbase_jsonb_schema"`
+		}
+		if err := json.Unmarshal([]byte(comment), &data); err == nil && data.FluxbaseJSONBSchema != nil {
+			return "", data.FluxbaseJSONBSchema
+		}
+		// If parsing fails, fall through to treat as regular comment
+	}
+
+	// Regular comment, return as description
+	return comment, nil
 }
 
 // getPrimaryKey retrieves primary key columns for a table
@@ -583,20 +639,24 @@ func (si *SchemaInspector) batchGetColumns(ctx context.Context, schemas []string
 	// For tables and regular views, use information_schema
 	query := `
 		SELECT
-			table_schema,
-			table_name,
-			column_name,
+			c.table_schema,
+			c.table_name,
+			c.column_name,
 			CASE
-				WHEN data_type = 'USER-DEFINED' THEN udt_name
-				ELSE data_type
+				WHEN c.data_type = 'USER-DEFINED' THEN c.udt_name
+				ELSE c.data_type
 			END as data_type,
-			is_nullable,
-			column_default,
-			character_maximum_length,
-			ordinal_position
-		FROM information_schema.columns
-		WHERE table_schema = ANY($1)
-		ORDER BY table_schema, table_name, ordinal_position
+			c.is_nullable,
+			c.column_default,
+			c.character_maximum_length,
+			c.ordinal_position,
+			COALESCE(pg_catalog.col_description(
+				(c.table_schema || '.' || c.table_name)::regclass::oid,
+				c.ordinal_position
+			), '') as column_comment
+		FROM information_schema.columns c
+		WHERE c.table_schema = ANY($1)
+		ORDER BY c.table_schema, c.table_name, c.ordinal_position
 	`
 
 	rows, err := si.conn.Query(ctx, query, schemas)
@@ -610,6 +670,7 @@ func (si *SchemaInspector) batchGetColumns(ctx context.Context, schemas []string
 		var col ColumnInfo
 		var isNullable string
 		var maxLength *int32
+		var comment string
 
 		err := rows.Scan(
 			&schema,
@@ -620,6 +681,7 @@ func (si *SchemaInspector) batchGetColumns(ctx context.Context, schemas []string
 			&col.DefaultValue,
 			&maxLength,
 			&col.Position,
+			&comment,
 		)
 		if err != nil {
 			return nil, err
@@ -630,6 +692,9 @@ func (si *SchemaInspector) batchGetColumns(ctx context.Context, schemas []string
 			length := int(*maxLength)
 			col.MaxLength = &length
 		}
+
+		// Parse column comment for description and/or JSONB schema
+		col.Description, col.JSONBSchema = parseColumnComment(comment)
 
 		key := fmt.Sprintf("%s.%s", schema, table)
 		result[key] = append(result[key], col)
@@ -650,7 +715,8 @@ func (si *SchemaInspector) batchGetMaterializedViewColumns(ctx context.Context, 
 			pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
 			NOT a.attnotnull AS is_nullable,
 			pg_get_expr(d.adbin, d.adrelid) AS column_default,
-			a.attnum AS ordinal_position
+			a.attnum AS ordinal_position,
+			COALESCE(pg_catalog.col_description(c.oid, a.attnum), '') as column_comment
 		FROM pg_catalog.pg_attribute a
 		JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
 		JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -672,6 +738,7 @@ func (si *SchemaInspector) batchGetMaterializedViewColumns(ctx context.Context, 
 		var schema, table string
 		var col ColumnInfo
 		var isNullable bool
+		var comment string
 
 		err := rows.Scan(
 			&schema,
@@ -681,12 +748,16 @@ func (si *SchemaInspector) batchGetMaterializedViewColumns(ctx context.Context, 
 			&isNullable,
 			&col.DefaultValue,
 			&col.Position,
+			&comment,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		col.IsNullable = isNullable
+
+		// Parse column comment for description and/or JSONB schema
+		col.Description, col.JSONBSchema = parseColumnComment(comment)
 
 		key := fmt.Sprintf("%s.%s", schema, table)
 		result[key] = append(result[key], col)

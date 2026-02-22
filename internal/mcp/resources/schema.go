@@ -77,6 +77,12 @@ func (r *SchemaResource) Read(ctx context.Context, authCtx *mcp.AuthContext) ([]
 			if col.IsPrimaryKey {
 				colInfo["primary_key"] = true
 			}
+			if col.Description != "" {
+				colInfo["description"] = col.Description
+			}
+			if col.JSONBSchema != nil {
+				colInfo["jsonb_schema"] = col.JSONBSchema
+			}
 			columns = append(columns, colInfo)
 		}
 
@@ -221,6 +227,12 @@ func (r *TableResource) ReadWithParams(ctx context.Context, authCtx *mcp.AuthCon
 		}
 		if col.MaxLength != nil {
 			colInfo["max_length"] = *col.MaxLength
+		}
+		if col.Description != "" {
+			colInfo["description"] = col.Description
+		}
+		if col.JSONBSchema != nil {
+			colInfo["jsonb_schema"] = col.JSONBSchema
 		}
 		columns = append(columns, colInfo)
 	}

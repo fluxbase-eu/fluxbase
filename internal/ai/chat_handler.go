@@ -403,9 +403,9 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 		return
 	}
 
-	// Retrieve RAG context if available
+	// Retrieve RAG context if available (with user isolation)
 	if h.ragService != nil {
-		ragSection, err := h.ragService.BuildRAGSystemPromptSection(ctx, chatbot.ID, msg.Content)
+		ragSection, err := h.ragService.BuildRAGSystemPromptSectionWithUser(ctx, chatbot.ID, msg.Content, userID)
 		if err != nil {
 			log.Warn().Err(err).Str("chatbot_id", chatbot.ID).Msg("Failed to retrieve RAG context")
 			// Continue without RAG - don't fail the request
