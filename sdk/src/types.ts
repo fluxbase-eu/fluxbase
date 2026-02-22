@@ -1948,6 +1948,35 @@ export interface ListSchemasResponse {
   schemas: Schema[];
 }
 
+// ============================================================================
+// JSONB Schema Types
+// ============================================================================
+
+/**
+ * Property definition within a JSONB schema
+ */
+export interface JSONBProperty {
+  /** Property type (string, number, boolean, object, array, null) */
+  type: string;
+  /** Human-readable description of the property */
+  description?: string;
+  /** Nested properties for object types */
+  properties?: Record<string, JSONBProperty>;
+  /** Item schema for array types */
+  items?: JSONBProperty;
+}
+
+/**
+ * Schema definition for a JSONB column
+ * Allows AI agents to understand the structure of JSONB data
+ */
+export interface JSONBSchema {
+  /** Map of property names to their definitions */
+  properties?: Record<string, JSONBProperty>;
+  /** List of required property names */
+  required?: string[];
+}
+
 /**
  * Table column information
  */
@@ -1957,6 +1986,10 @@ export interface Column {
   nullable: boolean;
   default_value?: string;
   is_primary_key?: boolean;
+  /** Column description from PostgreSQL comment */
+  description?: string;
+  /** JSONB schema if this is a JSONB/JSON column with schema annotation */
+  jsonb_schema?: JSONBSchema;
 }
 
 /**
@@ -3358,6 +3391,226 @@ export interface SearchKnowledgeBaseResponse {
   results: KnowledgeBaseSearchResult[];
   count: number;
   query: string;
+}
+
+/**
+ * Entity type classification (matching backend EntityType)
+ */
+export type EntityType =
+  | "person"
+  | "organization"
+  | "location"
+  | "concept"
+  | "product"
+  | "event"
+  | "table"
+  | "url"
+  | "api_endpoint"
+  | "datetime"
+  | "code_reference"
+  | "error"
+  | "other";
+
+/**
+ * Extracted entity from knowledge base documents
+ */
+export interface Entity {
+  id: string;
+  knowledge_base_id: string;
+  entity_type: EntityType;
+  name: string;
+  canonical_name: string;
+  aliases: string[];
+  metadata: Record<string, unknown>;
+  document_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Relationship between two entities
+ */
+export interface EntityRelationship {
+  id: string;
+  knowledge_base_id: string;
+  source_entity_id: string;
+  target_entity_id: string;
+  relationship_type: string;
+  confidence?: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  source_entity?: Entity;
+  target_entity?: Entity;
+}
+
+/**
+ * Knowledge graph data with entities and relationships
+ */
+export interface KnowledgeGraphData {
+  entities: Entity[];
+  relationships: EntityRelationship[];
+  entity_count: number;
+  relationship_count: number;
+}
+
+/**
+ * Request to update a document
+ */
+export interface UpdateDocumentRequest {
+  title?: string;
+  tags?: string[];
+  metadata?: Record<string, string>;
+}
+
+/**
+ * Request to delete documents by filter
+ */
+export interface DeleteDocumentsByFilterRequest {
+  tags?: string[];
+  metadata?: Record<string, string>;
+  metadata_filter?: Record<string, string>;
+}
+
+/**
+ * Response from deleting documents by filter
+ */
+export interface DeleteDocumentsByFilterResponse {
+  deleted_count: number;
+}
+
+/**
+ * Knowledge base capabilities and limits
+ */
+export interface KnowledgeBaseCapabilities {
+  ocr_enabled: boolean;
+  ocr_available: boolean;
+  ocr_languages: string[];
+  supported_file_types: string[];
+}
+
+// ============================================================================
+// Table Export Types
+// ============================================================================
+
+/**
+ * Options for exporting a table to a knowledge base
+ */
+export interface ExportTableOptions {
+  schema: string;
+  table: string;
+  columns?: string[];
+  include_sample_rows?: boolean;
+  sample_row_count?: number;
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+}
+
+/**
+ * Result of exporting a table to a knowledge base
+ */
+export interface ExportTableResult {
+  document_id: string;
+  entity_id: string;
+  relationship_ids?: string[];
+}
+
+/**
+ * Column information for a table
+ */
+export interface TableColumn {
+  name: string;
+  data_type: string;
+  is_nullable: boolean;
+  default_value?: string;
+  is_primary_key: boolean;
+  is_foreign_key: boolean;
+  is_unique: boolean;
+  max_length?: number;
+  position: number;
+  /** Column description from PostgreSQL comment */
+  description?: string;
+  /** JSONB schema if this is a JSONB/JSON column with schema annotation */
+  jsonb_schema?: JSONBSchema;
+}
+
+/**
+ * Foreign key information for a table
+ */
+export interface TableForeignKey {
+  name: string;
+  column_name: string;
+  referenced_schema: string;
+  referenced_table: string;
+  referenced_column: string;
+  on_delete: string;
+  on_update: string;
+}
+
+/**
+ * Index information for a table
+ */
+export interface TableIndex {
+  name: string;
+  columns: string[];
+  is_unique: boolean;
+  is_primary: boolean;
+}
+
+/**
+ * Detailed table information including columns
+ */
+export interface TableDetails {
+  schema: string;
+  name: string;
+  type: string;
+  columns: TableColumn[];
+  primary_key: string[];
+  foreign_keys: TableForeignKey[];
+  indexes: TableIndex[];
+  rls_enabled: boolean;
+}
+
+// ============================================================================
+// Table Export Preset Types
+// ============================================================================
+
+/**
+ * Saved export configuration (preset) for a table
+ */
+export interface TableExportSyncConfig {
+  id: string;
+  knowledge_base_id: string;
+  schema_name: string;
+  table_name: string;
+  columns?: string[];
+  include_foreign_keys: boolean;
+  include_indexes: boolean;
+  last_sync_at?: string;
+  last_sync_status?: string;
+  last_sync_error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Request to create a table export preset
+ */
+export interface CreateTableExportSyncConfig {
+  schema_name: string;
+  table_name: string;
+  columns?: string[];
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+  export_now?: boolean;
+}
+
+/**
+ * Request to update a table export preset
+ */
+export interface UpdateTableExportSyncConfig {
+  columns?: string[];
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
 }
 
 // ============================================================================

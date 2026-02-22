@@ -24,9 +24,8 @@ type KnowledgeBase struct {
 	Source              string  `json:"source"`
 	CreatedBy           *string `json:"created_by,omitempty"`
 	// Access control
-	OwnerID               *string      `json:"owner_id,omitempty"`
-	Visibility            KBVisibility `json:"visibility"`
-	DefaultUserPermission KBPermission `json:"default_user_permission"` // Default permission for all authenticated users
+	OwnerID    *string      `json:"owner_id,omitempty"`
+	Visibility KBVisibility `json:"visibility"`
 	// Quotas
 	QuotaMaxDocuments    int   `json:"quota_max_documents"`
 	QuotaMaxChunks       int   `json:"quota_max_chunks"`
@@ -166,6 +165,7 @@ type ChatbotKnowledgeBase struct {
 
 	// Joined fields (not in DB)
 	KnowledgeBaseName string `json:"knowledge_base_name,omitempty"`
+	ChatbotName       string `json:"chatbot_name,omitempty"`
 }
 
 // RetrievalResult represents a single chunk retrieved during RAG
@@ -279,16 +279,15 @@ type RetrievalLog struct {
 
 // CreateKnowledgeBaseRequest is the request to create a knowledge base
 type CreateKnowledgeBaseRequest struct {
-	Name                  string        `json:"name"`
-	Namespace             string        `json:"namespace,omitempty"`
-	Description           string        `json:"description,omitempty"`
-	Visibility            *KBVisibility `json:"visibility,omitempty"`
-	DefaultUserPermission KBPermission  `json:"default_user_permission,omitempty"` // Default permission for all users
-	EmbeddingModel        string        `json:"embedding_model,omitempty"`
-	EmbeddingDimensions   int           `json:"embedding_dimensions,omitempty"`
-	ChunkSize             int           `json:"chunk_size,omitempty"`
-	ChunkOverlap          int           `json:"chunk_overlap,omitempty"`
-	ChunkStrategy         string        `json:"chunk_strategy,omitempty"`
+	Name                string        `json:"name"`
+	Namespace           string        `json:"namespace,omitempty"`
+	Description         string        `json:"description,omitempty"`
+	Visibility          *KBVisibility `json:"visibility,omitempty"`
+	EmbeddingModel      string        `json:"embedding_model,omitempty"`
+	EmbeddingDimensions int           `json:"embedding_dimensions,omitempty"`
+	ChunkSize           int           `json:"chunk_size,omitempty"`
+	ChunkOverlap        int           `json:"chunk_overlap,omitempty"`
+	ChunkStrategy       string        `json:"chunk_strategy,omitempty"`
 	// InitialPermissions grants permissions to users upon creation
 	InitialPermissions []KBInitialPermission `json:"initial_permissions,omitempty"`
 }
@@ -301,16 +300,15 @@ type KBInitialPermission struct {
 
 // UpdateKnowledgeBaseRequest is the request to update a knowledge base
 type UpdateKnowledgeBaseRequest struct {
-	Name                  *string       `json:"name,omitempty"`
-	Description           *string       `json:"description,omitempty"`
-	Visibility            *KBVisibility `json:"visibility,omitempty"`
-	DefaultUserPermission *KBPermission `json:"default_user_permission,omitempty"`
-	EmbeddingModel        *string       `json:"embedding_model,omitempty"`
-	EmbeddingDimensions   *int          `json:"embedding_dimensions,omitempty"`
-	ChunkSize             *int          `json:"chunk_size,omitempty"`
-	ChunkOverlap          *int          `json:"chunk_overlap,omitempty"`
-	ChunkStrategy         *string       `json:"chunk_strategy,omitempty"`
-	Enabled               *bool         `json:"enabled,omitempty"`
+	Name                *string       `json:"name,omitempty"`
+	Description         *string       `json:"description,omitempty"`
+	Visibility          *KBVisibility `json:"visibility,omitempty"`
+	EmbeddingModel      *string       `json:"embedding_model,omitempty"`
+	EmbeddingDimensions *int          `json:"embedding_dimensions,omitempty"`
+	ChunkSize           *int          `json:"chunk_size,omitempty"`
+	ChunkOverlap        *int          `json:"chunk_overlap,omitempty"`
+	ChunkStrategy       *string       `json:"chunk_strategy,omitempty"`
+	Enabled             *bool         `json:"enabled,omitempty"`
 }
 
 // CreateDocumentRequest is the request to add a document to a knowledge base

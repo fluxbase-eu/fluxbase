@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import {
-  ArrowLeft,
   Search,
   RefreshCw,
   FileText,
@@ -42,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { KnowledgeBaseHeader } from '@/components/knowledge-bases/knowledge-base-header'
 
 const RESULTS_PER_PAGE = 5
 
@@ -60,7 +60,6 @@ export const Route = createFileRoute(
 
 function KnowledgeBaseSearchPage() {
   const { id } = Route.useParams()
-  const navigate = useNavigate()
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase | null>(null)
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
@@ -159,37 +158,13 @@ function KnowledgeBaseSearchPage() {
     return (
       <div className='flex h-96 flex-col items-center justify-center gap-4'>
         <p className='text-muted-foreground'>Knowledge base not found</p>
-        <Button
-          variant='outline'
-          onClick={() => navigate({ to: '/knowledge-bases' })}
-        >
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back to Knowledge Bases
-        </Button>
       </div>
     )
   }
 
   return (
     <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center gap-4'>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => navigate({ to: '/knowledge-bases' })}
-        >
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back
-        </Button>
-      </div>
-
-      <div>
-        <h1 className='text-3xl font-bold'>Search: {knowledgeBase.name}</h1>
-        <p className='text-muted-foreground'>
-          Search documents using semantic similarity, keyword matching, or
-          hybrid
-        </p>
-      </div>
+      <KnowledgeBaseHeader knowledgeBase={knowledgeBase} activeTab='search' />
 
       <Card>
         <CardHeader>

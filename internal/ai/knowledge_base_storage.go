@@ -42,8 +42,8 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 			id, name, namespace, description,
 			embedding_model, embedding_dimensions,
 			chunk_size, chunk_overlap, chunk_strategy,
-			enabled, source, created_by, visibility, default_user_permission
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			enabled, source, created_by, visibility
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING created_at, updated_at
 	`
 
@@ -51,7 +51,7 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Namespace, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility, kb.DefaultUserPermission,
+		kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility,
 	).Scan(&kb.CreatedAt, &kb.UpdatedAt)
 }
 
@@ -63,7 +63,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 			chunk_size, chunk_overlap, chunk_strategy,
 			enabled, document_count, total_chunks,
 			source, created_by, created_at, updated_at,
-			visibility, owner_id, default_user_permission
+			visibility, owner_id
 		FROM ai.knowledge_bases
 		WHERE id = $1
 	`
@@ -75,7 +75,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 		&kb.ChunkSize, &kb.ChunkOverlap, &kb.ChunkStrategy,
 		&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
 		&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
-		&kb.Visibility, &kb.OwnerID, &kb.DefaultUserPermission,
+		&kb.Visibility, &kb.OwnerID,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -167,7 +167,6 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 			chunk_strategy = $8,
 			enabled = $9,
 			visibility = $10,
-			default_user_permission = $11,
 			updated_at = NOW()
 		WHERE id = $1
 		RETURNING updated_at
@@ -177,7 +176,7 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Visibility, kb.DefaultUserPermission,
+		kb.Enabled, kb.Visibility,
 	).Scan(&kb.UpdatedAt)
 }
 
@@ -605,6 +604,48 @@ func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBases(ctx context.Context, cha
 // GetChatbotKnowledgeBaseLinks is an alias for GetChatbotKnowledgeBases for the query router
 func (s *KnowledgeBaseStorage) GetChatbotKnowledgeBaseLinks(ctx context.Context, chatbotID string) ([]ChatbotKnowledgeBase, error) {
 	return s.GetChatbotKnowledgeBases(ctx, chatbotID)
+}
+
+// GetKnowledgeBaseChatbots retrieves all chatbot links for a knowledge base (reverse lookup)
+// This is used to show which chatbots are using a specific knowledge base
+func (s *KnowledgeBaseStorage) GetKnowledgeBaseChatbots(ctx context.Context, knowledgeBaseID string) ([]ChatbotKnowledgeBase, error) {
+	query := `
+		SELECT ckb.id, ckb.chatbot_id, ckb.knowledge_base_id,
+			ckb.access_level, ckb.filter_expression, ckb.context_weight,
+			ckb.priority, ckb.intent_keywords, ckb.max_chunks,
+			ckb.similarity_threshold, ckb.enabled, ckb.metadata,
+			ckb.created_at, ckb.updated_at,
+			c.name as chatbot_name
+		FROM ai.chatbot_knowledge_bases ckb
+		JOIN ai.chatbots c ON c.id = ckb.chatbot_id
+		WHERE ckb.knowledge_base_id = $1
+		ORDER BY ckb.priority ASC
+	`
+
+	rows, err := s.db.Query(ctx, query, knowledgeBaseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get knowledge base chatbots: %w", err)
+	}
+	defer rows.Close()
+
+	var links []ChatbotKnowledgeBase
+	for rows.Next() {
+		var link ChatbotKnowledgeBase
+		if err := rows.Scan(
+			&link.ID, &link.ChatbotID, &link.KnowledgeBaseID,
+			&link.AccessLevel, &link.FilterExpression, &link.ContextWeight,
+			&link.Priority, &link.IntentKeywords, &link.MaxChunks,
+			&link.SimilarityThreshold, &link.Enabled, &link.Metadata,
+			&link.CreatedAt, &link.UpdatedAt,
+			&link.ChatbotName,
+		); err != nil {
+			log.Warn().Err(err).Msg("Failed to scan knowledge base chatbot link")
+			continue
+		}
+		links = append(links, link)
+	}
+
+	return links, nil
 }
 
 // UnlinkChatbotKnowledgeBase removes a link between chatbot and knowledge base
@@ -1531,8 +1572,20 @@ func (s *KnowledgeBaseStorage) SearchChunksWithFilter(
 	return results, nil
 }
 
+// SearchChatbotKnowledgeOptions contains options for chatbot knowledge search
+type SearchChatbotKnowledgeOptions struct {
+	UserID    *string
+	MaxChunks int
+	Threshold float64
+}
+
 // SearchChatbotKnowledge searches all knowledge bases linked to a chatbot
 func (s *KnowledgeBaseStorage) SearchChatbotKnowledge(ctx context.Context, chatbotID string, queryEmbedding []float32) ([]RetrievalResult, error) {
+	return s.SearchChatbotKnowledgeWithOptions(ctx, chatbotID, queryEmbedding, SearchChatbotKnowledgeOptions{})
+}
+
+// SearchChatbotKnowledgeWithOptions searches all knowledge bases linked to a chatbot with user context
+func (s *KnowledgeBaseStorage) SearchChatbotKnowledgeWithOptions(ctx context.Context, chatbotID string, queryEmbedding []float32, opts SearchChatbotKnowledgeOptions) ([]RetrievalResult, error) {
 	// Get linked knowledge bases
 	links, err := s.GetChatbotKnowledgeBases(ctx, chatbotID)
 	if err != nil {
@@ -1555,13 +1608,46 @@ func (s *KnowledgeBaseStorage) SearchChatbotKnowledge(ctx context.Context, chatb
 		if link.MaxChunks != nil {
 			maxChunks = *link.MaxChunks
 		}
+		if opts.MaxChunks > 0 {
+			maxChunks = opts.MaxChunks
+		}
 
 		threshold := 0.7
 		if link.SimilarityThreshold != nil {
 			threshold = *link.SimilarityThreshold
 		}
+		if opts.Threshold > 0 {
+			threshold = opts.Threshold
+		}
 
-		results, err := s.SearchChunks(ctx, link.KnowledgeBaseID, queryEmbedding, maxChunks, threshold)
+		var results []RetrievalResult
+
+		// Build filter for user isolation and access level
+		var filter *MetadataFilter
+		if opts.UserID != nil || link.AccessLevel == "filtered" {
+			filter = &MetadataFilter{}
+
+			// Apply user isolation if UserID provided
+			if opts.UserID != nil {
+				filter.UserID = opts.UserID
+				filter.IncludeGlobal = true
+			}
+
+			// Apply FilterExpression for "filtered" access level
+			if link.AccessLevel == "filtered" && link.FilterExpression != nil {
+				advancedFilter := convertFilterExpression(link.FilterExpression, opts.UserID)
+				if advancedFilter != nil {
+					filter.AdvancedFilter = advancedFilter
+				}
+			}
+		}
+
+		if filter != nil {
+			results, err = s.SearchChunksWithFilter(ctx, link.KnowledgeBaseID, queryEmbedding, maxChunks, threshold, filter)
+		} else {
+			results, err = s.SearchChunks(ctx, link.KnowledgeBaseID, queryEmbedding, maxChunks, threshold)
+		}
+
 		if err != nil {
 			log.Warn().Err(err).Str("kb_id", link.KnowledgeBaseID).Msg("Failed to search knowledge base")
 			continue
@@ -1579,6 +1665,47 @@ func (s *KnowledgeBaseStorage) SearchChatbotKnowledge(ctx context.Context, chatb
 	}
 
 	return allResults, nil
+}
+
+// convertFilterExpression converts a FilterExpression map to a MetadataFilterGroup
+// It also substitutes special variables like $user_id
+func convertFilterExpression(expr map[string]interface{}, userID *string) *MetadataFilterGroup {
+	if expr == nil {
+		return nil
+	}
+
+	var conditions []MetadataCondition
+
+	for key, value := range expr {
+		// Handle special variable substitution
+		strValue, ok := value.(string)
+		if ok && strValue == "$user_id" {
+			if userID != nil {
+				conditions = append(conditions, MetadataCondition{
+					Key:      key,
+					Operator: MetadataOpEquals,
+					Value:    *userID,
+				})
+			}
+			continue
+		}
+
+		// Handle direct value matches
+		conditions = append(conditions, MetadataCondition{
+			Key:      key,
+			Operator: MetadataOpEquals,
+			Value:    value,
+		})
+	}
+
+	if len(conditions) == 0 {
+		return nil
+	}
+
+	return &MetadataFilterGroup{
+		Conditions: conditions,
+		LogicalOp:  LogicalOpAND,
+	}
 }
 
 // ============================================================================
@@ -1795,10 +1922,6 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBaseFromRequest(ctx context.Contex
 	} else {
 		kb.Visibility = KBVisibilityPrivate
 	}
-	kb.DefaultUserPermission = req.DefaultUserPermission
-	if kb.DefaultUserPermission == "" {
-		kb.DefaultUserPermission = KBPermissionViewer
-	}
 	if req.EmbeddingModel != "" {
 		kb.EmbeddingModel = req.EmbeddingModel
 	} else {
@@ -1852,9 +1975,6 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBaseByID(ctx context.Context, id s
 	}
 	if req.Visibility != nil {
 		kb.Visibility = *req.Visibility
-	}
-	if req.DefaultUserPermission != nil {
-		kb.DefaultUserPermission = *req.DefaultUserPermission
 	}
 	if req.EmbeddingModel != nil {
 		kb.EmbeddingModel = *req.EmbeddingModel
@@ -2040,6 +2160,77 @@ func (s *KnowledgeBaseStorage) CanUserAccessKB(ctx context.Context, kbID, userID
 	`
 	err := s.db.QueryRow(ctx, query, kbID, userID).Scan(&hasAccess)
 	return err == nil && hasAccess
+}
+
+// CheckKBPermission checks if a user has the required permission level on a KB.
+// The permission hierarchy is: viewer < editor < owner
+// - If required is "viewer": user needs any permission (viewer, editor, or owner)
+// - If required is "editor": user needs editor or owner permission
+// - If required is "owner": user must be the KB owner or have owner permission
+func (s *KnowledgeBaseStorage) CheckKBPermission(ctx context.Context, kbID, userID, requiredPermission string) (bool, error) {
+	// Build the permission check based on required level
+	var permissionCheck string
+	switch requiredPermission {
+	case string(KBPermissionViewer):
+		// Any permission level allows read access
+		permissionCheck = "kbp.permission IN ('viewer', 'editor', 'owner')"
+	case string(KBPermissionEditor):
+		// Editor or owner required for write operations
+		permissionCheck = "kbp.permission IN ('editor', 'owner')"
+	case string(KBPermissionOwner):
+		// Only owner permission (or being the KB owner) allows full control
+		permissionCheck = "kbp.permission = 'owner'"
+	default:
+		// Unknown permission level, deny access
+		return false, nil
+	}
+
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM ai.knowledge_bases kb
+			LEFT JOIN ai.knowledge_base_permissions kbp
+				ON kbp.knowledge_base_id = kb.id AND kbp.user_id = $2
+			WHERE kb.id = $1
+			  AND kb.enabled = true
+			  AND (kb.owner_id = $2 OR ` + permissionCheck + `)
+		)
+	`
+
+	var hasPermission bool
+	err := s.db.QueryRow(ctx, query, kbID, userID).Scan(&hasPermission)
+	if err != nil {
+		return false, fmt.Errorf("failed to check KB permission: %w", err)
+	}
+	return hasPermission, nil
+}
+
+// GetUserKBPermission gets the user's effective permission level on a KB.
+// Returns the permission level or empty string if no access.
+// For public KBs, returns 'viewer' if no explicit permission exists.
+func (s *KnowledgeBaseStorage) GetUserKBPermission(ctx context.Context, kbID, userID string) (string, error) {
+	query := `
+		SELECT
+			CASE
+				WHEN kb.owner_id = $2 THEN 'owner'
+				WHEN kbp.permission IS NOT NULL THEN kbp.permission
+				WHEN kb.visibility = 'public' THEN 'viewer'
+				ELSE ''
+			END as permission
+		FROM ai.knowledge_bases kb
+		LEFT JOIN ai.knowledge_base_permissions kbp
+			ON kbp.knowledge_base_id = kb.id AND kbp.user_id = $2
+		WHERE kb.id = $1 AND kb.enabled = true
+	`
+
+	var permission string
+	err := s.db.QueryRow(ctx, query, kbID, userID).Scan(&permission)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", fmt.Errorf("failed to get user KB permission: %w", err)
+	}
+	return permission, nil
 }
 
 // GrantKBPermission grants permission to user

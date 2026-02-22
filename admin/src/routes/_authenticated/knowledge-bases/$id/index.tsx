@@ -14,15 +14,14 @@ import {
   AlertTriangle,
   Pencil,
   X,
-  Database,
-  Search,
-  Settings,
+  Bot,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   knowledgeBasesApi,
   type KnowledgeBase,
   type KnowledgeBaseDocument,
+  type ChatbotKnowledgeBaseLink,
 } from '@/lib/api'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -51,7 +50,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -65,6 +63,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { KnowledgeBaseHeader } from '@/components/knowledge-bases/knowledge-base-header'
 import { Textarea } from '@/components/ui/textarea'
 
 const SUPPORTED_FILE_TYPES = [
@@ -113,6 +112,9 @@ function KnowledgeBaseDetailPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [capabilities, setCapabilities] =
     useState<KnowledgeBaseCapabilities | null>(null)
+  const [linkedChatbots, setLinkedChatbots] = useState<ChatbotKnowledgeBaseLink[]>(
+    []
+  )
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Edit document state
@@ -130,12 +132,14 @@ function KnowledgeBaseDetailPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [kb, docs] = await Promise.all([
+      const [kb, docs, chatbots] = await Promise.all([
         knowledgeBasesApi.get(id),
         knowledgeBasesApi.listDocuments(id),
+        knowledgeBasesApi.listLinkedChatbots(id),
       ])
       setKnowledgeBase(kb)
       setDocuments(docs || [])
+      setLinkedChatbots(chatbots || [])
     } catch {
       toast.error('Failed to fetch knowledge base')
     } finally {
@@ -395,113 +399,79 @@ function KnowledgeBaseDetailPage() {
 
   return (
     <div className='flex flex-1 flex-col gap-6 p-6'>
-      <div className='flex items-center gap-4'>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => navigate({ to: '/knowledge-bases' })}
-        >
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back
-        </Button>
-      </div>
+      <KnowledgeBaseHeader
+        knowledgeBase={knowledgeBase}
+        activeTab='documents'
+        actions={
+          <>
+            <Button onClick={() => fetchData()} variant='outline' size='sm'>
+              <RefreshCw className='mr-2 h-4 w-4' />
+              Refresh
+            </Button>
+            <Button size='sm' onClick={() => setAddDialogOpen(true)}>
+              <Plus className='mr-2 h-4 w-4' />
+              Add Document
+            </Button>
+          </>
+        }
+      />
 
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold'>{knowledgeBase.name}</h1>
-          {knowledgeBase.description && (
-            <p className='text-muted-foreground'>{knowledgeBase.description}</p>
-          )}
-        </div>
-      </div>
-
-      <div className='flex items-center justify-between'>
-        <div className='flex gap-4 text-sm'>
-          <div className='flex items-center gap-1.5'>
-            <span className='text-muted-foreground'>Documents:</span>
-            <Badge variant='secondary' className='h-5 px-2'>
-              {knowledgeBase.document_count}
-            </Badge>
-          </div>
-          <div className='flex items-center gap-1.5'>
-            <span className='text-muted-foreground'>Chunks:</span>
-            <Badge variant='secondary' className='h-5 px-2'>
-              {knowledgeBase.total_chunks}
-            </Badge>
-          </div>
-          <div className='flex items-center gap-1.5'>
-            <span className='text-muted-foreground'>Model:</span>
-            <Badge variant='outline' className='h-5 px-2 text-[10px]'>
-              {knowledgeBase.embedding_model}
-            </Badge>
-          </div>
-        </div>
-        <div className='flex items-center gap-2'>
-          <Button onClick={() => fetchData()} variant='outline' size='sm'>
-            <RefreshCw className='mr-2 h-4 w-4' />
-            Refresh
-          </Button>
-          <Dialog
-            open={addDialogOpen}
-            onOpenChange={(open) => {
-              setAddDialogOpen(open)
-              if (open) {
-                // Fetch capabilities when dialog opens
-                knowledgeBasesApi
-                  .getCapabilities()
-                  .then(setCapabilities)
-                  .catch(() => {
-                    // Silently fail - we'll just not show the warning
-                  })
-              } else {
-                setNewDoc({ title: '', content: '' })
-                setNewDocTags('')
-                setNewDocMetadata([])
-                setSelectedFile(null)
-                setUploadMode('paste')
-              }
-            }}
+      {/* Add Document Dialog */}
+      <Dialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          setAddDialogOpen(open)
+          if (open) {
+            // Fetch capabilities when dialog opens
+            knowledgeBasesApi
+              .getCapabilities()
+              .then(setCapabilities)
+              .catch(() => {
+                // Silently fail - we'll just not show the warning
+              })
+          } else {
+            setNewDoc({ title: '', content: '' })
+            setNewDocTags('')
+            setNewDocMetadata([])
+            setSelectedFile(null)
+            setUploadMode('paste')
+          }
+        }}
+      >
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Add Document</DialogTitle>
+            <DialogDescription>
+              Add a new document to this knowledge base. The document will be
+              chunked and embedded for search.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs
+            value={uploadMode}
+            onValueChange={(v) => setUploadMode(v as 'paste' | 'upload')}
+            className='w-full'
           >
-            <DialogTrigger asChild>
-              <Button size='sm'>
-                <Plus className='mr-2 h-4 w-4' />
-                Add Document
-              </Button>
-            </DialogTrigger>
-            <DialogContent className='max-w-2xl'>
-              <DialogHeader>
-                <DialogTitle>Add Document</DialogTitle>
-                <DialogDescription>
-                  Add a new document to this knowledge base. The document will
-                  be chunked and embedded for search.
-                </DialogDescription>
-              </DialogHeader>
-              <Tabs
-                value={uploadMode}
-                onValueChange={(v) => setUploadMode(v as 'paste' | 'upload')}
-                className='w-full'
-              >
-                <TabsList className='grid w-full grid-cols-2'>
-                  <TabsTrigger value='paste'>Paste Text</TabsTrigger>
-                  <TabsTrigger value='upload'>Upload File</TabsTrigger>
-                </TabsList>
-                <TabsContent value='paste' className='mt-4'>
-                  <div className='grid gap-4'>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='title'>Title (optional)</Label>
-                      <Input
-                        id='title'
-                        value={newDoc.title}
-                        onChange={(e) =>
-                          setNewDoc({ ...newDoc, title: e.target.value })
-                        }
-                        placeholder='Document title'
-                      />
-                    </div>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='content'>Content</Label>
-                      <Textarea
-                        id='content'
+            <TabsList className='grid w-full grid-cols-2'>
+              <TabsTrigger value='paste'>Paste Text</TabsTrigger>
+              <TabsTrigger value='upload'>Upload File</TabsTrigger>
+            </TabsList>
+            <TabsContent value='paste' className='mt-4'>
+              <div className='grid gap-4'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='title'>Title (optional)</Label>
+                  <Input
+                    id='title'
+                    value={newDoc.title}
+                    onChange={(e) =>
+                      setNewDoc({ ...newDoc, title: e.target.value })
+                    }
+                    placeholder='Document title'
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='content'>Content</Label>
+                  <Textarea
+                    id='content'
                         value={newDoc.content}
                         onChange={(e) =>
                           setNewDoc({ ...newDoc, content: e.target.value })
@@ -690,38 +660,6 @@ function KnowledgeBaseDetailPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <Tabs defaultValue='documents' className='w-full'>
-        <TabsList className='grid w-full grid-cols-4'>
-          <TabsTrigger value='documents' asChild>
-            <a href={`/knowledge-bases/${id}`} className='flex items-center gap-2'>
-              <FileText className='h-4 w-4' />
-              Documents
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value='tables' asChild>
-            <a href={`/knowledge-bases/${id}/tables`} className='flex items-center gap-2'>
-              <Database className='h-4 w-4' />
-              Tables
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value='search' asChild>
-            <a href={`/knowledge-bases/${id}/search`} className='flex items-center gap-2'>
-              <Search className='h-4 w-4' />
-              Search
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value='settings' asChild>
-            <a href={`/knowledge-bases/${id}/settings`} className='flex items-center gap-2'>
-              <Settings className='h-4 w-4' />
-              Settings
-            </a>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
 
       <Card>
         <CardHeader>
@@ -818,6 +756,51 @@ function KnowledgeBaseDetailPage() {
               </div>
               <ScrollBar orientation='horizontal' />
             </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Linked Chatbots Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Bot className='h-5 w-5' />
+            Linked Chatbots
+          </CardTitle>
+          <CardDescription>
+            Chatbots using this knowledge base for RAG retrieval
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {linkedChatbots.length === 0 ? (
+            <p className='text-muted-foreground text-sm'>
+              No chatbots are using this knowledge base
+            </p>
+          ) : (
+            <div className='space-y-2'>
+              {linkedChatbots.map((link) => (
+                <div
+                  key={link.id}
+                  className='flex items-center justify-between rounded-lg border p-3'
+                >
+                  <a
+                    href={`/chatbots/${link.chatbot_id}`}
+                    className='font-medium hover:underline'
+                  >
+                    {link.chatbot_name || link.chatbot_id}
+                  </a>
+                  <div className='flex items-center gap-2'>
+                    <Badge variant='outline'>Priority: {link.priority}</Badge>
+                    {link.max_chunks && (
+                      <Badge variant='secondary'>Chunks: {link.max_chunks}</Badge>
+                    )}
+                    {!link.enabled && (
+                      <Badge variant='destructive'>Disabled</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

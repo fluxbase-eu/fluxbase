@@ -35,6 +35,7 @@ import { Route as AuthenticatedSecretsIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedSchemaIndexRouteImport } from './routes/_authenticated/schema/index'
 import { Route as AuthenticatedRpcIndexRouteImport } from './routes/_authenticated/rpc/index'
 import { Route as AuthenticatedRealtimeIndexRouteImport } from './routes/_authenticated/realtime/index'
+import { Route as AuthenticatedQuotasIndexRouteImport } from './routes/_authenticated/quotas/index'
 import { Route as AuthenticatedPoliciesIndexRouteImport } from './routes/_authenticated/policies/index'
 import { Route as AuthenticatedMonitoringIndexRouteImport } from './routes/_authenticated/monitoring/index'
 import { Route as AuthenticatedMcpToolsIndexRouteImport } from './routes/_authenticated/mcp-tools/index'
@@ -58,6 +59,7 @@ import { Route as AuthenticatedAiKnowledgeBasesIndexRouteImport } from './routes
 import { Route as AuthenticatedKnowledgeBasesIdTablesRouteImport } from './routes/_authenticated/knowledge-bases/$id/tables'
 import { Route as AuthenticatedKnowledgeBasesIdSettingsRouteImport } from './routes/_authenticated/knowledge-bases/$id/settings'
 import { Route as AuthenticatedKnowledgeBasesIdSearchRouteImport } from './routes/_authenticated/knowledge-bases/$id/search'
+import { Route as AuthenticatedKnowledgeBasesIdGraphRouteImport } from './routes/_authenticated/knowledge-bases/$id/graph'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -199,6 +201,12 @@ const AuthenticatedRealtimeIndexRoute =
     path: '/realtime/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedQuotasIndexRoute =
+  AuthenticatedQuotasIndexRouteImport.update({
+    id: '/quotas/',
+    path: '/quotas/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPoliciesIndexRoute =
   AuthenticatedPoliciesIndexRouteImport.update({
     id: '/policies/',
@@ -334,6 +342,12 @@ const AuthenticatedKnowledgeBasesIdSearchRoute =
     path: '/knowledge-bases/$id/search',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedKnowledgeBasesIdGraphRoute =
+  AuthenticatedKnowledgeBasesIdGraphRouteImport.update({
+    id: '/knowledge-bases/$id/graph',
+    path: '/knowledge-bases/$id/graph',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -366,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/mcp-tools/': typeof AuthenticatedMcpToolsIndexRoute
   '/monitoring/': typeof AuthenticatedMonitoringIndexRoute
   '/policies/': typeof AuthenticatedPoliciesIndexRoute
+  '/quotas/': typeof AuthenticatedQuotasIndexRoute
   '/realtime/': typeof AuthenticatedRealtimeIndexRoute
   '/rpc/': typeof AuthenticatedRpcIndexRoute
   '/schema/': typeof AuthenticatedSchemaIndexRoute
@@ -379,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/tables/': typeof AuthenticatedTablesIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/webhooks/': typeof AuthenticatedWebhooksIndexRoute
+  '/knowledge-bases/$id/graph': typeof AuthenticatedKnowledgeBasesIdGraphRoute
   '/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
   '/knowledge-bases/$id/tables': typeof AuthenticatedKnowledgeBasesIdTablesRoute
@@ -416,6 +432,7 @@ export interface FileRoutesByTo {
   '/mcp-tools': typeof AuthenticatedMcpToolsIndexRoute
   '/monitoring': typeof AuthenticatedMonitoringIndexRoute
   '/policies': typeof AuthenticatedPoliciesIndexRoute
+  '/quotas': typeof AuthenticatedQuotasIndexRoute
   '/realtime': typeof AuthenticatedRealtimeIndexRoute
   '/rpc': typeof AuthenticatedRpcIndexRoute
   '/schema': typeof AuthenticatedSchemaIndexRoute
@@ -429,6 +446,7 @@ export interface FileRoutesByTo {
   '/tables': typeof AuthenticatedTablesIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/webhooks': typeof AuthenticatedWebhooksIndexRoute
+  '/knowledge-bases/$id/graph': typeof AuthenticatedKnowledgeBasesIdGraphRoute
   '/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
   '/knowledge-bases/$id/tables': typeof AuthenticatedKnowledgeBasesIdTablesRoute
@@ -468,6 +486,7 @@ export interface FileRoutesById {
   '/_authenticated/mcp-tools/': typeof AuthenticatedMcpToolsIndexRoute
   '/_authenticated/monitoring/': typeof AuthenticatedMonitoringIndexRoute
   '/_authenticated/policies/': typeof AuthenticatedPoliciesIndexRoute
+  '/_authenticated/quotas/': typeof AuthenticatedQuotasIndexRoute
   '/_authenticated/realtime/': typeof AuthenticatedRealtimeIndexRoute
   '/_authenticated/rpc/': typeof AuthenticatedRpcIndexRoute
   '/_authenticated/schema/': typeof AuthenticatedSchemaIndexRoute
@@ -481,6 +500,7 @@ export interface FileRoutesById {
   '/_authenticated/tables/': typeof AuthenticatedTablesIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/webhooks/': typeof AuthenticatedWebhooksIndexRoute
+  '/_authenticated/knowledge-bases/$id/graph': typeof AuthenticatedKnowledgeBasesIdGraphRoute
   '/_authenticated/knowledge-bases/$id/search': typeof AuthenticatedKnowledgeBasesIdSearchRoute
   '/_authenticated/knowledge-bases/$id/settings': typeof AuthenticatedKnowledgeBasesIdSettingsRoute
   '/_authenticated/knowledge-bases/$id/tables': typeof AuthenticatedKnowledgeBasesIdTablesRoute
@@ -520,6 +540,7 @@ export interface FileRouteTypes {
     | '/mcp-tools/'
     | '/monitoring/'
     | '/policies/'
+    | '/quotas/'
     | '/realtime/'
     | '/rpc/'
     | '/schema/'
@@ -533,6 +554,7 @@ export interface FileRouteTypes {
     | '/tables/'
     | '/users/'
     | '/webhooks/'
+    | '/knowledge-bases/$id/graph'
     | '/knowledge-bases/$id/search'
     | '/knowledge-bases/$id/settings'
     | '/knowledge-bases/$id/tables'
@@ -570,6 +592,7 @@ export interface FileRouteTypes {
     | '/mcp-tools'
     | '/monitoring'
     | '/policies'
+    | '/quotas'
     | '/realtime'
     | '/rpc'
     | '/schema'
@@ -583,6 +606,7 @@ export interface FileRouteTypes {
     | '/tables'
     | '/users'
     | '/webhooks'
+    | '/knowledge-bases/$id/graph'
     | '/knowledge-bases/$id/search'
     | '/knowledge-bases/$id/settings'
     | '/knowledge-bases/$id/tables'
@@ -621,6 +645,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mcp-tools/'
     | '/_authenticated/monitoring/'
     | '/_authenticated/policies/'
+    | '/_authenticated/quotas/'
     | '/_authenticated/realtime/'
     | '/_authenticated/rpc/'
     | '/_authenticated/schema/'
@@ -634,6 +659,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tables/'
     | '/_authenticated/users/'
     | '/_authenticated/webhooks/'
+    | '/_authenticated/knowledge-bases/$id/graph'
     | '/_authenticated/knowledge-bases/$id/search'
     | '/_authenticated/knowledge-bases/$id/settings'
     | '/_authenticated/knowledge-bases/$id/tables'
@@ -840,6 +866,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRealtimeIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/quotas/': {
+      id: '/_authenticated/quotas/'
+      path: '/quotas'
+      fullPath: '/quotas/'
+      preLoaderRoute: typeof AuthenticatedQuotasIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/policies/': {
       id: '/_authenticated/policies/'
       path: '/policies'
@@ -1001,6 +1034,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKnowledgeBasesIdSearchRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/knowledge-bases/$id/graph': {
+      id: '/_authenticated/knowledge-bases/$id/graph'
+      path: '/knowledge-bases/$id/graph'
+      fullPath: '/knowledge-bases/$id/graph'
+      preLoaderRoute: typeof AuthenticatedKnowledgeBasesIdGraphRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -1024,6 +1064,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMcpToolsIndexRoute: typeof AuthenticatedMcpToolsIndexRoute
   AuthenticatedMonitoringIndexRoute: typeof AuthenticatedMonitoringIndexRoute
   AuthenticatedPoliciesIndexRoute: typeof AuthenticatedPoliciesIndexRoute
+  AuthenticatedQuotasIndexRoute: typeof AuthenticatedQuotasIndexRoute
   AuthenticatedRealtimeIndexRoute: typeof AuthenticatedRealtimeIndexRoute
   AuthenticatedRpcIndexRoute: typeof AuthenticatedRpcIndexRoute
   AuthenticatedSchemaIndexRoute: typeof AuthenticatedSchemaIndexRoute
@@ -1037,6 +1078,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTablesIndexRoute: typeof AuthenticatedTablesIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
   AuthenticatedWebhooksIndexRoute: typeof AuthenticatedWebhooksIndexRoute
+  AuthenticatedKnowledgeBasesIdGraphRoute: typeof AuthenticatedKnowledgeBasesIdGraphRoute
   AuthenticatedKnowledgeBasesIdSearchRoute: typeof AuthenticatedKnowledgeBasesIdSearchRoute
   AuthenticatedKnowledgeBasesIdSettingsRoute: typeof AuthenticatedKnowledgeBasesIdSettingsRoute
   AuthenticatedKnowledgeBasesIdTablesRoute: typeof AuthenticatedKnowledgeBasesIdTablesRoute
@@ -1064,6 +1106,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMcpToolsIndexRoute: AuthenticatedMcpToolsIndexRoute,
   AuthenticatedMonitoringIndexRoute: AuthenticatedMonitoringIndexRoute,
   AuthenticatedPoliciesIndexRoute: AuthenticatedPoliciesIndexRoute,
+  AuthenticatedQuotasIndexRoute: AuthenticatedQuotasIndexRoute,
   AuthenticatedRealtimeIndexRoute: AuthenticatedRealtimeIndexRoute,
   AuthenticatedRpcIndexRoute: AuthenticatedRpcIndexRoute,
   AuthenticatedSchemaIndexRoute: AuthenticatedSchemaIndexRoute,
@@ -1078,6 +1121,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTablesIndexRoute: AuthenticatedTablesIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedWebhooksIndexRoute: AuthenticatedWebhooksIndexRoute,
+  AuthenticatedKnowledgeBasesIdGraphRoute:
+    AuthenticatedKnowledgeBasesIdGraphRoute,
   AuthenticatedKnowledgeBasesIdSearchRoute:
     AuthenticatedKnowledgeBasesIdSearchRoute,
   AuthenticatedKnowledgeBasesIdSettingsRoute:
