@@ -1269,12 +1269,15 @@ func (h *KnowledgeBaseHandler) ExportTableToKnowledgeBase(c fiber.Ctx) error {
 	req.KnowledgeBaseID = kbID
 
 	// Determine owner_id for the document
-	// First, try to get user_id from context (authenticated user)
-	// If no user context (service role), use the KB's owner_id
+	// Priority: 1) authenticated user, 2) KB's owner_id, 3) KB's created_by
 	if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
 		req.OwnerID = &uid
 	} else if kb, err := h.storage.GetKnowledgeBase(ctx, kbID); err == nil && kb != nil {
-		req.OwnerID = kb.OwnerID
+		if kb.OwnerID != nil {
+			req.OwnerID = kb.OwnerID
+		} else if kb.CreatedBy != nil {
+			req.OwnerID = kb.CreatedBy
+		}
 	}
 
 	// Set defaults
