@@ -145,7 +145,7 @@ func (h *KnowledgeBaseHandler) CreateKnowledgeBase(c fiber.Ctx) error {
 	if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
 		kb.CreatedBy = &uid
 		kb.OwnerID = &uid
-	} else if role := c.Locals("rls_role"); role == "service_role" {
+	} else if role, ok := c.Locals("rls_role").(string); ok && role == "service_role" {
 		systemUserID := SystemUserID
 		kb.CreatedBy = &systemUserID
 		kb.OwnerID = &systemUserID
@@ -1296,7 +1296,7 @@ func (h *KnowledgeBaseHandler) ExportTableToKnowledgeBase(c fiber.Ctx) error {
 	}
 
 	// If we still don't have an owner_id, use system user for service role operations
-	if req.OwnerID == nil && c.Locals("rls_role") == "service_role" {
+	if role, ok := c.Locals("rls_role").(string); req.OwnerID == nil && ok && role == "service_role" {
 		systemUserID := SystemUserID
 		req.OwnerID = &systemUserID
 	}

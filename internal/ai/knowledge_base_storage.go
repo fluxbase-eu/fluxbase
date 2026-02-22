@@ -167,6 +167,8 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 			chunk_strategy = $8,
 			enabled = $9,
 			visibility = $10,
+			created_by = $11,
+			owner_id = $12,
 			updated_at = NOW()
 		WHERE id = $1
 		RETURNING updated_at
@@ -176,7 +178,7 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 		kb.ID, kb.Name, kb.Description,
 		kb.EmbeddingModel, kb.EmbeddingDimensions,
 		kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
-		kb.Enabled, kb.Visibility,
+		kb.Enabled, kb.Visibility, kb.CreatedBy, kb.OwnerID,
 	).Scan(&kb.UpdatedAt)
 }
 
