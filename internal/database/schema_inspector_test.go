@@ -753,3 +753,68 @@ func TestSchemaInspector_BatchQueryLogic(t *testing.T) {
 		assert.True(t, indexes["public.users"][1].IsUnique)
 	})
 }
+
+// =============================================================================
+// parseColumnComment Tests
+// =============================================================================
+
+func TestParseColumnComment(t *testing.T) {
+	t.Run("empty comment returns nil", func(t *testing.T) {
+		desc, schema := parseColumnComment("")
+		assert.Equal(t, "", desc)
+		assert.Nil(t, schema)
+	})
+
+	t.Run("plain comment returns description", func(t *testing.T) {
+		desc, schema := parseColumnComment("User email address")
+		assert.Equal(t, "User email address", desc)
+		assert.Nil(t, schema)
+	})
+
+	t.Run("JSONB schema is parsed correctly", func(t *testing.T) {
+		comment := `{"_fluxbase_jsonb_schema": {"properties": {"city": {"type": "string"}, "state": {"type": "string"}}, "required": ["city"]}}`
+		_, schema := parseColumnComment(comment)
+
+		assert.NotNil(t, schema)
+		assert.Contains(t, schema.Properties, "city")
+		assert.Contains(t, schema.Properties, "state")
+		assert.Equal(t, "string", schema.Properties["city"].Type)
+		assert.Contains(t, schema.Required, "city")
+	})
+
+	t.Run("JSONB schema with nested objects", func(t *testing.T) {
+		comment := `{"_fluxbase_jsonb_schema": {"properties": {"coordinates": {"type": "object", "properties": {"lat": {"type": "number"}, "lng": {"type": "number"}}}}}}`
+		_, schema := parseColumnComment(comment)
+
+		assert.NotNil(t, schema)
+		assert.Contains(t, schema.Properties, "coordinates")
+		assert.Equal(t, "object", schema.Properties["coordinates"].Type)
+		assert.Contains(t, schema.Properties["coordinates"].Properties, "lat")
+		assert.Equal(t, "number", schema.Properties["coordinates"].Properties["lat"].Type)
+	})
+
+	t.Run("JSONB schema with descriptions", func(t *testing.T) {
+		comment := `{"_fluxbase_jsonb_schema": {"properties": {"city": {"type": "string", "description": "City name"}}}}`
+		_, schema := parseColumnComment(comment)
+
+		assert.NotNil(t, schema)
+		assert.Equal(t, "City name", schema.Properties["city"].Description)
+	})
+
+	t.Run("invalid JSON falls back to plain description", func(t *testing.T) {
+		comment := `{"_fluxbase_jsonb_schema": invalid json}`
+		desc, schema := parseColumnComment(comment)
+
+		// Falls back to treating as plain comment
+		assert.Equal(t, comment, desc)
+		assert.Nil(t, schema)
+	})
+
+	t.Run("JSON without _fluxbase_jsonb_schema key is treated as plain comment", func(t *testing.T) {
+		comment := `{"foo": "bar"}`
+		desc, schema := parseColumnComment(comment)
+
+		assert.Equal(t, comment, desc)
+		assert.Nil(t, schema)
+	})
+}

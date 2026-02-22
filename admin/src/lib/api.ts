@@ -3357,7 +3357,10 @@ export const knowledgeBasesApi = {
   // ============================================================================
 
   // List entities in a knowledge base
-  listEntities: async (kbId: string, entityType?: string): Promise<Entity[]> => {
+  listEntities: async (
+    kbId: string,
+    entityType?: string
+  ): Promise<Entity[]> => {
     const url = entityType
       ? `/api/v1/admin/ai/knowledge-bases/${kbId}/entities?type=${entityType}`
       : `/api/v1/admin/ai/knowledge-bases/${kbId}/entities`
@@ -4275,6 +4278,24 @@ export const mcpResourcesApi = {
 // Schema Viewer API Types
 // ============================================
 
+/**
+ * Property definition within a JSONB schema
+ */
+export interface JSONBProperty {
+  type: string
+  description?: string
+  properties?: Record<string, JSONBProperty>
+  items?: JSONBProperty
+}
+
+/**
+ * Schema definition for a JSONB column
+ */
+export interface JSONBSchema {
+  properties?: Record<string, JSONBProperty>
+  required?: string[]
+}
+
 export interface SchemaNodeColumn {
   name: string
   data_type: string
@@ -4286,6 +4307,10 @@ export interface SchemaNodeColumn {
   is_unique: boolean
   is_indexed: boolean
   comment?: string
+  /** Column description (parsed from comment if not a JSONB schema) */
+  description?: string
+  /** JSONB schema if this is a JSONB/JSON column with schema annotation */
+  jsonb_schema?: JSONBSchema
 }
 
 export interface SchemaNode {

@@ -267,9 +267,51 @@ func (e *TableExporter) generateTableDocument(table *database.TableInfo, req Exp
 		}
 
 		sb.WriteString(fmt.Sprintf("| %s%s | %s | %s | %s | %s%s |\n",
-			prefix, col.Name, col.DataType, nullable, defaultVal, "", suffix))
+			prefix, col.Name, col.DataType, nullable, defaultVal, col.Description, suffix))
 	}
 	sb.WriteString("\n")
+
+	// JSONB Column Schemas
+	for _, col := range columns {
+		if col.JSONBSchema != nil && (col.DataType == "jsonb" || col.DataType == "json") {
+			sb.WriteString(fmt.Sprintf("## JSONB Column: `%s`\n\n", col.Name))
+			sb.WriteString("This JSONB column has the following structure:\n\n")
+			sb.WriteString("| Field | Type | Required | Description |\n")
+			sb.WriteString("|-------|------|----------|-------------|\n")
+
+			for name, prop := range col.JSONBSchema.Properties {
+				required := "no"
+				for _, r := range col.JSONBSchema.Required {
+					if r == name {
+						required = "yes"
+						break
+					}
+				}
+				sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
+					name, prop.Type, required, prop.Description))
+			}
+			sb.WriteString("\n")
+
+			// Add query examples
+			sb.WriteString("**Query examples:**\n\n")
+			sb.WriteString("```sql\n")
+			// Find a field to use in example
+			exampleField := ""
+			for name := range col.JSONBSchema.Properties {
+				exampleField = name
+				break
+			}
+			if exampleField != "" {
+				sb.WriteString(fmt.Sprintf("-- Filter by %s\n", exampleField))
+				sb.WriteString(fmt.Sprintf("SELECT * FROM %s.%s WHERE %s->>'%s' = 'value';\n",
+					table.Schema, table.Name, col.Name, exampleField))
+				sb.WriteString("-- Use JSON path for nested fields\n")
+				sb.WriteString(fmt.Sprintf("SELECT * FROM %s.%s WHERE %s->'nested'->>'field' = 'value';\n",
+					table.Schema, table.Name, col.Name))
+			}
+			sb.WriteString("```\n\n")
+		}
+	}
 
 	// Foreign keys
 	if req.IncludeForeignKeys && len(table.ForeignKeys) > 0 {

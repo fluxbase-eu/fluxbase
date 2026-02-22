@@ -1948,6 +1948,35 @@ export interface ListSchemasResponse {
   schemas: Schema[];
 }
 
+// ============================================================================
+// JSONB Schema Types
+// ============================================================================
+
+/**
+ * Property definition within a JSONB schema
+ */
+export interface JSONBProperty {
+  /** Property type (string, number, boolean, object, array, null) */
+  type: string;
+  /** Human-readable description of the property */
+  description?: string;
+  /** Nested properties for object types */
+  properties?: Record<string, JSONBProperty>;
+  /** Item schema for array types */
+  items?: JSONBProperty;
+}
+
+/**
+ * Schema definition for a JSONB column
+ * Allows AI agents to understand the structure of JSONB data
+ */
+export interface JSONBSchema {
+  /** Map of property names to their definitions */
+  properties?: Record<string, JSONBProperty>;
+  /** List of required property names */
+  required?: string[];
+}
+
 /**
  * Table column information
  */
@@ -1957,6 +1986,10 @@ export interface Column {
   nullable: boolean;
   default_value?: string;
   is_primary_key?: boolean;
+  /** Column description from PostgreSQL comment */
+  description?: string;
+  /** JSONB schema if this is a JSONB/JSON column with schema annotation */
+  jsonb_schema?: JSONBSchema;
 }
 
 /**
@@ -3494,6 +3527,10 @@ export interface TableColumn {
   is_unique: boolean;
   max_length?: number;
   position: number;
+  /** Column description from PostgreSQL comment */
+  description?: string;
+  /** JSONB schema if this is a JSONB/JSON column with schema annotation */
+  jsonb_schema?: JSONBSchema;
 }
 
 /**
