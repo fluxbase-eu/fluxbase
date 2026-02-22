@@ -310,6 +310,16 @@ func (c *Client) DoPost(ctx context.Context, path string, body interface{}, targ
 	return decodeBody(resp, target)
 }
 
+// DoPostWithQuery performs a POST request with query parameters and decodes the response into target
+func (c *Client) DoPostWithQuery(ctx context.Context, path string, body interface{}, query url.Values, target interface{}) error {
+	resp, err := c.RequestWithQuery(ctx, http.MethodPost, path, body, query)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return decodeBody(resp, target)
+}
+
 // DoPut performs a PUT request and decodes the response into target
 func (c *Client) DoPut(ctx context.Context, path string, body interface{}, target interface{}) error {
 	resp, err := c.Put(ctx, path, body)
