@@ -413,19 +413,18 @@ func runKBList(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Build URL with optional namespace filter
-	path := "/api/v1/admin/ai/knowledge-bases"
+	// Build query parameters for namespace filter
+	var params url.Values
 	if kbNamespace != "" {
-		params := url.Values{}
+		params = url.Values{}
 		params.Add("namespace", kbNamespace)
-		path += "?" + params.Encode()
 	}
 
 	var response struct {
 		KnowledgeBases []map[string]interface{} `json:"knowledge_bases"`
 		Count          int                      `json:"count"`
 	}
-	if err := apiClient.DoGet(ctx, path, nil, &response); err != nil {
+	if err := apiClient.DoGet(ctx, "/api/v1/admin/ai/knowledge-bases", params, &response); err != nil {
 		return err
 	}
 	kbs := response.KnowledgeBases
@@ -936,13 +935,8 @@ func runKBDocumentDeleteByFilter(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	path := "/api/v1/admin/ai/knowledge-bases/" + url.PathEscape(kbID) + "/documents/delete-by-filter"
-	if params.Encode() != "" {
-		path += "?" + params.Encode()
-	}
-
 	var result map[string]interface{}
-	if err := apiClient.DoPost(ctx, path, nil, &result); err != nil {
+	if err := apiClient.DoPostWithQuery(ctx, "/api/v1/admin/ai/knowledge-bases/"+url.PathEscape(kbID)+"/documents/delete-by-filter", nil, params, &result); err != nil {
 		return err
 	}
 
@@ -1163,16 +1157,17 @@ func runKBEntities(cmd *cobra.Command, args []string) error {
 		params.Add("search", kbEntitySearch)
 	}
 
-	path := "/api/v1/admin/ai/knowledge-bases/" + url.PathEscape(kbID) + "/entities"
-	if params.Encode() != "" {
-		path += "?" + params.Encode()
+	// Only pass params if we have any
+	var queryParams url.Values
+	if len(params) > 0 {
+		queryParams = params
 	}
 
 	var response struct {
 		Entities []map[string]interface{} `json:"entities"`
 		Count    int                      `json:"count"`
 	}
-	if err := apiClient.DoGet(ctx, path, nil, &response); err != nil {
+	if err := apiClient.DoGet(ctx, "/api/v1/admin/ai/knowledge-bases/"+url.PathEscape(kbID)+"/entities", queryParams, &response); err != nil {
 		return err
 	}
 
