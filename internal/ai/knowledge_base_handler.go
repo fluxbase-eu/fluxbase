@@ -63,7 +63,10 @@ func (h *KnowledgeBaseHandler) SetKnowledgeGraph(kg *KnowledgeGraph) {
 func (h *KnowledgeBaseHandler) ListKnowledgeBases(c fiber.Ctx) error {
 	ctx := c.RequestCtx()
 
-	kbs, err := h.storage.ListAllKnowledgeBases(ctx)
+	// Parse optional namespace filter
+	namespace := c.Query("namespace", "") // Empty = all namespaces
+
+	kbs, err := h.storage.ListKnowledgeBases(ctx, namespace, false)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to list knowledge bases")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

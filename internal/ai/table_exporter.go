@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -343,41 +344,10 @@ func (e *TableExporter) generateTableDocument(table *database.TableInfo, req Exp
 	return sb.String()
 }
 
-// metadataToJSON converts a map to JSONB string
+// metadataToJSON converts a map to JSON bytes using standard json.Marshal
 func metadataToJSON(m map[string]interface{}) ([]byte, error) {
 	if len(m) == 0 {
 		return []byte("{}"), nil
 	}
-	// Simple JSON encoding - for production use proper JSON library
-	var sb strings.Builder
-	sb.WriteString("{")
-	first := true
-	for k, v := range m {
-		if !first {
-			sb.WriteString(",")
-		}
-		first = false
-		sb.WriteString(fmt.Sprintf("\"%s\":", k))
-		switch val := v.(type) {
-		case string:
-			sb.WriteString(fmt.Sprintf("\"%s\"", val))
-		case bool:
-			sb.WriteString(fmt.Sprintf("%t", val))
-		case int:
-			sb.WriteString(fmt.Sprintf("%d", val))
-		case []string:
-			sb.WriteString("[")
-			for i, s := range val {
-				if i > 0 {
-					sb.WriteString(",")
-				}
-				sb.WriteString(fmt.Sprintf("\"%s\"", s))
-			}
-			sb.WriteString("]")
-		default:
-			sb.WriteString("null")
-		}
-	}
-	sb.WriteString("}")
-	return []byte(sb.String()), nil
+	return json.Marshal(m)
 }
