@@ -30,6 +30,13 @@ export interface FluxbaseClientOptions {
   };
 
   /**
+   * Whether this is a service role client
+   * When true, enables service_role features like onBehalfOf for job submission
+   * @internal
+   */
+  serviceRole?: boolean;
+
+  /**
    * Global headers to include in all requests
    */
   headers?: Record<string, string>;

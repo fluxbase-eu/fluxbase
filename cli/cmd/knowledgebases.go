@@ -953,7 +953,7 @@ func runKBExportTable(cmd *cobra.Command, args []string) error {
 	}
 
 	body := map[string]interface{}{
-		"table":               kbTableName,
+		"table":                kbTableName,
 		"include_foreign_keys": kbTableIncludeFKs,
 		"include_indexes":      kbTableIncludeIdx,
 		"include_sample_rows":  kbTableSampleRows > 0,

@@ -56,6 +56,11 @@ type ExportTableResult struct {
 
 // ExportTable exports a single table as a document and entity
 func (e *TableExporter) ExportTable(ctx context.Context, req ExportTableRequest) (*ExportTableResult, error) {
+	// Validate request
+	if req.Schema == "" || req.Table == "" {
+		return nil, fmt.Errorf("schema and table are required")
+	}
+
 	inspector := database.NewSchemaInspector(e.conn)
 
 	// Get table metadata
@@ -165,15 +170,20 @@ func (e *TableExporter) ExportTable(ctx context.Context, req ExportTableRequest)
 		// Create foreign key relationships
 		if req.IncludeForeignKeys {
 			for _, fk := range tableInfo.ForeignKeys {
-				// Create entity for referenced table (if different)
-				refTableName := fmt.Sprintf("%s.%s", req.Schema, fk.ReferencedTable)
+				// Skip if referenced table is empty or same as source table
+				if fk.ReferencedTable == "" || fk.ReferencedTable == fmt.Sprintf("%s.%s", req.Schema, req.Table) {
+					continue
+				}
+
+				// fk.ReferencedTable already contains "schema.table" format from SQL query
+				// See: schema_inspector.go line 445: ccu.table_schema || '.' || ccu.table_name AS referenced_table
 				refEntity := &Entity{
 					ID:              uuid.New().String(),
 					KnowledgeBaseID: req.KnowledgeBaseID,
 					EntityType:      EntityTable,
-					Name:            refTableName,
-					CanonicalName:   refTableName,
-					Aliases:         []string{fk.ReferencedTable},
+					Name:            fk.ReferencedTable,
+					CanonicalName:   fk.ReferencedTable,
+					Aliases:         []string{extractTableName(fk.ReferencedTable)},
 				}
 				_ = e.knowledgeGraph.AddEntity(ctx, refEntity)
 
@@ -356,4 +366,13 @@ func metadataToJSON(m map[string]interface{}) ([]byte, error) {
 		return []byte("{}"), nil
 	}
 	return json.Marshal(m)
+}
+
+// extractTableName extracts the table name from a schema.table string
+func extractTableName(fullName string) string {
+	parts := strings.Split(fullName, ".")
+	if len(parts) >= 2 {
+		return parts[len(parts)-1]
+	}
+	return fullName
 }
