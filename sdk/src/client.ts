@@ -294,8 +294,8 @@ export class FluxbaseClient<
     // Initialize functions module
     this.functions = new FluxbaseFunctions(this.fetch);
 
-    // Initialize jobs module
-    this.jobs = new FluxbaseJobs(this.fetch);
+    // Initialize jobs module (pass serviceRole flag for onBehalfOf support)
+    this.jobs = new FluxbaseJobs(this.fetch, options?.serviceRole ?? false);
 
     // Initialize admin module
     this.admin = new FluxbaseAdmin(this.fetch);
@@ -616,13 +616,26 @@ export function createClient<
     getEnvVar("VITE_FLUXBASE_URL");
 
   // Resolve key from argument or environment variables (try multiple common names)
-  const key =
+  // Track if it's a service role token
+  const resolvedKey =
     fluxbaseKey ||
-    getEnvVar("FLUXBASE_ANON_KEY") ||
     getEnvVar("FLUXBASE_SERVICE_TOKEN") ||
+    getEnvVar("FLUXBASE_ANON_KEY") ||
     getEnvVar("FLUXBASE_JOB_TOKEN") ||
     getEnvVar("NEXT_PUBLIC_FLUXBASE_ANON_KEY") ||
     getEnvVar("VITE_FLUXBASE_ANON_KEY");
+
+  // Detect if this is a service role client
+  let isServiceRole = options?.serviceRole ?? false;
+  // Also check if the service token env var was used (when key wasn't provided directly)
+  if (!fluxbaseKey && getEnvVar("FLUXBASE_SERVICE_TOKEN")) {
+    isServiceRole = true;
+  }
+
+  // Allow explicit service role detection via options
+  if (options?.serviceRole !== undefined) {
+    isServiceRole = options.serviceRole;
+  }
 
   if (!url) {
     throw new Error(
@@ -630,11 +643,14 @@ export function createClient<
     );
   }
 
-  if (!key) {
+  if (!resolvedKey) {
     throw new Error(
       "Fluxbase key is required. Pass it as the second argument or set FLUXBASE_ANON_KEY environment variable.",
     );
   }
 
-  return new FluxbaseClient<Database, SchemaName>(url, key, options);
+  return new FluxbaseClient<Database, SchemaName>(url, resolvedKey, {
+    ...options,
+    serviceRole: isServiceRole,
+  });
 }

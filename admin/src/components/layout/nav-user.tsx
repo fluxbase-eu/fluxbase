@@ -1,10 +1,8 @@
-import { LogOut, User, LifeBuoy } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
+import { LogOut, User } from 'lucide-react'
 import { logout } from '@/lib/auth'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { SidebarMenu, SidebarMenuItem } from '@/components/ui/sidebar'
-import { Separator } from '@/components/ui/separator'
 
 // Component to display user name in sidebar footer
 type NavUserProps = {
@@ -16,23 +14,6 @@ type NavUserProps = {
 }
 
 export function NavUser({ user }: NavUserProps) {
-  const navigate = useNavigate()
-
-  const showTour = () => {
-    // Determine which tour to show based on current path
-    const path = window.location.pathname
-    let tourId = 'dashboard'
-
-    if (path.startsWith('/tables')) tourId = 'tables'
-    else if (path.startsWith('/functions')) tourId = 'functions'
-    else if (path.startsWith('/users')) tourId = 'users'
-    else if (path.startsWith('/policies')) tourId = 'policies'
-    else if (path.startsWith('/storage')) tourId = 'storage'
-
-    // Navigate to tour page with tourId parameter
-    navigate({ to: `/tour?t=${tourId}` })
-  }
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -59,16 +40,6 @@ export function NavUser({ user }: NavUserProps) {
             <LogOut className='h-4 w-4' />
           </Button>
         </div>
-      </SidebarMenuItem>
-      <SidebarMenuItem>
-        <Separator className='my-1' />
-        <button
-          onClick={showTour}
-          className='flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent'
-        >
-          <LifeBuoy className='h-4 w-4 text-muted-foreground' />
-          <span>Show Tour</span>
-        </button>
       </SidebarMenuItem>
     </SidebarMenu>
   )

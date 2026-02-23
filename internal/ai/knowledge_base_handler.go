@@ -1280,6 +1280,13 @@ func (h *KnowledgeBaseHandler) ExportTableToKnowledgeBase(c fiber.Ctx) error {
 
 	req.KnowledgeBaseID = kbID
 
+	// Validate required fields
+	if req.Schema == "" || req.Table == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "schema and table are required",
+		})
+	}
+
 	// Determine owner_id for the document
 	// Priority: 1) authenticated user, 2) KB's owner_id, 3) KB's created_by, 4) nil for system documents
 	if uid, ok := c.Locals("user_id").(string); ok && uid != "" {

@@ -19,7 +19,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type { ExecutionLog, Job, OnBehalfOf, SubmitJobRequest } from "./types";
+import type { ExecutionLog, Job, OnBehalfOf, SubmitJobRequest, User } from "./types";
 
 /**
  * Jobs client for submitting and monitoring background jobs
@@ -31,9 +31,59 @@ import type { ExecutionLog, Job, OnBehalfOf, SubmitJobRequest } from "./types";
  */
 export class FluxbaseJobs {
   private fetch: FluxbaseFetch;
+  private cachedRole: { userId: string; role: string; expiresAt: number } | null = null;
+  private readonly ROLE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private isServiceRole: boolean;
 
-  constructor(fetch: FluxbaseFetch) {
+  constructor(fetch: FluxbaseFetch, isServiceRole = false) {
     this.fetch = fetch;
+    this.isServiceRole = isServiceRole;
+  }
+
+  /**
+   * Get the current user's role from user_profiles table
+   * This is used to auto-populate the onBehalfOf parameter when submitting jobs
+   *
+   * @returns Promise resolving to the user's role or null if not found
+   */
+  private async getCurrentUserRole(userId: string): Promise<string | null> {
+    try {
+      // Check cache
+      const now = Date.now();
+      if (
+        this.cachedRole &&
+        this.cachedRole.userId === userId &&
+        this.cachedRole.expiresAt > now
+      ) {
+        return this.cachedRole.role;
+      }
+
+      // Fetch user role from user_profiles table
+      // Note: This assumes a standard user_profiles table with role column
+      const profileResult = await this.fetch.get<Array<{ role: string }>>(
+        `/rest/v1/user_profiles?id=eq.${userId}&select=role`
+      );
+
+      if (!profileResult || !profileResult[0]) {
+        return null;
+      }
+
+      const role = profileResult[0].role;
+
+      // Update cache
+      if (role) {
+        this.cachedRole = {
+          userId,
+          role,
+          expiresAt: now + this.ROLE_CACHE_TTL
+        };
+      }
+
+      return role;
+    } catch (error) {
+      console.warn('[FluxbaseJobs] Failed to fetch user role:', error);
+      return null;
+    }
   }
 
   /**
@@ -88,18 +138,43 @@ export class FluxbaseJobs {
        * Submit job on behalf of another user (service_role only).
        * The job will be created with the specified user's identity,
        * allowing them to see the job and its logs via RLS.
+       *
+       * If not provided, the current user's identity and role from user_profiles
+       * will be automatically included.
        */
       onBehalfOf?: OnBehalfOf;
     },
   ): Promise<{ data: Job | null; error: Error | null }> {
     try {
+      let finalOnBehalfOf = options?.onBehalfOf;
+
+      // Only auto-populate onBehalfOf if this is a service role client
+      // Regular authenticated users cannot use on_behalf_of (backend rejects it)
+      if (this.isServiceRole && !finalOnBehalfOf) {
+        // Get current user info to submit on their behalf
+        const userResponse = await this.fetch.get<{ user: User }>("/api/v1/auth/user");
+        if (userResponse?.user) {
+          const user = userResponse.user;
+
+          // Fetch user's role from user_profiles
+          const role = await this.getCurrentUserRole(user.id);
+
+          // Populate onBehalfOf with current user's identity and role
+          finalOnBehalfOf = {
+            user_id: user.id,
+            user_email: user.email,
+            user_role: role || undefined // Include role if found
+          };
+        }
+      }
+
       const request: SubmitJobRequest = {
         job_name: jobName,
         payload,
         priority: options?.priority,
         namespace: options?.namespace,
         scheduled: options?.scheduled,
-        on_behalf_of: options?.onBehalfOf,
+        on_behalf_of: finalOnBehalfOf,
       };
 
       const data = await this.fetch.post<Job>("/api/v1/jobs/submit", request);
