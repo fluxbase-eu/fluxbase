@@ -4,9 +4,9 @@ go 1.25.7
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.43.0
-	github.com/aws/aws-sdk-go-v2 v1.41.1
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.9
-	github.com/aws/aws-sdk-go-v2/service/ses v1.34.18
+	github.com/aws/aws-sdk-go-v2 v1.41.2
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.10
+	github.com/aws/aws-sdk-go-v2/service/ses v1.34.19
 	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/crewjam/saml v0.5.1
 	github.com/davidbyttow/govips/v2 v2.16.0
@@ -25,7 +25,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/kapmahc/epub v0.1.1
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
-	github.com/mailgun/mailgun-go/v5 v5.13.2
+	github.com/mailgun/mailgun-go/v5 v5.14.0
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/nguyenthenguyen/docx v0.0.0-20230621112118-9c8e795a11db
 	github.com/olekukonko/tablewriter v1.1.3
@@ -63,9 +63,9 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/ClickHouse/ch-go v0.71.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17 // indirect
-	github.com/aws/smithy-go v1.24.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.18 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.18 // indirect
+	github.com/aws/smithy-go v1.24.1 // indirect
 	github.com/beevik/etree v1.5.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
