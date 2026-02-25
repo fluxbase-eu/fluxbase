@@ -201,6 +201,11 @@ func (h *RealtimeHandler) handleConnection(c *websocket.Conn) {
 		if h.subManager != nil {
 			h.subManager.RemoveConnectionSubscriptions(connectionID)
 		}
+		// Close the connection to cancel its context and clean up goroutines
+		// This must be called BEFORE RemoveConnection to ensure the context
+		// watcher goroutine can exit (it's blocked on <-connection.Context().Done())
+		_ = connection.Close()
+		// Remove from manager tracking
 		h.manager.RemoveConnection(connectionID)
 	}()
 
