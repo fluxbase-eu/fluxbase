@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"sync/atomic"
 	"time"
 
@@ -16,11 +15,6 @@ import (
 
 // MessageType represents the type of WebSocket message
 type MessageType string
-
-// readTimeout is the duration before a WebSocket read times out.
-// This allows periodic checking of context cancellation.
-// Set to match heartbeat interval for consistent timing and faster shutdown response.
-const readTimeout = 30 * time.Second
 
 // pingInterval is how often the server sends WebSocket pings to check connection health.
 const pingInterval = 15 * time.Second
@@ -214,33 +208,20 @@ func (h *RealtimeHandler) handleConnection(c *websocket.Conn) {
 	msgChan := make(chan ClientMessage, 10)
 	errChan := make(chan error, 1)
 
+	// Goroutine to close connection when context is cancelled
+	go func() {
+		<-connection.Context().Done()
+		// Close the WebSocket to unblock any pending reads
+		_ = c.Close()
+	}()
+
 	go func() {
 		for {
-			// Set read deadline to allow periodic context check
-			if err := c.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
-				errChan <- err
-				return
-			}
-
 			var msg ClientMessage
 			if err := c.ReadJSON(&msg); err != nil {
-				// Check if this is a timeout (expected for context checking)
-				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-					// Check if connection context is cancelled
-					select {
-					case <-connection.Context().Done():
-						errChan <- connection.Context().Err()
-						return
-					default:
-						// Not cancelled, refresh deadline and continue
-						continue
-					}
-				}
 				errChan <- err
 				return
 			}
-			// Clear deadline after successful read
-			c.SetReadDeadline(time.Time{})
 			msgChan <- msg
 		}
 	}()
