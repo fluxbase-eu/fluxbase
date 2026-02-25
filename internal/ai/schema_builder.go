@@ -86,9 +86,9 @@ func (s *SchemaBuilder) BuildSchemaDescription(ctx context.Context, allowedSchem
 	sb.WriteString("## Available Database Tables\n\n")
 
 	for _, table := range tables {
-		sb.WriteString(fmt.Sprintf("### %s.%s\n", table.Schema, table.Name))
+		fmt.Fprintf(&sb, "### %s.%s\n", table.Schema, table.Name)
 		if table.Description != "" {
-			sb.WriteString(fmt.Sprintf("%s\n\n", table.Description))
+			fmt.Fprintf(&sb, "%s\n\n", table.Description)
 		}
 
 		sb.WriteString("| Column | Type | Nullable | Notes |\n")
@@ -112,8 +112,8 @@ func (s *SchemaBuilder) BuildSchemaDescription(ctx context.Context, allowedSchem
 			}
 
 			notesStr := strings.Join(notes, ", ")
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
-				col.Name, col.DataType, nullable, notesStr))
+			fmt.Fprintf(&sb, "| %s | %s | %s | %s |\n",
+				col.Name, col.DataType, nullable, notesStr)
 		}
 
 		sb.WriteString("\n")
@@ -383,7 +383,7 @@ func (s *SchemaBuilder) BuildSystemPromptWithAuth(ctx context.Context, chatbot *
 
 	// Add default table hint if configured
 	if chatbot.DefaultTable != "" {
-		sb.WriteString(fmt.Sprintf("\n**Default/Primary table**: %s - Use this table first unless the question specifically requires a different table.\n", chatbot.DefaultTable))
+		fmt.Fprintf(&sb, "\n**Default/Primary table**: %s - Use this table first unless the question specifically requires a different table.\n", chatbot.DefaultTable)
 	}
 
 	// Add intent rules hints if configured
@@ -677,9 +677,9 @@ func (s *SchemaBuilder) BuildSchemaDescriptionFromMCP(ctx context.Context, allow
 	sb.WriteString("## Available Database Tables\n\n")
 
 	for _, table := range tables {
-		sb.WriteString(fmt.Sprintf("### %s.%s\n", table.Schema, table.Name))
+		fmt.Fprintf(&sb, "### %s.%s\n", table.Schema, table.Name)
 		if table.Description != "" {
-			sb.WriteString(fmt.Sprintf("%s\n\n", table.Description))
+			fmt.Fprintf(&sb, "%s\n\n", table.Description)
 		}
 
 		sb.WriteString("| Column | Type | Nullable | Notes |\n")
@@ -703,8 +703,8 @@ func (s *SchemaBuilder) BuildSchemaDescriptionFromMCP(ctx context.Context, allow
 			}
 
 			notesStr := strings.Join(notes, ", ")
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
-				col.Name, col.DataType, nullable, notesStr))
+			fmt.Fprintf(&sb, "| %s | %s | %s | %s |\n",
+				col.Name, col.DataType, nullable, notesStr)
 		}
 
 		sb.WriteString("\n")
