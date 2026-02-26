@@ -171,11 +171,14 @@ func main() {
 	}
 	log.Info().Msg("Database migrations completed successfully")
 
-	// Reset the pool after migrations to clear any stale prepared statement cache
+	// Recreate the pool after migrations to clear any stale prepared statement cache
 	// Migrations can invalidate cached statement plans, causing panics in pgx
-	log.Debug().Msg("Resetting connection pool after migrations...")
-	db.Pool().Reset()
-	log.Debug().Msg("Connection pool reset complete")
+	// We use RecreatePool() instead of Reset() to avoid edge cases where Reset()
+	// can cause the pool to enter a closed state
+	log.Debug().Msg("Recreating connection pool after migrations...")
+	if err := db.RecreatePool(); err != nil {
+		log.Warn().Err(err).Msg("Failed to recreate connection pool, continuing with existing pool")
+	}
 
 	// Initialize API server
 	server := api.NewServer(cfg, db, Version)
