@@ -251,6 +251,15 @@ func (c *SchemaCache) startInvalidationListener() {
 	c.mu.Unlock()
 
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("goroutine", "schema_cache_invalidation").
+					Msg("Panic in schema cache invalidation listener - recovered")
+			}
+		}()
+
 		msgCh, err := ps.Subscribe(ctx, pubsub.SchemaCacheChannel)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to subscribe to schema cache invalidation channel")
