@@ -155,6 +155,14 @@ func (r *DenoRuntime) Execute(
 	// Watch for cancel signal and cancel exec context
 	if cancelSignal != nil {
 		go func() {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Error().
+						Interface("panic", rec).
+						Str("id", req.ID.String()).
+						Msg("Panic in cancel signal watcher - recovered")
+				}
+			}()
 			select {
 			case <-cancelSignal.Context().Done():
 				execCancel() // This will kill the Deno process
@@ -411,8 +419,22 @@ func (r *DenoRuntime) Execute(
 	// Wait for command to complete
 	cmdErr := cmd.Wait()
 
-	// Wait for output processing to complete
-	wg.Wait()
+	// Wait for output processing to complete with timeout
+	// This prevents hanging if scanner goroutines are stuck
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Normal completion
+	case <-time.After(5 * time.Second):
+		log.Warn().
+			Str("id", req.ID.String()).
+			Msg("Timeout waiting for output scanners - continuing")
+	}
 
 	duration := time.Since(start)
 

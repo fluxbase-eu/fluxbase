@@ -280,8 +280,24 @@ func (e *Executor) ExecuteAsync(ctx context.Context, execCtx *ExecuteContext) (*
 	// Pass the execution ID so the background worker updates this record
 	execCtx.ExecutionID = exec.ID
 
-	// Start async execution in goroutine
+	// Start async execution in goroutine with panic recovery
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("execution_id", exec.ID).
+					Str("procedure", execCtx.Procedure.Name).
+					Msg("Panic in async RPC execution - recovered, marking as failed")
+				// Mark execution as failed
+				exec.Status = StatusFailed
+				errMsg := fmt.Sprintf("Internal error: execution panic: %v", rec)
+				exec.ErrorMessage = &errMsg
+				now := time.Now()
+				exec.CompletedAt = &now
+				_ = e.storage.UpdateExecution(context.Background(), exec)
+			}
+		}()
 		// Use executor's context so async executions are cancelled on shutdown
 		_, _ = e.Execute(e.ctx, execCtx)
 	}()
