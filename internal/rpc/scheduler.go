@@ -56,6 +56,14 @@ func (s *Scheduler) Start() error {
 
 	// Load procedures asynchronously with retry logic to handle race conditions during startup
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Msg("Panic in RPC scheduler async loader - recovered")
+			}
+		}()
+
 		maxRetries := 5
 		retryDelay := 100 * time.Millisecond
 

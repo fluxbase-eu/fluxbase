@@ -90,6 +90,21 @@ func (le *LeaderElector) IsLeader() bool {
 
 // electionLoop periodically tries to acquire/maintain the leader lock.
 func (le *LeaderElector) electionLoop(onBecomeLeader, onLoseLeadership func()) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("lock", le.lockName).
+				Str("goroutine", "electionLoop").
+				Msg("Panic in leader election loop - recovered")
+			// Restart the election loop after a delay
+			time.Sleep(5 * time.Second)
+			if le.ctx.Err() == nil {
+				go le.electionLoop(onBecomeLeader, onLoseLeadership)
+			}
+		}
+	}()
+
 	ticker := time.NewTicker(le.checkInterval)
 	defer ticker.Stop()
 
@@ -134,16 +149,30 @@ func (le *LeaderElector) tryAcquireLock(onBecomeLeader, onLoseLeadership func())
 			Str("lock", le.lockName).
 			Msg("Acquired leader lock - this instance is now the leader")
 		if onBecomeLeader != nil {
-			onBecomeLeader()
+			le.safeCallback(onBecomeLeader, "onBecomeLeader")
 		}
 	} else if !acquired && wasLeader {
 		log.Warn().
 			Str("lock", le.lockName).
 			Msg("Lost leader lock - this instance is no longer the leader")
 		if onLoseLeadership != nil {
-			onLoseLeadership()
+			le.safeCallback(onLoseLeadership, "onLoseLeadership")
 		}
 	}
+}
+
+// safeCallback executes a callback with panic recovery
+func (le *LeaderElector) safeCallback(fn func(), name string) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("lock", le.lockName).
+				Str("callback", name).
+				Msg("Panic in leader election callback - recovered")
+		}
+	}()
+	fn()
 }
 
 // releaseLock releases the advisory lock if held.

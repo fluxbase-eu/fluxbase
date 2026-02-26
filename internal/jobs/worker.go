@@ -200,6 +200,16 @@ func (w *Worker) Stop() {
 
 // pollLoop continuously polls for and executes jobs
 func (w *Worker) pollLoop(ctx context.Context) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("worker_id", w.ID.String()).
+				Str("goroutine", "pollLoop").
+				Msg("Panic in poll loop - recovered, worker will stop processing jobs")
+		}
+	}()
+
 	ticker := time.NewTicker(w.Config.PollInterval)
 	defer ticker.Stop()
 
