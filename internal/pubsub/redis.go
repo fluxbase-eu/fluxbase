@@ -86,6 +86,13 @@ func (r *RedisPubSub) Subscribe(ctx context.Context, channel string) (<-chan Mes
 	go func() {
 		defer r.wg.Done()
 		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("channel", channel).
+					Str("goroutine", "redis_message_handler").
+					Msg("Panic in Redis pub/sub message handler - recovered")
+			}
 			r.unsubscribe(channel, ch)
 			_ = pubsub.Close()
 		}()

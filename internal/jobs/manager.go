@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
@@ -13,7 +14,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Manager manages multiple workers
+// workerError represents an error from a worker
+type workerError struct {
+	workerID uuid.UUID
+	err      error
+}
+
+// Manager manages multiple workers with automatic restart on failure
 type Manager struct {
 	Config                 *config.JobsConfig
 	Storage                *Storage
@@ -24,6 +31,16 @@ type Manager struct {
 	publicURL              string
 	wg                     sync.WaitGroup
 	stopCh                 chan struct{}
+
+	// Worker supervision
+	workerErrors   chan workerError
+	workersMutex   sync.RWMutex
+	activeWorkers  map[uuid.UUID]bool
+	restartCounts  map[uuid.UUID]int
+	restartMutex   sync.Mutex
+	targetCount    int
+	supervisorCtx  context.Context
+	supervisorStop context.CancelFunc
 }
 
 // NewManager creates a new worker manager
@@ -36,10 +53,13 @@ func NewManager(cfg *config.JobsConfig, conn *database.Connection, jwtSecret, pu
 		jwtSecret:      jwtSecret,
 		publicURL:      publicURL,
 		stopCh:         make(chan struct{}),
+		workerErrors:   make(chan workerError, 100),
+		activeWorkers:  make(map[uuid.UUID]bool),
+		restartCounts:  make(map[uuid.UUID]int),
 	}
 }
 
-// Start starts the specified number of workers
+// Start starts the specified number of workers with automatic restart on failure
 func (m *Manager) Start(ctx context.Context, workerCount int) error {
 	if workerCount <= 0 {
 		return fmt.Errorf("worker count must be positive, got: %d", workerCount)
@@ -50,22 +70,15 @@ func (m *Manager) Start(ctx context.Context, workerCount int) error {
 		Str("mode", m.Config.WorkerMode).
 		Msg("Starting job worker manager")
 
-	// Start workers
-	for i := 0; i < workerCount; i++ {
-		worker := NewWorker(m.Config, m.Storage, m.jwtSecret, m.publicURL, m.SecretsStorage)
-		worker.SettingsSecretsService = m.SettingsSecretsService
-		m.Workers = append(m.Workers, worker)
+	m.targetCount = workerCount
+	m.supervisorCtx, m.supervisorStop = context.WithCancel(context.Background())
 
-		m.wg.Add(1)
-		go func(w *Worker) {
-			defer m.wg.Done()
-			if err := w.Start(ctx); err != nil {
-				log.Error().
-					Err(err).
-					Str("worker_id", w.ID.String()).
-					Msg("Worker failed")
-			}
-		}(worker)
+	// Start supervisor goroutine to monitor worker health
+	go m.superviseWorkers()
+
+	// Start initial workers
+	for i := 0; i < workerCount; i++ {
+		m.startWorker(ctx)
 	}
 
 	log.Info().
@@ -75,14 +88,123 @@ func (m *Manager) Start(ctx context.Context, workerCount int) error {
 	return nil
 }
 
+// startWorker creates and starts a single worker
+func (m *Manager) startWorker(ctx context.Context) *Worker {
+	worker := NewWorker(m.Config, m.Storage, m.jwtSecret, m.publicURL, m.SecretsStorage)
+	worker.SettingsSecretsService = m.SettingsSecretsService
+
+	m.workersMutex.Lock()
+	m.Workers = append(m.Workers, worker)
+	m.activeWorkers[worker.ID] = true
+	m.workersMutex.Unlock()
+
+	m.wg.Add(1)
+	go func(w *Worker) {
+		defer m.wg.Done()
+		defer func() {
+			m.workersMutex.Lock()
+			delete(m.activeWorkers, w.ID)
+			m.workersMutex.Unlock()
+		}()
+
+		if err := w.Start(ctx); err != nil {
+			log.Error().
+				Err(err).
+				Str("worker_id", w.ID.String()).
+				Msg("Worker failed")
+			// Notify supervisor about the failure
+			select {
+			case m.workerErrors <- workerError{workerID: w.ID, err: err}:
+			default:
+				// Channel full, log and continue
+				log.Warn().Str("worker_id", w.ID.String()).Msg("Worker error channel full, cannot notify supervisor")
+			}
+		}
+	}(worker)
+
+	return worker
+}
+
+// superviseWorkers monitors worker health and restarts failed workers
+func (m *Manager) superviseWorkers() {
+	for {
+		select {
+		case err := <-m.workerErrors:
+			log.Warn().
+				Err(err.err).
+				Str("worker_id", err.workerID.String()).
+				Msg("Worker failed, checking restart eligibility")
+
+			// Check if we should restart
+			m.restartMutex.Lock()
+			restartCount := m.restartCounts[err.workerID]
+			// Reset restart count after 5 minutes of stability
+			maxRestarts := 5
+			shouldRestart := restartCount < maxRestarts
+			if shouldRestart {
+				m.restartCounts[err.workerID] = restartCount + 1
+			}
+			m.restartMutex.Unlock()
+
+			if shouldRestart {
+				// Exponential backoff: 1s, 2s, 4s, 8s, 16s
+				backoff := time.Second << time.Duration(restartCount)
+				if backoff > 30*time.Second {
+					backoff = 30 * time.Second
+				}
+				log.Info().
+					Str("failed_worker_id", err.workerID.String()).
+					Int("restart_count", restartCount+1).
+					Dur("backoff", backoff).
+					Msg("Scheduling worker restart with backoff")
+
+				time.Sleep(backoff)
+
+				// Check current worker count
+				m.workersMutex.RLock()
+				currentCount := len(m.activeWorkers)
+				m.workersMutex.RUnlock()
+
+				if currentCount < m.targetCount {
+					log.Info().
+						Int("current_workers", currentCount).
+						Int("target_workers", m.targetCount).
+						Msg("Starting replacement worker")
+					m.startWorker(m.supervisorCtx)
+				} else {
+					log.Info().
+						Int("current_workers", currentCount).
+						Msg("Worker count at target, not starting replacement")
+				}
+			} else {
+				log.Error().
+					Str("worker_id", err.workerID.String()).
+					Int("restart_count", restartCount).
+					Msg("Worker exceeded max restarts, not restarting")
+			}
+
+		case <-m.supervisorCtx.Done():
+			log.Info().Msg("Worker supervisor stopped")
+			return
+		}
+	}
+}
+
 // Stop stops all workers gracefully
 func (m *Manager) Stop() {
 	log.Info().Msg("Stopping job worker manager")
 
+	// Stop the supervisor first
+	if m.supervisorStop != nil {
+		m.supervisorStop()
+	}
+
 	// Signal all workers to stop
+	m.workersMutex.RLock()
 	for _, worker := range m.Workers {
 		worker.Stop()
 	}
+	m.workersMutex.RUnlock()
 
 	// Wait for all workers to complete
 	m.wg.Wait()
@@ -91,7 +213,21 @@ func (m *Manager) Stop() {
 }
 
 // GetWorkerCount returns the number of active workers
+// It returns the count from activeWorkers map when using supervisor,
+// or falls back to Workers slice length for backward compatibility
 func (m *Manager) GetWorkerCount() int {
+	m.workersMutex.RLock()
+	activeCount := len(m.activeWorkers)
+	m.workersMutex.RUnlock()
+
+	// If activeWorkers is populated, use it (supervisor mode)
+	if activeCount > 0 {
+		return activeCount
+	}
+
+	// Fall back to Workers slice for backward compatibility with tests
+	m.workersMutex.RLock()
+	defer m.workersMutex.RUnlock()
 	return len(m.Workers)
 }
 
@@ -103,7 +239,12 @@ func (m *Manager) SetSettingsSecretsService(svc *settings.SecretsService) {
 // CancelJob cancels a running job by signaling all workers
 // This immediately kills the Deno process if the job is running on any worker
 func (m *Manager) CancelJob(jobID uuid.UUID) {
-	for _, worker := range m.Workers {
+	m.workersMutex.RLock()
+	workers := make([]*Worker, len(m.Workers))
+	copy(workers, m.Workers)
+	m.workersMutex.RUnlock()
+
+	for _, worker := range workers {
 		worker.cancelJob(jobID)
 	}
 }

@@ -115,6 +115,15 @@ func NewConnectionSync(id string, conn *websocket.Conn, userID *string, role str
 // writerLoop drains the message queue and sends messages to the WebSocket
 func (c *Connection) writerLoop() {
 	defer c.wg.Done()
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("connection_id", c.ID).
+				Str("goroutine", "writerLoop").
+				Msg("Panic in writer loop - recovered")
+		}
+	}()
 
 	for {
 		select {

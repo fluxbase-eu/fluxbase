@@ -1233,6 +1233,15 @@ func (ls *LocalStorage) CleanupExpiredChunkedUploads(ctx context.Context) (int, 
 // expired chunked upload sessions. Call this once when initializing the storage.
 func (ls *LocalStorage) StartChunkedUploadCleanup(ctx context.Context) {
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("goroutine", "local_chunked_upload_cleanup").
+					Msg("Panic in local storage chunked upload cleanup - recovered")
+			}
+		}()
+
 		// Run cleanup every hour
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()

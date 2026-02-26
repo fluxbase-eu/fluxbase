@@ -3,6 +3,8 @@ package auth
 import (
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // nonceEntry stores a nonce with its associated user and expiry time
@@ -72,6 +74,15 @@ func (s *NonceStore) Cleanup() {
 func (s *NonceStore) StartCleanup(interval time.Duration) chan struct{} {
 	stop := make(chan struct{})
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("goroutine", "nonce_cleanup").
+					Msg("Panic in nonce cleanup - recovered")
+			}
+		}()
+
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		for {

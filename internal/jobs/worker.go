@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/fluxbase-eu/fluxbase/internal/config"
@@ -199,6 +200,16 @@ func (w *Worker) Stop() {
 
 // pollLoop continuously polls for and executes jobs
 func (w *Worker) pollLoop(ctx context.Context) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("worker_id", w.ID.String()).
+				Str("goroutine", "pollLoop").
+				Msg("Panic in poll loop - recovered, worker will stop processing jobs")
+		}
+	}()
+
 	ticker := time.NewTicker(w.Config.PollInterval)
 	defer ticker.Stop()
 
@@ -245,6 +256,16 @@ func (w *Worker) pollLoop(ctx context.Context) {
 
 // heartbeatLoop sends periodic heartbeats
 func (w *Worker) heartbeatLoop(ctx context.Context) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("worker_id", w.ID.String()).
+				Str("goroutine", "heartbeatLoop").
+				Msg("Panic in heartbeat loop - recovered")
+		}
+	}()
+
 	ticker := time.NewTicker(w.Config.WorkerHeartbeatInterval)
 	defer ticker.Stop()
 
@@ -267,6 +288,16 @@ func (w *Worker) heartbeatLoop(ctx context.Context) {
 
 // staleWorkerCleanupLoop periodically removes workers that haven't sent heartbeats
 func (w *Worker) staleWorkerCleanupLoop(ctx context.Context) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("worker_id", w.ID.String()).
+				Str("goroutine", "staleWorkerCleanupLoop").
+				Msg("Panic in stale worker cleanup loop - recovered")
+		}
+	}()
+
 	// Run cleanup at half the WorkerTimeout interval for faster detection
 	// This reduces worst-case detection time from 2*timeout to 1.5*timeout
 	cleanupInterval := w.Config.WorkerTimeout / 2
@@ -301,6 +332,16 @@ func (w *Worker) staleWorkerCleanupLoop(ctx context.Context) {
 
 // progressTimeoutLoop monitors running jobs for progress timeouts
 func (w *Worker) progressTimeoutLoop(ctx context.Context) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("worker_id", w.ID.String()).
+				Str("goroutine", "progressTimeoutLoop").
+				Msg("Panic in progress timeout loop - recovered")
+		}
+	}()
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -374,8 +415,8 @@ func (w *Worker) executeJob(ctx context.Context, job *Job) {
 	w.currentJobs.Store(job.ID, cancelSignal)
 	defer w.currentJobs.Delete(job.ID)
 
-	// Initialize log line counter
-	lineCounter := 0
+	// Initialize log line counter (int32 for atomic operations)
+	var lineCounter int32 = 0
 	w.jobLogCounters.Store(job.ID, &lineCounter)
 	defer w.jobLogCounters.Delete(job.ID)
 
@@ -467,7 +508,12 @@ func (w *Worker) executeJob(ctx context.Context, job *Job) {
 		allSecrets[k] = v
 	}
 
-	// Execute job in runtime
+	// Execute job in runtime - add defensive nil check
+	if w.Runtime == nil {
+		log.Error().Str("job_id", job.ID.String()).Msg("Runtime not initialized")
+		_ = w.Storage.FailJob(ctx, job.ID, "Internal error: runtime not initialized")
+		return
+	}
 	result, err := w.Runtime.Execute(ctx, *jobFunction.Code, execReq, permissions, cancelSignal, timeoutOverride, allSecrets)
 
 	// Check if job was cancelled
@@ -576,26 +622,25 @@ func (w *Worker) handleLogMessage(jobID uuid.UUID, level string, message string)
 		return
 	}
 
-	// Get and increment the line counter for this job
+	// Get and increment the line counter for this job atomically
 	counterVal, ok := w.jobLogCounters.Load(jobID)
 	if !ok {
 		log.Warn().Str("job_id", jobID.String()).Msg("Log counter not found for job")
 		return
 	}
-	counterPtr, ok := counterVal.(*int)
+	counterPtr, ok := counterVal.(*int32)
 	if !ok {
 		log.Warn().Str("job_id", jobID.String()).Msg("Invalid log counter type for job")
 		return
 	}
-	lineNumber := *counterPtr
-	*counterPtr = lineNumber + 1
+	lineNumber := atomic.AddInt32(counterPtr, 1) - 1 // AddInt32 returns new value, so subtract 1 for 0-indexed
 
 	// Log to zerolog - central logging service will capture this via execution_id field
 	log.Info().
 		Str("execution_id", jobID.String()).
 		Str("execution_type", "job").
 		Str("level", level).
-		Int("line_number", lineNumber).
+		Int("line_number", int(lineNumber)).
 		Msg(message)
 }
 
