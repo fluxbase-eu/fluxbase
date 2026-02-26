@@ -69,6 +69,15 @@ func (rl *endpointRateLimiter) allow(endpoint string) bool {
 
 // cleanup periodically removes old entries to prevent memory growth
 func (rl *endpointRateLimiter) cleanup() {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("goroutine", "rateLimiterCleanup").
+				Msg("Panic in rate limiter cleanup - recovered")
+		}
+	}()
+
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -292,6 +301,14 @@ func (s *TriggerService) EnablePrivateIPs() {
 // listen listens for PostgreSQL notifications about new webhook events
 func (s *TriggerService) listen(ctx context.Context) {
 	defer s.wg.Done()
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("goroutine", "webhook_listen").
+				Msg("Panic in webhook listener - recovered")
+		}
+	}()
 
 	// Retry logic to handle race conditions during startup
 	maxRetries := 5
@@ -410,6 +427,15 @@ func (s *TriggerService) listen(ctx context.Context) {
 // worker processes webhook events from the queue
 func (s *TriggerService) worker(ctx context.Context, workerID int) {
 	defer s.wg.Done()
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Int("worker_id", workerID).
+				Str("goroutine", "webhook_worker").
+				Msg("Panic in webhook worker - recovered")
+		}
+	}()
 	log.Debug().Int("worker_id", workerID).Msg("Webhook worker started")
 
 	for {
@@ -671,6 +697,14 @@ func (s *TriggerService) markEventSuccess(ctx context.Context, eventID uuid.UUID
 // processBacklog periodically processes events that are ready for retry
 func (s *TriggerService) processBacklog(ctx context.Context) {
 	defer s.wg.Done()
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("goroutine", "webhook_processBacklog").
+				Msg("Panic in webhook backlog processor - recovered")
+		}
+	}()
 
 	// Run immediately on startup to check for any pending retries
 	s.checkForRetries(ctx)
@@ -736,6 +770,15 @@ func (s *TriggerService) checkForRetries(ctx context.Context) {
 // cleanup removes old processed webhook events to prevent table bloat
 func (s *TriggerService) cleanup(ctx context.Context) {
 	defer s.wg.Done()
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("goroutine", "webhook_cleanup").
+				Msg("Panic in webhook cleanup - recovered")
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():

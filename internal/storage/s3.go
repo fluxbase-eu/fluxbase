@@ -644,6 +644,15 @@ func (s3s *S3Storage) CleanupExpiredMultipartUploads(ctx context.Context, bucket
 // expired multipart uploads across all buckets. Call this once when initializing the storage.
 func (s3s *S3Storage) StartMultipartUploadCleanup(ctx context.Context, maxAge time.Duration) {
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("goroutine", "s3_multipart_cleanup").
+					Msg("Panic in S3 multipart cleanup - recovered")
+			}
+		}()
+
 		// Run cleanup every hour
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()

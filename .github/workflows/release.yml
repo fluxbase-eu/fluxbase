@@ -185,6 +185,14 @@ jobs:
               BASE_MONTH="$MONTH"
               BASE_ITERATION="$ITERATION"
               MODE="continue_rc"
+
+              # Check if stable version of this base already exists
+              # If so, we need to start a new RC series for the next iteration
+              if git rev-parse "v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}" >/dev/null 2>&1; then
+                echo "Stable version v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION} already exists, incrementing iteration"
+                BASE_ITERATION="$((BASE_ITERATION + 1))"
+                MODE="new"
+              fi
             elif [ "$LAST_IS_RC" = true ] && [ "$RELEASE_TYPE" = "stable" ]; then
               # rc → stable: Promote RC to stable
               BASE_YEAR="$YEAR"

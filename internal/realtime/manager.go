@@ -162,6 +162,15 @@ func (m *Manager) SetPubSub(ps pubsub.PubSub) {
 
 // handleGlobalBroadcasts listens for broadcast messages from other instances
 func (m *Manager) handleGlobalBroadcasts() {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("goroutine", "handleGlobalBroadcasts").
+				Msg("Panic in global broadcasts handler - recovered")
+		}
+	}()
+
 	ch, err := m.ps.Subscribe(m.ctx, pubsub.BroadcastChannel)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to subscribe to broadcast channel")

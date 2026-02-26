@@ -130,6 +130,14 @@ func (s *Service) Log(ctx context.Context, entry *storage.LogEntry) {
 	// Send PubSub notification for all logs (for realtime streaming)
 	if s.notifier != nil {
 		go func(e *storage.LogEntry) {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Error().
+						Interface("panic", rec).
+						Str("goroutine", "logging_pubsub_notify").
+						Msg("Panic in log PubSub notification - recovered")
+				}
+			}()
 			if err := s.notifier.Notify(context.Background(), e); err != nil {
 				log.Debug().Err(err).Msg("Failed to send log notification")
 			}
@@ -422,6 +430,15 @@ func (s *Service) ClearLineNumbers(executionID string) {
 // cleanupStaleLineNumbers periodically removes stale line number entries
 // to prevent memory leaks from executions that never called ClearLineNumbers.
 func (s *Service) cleanupStaleLineNumbers() {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("goroutine", "logging_cleanupStaleLineNumbers").
+				Msg("Panic in logging cleanup - recovered")
+		}
+	}()
+
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 

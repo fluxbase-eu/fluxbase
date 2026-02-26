@@ -61,6 +61,14 @@ func (p *PostgresPubSub) Start() error {
 // listenLoop handles PostgreSQL LISTEN/NOTIFY
 func (p *PostgresPubSub) listenLoop() {
 	defer p.wg.Done()
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Error().
+				Interface("panic", rec).
+				Str("goroutine", "listenLoop").
+				Msg("Panic in PostgreSQL pub/sub listen loop - recovered")
+		}
+	}()
 
 	for {
 		// Check if we should stop
@@ -182,6 +190,15 @@ func (p *PostgresPubSub) Subscribe(ctx context.Context, channel string) (<-chan 
 
 	// Remove subscription when context is cancelled
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("channel", channel).
+					Str("goroutine", "unsubscribe_handler").
+					Msg("Panic in pub/sub unsubscribe handler - recovered")
+			}
+		}()
 		<-ctx.Done()
 		p.unsubscribe(channel, ch)
 	}()

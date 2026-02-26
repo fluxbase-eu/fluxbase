@@ -233,6 +233,85 @@ func (c *Connection) Pool() *pgxpool.Pool {
 	return c.pool
 }
 
+// RecreatePool closes the current pool and creates a new one.
+// This is safer than Reset() as it ensures a completely fresh pool state.
+// Use this after schema changes (migrations) to avoid prepared statement cache issues.
+func (c *Connection) RecreatePool() error {
+	// Close the old pool
+	c.pool.Close()
+
+	// Create a new pool with the same configuration
+	poolConfig, err := pgxpool.ParseConfig(c.config.RuntimeConnectionString())
+	if err != nil {
+		return fmt.Errorf("unable to parse connection string: %w", err)
+	}
+
+	// Apply same configuration as NewConnection
+	poolConfig.MaxConns = c.config.MaxConnections
+	poolConfig.MinConns = c.config.MinConnections
+	poolConfig.MaxConnLifetime = c.config.MaxConnLifetime
+	poolConfig.MaxConnIdleTime = c.config.MaxConnIdleTime
+	poolConfig.HealthCheckPeriod = c.config.HealthCheck
+	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
+
+	// Copy the AfterConnect hook logic for custom type registration
+	poolConfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		// Register tsvector (OID 3614) as text
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Name:  "tsvector",
+			OID:   3614,
+			Codec: pgtype.TextCodec{},
+		})
+		// Register tsquery (OID 3615) as text
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Name:  "tsquery",
+			OID:   3615,
+			Codec: pgtype.TextCodec{},
+		})
+		// Register regclass (OID 2205) as text - used in some system views
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Name:  "regclass",
+			OID:   2205,
+			Codec: pgtype.TextCodec{},
+		})
+
+		// Register pgvector 'vector' type if the extension is installed
+		queryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		var vectorOID uint32
+		err := conn.QueryRow(queryCtx, "SELECT oid FROM pg_type WHERE typname = 'vector'").Scan(&vectorOID)
+		if err == nil && vectorOID > 0 {
+			conn.TypeMap().RegisterType(&pgtype.Type{
+				Name:  "vector",
+				OID:   vectorOID,
+				Codec: pgtype.TextCodec{}, // Vectors are text-encoded as '[0.1,0.2,...]'
+			})
+		}
+
+		return nil
+	}
+
+	// Create new pool
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	if err != nil {
+		return fmt.Errorf("unable to create connection pool: %w", err)
+	}
+
+	// Test the new pool
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return fmt.Errorf("unable to ping database: %w", err)
+	}
+
+	c.pool = pool
+	log.Info().Msg("Connection pool recreated successfully")
+	return nil
+}
+
 // Migrate runs database migrations from both system and user sources
 func (c *Connection) Migrate() error {
 	// Step 1: Run system migrations (embedded in binary)

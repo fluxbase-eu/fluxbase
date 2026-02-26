@@ -114,6 +114,14 @@ func (s *Scheduler) Start() error {
 
 	// Load jobs asynchronously with retry logic to handle race conditions during startup
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Msg("Panic in job scheduler async loader - recovered")
+			}
+		}()
+
 		maxRetries := 5
 		retryDelay := 100 * time.Millisecond
 

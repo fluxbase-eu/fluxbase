@@ -526,6 +526,16 @@ func (p *DocumentProcessor) AddDocument(ctx context.Context, kbID string, req Cr
 
 	// Process document asynchronously
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("doc_id", doc.ID).
+					Str("goroutine", "ai_document_processor").
+					Msg("Panic in async document processing - recovered")
+			}
+		}()
+
 		processCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 

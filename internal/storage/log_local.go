@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 // LocalLogStorage implements LogStorage using the local filesystem.
@@ -496,6 +497,15 @@ func (s *LocalLogStorage) StreamExecutionLogs(ctx context.Context, executionID s
 
 	go func() {
 		defer close(ch)
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("execution_id", executionID).
+					Str("goroutine", "local_log_stream").
+					Msg("Panic in local log stream - recovered")
+			}
+		}()
 
 		var lastLine int
 		ticker := time.NewTicker(100 * time.Millisecond)

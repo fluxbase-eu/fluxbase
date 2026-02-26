@@ -105,6 +105,14 @@ func (s *Scheduler) Start() error {
 
 	// Load functions asynchronously with retry logic to handle race conditions during startup
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Msg("Panic in edge functions scheduler async loader - recovered")
+			}
+		}()
+
 		maxRetries := 5
 		retryDelay := 100 * time.Millisecond
 
@@ -379,6 +387,15 @@ func (s *Scheduler) executeScheduledFunction(funcName, funcNamespace string) {
 	// Skip if execution logs are disabled for this function
 	if !fn.DisableExecutionLogs {
 		go func() {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Error().
+						Interface("panic", rec).
+						Str("function", fn.Name).
+						Str("execution_id", executionID.String()).
+						Msg("Panic in scheduled function execution record completion - recovered")
+				}
+			}()
 			if updateErr := s.storage.CompleteExecution(context.Background(), executionID, status, &result.Status, &durationMs, resultStr, &result.Logs, errorMessage); updateErr != nil {
 				log.Error().
 					Err(updateErr).

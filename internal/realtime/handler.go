@@ -215,12 +215,30 @@ func (h *RealtimeHandler) handleConnection(c *websocket.Conn) {
 
 	// Goroutine to close connection when context is cancelled
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("connection_id", connectionID).
+					Str("goroutine", "context_watcher").
+					Msg("Panic in context watcher goroutine - recovered")
+			}
+		}()
 		<-connection.Context().Done()
 		// Close the WebSocket to unblock any pending reads
 		_ = c.Close()
 	}()
 
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("connection_id", connectionID).
+					Str("goroutine", "message_reader").
+					Msg("Panic in message reader goroutine - recovered")
+			}
+		}()
 		for {
 			var msg ClientMessage
 			if err := c.ReadJSON(&msg); err != nil {
@@ -247,6 +265,15 @@ func (h *RealtimeHandler) handleConnection(c *websocket.Conn) {
 	defer pingTicker.Stop()
 
 	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("connection_id", connectionID).
+					Str("goroutine", "ping_monitor").
+					Msg("Panic in ping monitor goroutine - recovered")
+			}
+		}()
 		for {
 			select {
 			case <-pingTicker.C:
