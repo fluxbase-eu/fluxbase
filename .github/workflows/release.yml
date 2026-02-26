@@ -193,7 +193,8 @@ jobs:
               MODE="promote_rc"
             else
               # stable → rc OR stable → stable: Start new release (increment iteration)
-              if [ "$IS_CALVER" = true ] && [ "$YEAR" = "$CURRENT_YEAR" ] && [ "$MONTH" = "$CURRENT_MONTH" ]; then
+              # Use numeric comparison (-eq) to handle leading zeros correctly
+              if [ "$IS_CALVER" = true ] && [ "$YEAR" -eq "$CURRENT_YEAR" ] && [ "$MONTH" -eq "$CURRENT_MONTH" ]; then
                 # Same month: increment iteration
                 BASE_ITERATION="$((ITERATION + 1))"
                 BASE_YEAR="$YEAR"
