@@ -215,7 +215,7 @@ function UserQuotasPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className='min-w-[160px]'>
                         <div className='space-y-1'>
                           <div className='flex items-center gap-2 text-sm'>
                             <span>{quota.used_documents.toLocaleString()}</span>
@@ -229,7 +229,7 @@ function UserQuotasPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className='min-w-[160px]'>
                         <div className='space-y-1'>
                           <div className='flex items-center gap-2 text-sm'>
                             <span>{quota.used_chunks.toLocaleString()}</span>
@@ -243,7 +243,7 @@ function UserQuotasPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className='min-w-[160px]'>
                         <div className='space-y-1'>
                           <div className='flex items-center gap-2 text-sm'>
                             <span>{formatBytes(quota.used_storage_bytes)}</span>
