@@ -102,7 +102,7 @@ services:
 
   # Elasticsearch Service (for logging backend testing)
   elasticsearch:
-    image: elasticsearch:9.3.0
+    image: elasticsearch:9.3.1
     container_name: fluxbase-elasticsearch-dev
     restart: unless-stopped
     environment:
