@@ -27,26 +27,24 @@ export function HealthIndicators() {
     {
       name: 'API',
       status: health?.status === 'ok' ? 'healthy' : 'down',
-      details: health?.status === 'ok' ? 'All endpoints operational' : 'Service unavailable',
+      details:
+        health?.status === 'ok'
+          ? 'All endpoints operational'
+          : 'Service unavailable',
     },
     {
       name: 'Database',
-      status: health?.services.database?.status === 'healthy' ? 'healthy' : 'down',
-      details: health?.services.database?.status === 'healthy'
-        ? `Connected (${health.services.database.latency_ms}ms)`
-        : health?.services.database?.message || 'Connection failed',
+      status: health?.services.database === true ? 'healthy' : 'down',
+      details:
+        health?.services.database === true ? 'Connected' : 'Connection failed',
     },
     {
       name: 'Realtime',
-      status: health?.services.realtime?.status === 'healthy' ? 'healthy' : 'degraded',
-      details: health?.services.realtime?.message || 'WebSocket server running',
-    },
-    {
-      name: 'Jobs',
-      status: (health?.services.jobs?.status === 'healthy' || health?.services.jobs?.status === 'degraded')
-        ? (health.services.jobs.status as 'healthy' | 'degraded')
-        : 'down',
-      details: health?.services.jobs?.message || 'Job system unavailable',
+      status: health?.services.realtime === true ? 'healthy' : 'down',
+      details:
+        health?.services.realtime === true
+          ? 'WebSocket server running'
+          : 'Disabled',
     },
   ]
 
@@ -57,8 +55,10 @@ export function HealthIndicators() {
 
     // Use backend's overall status
     const status = health.status
-    if (status === 'healthy') return { icon: 'success', text: 'All systems operational' }
-    if (status === 'degraded') return { icon: 'warning', text: 'Some systems degraded' }
+    if (status === 'ok')
+      return { icon: 'success', text: 'All systems operational' }
+    if (status === 'degraded')
+      return { icon: 'warning', text: 'Some systems degraded' }
     return { icon: 'error', text: 'Systems unavailable' }
   }
 
@@ -70,7 +70,7 @@ export function HealthIndicators() {
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             {overallStatus.icon === 'loading' ? (
-              <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' />
+              <Loader2 className='text-muted-foreground h-4 w-4 animate-spin' />
             ) : overallStatus.icon === 'success' ? (
               <CheckCircle2 className='h-4 w-4 text-green-500' />
             ) : overallStatus.icon === 'warning' ? (
@@ -78,9 +78,7 @@ export function HealthIndicators() {
             ) : (
               <XCircle className='h-4 w-4 text-red-500' />
             )}
-            <span className='text-sm font-medium'>
-              {overallStatus.text}
-            </span>
+            <span className='text-sm font-medium'>{overallStatus.text}</span>
           </div>
           <div className='flex gap-3'>
             {services.map((service) => (
@@ -102,7 +100,9 @@ export function HealthIndicators() {
                     {service.status === 'down' && (
                       <XCircle className='h-3.5 w-3.5 text-red-500' />
                     )}
-                    <span className='text-xs text-muted-foreground'>{service.name}</span>
+                    <span className='text-muted-foreground text-xs'>
+                      {service.name}
+                    </span>
                   </>
                 )}
               </div>
