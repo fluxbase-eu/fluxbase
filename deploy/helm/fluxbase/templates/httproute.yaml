@@ -45,6 +45,7 @@ spec:
           port: {{ $.Values.service.ports.http }}
           group: ""
           kind: Service
+          weight: 1
     {{- end }}
     {{- end }}
     - matches:
@@ -65,4 +66,5 @@ spec:
           port: {{ .Values.service.ports.http }}
           group: ""
           kind: Service
+          weight: 1
 {{- end }}
