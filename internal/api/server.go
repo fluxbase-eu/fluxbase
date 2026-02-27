@@ -2348,6 +2348,7 @@ func (s *Server) setupAdminRoutes(router fiber.Router) {
 			router.Delete("/ai/knowledge-bases/:id/documents/:doc_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.DeleteDocument)
 			router.Patch("/ai/knowledge-bases/:id/documents/:doc_id", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UpdateDocument)
 			router.Post("/ai/knowledge-bases/:id/documents/upload", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.UploadDocument)
+			router.Post("/ai/knowledge-bases/:id/documents/delete-by-filter", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.DeleteDocumentsByFilter)
 
 			// Document permissions
 			router.Post("/ai/knowledge-bases/:id/documents/:doc_id/permissions", requireAI, unifiedAuth, RequireRole("admin", "dashboard_admin", "service_role"), s.knowledgeBaseHandler.GrantDocumentPermission)

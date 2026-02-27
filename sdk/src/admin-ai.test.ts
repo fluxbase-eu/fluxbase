@@ -38,8 +38,18 @@ describe("FluxbaseAdminAI", () => {
       it("should list all chatbots", async () => {
         const response = {
           chatbots: [
-            { id: "bot-1", name: "assistant", namespace: "default", enabled: true },
-            { id: "bot-2", name: "sql-helper", namespace: "default", enabled: false },
+            {
+              id: "bot-1",
+              name: "assistant",
+              namespace: "default",
+              enabled: true,
+            },
+            {
+              id: "bot-2",
+              name: "sql-helper",
+              namespace: "default",
+              enabled: false,
+            },
           ] as AIChatbotSummary[],
           count: 2,
         };
@@ -59,12 +69,15 @@ describe("FluxbaseAdminAI", () => {
         await ai.listChatbots("custom");
 
         expect(mockFetch.get).toHaveBeenCalledWith(
-          "/api/v1/admin/ai/chatbots?namespace=custom"
+          "/api/v1/admin/ai/chatbots?namespace=custom",
         );
       });
 
       it("should handle empty response", async () => {
-        vi.mocked(mockFetch.get).mockResolvedValue({ chatbots: null, count: 0 });
+        vi.mocked(mockFetch.get).mockResolvedValue({
+          chatbots: null,
+          count: 0,
+        });
 
         const { data, error } = await ai.listChatbots();
 
@@ -97,7 +110,9 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.getChatbot("bot-1");
 
-        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/chatbots/bot-1");
+        expect(mockFetch.get).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/chatbots/bot-1",
+        );
         expect(error).toBeNull();
         expect(data!.name).toBe("assistant");
       });
@@ -128,7 +143,7 @@ describe("FluxbaseAdminAI", () => {
 
         expect(mockFetch.put).toHaveBeenCalledWith(
           "/api/v1/admin/ai/chatbots/bot-1/toggle",
-          { enabled: true }
+          { enabled: true },
         );
         expect(error).toBeNull();
         expect(data!.enabled).toBe(true);
@@ -166,13 +181,17 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.deleteChatbot("bot-1");
 
-        expect(mockFetch.delete).toHaveBeenCalledWith("/api/v1/admin/ai/chatbots/bot-1");
+        expect(mockFetch.delete).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/chatbots/bot-1",
+        );
         expect(error).toBeNull();
         expect(data).toBeNull();
       });
 
       it("should handle error", async () => {
-        vi.mocked(mockFetch.delete).mockRejectedValue(new Error("Delete failed"));
+        vi.mocked(mockFetch.delete).mockRejectedValue(
+          new Error("Delete failed"),
+        );
 
         const { data, error } = await ai.deleteChatbot("bot-1");
 
@@ -186,8 +205,20 @@ describe("FluxbaseAdminAI", () => {
         const response: SyncChatbotsResult = {
           message: "Sync completed",
           namespace: "default",
-          summary: { created: 1, updated: 0, deleted: 0, unchanged: 0, errors: 0 },
-          details: { created: ["bot-1"], updated: [], deleted: [], unchanged: [], errors: [] },
+          summary: {
+            created: 1,
+            updated: 0,
+            deleted: 0,
+            unchanged: 0,
+            errors: 0,
+          },
+          details: {
+            created: ["bot-1"],
+            updated: [],
+            deleted: [],
+            unchanged: [],
+            errors: [],
+          },
           dry_run: false,
         };
 
@@ -195,11 +226,14 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.sync();
 
-        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/admin/ai/chatbots/sync", {
-          namespace: "default",
-          chatbots: undefined,
-          options: { delete_missing: false, dry_run: false },
-        });
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/chatbots/sync",
+          {
+            namespace: "default",
+            chatbots: undefined,
+            options: { delete_missing: false, dry_run: false },
+          },
+        );
         expect(error).toBeNull();
       });
 
@@ -207,8 +241,20 @@ describe("FluxbaseAdminAI", () => {
         const response: SyncChatbotsResult = {
           message: "Sync completed",
           namespace: "custom",
-          summary: { created: 1, updated: 0, deleted: 0, unchanged: 0, errors: 0 },
-          details: { created: ["my-bot"], updated: [], deleted: [], unchanged: [], errors: [] },
+          summary: {
+            created: 1,
+            updated: 0,
+            deleted: 0,
+            unchanged: 0,
+            errors: 0,
+          },
+          details: {
+            created: ["my-bot"],
+            updated: [],
+            deleted: [],
+            unchanged: [],
+            errors: [],
+          },
           dry_run: false,
         };
 
@@ -220,11 +266,14 @@ describe("FluxbaseAdminAI", () => {
           options: { delete_missing: true, dry_run: false },
         });
 
-        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/admin/ai/chatbots/sync", {
-          namespace: "custom",
-          chatbots: [{ name: "my-bot", code: "system: You are helpful" }],
-          options: { delete_missing: true, dry_run: false },
-        });
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/chatbots/sync",
+          {
+            namespace: "custom",
+            chatbots: [{ name: "my-bot", code: "system: You are helpful" }],
+            options: { delete_missing: true, dry_run: false },
+          },
+        );
       });
 
       it("should handle error", async () => {
@@ -243,8 +292,18 @@ describe("FluxbaseAdminAI", () => {
       it("should list all providers", async () => {
         const response = {
           providers: [
-            { id: "prov-1", name: "openai", display_name: "OpenAI", enabled: true },
-            { id: "prov-2", name: "anthropic", display_name: "Anthropic", enabled: true },
+            {
+              id: "prov-1",
+              name: "openai",
+              display_name: "OpenAI",
+              enabled: true,
+            },
+            {
+              id: "prov-2",
+              name: "anthropic",
+              display_name: "Anthropic",
+              enabled: true,
+            },
           ] as AIProvider[],
           count: 2,
         };
@@ -253,13 +312,18 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.listProviders();
 
-        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/providers");
+        expect(mockFetch.get).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers",
+        );
         expect(error).toBeNull();
         expect(data).toHaveLength(2);
       });
 
       it("should handle empty response", async () => {
-        vi.mocked(mockFetch.get).mockResolvedValue({ providers: null, count: 0 });
+        vi.mocked(mockFetch.get).mockResolvedValue({
+          providers: null,
+          count: 0,
+        });
 
         const { data, error } = await ai.listProviders();
 
@@ -293,7 +357,9 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.getProvider("prov-1");
 
-        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/providers/prov-1");
+        expect(mockFetch.get).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers/prov-1",
+        );
         expect(error).toBeNull();
         expect(data!.name).toBe("openai");
       });
@@ -330,13 +396,16 @@ describe("FluxbaseAdminAI", () => {
           config: { api_key: "sk-xxx", model: "gpt-4-turbo" },
         });
 
-        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/admin/ai/providers", {
-          name: "openai-main",
-          display_name: "OpenAI (Main)",
-          provider_type: "openai",
-          is_default: true,
-          config: { api_key: "sk-xxx", model: "gpt-4-turbo" },
-        });
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers",
+          {
+            name: "openai-main",
+            display_name: "OpenAI (Main)",
+            provider_type: "openai",
+            is_default: true,
+            config: { api_key: "sk-xxx", model: "gpt-4-turbo" },
+          },
+        );
         expect(error).toBeNull();
       });
 
@@ -349,11 +418,14 @@ describe("FluxbaseAdminAI", () => {
           config: { max_tokens: 100, temperature: 0.7 } as any,
         });
 
-        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/admin/ai/providers", {
-          name: "test",
-          provider_type: "openai",
-          config: { max_tokens: "100", temperature: "0.7" },
-        });
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers",
+          {
+            name: "test",
+            provider_type: "openai",
+            config: { max_tokens: "100", temperature: "0.7" },
+          },
+        );
       });
 
       it("should skip undefined and null config values", async () => {
@@ -362,14 +434,21 @@ describe("FluxbaseAdminAI", () => {
         await ai.createProvider({
           name: "test",
           provider_type: "openai",
-          config: { api_key: "key", optional: undefined, nullable: null } as any,
+          config: {
+            api_key: "key",
+            optional: undefined,
+            nullable: null,
+          } as any,
         });
 
-        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/admin/ai/providers", {
-          name: "test",
-          provider_type: "openai",
-          config: { api_key: "key" },
-        });
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers",
+          {
+            name: "test",
+            provider_type: "openai",
+            config: { api_key: "key" },
+          },
+        );
       });
 
       it("should handle error", async () => {
@@ -403,10 +482,13 @@ describe("FluxbaseAdminAI", () => {
           enabled: true,
         });
 
-        expect(mockFetch.put).toHaveBeenCalledWith("/api/v1/admin/ai/providers/prov-1", {
-          display_name: "Updated Name",
-          enabled: true,
-        });
+        expect(mockFetch.put).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers/prov-1",
+          {
+            display_name: "Updated Name",
+            enabled: true,
+          },
+        );
         expect(error).toBeNull();
       });
 
@@ -417,9 +499,12 @@ describe("FluxbaseAdminAI", () => {
           config: { max_tokens: 200 } as any,
         });
 
-        expect(mockFetch.put).toHaveBeenCalledWith("/api/v1/admin/ai/providers/prov-1", {
-          config: { max_tokens: "200" },
-        });
+        expect(mockFetch.put).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers/prov-1",
+          {
+            config: { max_tokens: "200" },
+          },
+        );
       });
 
       it("should handle error", async () => {
@@ -450,7 +535,7 @@ describe("FluxbaseAdminAI", () => {
 
         expect(mockFetch.put).toHaveBeenCalledWith(
           "/api/v1/admin/ai/providers/prov-1/default",
-          {}
+          {},
         );
         expect(error).toBeNull();
       });
@@ -471,13 +556,17 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.deleteProvider("prov-1");
 
-        expect(mockFetch.delete).toHaveBeenCalledWith("/api/v1/admin/ai/providers/prov-1");
+        expect(mockFetch.delete).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/providers/prov-1",
+        );
         expect(error).toBeNull();
         expect(data).toBeNull();
       });
 
       it("should handle error", async () => {
-        vi.mocked(mockFetch.delete).mockRejectedValue(new Error("Delete failed"));
+        vi.mocked(mockFetch.delete).mockRejectedValue(
+          new Error("Delete failed"),
+        );
 
         const { data, error } = await ai.deleteProvider("prov-1");
 
@@ -495,7 +584,7 @@ describe("FluxbaseAdminAI", () => {
 
         expect(mockFetch.put).toHaveBeenCalledWith(
           "/api/v1/admin/ai/providers/prov-1/embedding",
-          {}
+          {},
         );
         expect(error).toBeNull();
         expect(data!.use_for_embeddings).toBe(true);
@@ -519,7 +608,7 @@ describe("FluxbaseAdminAI", () => {
         const { data, error } = await ai.clearEmbeddingProvider("prov-1");
 
         expect(mockFetch.delete).toHaveBeenCalledWith(
-          "/api/v1/admin/ai/providers/prov-1/embedding"
+          "/api/v1/admin/ai/providers/prov-1/embedding",
         );
         expect(error).toBeNull();
         expect(data!.use_for_embeddings).toBe(false);
@@ -551,13 +640,18 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.listKnowledgeBases();
 
-        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/knowledge-bases");
+        expect(mockFetch.get).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases",
+        );
         expect(error).toBeNull();
         expect(data).toHaveLength(2);
       });
 
       it("should handle empty response", async () => {
-        vi.mocked(mockFetch.get).mockResolvedValue({ knowledge_bases: null, count: 0 });
+        vi.mocked(mockFetch.get).mockResolvedValue({
+          knowledge_bases: null,
+          count: 0,
+        });
 
         const { data, error } = await ai.listKnowledgeBases();
 
@@ -591,7 +685,9 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.getKnowledgeBase("kb-1");
 
-        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/knowledge-bases/kb-1");
+        expect(mockFetch.get).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases/kb-1",
+        );
         expect(error).toBeNull();
         expect(data!.name).toBe("product-docs");
       });
@@ -627,12 +723,15 @@ describe("FluxbaseAdminAI", () => {
           chunk_overlap: 50,
         });
 
-        expect(mockFetch.post).toHaveBeenCalledWith("/api/v1/admin/ai/knowledge-bases", {
-          name: "product-docs",
-          description: "Product documentation",
-          chunk_size: 512,
-          chunk_overlap: 50,
-        });
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases",
+          {
+            name: "product-docs",
+            description: "Product documentation",
+            chunk_size: 512,
+            chunk_overlap: 50,
+          },
+        );
         expect(error).toBeNull();
       });
 
@@ -663,10 +762,13 @@ describe("FluxbaseAdminAI", () => {
           enabled: true,
         });
 
-        expect(mockFetch.put).toHaveBeenCalledWith("/api/v1/admin/ai/knowledge-bases/kb-1", {
-          description: "Updated description",
-          enabled: true,
-        });
+        expect(mockFetch.put).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases/kb-1",
+          {
+            description: "Updated description",
+            enabled: true,
+          },
+        );
         expect(error).toBeNull();
       });
 
@@ -686,13 +788,17 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.deleteKnowledgeBase("kb-1");
 
-        expect(mockFetch.delete).toHaveBeenCalledWith("/api/v1/admin/ai/knowledge-bases/kb-1");
+        expect(mockFetch.delete).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases/kb-1",
+        );
         expect(error).toBeNull();
         expect(data).toBeNull();
       });
 
       it("should handle error", async () => {
-        vi.mocked(mockFetch.delete).mockRejectedValue(new Error("Delete failed"));
+        vi.mocked(mockFetch.delete).mockRejectedValue(
+          new Error("Delete failed"),
+        );
 
         const { data, error } = await ai.deleteKnowledgeBase("kb-1");
 
@@ -718,14 +824,17 @@ describe("FluxbaseAdminAI", () => {
         const { data, error } = await ai.listDocuments("kb-1");
 
         expect(mockFetch.get).toHaveBeenCalledWith(
-          "/api/v1/admin/ai/knowledge-bases/kb-1/documents"
+          "/api/v1/admin/ai/knowledge-bases/kb-1/documents",
         );
         expect(error).toBeNull();
         expect(data).toHaveLength(2);
       });
 
       it("should handle empty response", async () => {
-        vi.mocked(mockFetch.get).mockResolvedValue({ documents: null, count: 0 });
+        vi.mocked(mockFetch.get).mockResolvedValue({
+          documents: null,
+          count: 0,
+        });
 
         const { data, error } = await ai.listDocuments("kb-1");
 
@@ -758,7 +867,7 @@ describe("FluxbaseAdminAI", () => {
         const { data, error } = await ai.getDocument("kb-1", "doc-1");
 
         expect(mockFetch.get).toHaveBeenCalledWith(
-          "/api/v1/admin/ai/knowledge-bases/kb-1/documents/doc-1"
+          "/api/v1/admin/ai/knowledge-bases/kb-1/documents/doc-1",
         );
         expect(error).toBeNull();
         expect(data!.title).toBe("Getting Started");
@@ -795,7 +904,7 @@ describe("FluxbaseAdminAI", () => {
             title: "Getting Started",
             content: "This is the content...",
             metadata: { category: "guides" },
-          }
+          },
         );
         expect(error).toBeNull();
         expect(data!.document_id).toBe("doc-1");
@@ -824,12 +933,14 @@ describe("FluxbaseAdminAI", () => {
 
         vi.mocked(mockFetch.post).mockResolvedValue(response);
 
-        const file = new File(["content"], "document.pdf", { type: "application/pdf" });
+        const file = new File(["content"], "document.pdf", {
+          type: "application/pdf",
+        });
         const { data, error } = await ai.uploadDocument("kb-1", file);
 
         expect(mockFetch.post).toHaveBeenCalledWith(
           "/api/v1/admin/ai/knowledge-bases/kb-1/documents/upload",
-          expect.any(FormData)
+          expect.any(FormData),
         );
         expect(error).toBeNull();
         expect(data!.document_id).toBe("doc-1");
@@ -864,16 +975,88 @@ describe("FluxbaseAdminAI", () => {
         const { data, error } = await ai.deleteDocument("kb-1", "doc-1");
 
         expect(mockFetch.delete).toHaveBeenCalledWith(
-          "/api/v1/admin/ai/knowledge-bases/kb-1/documents/doc-1"
+          "/api/v1/admin/ai/knowledge-bases/kb-1/documents/doc-1",
         );
         expect(error).toBeNull();
         expect(data).toBeNull();
       });
 
       it("should handle error", async () => {
-        vi.mocked(mockFetch.delete).mockRejectedValue(new Error("Delete failed"));
+        vi.mocked(mockFetch.delete).mockRejectedValue(
+          new Error("Delete failed"),
+        );
 
         const { data, error } = await ai.deleteDocument("kb-1", "doc-1");
+
+        expect(data).toBeNull();
+        expect(error).toBeDefined();
+      });
+    });
+
+    describe("deleteDocumentsByFilter()", () => {
+      it("should delete documents by tags", async () => {
+        vi.mocked(mockFetch.post).mockResolvedValue({ deleted_count: 5 });
+
+        const { data, error } = await ai.deleteDocumentsByFilter("kb-1", {
+          tags: ["deprecated", "archive"],
+        });
+
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases/kb-1/documents/delete-by-filter",
+          { tags: ["deprecated", "archive"] },
+        );
+        expect(error).toBeNull();
+        expect(data!.deleted_count).toBe(5);
+      });
+
+      it("should delete documents by metadata", async () => {
+        vi.mocked(mockFetch.post).mockResolvedValue({ deleted_count: 3 });
+
+        const { data, error } = await ai.deleteDocumentsByFilter("kb-1", {
+          metadata: { user_id: "user-123", source: "migration" },
+        });
+
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases/kb-1/documents/delete-by-filter",
+          { metadata: { user_id: "user-123", source: "migration" } },
+        );
+        expect(error).toBeNull();
+        expect(data!.deleted_count).toBe(3);
+      });
+
+      it("should delete documents by tags and metadata", async () => {
+        vi.mocked(mockFetch.post).mockResolvedValue({ deleted_count: 10 });
+
+        const { data, error } = await ai.deleteDocumentsByFilter("kb-1", {
+          tags: ["v1"],
+          metadata: { category: "legacy" },
+        });
+
+        expect(mockFetch.post).toHaveBeenCalledWith(
+          "/api/v1/admin/ai/knowledge-bases/kb-1/documents/delete-by-filter",
+          { tags: ["v1"], metadata: { category: "legacy" } },
+        );
+        expect(error).toBeNull();
+        expect(data!.deleted_count).toBe(10);
+      });
+
+      it("should return zero count when no documents match", async () => {
+        vi.mocked(mockFetch.post).mockResolvedValue({ deleted_count: 0 });
+
+        const { data, error } = await ai.deleteDocumentsByFilter("kb-1", {
+          tags: ["nonexistent"],
+        });
+
+        expect(error).toBeNull();
+        expect(data!.deleted_count).toBe(0);
+      });
+
+      it("should handle error", async () => {
+        vi.mocked(mockFetch.post).mockRejectedValue(new Error("Delete failed"));
+
+        const { data, error } = await ai.deleteDocumentsByFilter("kb-1", {
+          tags: ["test"],
+        });
 
         expect(data).toBeNull();
         expect(error).toBeDefined();
@@ -894,7 +1077,7 @@ describe("FluxbaseAdminAI", () => {
 
         const { data, error } = await ai.searchKnowledgeBase(
           "kb-1",
-          "how to reset password"
+          "how to reset password",
         );
 
         expect(mockFetch.post).toHaveBeenCalledWith(
@@ -903,7 +1086,7 @@ describe("FluxbaseAdminAI", () => {
             query: "how to reset password",
             max_chunks: undefined,
             threshold: undefined,
-          }
+          },
         );
         expect(error).toBeNull();
         expect(data!.results).toHaveLength(2);
@@ -923,7 +1106,7 @@ describe("FluxbaseAdminAI", () => {
             query: "query",
             max_chunks: 5,
             threshold: 0.7,
-          }
+          },
         );
       });
 
@@ -954,14 +1137,17 @@ describe("FluxbaseAdminAI", () => {
         const { data, error } = await ai.listChatbotKnowledgeBases("bot-1");
 
         expect(mockFetch.get).toHaveBeenCalledWith(
-          "/api/v1/admin/ai/chatbots/bot-1/knowledge-bases"
+          "/api/v1/admin/ai/chatbots/bot-1/knowledge-bases",
         );
         expect(error).toBeNull();
         expect(data).toHaveLength(2);
       });
 
       it("should handle empty response", async () => {
-        vi.mocked(mockFetch.get).mockResolvedValue({ knowledge_bases: null, count: 0 });
+        vi.mocked(mockFetch.get).mockResolvedValue({
+          knowledge_bases: null,
+          count: 0,
+        });
 
         const { data, error } = await ai.listChatbotKnowledgeBases("bot-1");
 
@@ -1006,7 +1192,7 @@ describe("FluxbaseAdminAI", () => {
             priority: 1,
             max_chunks: 5,
             similarity_threshold: 0.7,
-          }
+          },
         );
         expect(error).toBeNull();
         expect(data!.enabled).toBe(true);
@@ -1038,12 +1224,12 @@ describe("FluxbaseAdminAI", () => {
         const { data, error } = await ai.updateChatbotKnowledgeBase(
           "bot-1",
           "kb-1",
-          { max_chunks: 10, enabled: true }
+          { max_chunks: 10, enabled: true },
         );
 
         expect(mockFetch.put).toHaveBeenCalledWith(
           "/api/v1/admin/ai/chatbots/bot-1/knowledge-bases/kb-1",
-          { max_chunks: 10, enabled: true }
+          { max_chunks: 10, enabled: true },
         );
         expect(error).toBeNull();
         expect(data!.max_chunks).toBe(10);
@@ -1052,7 +1238,11 @@ describe("FluxbaseAdminAI", () => {
       it("should handle error", async () => {
         vi.mocked(mockFetch.put).mockRejectedValue(new Error("Update failed"));
 
-        const { data, error } = await ai.updateChatbotKnowledgeBase("bot-1", "kb-1", {});
+        const { data, error } = await ai.updateChatbotKnowledgeBase(
+          "bot-1",
+          "kb-1",
+          {},
+        );
 
         expect(data).toBeNull();
         expect(error).toBeDefined();
@@ -1066,14 +1256,16 @@ describe("FluxbaseAdminAI", () => {
         const { data, error } = await ai.unlinkKnowledgeBase("bot-1", "kb-1");
 
         expect(mockFetch.delete).toHaveBeenCalledWith(
-          "/api/v1/admin/ai/chatbots/bot-1/knowledge-bases/kb-1"
+          "/api/v1/admin/ai/chatbots/bot-1/knowledge-bases/kb-1",
         );
         expect(error).toBeNull();
         expect(data).toBeNull();
       });
 
       it("should handle error", async () => {
-        vi.mocked(mockFetch.delete).mockRejectedValue(new Error("Unlink failed"));
+        vi.mocked(mockFetch.delete).mockRejectedValue(
+          new Error("Unlink failed"),
+        );
 
         const { data, error } = await ai.unlinkKnowledgeBase("bot-1", "kb-1");
 
