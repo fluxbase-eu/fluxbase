@@ -227,6 +227,92 @@ func TestDebugSearchRequest_Struct(t *testing.T) {
 	})
 }
 
+func TestDeleteDocumentsByFilterRequest_Struct(t *testing.T) {
+	t.Run("filter by tags only", func(t *testing.T) {
+		jsonData := `{"tags": ["deprecated", "archive"]}`
+		var req struct {
+			Tags           []string             `json:"tags"`
+			Metadata       map[string]string    `json:"metadata"`
+			MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
+		}
+		err := json.Unmarshal([]byte(jsonData), &req)
+		require.NoError(t, err)
+		assert.Len(t, req.Tags, 2)
+		assert.Contains(t, req.Tags, "deprecated")
+		assert.Contains(t, req.Tags, "archive")
+		assert.Nil(t, req.Metadata)
+		assert.Nil(t, req.MetadataFilter)
+	})
+
+	t.Run("filter by metadata only", func(t *testing.T) {
+		jsonData := `{"metadata": {"user_id": "user-123", "category": "food"}}`
+		var req struct {
+			Tags           []string             `json:"tags"`
+			Metadata       map[string]string    `json:"metadata"`
+			MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
+		}
+		err := json.Unmarshal([]byte(jsonData), &req)
+		require.NoError(t, err)
+		assert.Nil(t, req.Tags)
+		assert.Equal(t, "user-123", req.Metadata["user_id"])
+		assert.Equal(t, "food", req.Metadata["category"])
+	})
+
+	t.Run("filter by tags and metadata", func(t *testing.T) {
+		jsonData := `{
+			"tags": ["v1"],
+			"metadata": {"source": "migration"}
+		}`
+		var req struct {
+			Tags           []string             `json:"tags"`
+			Metadata       map[string]string    `json:"metadata"`
+			MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
+		}
+		err := json.Unmarshal([]byte(jsonData), &req)
+		require.NoError(t, err)
+		assert.Len(t, req.Tags, 1)
+		assert.Equal(t, "migration", req.Metadata["source"])
+	})
+
+	t.Run("filter by advanced metadata_filter", func(t *testing.T) {
+		jsonData := `{
+			"metadata_filter": {
+				"conditions": [
+					{"key": "status", "operator": "=", "value": "active"}
+				],
+				"logical_op": "AND"
+			}
+		}`
+		var req struct {
+			Tags           []string             `json:"tags"`
+			Metadata       map[string]string    `json:"metadata"`
+			MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
+		}
+		err := json.Unmarshal([]byte(jsonData), &req)
+		require.NoError(t, err)
+		assert.Nil(t, req.Tags)
+		assert.Nil(t, req.Metadata)
+		require.NotNil(t, req.MetadataFilter)
+		assert.Len(t, req.MetadataFilter.Conditions, 1)
+		assert.Equal(t, "status", req.MetadataFilter.Conditions[0].Key)
+		assert.Equal(t, MetadataOpEquals, req.MetadataFilter.Conditions[0].Operator)
+	})
+
+	t.Run("empty filter deletes all user documents", func(t *testing.T) {
+		jsonData := `{}`
+		var req struct {
+			Tags           []string             `json:"tags"`
+			Metadata       map[string]string    `json:"metadata"`
+			MetadataFilter *MetadataFilterGroup `json:"metadata_filter"`
+		}
+		err := json.Unmarshal([]byte(jsonData), &req)
+		require.NoError(t, err)
+		assert.Nil(t, req.Tags)
+		assert.Nil(t, req.Metadata)
+		assert.Nil(t, req.MetadataFilter)
+	})
+}
+
 func TestDebugSearchResponse_Struct(t *testing.T) {
 	t.Run("successful debug response", func(t *testing.T) {
 		resp := DebugSearchResponse{
