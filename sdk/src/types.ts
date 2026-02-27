@@ -3625,7 +3625,7 @@ export interface UpdateTableExportSyncConfig {
 // ============================================================================
 
 /**
- * Individual service health status
+ * Individual service health status (for detailed monitoring endpoint)
  */
 export interface ServiceHealth {
   status: string; // "healthy", "degraded", "unhealthy"
@@ -3634,11 +3634,15 @@ export interface ServiceHealth {
 }
 
 /**
- * System health status response
+ * System health status response from public /health endpoint
+ * Services are represented as booleans indicating availability
  */
 export interface HealthResponse {
-  status: string; // "healthy", "degraded", "unhealthy"
-  services: Record<string, ServiceHealth>;
+  status: string; // "ok" or "degraded"
+  services: {
+    database: boolean;
+    realtime: boolean;
+  };
   timestamp?: string;
 }
 
