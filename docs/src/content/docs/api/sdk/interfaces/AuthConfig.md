@@ -23,5 +23,5 @@ Returns all public auth settings from the server
 | <a id="password_require_special"></a> `password_require_special` | `boolean` | Whether passwords must contain special characters |
 | <a id="password_require_uppercase"></a> `password_require_uppercase` | `boolean` | Whether passwords must contain uppercase letters |
 | <a id="require_email_verification"></a> `require_email_verification` | `boolean` | Whether email verification is required after signup |
-| <a id="saml_providers"></a> `saml_providers` | [`SAMLProvider`](/api/sdk/interfaces/samlprovider/)[] | Available SAML providers for enterprise SSO |
+| <a id="saml_providers"></a> `saml_providers` | `SAMLProviderInfo`[] | Available SAML providers for enterprise SSO |
 | <a id="signup_enabled"></a> `signup_enabled` | `boolean` | Whether user signup is enabled |

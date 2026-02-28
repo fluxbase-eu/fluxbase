@@ -154,6 +154,42 @@ const { data, error } = await client.admin.ai.createProvider({
 
 ***
 
+### createTableExportSync()
+
+> **createTableExportSync**(`knowledgeBaseId`, `config`): `Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Create a table export preset
+
+Saves a table export configuration for easy re-export. Use triggerTableExportSync
+to re-export when the schema changes.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `config` | [`CreateTableExportSyncConfig`](/api/sdk/interfaces/createtableexportsyncconfig/) | Export preset configuration |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with created preset
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.createTableExportSync('kb-uuid', {
+  schema_name: 'public',
+  table_name: 'products',
+  columns: ['id', 'name', 'description', 'price'],
+  include_foreign_keys: true,
+  export_now: true, // Trigger initial export
+})
+```
+
+***
+
 ### deleteChatbot()
 
 > **deleteChatbot**(`id`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
@@ -207,6 +243,45 @@ const { data, error } = await client.admin.ai.deleteDocument('kb-uuid', 'doc-uui
 
 ***
 
+### deleteDocumentsByFilter()
+
+> **deleteDocumentsByFilter**(`knowledgeBaseId`, `filter`): `Promise`\<\{ `data`: `DeleteDocumentsByFilterResponse` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Delete documents from a knowledge base by filter
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `filter` | `DeleteDocumentsByFilterRequest` | Filter criteria for deletion |
+
+#### Returns
+
+`Promise`\<\{ `data`: `DeleteDocumentsByFilterResponse` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with deletion count
+
+#### Example
+
+```typescript
+// Delete by tags
+const { data, error } = await client.admin.ai.deleteDocumentsByFilter('kb-uuid', {
+  tags: ['deprecated', 'archive'],
+})
+
+// Delete by metadata
+const { data, error } = await client.admin.ai.deleteDocumentsByFilter('kb-uuid', {
+  metadata: { source: 'legacy-system' },
+})
+
+if (data) {
+  console.log(`Deleted ${data.deleted_count} documents`)
+}
+```
+
+***
+
 ### deleteKnowledgeBase()
 
 > **deleteKnowledgeBase**(`id`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
@@ -255,6 +330,101 @@ Promise resolving to { data, error } tuple
 
 ```typescript
 const { data, error } = await client.admin.ai.deleteProvider('uuid')
+```
+
+***
+
+### deleteTableExportSync()
+
+> **deleteTableExportSync**(`knowledgeBaseId`, `syncId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+
+Delete a table export sync configuration
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `syncId` | `string` | Sync config ID |
+
+#### Returns
+
+`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.deleteTableExportSync('kb-uuid', 'sync-id')
+```
+
+***
+
+### exportTable()
+
+> **exportTable**(`knowledgeBaseId`, `options`): `Promise`\<\{ `data`: [`ExportTableResult`](/api/sdk/interfaces/exporttableresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Export a database table to a knowledge base
+
+The table schema will be exported as a markdown document and indexed.
+Optionally filter which columns to export for security or relevance.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `options` | [`ExportTableOptions`](/api/sdk/interfaces/exporttableoptions/) | Export options including column selection |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`ExportTableResult`](/api/sdk/interfaces/exporttableresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with export result
+
+#### Example
+
+```typescript
+// Export all columns
+const { data, error } = await client.admin.ai.exportTable('kb-uuid', {
+  schema: 'public',
+  table: 'users',
+  include_foreign_keys: true,
+})
+
+// Export specific columns (recommended for sensitive data)
+const { data, error } = await client.admin.ai.exportTable('kb-uuid', {
+  schema: 'public',
+  table: 'users',
+  columns: ['id', 'name', 'email', 'created_at'],
+})
+```
+
+***
+
+### getCapabilities()
+
+> **getCapabilities**(): `Promise`\<\{ `data`: `KnowledgeBaseCapabilities` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Get knowledge base system capabilities
+
+Returns information about OCR support, supported file types, etc.
+
+#### Returns
+
+`Promise`\<\{ `data`: `KnowledgeBaseCapabilities` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with capabilities
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.getCapabilities()
+if (data) {
+  console.log('OCR available:', data.ocr_available)
+  console.log('Supported types:', data.supported_file_types)
+}
 ```
 
 ***
@@ -315,6 +485,36 @@ const { data, error } = await client.admin.ai.getDocument('kb-uuid', 'doc-uuid')
 
 ***
 
+### getEntityRelationships()
+
+> **getEntityRelationships**(`knowledgeBaseId`, `entityId`): `Promise`\<\{ `data`: `EntityRelationship`[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+Get relationships for a specific entity
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `entityId` | `string` | Entity ID |
+
+#### Returns
+
+`Promise`\<\{ `data`: `EntityRelationship`[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with entity relationships
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.getEntityRelationships('kb-uuid', 'entity-uuid')
+if (data) {
+  console.log('Relationships:', data.map(r => `${r.relationship_type} -> ${r.target_entity?.name}`))
+}
+```
+
+***
+
 ### getKnowledgeBase()
 
 > **getKnowledgeBase**(`id`): `Promise`\<\{ `data`: `KnowledgeBase` \| `null`; `error`: `Error` \| `null`; \}\>
@@ -344,6 +544,38 @@ if (data) {
 
 ***
 
+### getKnowledgeGraph()
+
+> **getKnowledgeGraph**(`knowledgeBaseId`): `Promise`\<\{ `data`: `KnowledgeGraphData` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Get the knowledge graph for a knowledge base
+
+Returns all entities and relationships for visualization.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+
+#### Returns
+
+`Promise`\<\{ `data`: `KnowledgeGraphData` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with graph data
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.getKnowledgeGraph('kb-uuid')
+if (data) {
+  console.log('Graph:', data.entity_count, 'entities,', data.relationship_count, 'relationships')
+  // Use with visualization libraries like D3.js, Cytoscape.js, etc.
+}
+```
+
+***
+
 ### getProvider()
 
 > **getProvider**(`id`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
@@ -368,6 +600,39 @@ Promise resolving to { data, error } tuple with provider details
 const { data, error } = await client.admin.ai.getProvider('uuid')
 if (data) {
   console.log('Provider:', data.display_name)
+}
+```
+
+***
+
+### getTableDetails()
+
+> **getTableDetails**(`schema`, `table`): `Promise`\<\{ `data`: [`TableDetails`](/api/sdk/interfaces/tabledetails/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Get detailed table information including columns
+
+Use this to discover available columns before exporting.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `schema` | `string` | Schema name (e.g., 'public') |
+| `table` | `string` | Table name |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`TableDetails`](/api/sdk/interfaces/tabledetails/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with table details
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.getTableDetails('public', 'users')
+if (data) {
+  console.log('Columns:', data.columns.map(c => c.name))
+  console.log('Primary key:', data.primary_key)
 }
 ```
 
@@ -463,6 +728,37 @@ if (data) {
 
 ***
 
+### listChatbotsUsingKB()
+
+> **listChatbotsUsingKB**(`knowledgeBaseId`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+List all chatbots that use a specific knowledge base
+
+Reverse lookup to find which chatbots are linked to a knowledge base.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with array of chatbot summaries
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.listChatbotsUsingKB('kb-uuid')
+if (data) {
+  console.log('Used by chatbots:', data.map(c => c.name))
+}
+```
+
+***
+
 ### listDocuments()
 
 > **listDocuments**(`knowledgeBaseId`): `Promise`\<\{ `data`: `KnowledgeBaseDocument`[] \| `null`; `error`: `Error` \| `null`; \}\>
@@ -487,6 +783,41 @@ Promise resolving to { data, error } tuple with array of documents
 const { data, error } = await client.admin.ai.listDocuments('kb-uuid')
 if (data) {
   console.log('Documents:', data.map(d => d.title))
+}
+```
+
+***
+
+### listEntities()
+
+> **listEntities**(`knowledgeBaseId`, `entityType?`): `Promise`\<\{ `data`: `Entity`[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+List entities in a knowledge base
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `entityType?` | `string` | Optional entity type filter |
+
+#### Returns
+
+`Promise`\<\{ `data`: `Entity`[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with array of entities
+
+#### Example
+
+```typescript
+// List all entities
+const { data, error } = await client.admin.ai.listEntities('kb-uuid')
+
+// Filter by type
+const { data, error } = await client.admin.ai.listEntities('kb-uuid', 'person')
+
+if (data) {
+  console.log('Entities:', data.map(e => e.name))
 }
 ```
 
@@ -533,6 +864,73 @@ Promise resolving to { data, error } tuple with array of providers
 const { data, error } = await client.admin.ai.listProviders()
 if (data) {
   console.log('Providers:', data.map(p => p.name))
+}
+```
+
+***
+
+### listTableExportSyncs()
+
+> **listTableExportSyncs**(`knowledgeBaseId`): `Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+List table export presets for a knowledge base
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with array of presets
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.listTableExportSyncs('kb-uuid')
+if (data) {
+  data.forEach(config => {
+    console.log(`${config.schema_name}.${config.table_name}`)
+  })
+}
+```
+
+***
+
+### searchEntities()
+
+> **searchEntities**(`knowledgeBaseId`, `query`, `types?`): `Promise`\<\{ `data`: `Entity`[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+Search for entities in a knowledge base
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `query` | `string` | Search query |
+| `types?` | `string`[] | Optional entity type filters |
+
+#### Returns
+
+`Promise`\<\{ `data`: `Entity`[] \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with matching entities
+
+#### Example
+
+```typescript
+// Search all entity types
+const { data, error } = await client.admin.ai.searchEntities('kb-uuid', 'John')
+
+// Search specific types
+const { data, error } = await client.admin.ai.searchEntities('kb-uuid', 'Apple', ['organization', 'product'])
+
+if (data) {
+  console.log('Found entities:', data.map(e => `${e.name} (${e.entity_type})`))
 }
 ```
 
@@ -703,6 +1101,39 @@ const { data, error } = await client.admin.ai.toggleChatbot('uuid', true)
 
 ***
 
+### triggerTableExportSync()
+
+> **triggerTableExportSync**(`knowledgeBaseId`, `syncId`): `Promise`\<\{ `data`: [`ExportTableResult`](/api/sdk/interfaces/exporttableresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Manually trigger a table export sync
+
+Immediately re-exports the table to the knowledge base,
+regardless of the sync mode.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `syncId` | `string` | Sync config ID |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`ExportTableResult`](/api/sdk/interfaces/exporttableresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with export result
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.triggerTableExportSync('kb-uuid', 'sync-id')
+if (data) {
+  console.log('Exported document:', data.document_id)
+}
+```
+
+***
+
 ### unlinkKnowledgeBase()
 
 > **unlinkKnowledgeBase**(`chatbotId`, `knowledgeBaseId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
@@ -758,6 +1189,38 @@ const { data, error } = await client.admin.ai.updateChatbotKnowledgeBase(
   'kb-uuid',
   { max_chunks: 10, enabled: true }
 )
+```
+
+***
+
+### updateDocument()
+
+> **updateDocument**(`knowledgeBaseId`, `documentId`, `updates`): `Promise`\<\{ `data`: `KnowledgeBaseDocument` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Update a document in a knowledge base
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `documentId` | `string` | Document ID |
+| `updates` | `UpdateDocumentRequest` | Fields to update |
+
+#### Returns
+
+`Promise`\<\{ `data`: `KnowledgeBaseDocument` \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with updated document
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.updateDocument('kb-uuid', 'doc-uuid', {
+  title: 'Updated Title',
+  tags: ['updated', 'tag'],
+  metadata: { category: 'updated' },
+})
 ```
 
 ***
@@ -821,6 +1284,36 @@ const { data, error } = await client.admin.ai.updateProvider('uuid', {
     model: 'gpt-4-turbo',
   },
   enabled: true,
+})
+```
+
+***
+
+### updateTableExportSync()
+
+> **updateTableExportSync**(`knowledgeBaseId`, `syncId`, `updates`): `Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Update a table export preset
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `knowledgeBaseId` | `string` | Knowledge base ID |
+| `syncId` | `string` | Preset ID |
+| `updates` | [`UpdateTableExportSyncConfig`](/api/sdk/interfaces/updatetableexportsyncconfig/) | Fields to update |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: `Error` \| `null`; \}\>
+
+Promise resolving to { data, error } tuple with updated preset
+
+#### Example
+
+```typescript
+const { data, error } = await client.admin.ai.updateTableExportSync('kb-uuid', 'sync-id', {
+  columns: ['id', 'name', 'email', 'updated_at'],
 })
 ```
 

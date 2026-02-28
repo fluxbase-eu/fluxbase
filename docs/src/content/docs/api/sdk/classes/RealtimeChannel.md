@@ -9,7 +9,7 @@ title: "RealtimeChannel"
 
 ### Constructor
 
-> **new RealtimeChannel**(`url`, `channelName`, `token`, `config`): `RealtimeChannel`
+> **new RealtimeChannel**(`url`, `channelName`, `token?`, `config?`): `RealtimeChannel`
 
 #### Parameters
 

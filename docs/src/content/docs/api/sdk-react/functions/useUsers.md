@@ -5,7 +5,7 @@ prev: false
 title: "useUsers"
 ---
 
-> **useUsers**(`options`): `UseUsersReturn`
+> **useUsers**(`options?`): `UseUsersReturn`
 
 Hook for managing users
 

@@ -5,7 +5,7 @@ prev: false
 title: "useClientKeys"
 ---
 
-> **useClientKeys**(`options`): `UseClientKeysReturn`
+> **useClientKeys**(`options?`): `UseClientKeysReturn`
 
 Hook for managing client keys
 

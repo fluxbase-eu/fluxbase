@@ -5,7 +5,7 @@ prev: false
 title: "assertType"
 ---
 
-> **assertType**\<`T`\>(`value`, `validator`, `errorMessage`): `asserts value is T`
+> **assertType**\<`T`\>(`value`, `validator`, `errorMessage?`): `asserts value is T`
 
 Assert that a value is of type T, throwing if validation fails
 

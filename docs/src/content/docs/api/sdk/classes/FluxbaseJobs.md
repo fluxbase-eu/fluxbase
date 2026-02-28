@@ -14,13 +14,14 @@ use client.admin.jobs
 
 ### Constructor
 
-> **new FluxbaseJobs**(`fetch`): `FluxbaseJobs`
+> **new FluxbaseJobs**(`fetch`, `isServiceRole?`): `FluxbaseJobs`
 
 #### Parameters
 
-| Parameter | Type |
-| ------ | ------ |
-| `fetch` | [`FluxbaseFetch`](/api/sdk/classes/fluxbasefetch/) |
+| Parameter | Type | Default value |
+| ------ | ------ | ------ |
+| `fetch` | [`FluxbaseFetch`](/api/sdk/classes/fluxbasefetch/) | `undefined` |
+| `isServiceRole` | `boolean` | `false` |
 
 #### Returns
 
@@ -231,7 +232,7 @@ Submit a new job for execution
 | `payload?` | `unknown` | Job input data |
 | `options?` | \{ `namespace?`: `string`; `onBehalfOf?`: `OnBehalfOf`; `priority?`: `number`; `scheduled?`: `string`; \} | Additional options (priority, namespace, scheduled time, onBehalfOf) |
 | `options.namespace?` | `string` | - |
-| `options.onBehalfOf?` | `OnBehalfOf` | Submit job on behalf of another user (service_role only). The job will be created with the specified user's identity, allowing them to see the job and its logs via RLS. |
+| `options.onBehalfOf?` | `OnBehalfOf` | Submit job on behalf of another user (service_role only). The job will be created with the specified user's identity, allowing them to see the job and its logs via RLS. If not provided, the current user's identity and role from user_profiles will be automatically included. |
 | `options.priority?` | `number` | - |
 | `options.scheduled?` | `string` | - |
 

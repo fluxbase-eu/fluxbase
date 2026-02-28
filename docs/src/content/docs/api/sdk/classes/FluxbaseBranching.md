@@ -172,7 +172,7 @@ const { data } = await client.branching.get('123e4567-e89b-12d3-a456-42661417400
 
 ### getActivity()
 
-> **getActivity**(`idOrSlug`, `limit`): `Promise`\<\{ `data`: [`BranchActivity`](/api/sdk/interfaces/branchactivity/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **getActivity**(`idOrSlug`, `limit?`): `Promise`\<\{ `data`: [`BranchActivity`](/api/sdk/interfaces/branchactivity/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get activity log for a branch
 

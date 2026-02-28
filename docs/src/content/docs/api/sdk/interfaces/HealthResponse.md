@@ -5,7 +5,8 @@ prev: false
 title: "HealthResponse"
 ---
 
-System health status response
+System health status response from public /health endpoint
+Services are represented as booleans indicating availability
 
 ## Properties
 
@@ -15,4 +16,4 @@ System health status response
 | `services.database` | `boolean` |
 | `services.realtime` | `boolean` |
 | <a id="status"></a> `status` | `string` |
-| <a id="timestamp"></a> `timestamp` | `string` |
+| <a id="timestamp"></a> `timestamp?` | `string` |

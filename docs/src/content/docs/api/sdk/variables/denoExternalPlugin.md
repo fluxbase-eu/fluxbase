@@ -14,7 +14,7 @@ Use this when bundling functions/jobs with esbuild to handle npm:, https://, and
 
 | Name | Type | Default value |
 | ------ | ------ | ------ |
-| <a id="name"></a> `name` | `string` | `"deno-external"` |
+| <a id="property-name"></a> `name` | `string` | `"deno-external"` |
 | `setup()` | (`build`) => `void` | - |
 
 ## Example

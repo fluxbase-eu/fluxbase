@@ -71,7 +71,7 @@ const { data } = await client.from('products')
 
 ### count()
 
-> **count**(`column`): `this`
+> **count**(`column?`): `this`
 
 Count rows or a specific column
 
@@ -966,7 +966,7 @@ Order results
 
 ### orderByVector()
 
-> **orderByVector**(`column`, `vector`, `metric`, `options?`): `this`
+> **orderByVector**(`column`, `vector`, `metric?`, `options?`): `this`
 
 Order results by vector similarity (pgvector)
 Results are ordered by distance (ascending = closest first)
@@ -1044,7 +1044,7 @@ Range selection (pagination)
 
 ### select()
 
-> **select**(`columns`, `options?`): `this`
+> **select**(`columns?`, `options?`): `this`
 
 Select columns to return
 
@@ -1328,7 +1328,7 @@ Upsert (insert or update) rows (Supabase-compatible)
 
 ### vectorSearch()
 
-> **vectorSearch**(`column`, `vector`, `metric`): `this`
+> **vectorSearch**(`column`, `vector`, `metric?`): `this`
 
 Filter by vector similarity (pgvector)
 This is a convenience method that adds a vector filter using the specified distance metric.

@@ -5,7 +5,7 @@ prev: false
 title: "useAdminAuth"
 ---
 
-> **useAdminAuth**(`options`): `UseAdminAuthReturn`
+> **useAdminAuth**(`options?`): `UseAdminAuthReturn`
 
 Hook for admin authentication
 
