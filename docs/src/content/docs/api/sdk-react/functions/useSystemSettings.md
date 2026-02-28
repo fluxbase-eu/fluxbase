@@ -5,7 +5,7 @@ prev: false
 title: "useSystemSettings"
 ---
 
-> **useSystemSettings**(`options`): `UseSystemSettingsReturn`
+> **useSystemSettings**(`options?`): `UseSystemSettingsReturn`
 
 Hook for managing system settings (key-value storage)
 

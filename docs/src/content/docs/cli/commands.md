@@ -146,7 +146,14 @@ fluxbase functions delete my-function
 fluxbase functions invoke my-function
 fluxbase functions invoke my-function --data '{"key": "value"}'
 fluxbase functions invoke my-function --file ./payload.json
+fluxbase functions invoke my-function --async
 ```
+
+**Flags:**
+
+- `--data` - JSON payload to send
+- `--file` - Load payload from file
+- `--async` - Run asynchronously (returns immediately)
 
 ### `fluxbase functions logs`
 
@@ -177,6 +184,7 @@ fluxbase functions sync --dir ./functions --namespace production --dry-run
 - `--dir` - Directory containing function files (default: `./functions`)
 - `--namespace` - Target namespace (default: `default`)
 - `--dry-run` - Preview changes without applying
+- `--keep` - Keep functions not present in directory
 
 **Shared Modules:**
 
@@ -215,8 +223,17 @@ fluxbase jobs list
 ```bash
 fluxbase jobs submit my-job
 fluxbase jobs submit my-job --payload '{"data": "value"}'
+fluxbase jobs submit my-job --file ./payload.json
 fluxbase jobs submit my-job --priority 10
+fluxbase jobs submit my-job --schedule "0 * * * *"
 ```
+
+**Flags:**
+
+- `--payload` - JSON payload to send
+- `--file` - Load payload from file
+- `--priority` - Job priority (higher = more important)
+- `--schedule` - Cron schedule for recurring jobs
 
 ### `fluxbase jobs status`
 
@@ -264,6 +281,7 @@ fluxbase jobs sync --dir ./jobs --namespace production --dry-run
 - `--dir` - Directory containing job files (default: `./jobs`)
 - `--namespace` - Target namespace (default: `default`)
 - `--dry-run` - Preview changes without applying
+- `--keep` - Keep jobs not present in directory
 
 Like functions, jobs support a `_shared/` directory for shared modules and JSON/GeoJSON data files.
 
@@ -282,10 +300,18 @@ fluxbase storage buckets list
 # Create bucket
 fluxbase storage buckets create my-bucket
 fluxbase storage buckets create my-bucket --public
+fluxbase storage buckets create my-bucket --max-size 10737418240  # 10GB limit
 
 # Delete bucket
 fluxbase storage buckets delete my-bucket
 ```
+
+### `fluxbase storage buckets create`
+
+**Flags:**
+
+- `--public` - Make bucket publicly accessible
+- `--max-size` - Maximum bucket size in bytes
 
 ### Object Commands
 
@@ -296,6 +322,7 @@ fluxbase storage objects list my-bucket --prefix images/
 
 # Upload file
 fluxbase storage objects upload my-bucket path/to/file.jpg ./local-file.jpg
+fluxbase storage objects upload my-bucket path/to/file.jpg ./local-file.jpg --content-type image/jpeg
 
 # Download file
 fluxbase storage objects download my-bucket path/to/file.jpg ./local-file.jpg
@@ -306,6 +333,12 @@ fluxbase storage objects delete my-bucket path/to/file.jpg
 # Get signed URL
 fluxbase storage objects url my-bucket path/to/file.jpg --expires 7200
 ```
+
+### `fluxbase storage objects upload`
+
+**Flags:**
+
+- `--content-type` - MIME type for the uploaded file
 
 ---
 
@@ -331,32 +364,304 @@ fluxbase chatbots delete abc123
 
 # Interactive chat
 fluxbase chatbots chat abc123
+
+# Sync chatbots from directory
+fluxbase chatbots sync --dir ./chatbots
 ```
+
+### `fluxbase chatbots create`
+
+**Flags:**
+
+- `--system-prompt` - System prompt for the chatbot
+- `--model` - AI model to use (e.g., `gpt-4`, `gpt-3.5-turbo`)
+- `--temperature` - Response randomness (0.0-2.0)
+- `--max-tokens` - Maximum response length
+- `--knowledge-base` - Knowledge base ID to attach
+
+### `fluxbase chatbots update`
+
+**Flags:**
+
+- `--system-prompt` - System prompt for the chatbot
+- `--model` - AI model to use
+- `--temperature` - Response randomness (0.0-2.0)
+- `--max-tokens` - Maximum response length
+
+### `fluxbase chatbots sync`
+
+Sync chatbots from a local directory.
+
+```bash
+fluxbase chatbots sync --dir ./chatbots
+fluxbase chatbots sync --dir ./chatbots --namespace production --dry-run
+```
+
+**Flags:**
+
+- `--dir` - Directory containing chatbot files (default: `./chatbots`)
+- `--namespace` - Target namespace (default: `default`)
+- `--dry-run` - Preview changes without applying
+- `--delete-missing` - Delete chatbots not in local directory
 
 ---
 
 ## Knowledge Base Commands
 
-Manage knowledge bases for RAG.
+Manage knowledge bases for RAG (Retrieval-Augmented Generation). Knowledge bases store documents that are chunked, embedded, and indexed for semantic search.
+
+### `fluxbase kb list`
+
+List all knowledge bases.
 
 ```bash
-# List knowledge bases
 fluxbase kb list
+fluxbase kb list --namespace production
+fluxbase kb list -o json
+```
 
-# Create knowledge base
+**Flags:**
+
+- `--namespace` - Filter by namespace
+
+### `fluxbase kb get`
+
+Get details of a specific knowledge base.
+
+```bash
+fluxbase kb get abc123
+```
+
+### `fluxbase kb create`
+
+Create a new knowledge base.
+
+```bash
 fluxbase kb create docs --description "Product documentation"
+fluxbase kb create docs --embedding-model text-embedding-ada-002 --chunk-size 512
+```
 
-# Upload document
-fluxbase kb upload abc123 ./manual.pdf
+**Flags:**
 
-# List documents
-fluxbase kb documents abc123
+- `--description` - Knowledge base description
+- `--embedding-model` - Embedding model to use
+- `--chunk-size` - Document chunk size (default: 512)
+- `--namespace` - Target namespace (default: `default`)
 
-# Search knowledge base
-fluxbase kb search abc123 "how to reset password"
+### `fluxbase kb update`
 
-# Delete knowledge base
+Update an existing knowledge base.
+
+```bash
+fluxbase kb update abc123 --description "Updated description"
+```
+
+**Flags:**
+
+- `--description` - New description
+
+### `fluxbase kb delete`
+
+Delete a knowledge base and all its documents.
+
+```bash
 fluxbase kb delete abc123
+```
+
+### `fluxbase kb status`
+
+Show knowledge base status and statistics.
+
+```bash
+fluxbase kb status abc123
+fluxbase kb status abc123 --output json
+```
+
+**Flags:**
+
+- `--output` - Output format (`json`, `table`)
+
+### `fluxbase kb upload`
+
+Upload a document to a knowledge base. Supported formats: PDF, DOCX, TXT, MD, images (with OCR).
+
+```bash
+fluxbase kb upload abc123 ./manual.pdf
+fluxbase kb upload abc123 ./guide.md --title "User Guide"
+fluxbase kb upload abc123 ./scan.png --ocr-languages eng,deu
+```
+
+**Flags:**
+
+- `--title` - Document title
+- `--metadata` - Document metadata (JSON)
+- `--tags` - Comma-separated tags
+- `--ocr-languages` - OCR languages for images (e.g., `eng,deu`)
+
+### `fluxbase kb add`
+
+Add a document from text, stdin, or file (alternative to upload for text content).
+
+```bash
+# Add from inline content
+fluxbase kb add abc123 --content "Hello world" --title "Greeting"
+
+# Add from stdin
+echo "Content" | fluxbase kb add abc123 --title "My Doc"
+
+# Add from file
+fluxbase kb add abc123 --from-file ./doc.txt --title "Document"
+
+# Add with metadata
+fluxbase kb add abc123 --content "..." --title "Doc" --metadata '{"user_id":"uuid"}' --tags "important,reference"
+```
+
+**Flags:**
+
+- `--content` - Inline document content
+- `--from-file` - Read content from file
+- `--title` - Document title
+- `--metadata` - Document metadata (JSON)
+- `--tags` - Comma-separated tags
+
+### `fluxbase kb documents`
+
+List documents in a knowledge base.
+
+```bash
+fluxbase kb documents abc123
+```
+
+### `fluxbase kb documents get`
+
+Get document details.
+
+```bash
+fluxbase kb documents get abc123 doc456
+```
+
+### `fluxbase kb documents update`
+
+Update document metadata.
+
+```bash
+fluxbase kb documents update abc123 doc456 --title "New Title"
+fluxbase kb documents update abc123 doc456 --tags "tag1,tag2"
+fluxbase kb documents update abc123 doc456 --metadata '{"key":"value"}'
+```
+
+**Flags:**
+
+- `--title` - New document title
+- `--tags` - New tags (comma-separated)
+- `--metadata` - New metadata (JSON)
+
+### `fluxbase kb documents delete`
+
+Delete a document from a knowledge base.
+
+```bash
+fluxbase kb documents delete abc123 doc456
+```
+
+### `fluxbase kb documents delete-by-filter`
+
+Bulk delete documents by tags or metadata.
+
+```bash
+fluxbase kb documents delete-by-filter abc123 --tags "archived"
+fluxbase kb documents delete-by-filter abc123 --metadata-filter "user_id=uuid-here"
+```
+
+**Flags:**
+
+- `--tags` - Filter by tags (comma-separated)
+- `--metadata-filter` - Filter by metadata (e.g., `key=value`)
+
+### `fluxbase kb search`
+
+Search a knowledge base using semantic similarity.
+
+```bash
+fluxbase kb search abc123 "how to reset password"
+fluxbase kb search abc123 "pricing plans" --limit 5 --threshold 0.8
+```
+
+**Flags:**
+
+- `--limit` - Maximum results (default: 10)
+- `--threshold` - Similarity threshold 0.0-1.0 (default: 0.7)
+
+### `fluxbase kb export-table`
+
+Export a database table as a document to the knowledge base. Includes schema, columns, relationships, and optional sample data.
+
+```bash
+# Export all columns
+fluxbase kb export-table abc123 --table users --schema public
+
+# Export specific columns (recommended for sensitive data)
+fluxbase kb export-table abc123 --table users --columns id,name,email
+
+# Include foreign keys and indexes
+fluxbase kb export-table abc123 --table products --include-fks --include-indexes --sample-rows 10
+```
+
+**Flags:**
+
+- `--table` - Table name (required)
+- `--schema` - Schema name (default: `public`)
+- `--columns` - Comma-separated column names (default: all)
+- `--include-fks` - Include foreign keys
+- `--include-indexes` - Include indexes
+- `--sample-rows` - Number of sample rows to include
+
+### `fluxbase kb tables`
+
+List exportable database tables.
+
+```bash
+fluxbase kb tables
+fluxbase kb tables public
+```
+
+### `fluxbase kb capabilities`
+
+Show system capabilities including supported OCR languages, file types, and features.
+
+```bash
+fluxbase kb capabilities
+```
+
+### `fluxbase kb graph`
+
+Show the knowledge graph for a knowledge base, including entities and their relationships.
+
+```bash
+fluxbase kb graph abc123
+```
+
+### `fluxbase kb entities`
+
+List entities extracted from the knowledge base.
+
+```bash
+fluxbase kb entities abc123
+fluxbase kb entities abc123 --type person
+fluxbase kb entities abc123 --search "John"
+```
+
+**Flags:**
+
+- `--type` - Filter by entity type
+- `--search` - Search entities by name
+
+### `fluxbase kb chatbots`
+
+List all chatbots using a knowledge base.
+
+```bash
+fluxbase kb chatbots abc123
 ```
 
 ---
@@ -375,6 +680,7 @@ fluxbase tables describe users
 # Query table
 fluxbase tables query users
 fluxbase tables query users --select "id,email" --where "role=eq.admin" --limit 10
+fluxbase tables query users --order-by "created_at.desc" --offset 20 --limit 10
 
 # Insert record
 fluxbase tables insert users --data '{"email": "user@example.com"}'
@@ -384,6 +690,62 @@ fluxbase tables update users --where "id=eq.123" --data '{"name": "New Name"}'
 
 # Delete records
 fluxbase tables delete users --where "id=eq.123"
+```
+
+### `fluxbase tables query`
+
+**Flags:**
+
+- `--select` - Comma-separated columns to return (default: all)
+- `--where` - Filter conditions (PostgREST syntax)
+- `--order-by` - Order by column (e.g., `created_at.desc`, `name.asc`)
+- `--limit` - Maximum rows to return (default: 100)
+- `--offset` - Number of rows to skip (for pagination)
+
+---
+
+## Type Generation Commands
+
+Generate TypeScript type definitions from your database schema. The generated types can be used with the Fluxbase TypeScript SDK for type-safe database queries.
+
+### `fluxbase types generate`
+
+Generate TypeScript type definitions from your database schema.
+
+```bash
+# Generate types for the public schema and write to types.ts
+fluxbase types generate --output types.ts
+
+# Generate types for multiple schemas
+fluxbase types generate --schemas public,auth --output types.ts
+
+# Generate types including RPC function signatures
+fluxbase types generate --include-functions --output types.ts
+
+# Generate types without views
+fluxbase types generate --include-views=false --output types.ts
+
+# Output to stdout (for piping)
+fluxbase types generate
+
+# Generate with helper functions
+fluxbase types generate --format full --output types.ts
+```
+
+**Flags:**
+
+- `--schemas` - Schemas to include (default: `public`, comma-separated)
+- `--include-functions` - Include RPC function types (default: true)
+- `--include-views` - Include view types (default: true)
+- `--output`, `-o` - Output file path (default: stdout)
+- `--format` - Output format: `types` (interfaces only) or `full` (with helpers)
+
+### `fluxbase types list`
+
+List all available database schemas that can be used for type generation.
+
+```bash
+fluxbase types list
 ```
 
 ---
@@ -512,7 +874,12 @@ Get details of a specific procedure.
 
 ```bash
 fluxbase rpc get default/calculate_totals
+fluxbase rpc get default/calculate_totals --namespace production
 ```
+
+**Flags:**
+
+- `--namespace` - Namespace (default: `default`)
 
 ### `fluxbase rpc invoke`
 
@@ -522,10 +889,12 @@ Invoke a stored procedure.
 fluxbase rpc invoke default/calculate_totals
 fluxbase rpc invoke default/process --params '{"id": 123}'
 fluxbase rpc invoke default/batch_update --file ./params.json --async
+fluxbase rpc invoke default/process --namespace production
 ```
 
 **Flags:**
 
+- `--namespace` - Namespace (default: `default`)
 - `--params` - JSON parameters to pass
 - `--file` - Load parameters from file
 - `--async` - Run asynchronously (returns immediately)
@@ -544,20 +913,29 @@ fluxbase rpc sync --dir ./rpc --namespace production --dry-run
 - `--dir` - Directory containing `.sql` files (default: `./rpc`)
 - `--namespace` - Target namespace (default: `default`)
 - `--dry-run` - Preview changes without applying
+- `--keep` - Keep procedures not in local directory
 - `--delete-missing` - Delete procedures not in local directory
 
 ---
 
 ## Webhook Commands
 
-Manage webhooks.
+Manage webhooks for database events.
 
 ```bash
 # List webhooks
 fluxbase webhooks list
 
+# Get webhook details
+fluxbase webhooks get abc123
+
 # Create webhook
 fluxbase webhooks create --url https://example.com/webhook --events "INSERT,UPDATE"
+
+# Update webhook
+fluxbase webhooks update abc123 --url https://new-url.com/webhook
+fluxbase webhooks update abc123 --events "INSERT,UPDATE,DELETE"
+fluxbase webhooks update abc123 --enabled=false
 
 # Test webhook
 fluxbase webhooks test abc123
@@ -569,11 +947,42 @@ fluxbase webhooks deliveries abc123
 fluxbase webhooks delete abc123
 ```
 
+### `fluxbase webhooks create`
+
+Create a new webhook.
+
+```bash
+fluxbase webhooks create --url https://example.com/webhook --events "INSERT,UPDATE"
+fluxbase webhooks create --url https://example.com/webhook --events "*" --secret "my-secret"
+```
+
+**Flags:**
+
+- `--url` - Webhook URL (required)
+- `--events` - Comma-separated events (e.g., `INSERT,UPDATE,DELETE` or `*` for all)
+- `--secret` - Secret for webhook signature verification
+
+### `fluxbase webhooks update`
+
+Update a webhook.
+
+```bash
+fluxbase webhooks update abc123 --url https://new-url.com/webhook
+fluxbase webhooks update abc123 --events "INSERT,UPDATE,DELETE"
+fluxbase webhooks update abc123 --enabled=false
+```
+
+**Flags:**
+
+- `--url` - New webhook URL
+- `--events` - New comma-separated events
+- `--enabled` - Enable or disable the webhook
+
 ---
 
 ## Client Key Commands
 
-Manage client keys.
+Manage client keys for API authentication.
 
 ```bash
 # List client keys
@@ -582,12 +991,24 @@ fluxbase clientkeys list
 # Create client key
 fluxbase clientkeys create --name "Production" --scopes "read:tables,write:tables"
 
+# Get client key details
+fluxbase clientkeys get abc123
+
 # Revoke client key
 fluxbase clientkeys revoke abc123
 
 # Delete client key
 fluxbase clientkeys delete abc123
 ```
+
+### `fluxbase clientkeys create`
+
+**Flags:**
+
+- `--name` - Client key name (required)
+- `--scopes` - Comma-separated scopes (e.g., `read:tables,write:tables`)
+- `--rate-limit` - Rate limit per minute (e.g., `100`)
+- `--expires` - Expiration duration (e.g., `30d`, `1y`)
 
 ---
 
@@ -598,6 +1019,12 @@ Manage database migrations.
 ```bash
 # List migrations
 fluxbase migrations list
+
+# Get migration details
+fluxbase migrations get 001_create_users
+
+# Create migration
+fluxbase migrations create add_users_table --up-sql "CREATE TABLE users..." --down-sql "DROP TABLE users"
 
 # Apply specific migration
 fluxbase migrations apply 001_create_users
@@ -612,6 +1039,58 @@ fluxbase migrations apply-pending
 fluxbase migrations sync --dir ./migrations
 ```
 
+### `fluxbase migrations list`
+
+List all migrations.
+
+```bash
+fluxbase migrations list
+fluxbase migrations list --namespace production
+```
+
+**Flags:**
+
+- `--namespace` - Filter by namespace
+
+### `fluxbase migrations get`
+
+Get migration details.
+
+```bash
+fluxbase migrations get 001_create_users
+```
+
+### `fluxbase migrations create`
+
+Create a new migration.
+
+```bash
+fluxbase migrations create add_users_table --up-sql "CREATE TABLE users (id SERIAL PRIMARY KEY);"
+fluxbase migrations create add_users_table --up-sql "CREATE TABLE..." --down-sql "DROP TABLE..."
+```
+
+**Flags:**
+
+- `--up-sql` - SQL for up migration
+- `--down-sql` - SQL for down migration
+- `--namespace` - Target namespace (default: `default`)
+
+### `fluxbase migrations sync`
+
+Sync migrations from a directory.
+
+```bash
+fluxbase migrations sync --dir ./migrations
+fluxbase migrations sync --dir ./migrations --namespace production --no-apply
+```
+
+**Flags:**
+
+- `--dir` - Directory containing migration files (default: `./migrations`)
+- `--namespace` - Target namespace (default: `default`)
+- `--no-apply` - Sync without auto-applying pending migrations
+- `--dry-run` - Preview changes without applying
+
 ---
 
 ## Extension Commands
@@ -622,12 +1101,36 @@ Manage PostgreSQL extensions.
 # List extensions
 fluxbase extensions list
 
+# Get extension status
+fluxbase extensions status pgvector
+
 # Enable extension
 fluxbase extensions enable pgvector
 
 # Disable extension
 fluxbase extensions disable pgvector
 ```
+
+### `fluxbase extensions status`
+
+Get the status of a specific extension.
+
+```bash
+fluxbase extensions status pgvector
+```
+
+### `fluxbase extensions enable`
+
+Enable a PostgreSQL extension.
+
+```bash
+fluxbase extensions enable pgvector
+fluxbase extensions enable pgvector --schema vector_schema
+```
+
+**Flags:**
+
+- `--schema` - Schema to install the extension in (default: extension default)
 
 ---
 
@@ -641,7 +1144,15 @@ fluxbase realtime stats
 
 # Broadcast message
 fluxbase realtime broadcast my-channel --message '{"type": "notification"}'
+fluxbase realtime broadcast my-channel --message '{"data": "value"}' --event custom-event
 ```
+
+### `fluxbase realtime broadcast`
+
+**Flags:**
+
+- `--message` - JSON message to broadcast (required)
+- `--event` - Custom event name (default: `broadcast`)
 
 ---
 
@@ -753,6 +1264,153 @@ fluxbase settings secrets delete my_api_key --user
 
 ---
 
+## Service Key Commands
+
+Manage service keys for server-to-server authentication with elevated permissions. Service keys are used for automated workflows, CI/CD pipelines, and backend services that need to access the Fluxbase API.
+
+:::caution
+Service keys have elevated permissions. Store them securely and never expose them in client-side code.
+:::
+
+### `fluxbase servicekeys list`
+
+List all service keys.
+
+```bash
+fluxbase servicekeys list
+fluxbase servicekeys list -o json
+```
+
+### `fluxbase servicekeys create`
+
+Create a new service key.
+
+```bash
+fluxbase servicekeys create --name "Migrations Key" --scopes "migrations:*"
+fluxbase servicekeys create --name "Production" --rate-limit-per-hour 100
+fluxbase servicekeys create --name "CI/CD" --scopes "*" --expires 2025-12-31T23:59:59Z
+```
+
+**Flags:**
+
+- `--name` - Service key name (required)
+- `--description` - Service key description
+- `--scopes` - Comma-separated scopes (default: `*` for all)
+- `--rate-limit-per-minute` - Requests per minute (0 = no limit)
+- `--rate-limit-per-hour` - Requests per hour (0 = no limit)
+- `--expires` - Expiration time (e.g., `2025-12-31T23:59:59Z`)
+
+:::note
+The full key is only shown once at creation. Save it immediately!
+:::
+
+### `fluxbase servicekeys get`
+
+Get details of a specific service key.
+
+```bash
+fluxbase servicekeys get abc123
+```
+
+### `fluxbase servicekeys update`
+
+Update a service key's properties.
+
+```bash
+fluxbase servicekeys update abc123 --name "New Name"
+fluxbase servicekeys update abc123 --rate-limit-per-hour 200
+fluxbase servicekeys update abc123 --enabled=false
+```
+
+**Flags:**
+
+- `--name` - New service key name
+- `--description` - New service key description
+- `--scopes` - New comma-separated scopes
+- `--rate-limit-per-minute` - Requests per minute (0 = no limit)
+- `--rate-limit-per-hour` - Requests per hour (0 = no limit)
+- `--enabled` - Enable or disable the key (default: true)
+
+### `fluxbase servicekeys disable`
+
+Disable a service key (keeps the record but prevents use).
+
+```bash
+fluxbase servicekeys disable abc123
+```
+
+### `fluxbase servicekeys enable`
+
+Enable a previously disabled service key.
+
+```bash
+fluxbase servicekeys enable abc123
+```
+
+### `fluxbase servicekeys delete`
+
+Delete a service key permanently.
+
+```bash
+fluxbase servicekeys delete abc123
+```
+
+### `fluxbase servicekeys revoke`
+
+Emergency revoke a service key immediately. This action is irreversible.
+
+```bash
+fluxbase servicekeys revoke abc123 --reason "Key compromised"
+fluxbase servicekeys revoke abc123 --reason "Employee departure"
+```
+
+**Flags:**
+
+- `--reason` - Reason for revocation (required)
+
+The key will be permanently disabled and marked as revoked with an audit trail.
+
+### `fluxbase servicekeys deprecate`
+
+Mark a service key as deprecated with a grace period. The key continues working during the grace period, allowing time for migration to a new key.
+
+```bash
+fluxbase servicekeys deprecate abc123 --grace-period 24h
+fluxbase servicekeys deprecate abc123 --grace-period 7d --reason "Scheduled rotation"
+```
+
+**Flags:**
+
+- `--grace-period` - Grace period before key stops working (default: `24h`, e.g., `24h`, `7d`)
+- `--reason` - Reason for deprecation
+
+### `fluxbase servicekeys rotate`
+
+Create a new service key as a replacement for an existing one. This deprecates the old key with a grace period and creates a new key with the same configuration.
+
+```bash
+fluxbase servicekeys rotate abc123 --grace-period 24h
+fluxbase servicekeys rotate abc123 --grace-period 7d
+```
+
+**Flags:**
+
+- `--grace-period` - Grace period for old key (default: `24h`, e.g., `24h`, `7d`)
+
+The output shows the new key (save it immediately!) and when the old key will stop working.
+
+### `fluxbase servicekeys revocations`
+
+View the revocation audit log for a service key.
+
+```bash
+fluxbase servicekeys revocations abc123
+```
+
+Shows all revocation events including emergency revocations, rotations, and expirations.
+
+---
+
 ## Config Commands
 
 Manage CLI configuration.
@@ -763,6 +1421,9 @@ fluxbase config init
 
 # View config
 fluxbase config view
+
+# Get config value
+fluxbase config get defaults.output
 
 # Set config value
 fluxbase config set defaults.output json
@@ -775,6 +1436,15 @@ fluxbase config profiles add staging
 
 # Remove profile
 fluxbase config profiles remove staging
+```
+
+### `fluxbase config get`
+
+Get a specific config value.
+
+```bash
+fluxbase config get defaults.output
+fluxbase config get current_profile
 ```
 
 ---
@@ -934,6 +1604,123 @@ fluxbase logs execution abc123-def456 --tail 50
 
 ---
 
+## MCP Commands
+
+Manage custom MCP (Model Context Protocol) tools for AI assistant integration. Custom MCP tools allow you to extend the Fluxbase MCP server with your own tools that can be used by AI assistants.
+
+### `fluxbase mcp tools list`
+
+List all custom MCP tools.
+
+```bash
+fluxbase mcp tools list
+fluxbase mcp tools list --namespace production
+fluxbase mcp tools list -o json
+```
+
+**Flags:**
+
+- `--namespace` - Filter by namespace
+
+### `fluxbase mcp tools get`
+
+Get details of a specific custom MCP tool.
+
+```bash
+fluxbase mcp tools get weather_forecast
+fluxbase mcp tools get weather_forecast -o json
+```
+
+### `fluxbase mcp tools create`
+
+Create a new custom MCP tool.
+
+```bash
+fluxbase mcp tools create weather_forecast --code ./weather.ts
+fluxbase mcp tools create weather_forecast --code ./weather.ts --description "Get weather forecast"
+fluxbase mcp tools create weather_forecast --code ./weather.ts --timeout 60 --memory 256
+```
+
+**Flags:**
+
+- `--code` - Path to TypeScript code file (required)
+- `--namespace` - Namespace (default: `default`)
+- `--description` - Tool description
+- `--timeout` - Execution timeout in seconds (default: 30)
+- `--memory` - Memory limit in MB (default: 128)
+- `--allow-net` - Allow network access (default: true)
+- `--allow-env` - Allow environment variable access
+- `--allow-read` - Allow file read access
+- `--allow-write` - Allow file write access
+
+### `fluxbase mcp tools update`
+
+Update an existing custom MCP tool.
+
+```bash
+fluxbase mcp tools update weather_forecast --code ./weather.ts
+fluxbase mcp tools update weather_forecast --timeout 60
+```
+
+**Flags:**
+
+- `--code` - Path to TypeScript code file
+- `--namespace` - Namespace (default: `default`)
+- `--description` - Tool description
+- `--timeout` - Execution timeout in seconds
+- `--memory` - Memory limit in MB
+
+### `fluxbase mcp tools delete`
+
+Delete a custom MCP tool.
+
+```bash
+fluxbase mcp tools delete weather_forecast
+```
+
+### `fluxbase mcp tools sync`
+
+Sync custom MCP tools from a directory to the server.
+
+```bash
+fluxbase mcp tools sync                                # Auto-detect directory
+fluxbase mcp tools sync --dir ./mcp-tools
+fluxbase mcp tools sync --dir ./mcp-tools --namespace production
+fluxbase mcp tools sync --dry-run
+```
+
+**Flags:**
+
+- `--dir` - Directory containing tool files (auto-detects `./fluxbase/mcp-tools/` or `./mcp-tools/`)
+- `--namespace` - Target namespace (default: `default`)
+- `--dry-run` - Preview changes without applying
+
+Each `.ts` file in the directory will be synced as a custom tool. Tool name defaults to filename. You can use annotations in your code:
+
+```typescript
+// @fluxbase:name my_tool
+// @fluxbase:namespace production
+// @fluxbase:description Get weather forecast
+// @fluxbase:timeout 30
+// @fluxbase:memory 128
+// @fluxbase:allow-net
+```
+
+### `fluxbase mcp tools test`
+
+Test a custom MCP tool by invoking it with sample arguments.
+
+```bash
+fluxbase mcp tools test weather_forecast --args '{"location": "New York"}'
+```
+
+**Flags:**
+
+- `--args` - JSON arguments to pass to the tool (default: `{}`)
+- `--namespace` - Namespace (default: `default`)
+
+---
+
 ## Sync Command
 
 Unified sync for all resource types.
@@ -947,6 +1734,9 @@ fluxbase sync                           # Auto-detect from ./fluxbase/ or curren
 fluxbase sync --dir ./src               # Specify root directory
 fluxbase sync --namespace production    # Apply namespace to all
 fluxbase sync --dry-run                 # Preview all changes
+fluxbase sync --keep                    # Keep resources not in directory
+fluxbase sync --analyze                 # Analyze bundle sizes
+fluxbase sync --analyze --verbose       # Detailed analysis
 ```
 
 **Flags:**
@@ -954,6 +1744,9 @@ fluxbase sync --dry-run                 # Preview all changes
 - `--dir` - Root directory (default: `./fluxbase` or current directory)
 - `--namespace` - Target namespace for all resources (default: `default`)
 - `--dry-run` - Preview changes without applying
+- `--keep` - Keep items not present in directory
+- `--analyze` - Analyze bundle sizes (shows breakdown of what's in each bundle)
+- `--verbose` - Show detailed analysis (with `--analyze`)
 
 The sync command automatically detects and syncs these subdirectories:
 
@@ -1032,6 +1825,7 @@ fluxbase branch create feature-b --from feature-a
 - `--from` - Parent branch to clone from (default: `main`)
 - `--pr` - GitHub PR number to associate
 - `--repo` - GitHub repository (e.g., `owner/repo`)
+- `--seeds-dir` - Custom directory containing seed SQL files (only with `--clone-data seed_data`)
 
 After creation, the command shows how to connect:
 
@@ -1112,6 +1906,26 @@ fluxbase branch stats
 ```
 
 Useful for debugging and monitoring database connections across branches.
+
+### `fluxbase branch use`
+
+Set the default branch for all subsequent CLI commands. This saves the branch to your profile config.
+
+```bash
+fluxbase branch use my-feature
+fluxbase branch use pr-123
+fluxbase branch use main  # Reset to main branch
+```
+
+After setting a default branch, all CLI commands will automatically use that branch without needing to specify it each time.
+
+### `fluxbase branch current`
+
+Show the current default branch set for CLI commands.
+
+```bash
+fluxbase branch current
+```
 
 ---
 
@@ -1297,3 +2111,73 @@ fluxbase users delete 550e8400-e29b-41d4-a716-446655440000 --force
 **Flags:**
 
 - `--force`, `-f` - Skip confirmation prompt
+
+---
+
+## Version Command
+
+### `fluxbase version`
+
+Show CLI version information.
+
+```bash
+fluxbase version
+```
+
+---
+
+## Completion Command
+
+### `fluxbase completion`
+
+Generate shell completion scripts for bash, zsh, fish, and powershell.
+
+```bash
+# Bash
+fluxbase completion bash > /etc/bash_completion.d/fluxbase
+
+# Zsh
+fluxbase completion zsh > "${fpath[1]}/_fluxbase"
+
+# Fish
+fluxbase completion fish > ~/.config/fish/completions/fluxbase.fish
+
+# PowerShell
+fluxbase completion powershell > ~/.config/powershell/completions/fluxbase.ps1
+```
+
+After installation, restart your shell or source the completion file to enable autocompletion.
+
+---
+
+## Command Aliases
+
+Many commands have shorter aliases for convenience:
+
+| Command           | Aliases                                |
+| ----------------- | -------------------------------------- |
+| `admin`           | `adm`                                  |
+| `branch`          | `branches`, `br`                       |
+| `chatbots`        | `chatbot`, `cb`                        |
+| `clientkeys`      | `clientkey`, `keys`                    |
+| `extensions`      | `extension`, `ext`                     |
+| `functions`       | `fn`, `function`                       |
+| `graphql`         | `gql`                                  |
+| `jobs`            | `job`                                  |
+| `kb`              | `knowledge-bases`, `knowledge-base`    |
+| `logs`            | `log`                                  |
+| `migrations`      | `migration`, `migrate`                 |
+| `realtime`        | `rt`                                   |
+| `secrets`         | `secret`                               |
+| `servicekeys`     | `servicekey`, `sk`                     |
+| `tables`          | `table`, `db`                          |
+| `users`           | `user`                                 |
+| `webhooks`        | `webhook`, `wh`                        |
+
+Examples:
+
+```bash
+fluxbase fn list          # Same as fluxbase functions list
+fluxbase br create test   # Same as fluxbase branch create test
+fluxbase rt stats         # Same as fluxbase realtime stats
+```

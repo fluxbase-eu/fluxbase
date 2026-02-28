@@ -5,7 +5,7 @@ prev: false
 title: "useWebhooks"
 ---
 
-> **useWebhooks**(`options`): `UseWebhooksReturn`
+> **useWebhooks**(`options?`): `UseWebhooksReturn`
 
 Hook for managing webhooks
 

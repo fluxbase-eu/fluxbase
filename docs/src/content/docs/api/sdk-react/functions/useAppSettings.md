@@ -5,7 +5,7 @@ prev: false
 title: "useAppSettings"
 ---
 
-> **useAppSettings**(`options`): `UseAppSettingsReturn`
+> **useAppSettings**(`options?`): `UseAppSettingsReturn`
 
 Hook for managing application settings
 

@@ -112,7 +112,7 @@ console.log('Send this link to the user:', invitation.invite_link)
 
 ### list()
 
-> **list**(`options`): `Promise`\<[`ListInvitationsResponse`](/api/sdk/interfaces/listinvitationsresponse/)\>
+> **list**(`options?`): `Promise`\<[`ListInvitationsResponse`](/api/sdk/interfaces/listinvitationsresponse/)\>
 
 List all invitations (admin only)
 
