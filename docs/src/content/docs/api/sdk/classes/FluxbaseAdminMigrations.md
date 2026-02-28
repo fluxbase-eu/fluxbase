@@ -28,7 +28,7 @@ Provides create, update, delete, apply, rollback, and smart sync operations
 
 ### apply()
 
-> **apply**(`name`, `namespace`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **apply**(`name`, `namespace?`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Apply a specific migration
 
@@ -58,7 +58,7 @@ if (data) {
 
 ### applyPending()
 
-> **applyPending**(`namespace`): `Promise`\<\{ `data`: \{ `applied`: `string`[]; `failed`: `string`[]; `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **applyPending**(`namespace?`): `Promise`\<\{ `data`: \{ `applied`: `string`[]; `failed`: `string`[]; `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Apply all pending migrations in order
 
@@ -119,7 +119,7 @@ const { data, error } = await client.admin.migrations.create({
 
 ### delete()
 
-> **delete**(`name`, `namespace`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **delete**(`name`, `namespace?`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
 
 Delete a migration (only if status is pending)
 
@@ -146,7 +146,7 @@ const { data, error } = await client.admin.migrations.delete('001_create_users',
 
 ### get()
 
-> **get**(`name`, `namespace`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **get**(`name`, `namespace?`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get details of a specific migration
 
@@ -173,7 +173,7 @@ const { data, error } = await client.admin.migrations.get('001_create_users', 'm
 
 ### getExecutions()
 
-> **getExecutions**(`name`, `namespace`, `limit`): `Promise`\<\{ `data`: [`MigrationExecution`](/api/sdk/interfaces/migrationexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **getExecutions**(`name`, `namespace?`, `limit?`): `Promise`\<\{ `data`: [`MigrationExecution`](/api/sdk/interfaces/migrationexecution/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 Get execution history for a migration
 
@@ -210,7 +210,7 @@ if (data) {
 
 ### list()
 
-> **list**(`namespace`, `status?`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(`namespace?`, `status?`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/)[] \| `null`; `error`: `Error` \| `null`; \}\>
 
 List migrations in a namespace
 
@@ -291,7 +291,7 @@ await client.admin.migrations.sync()
 
 ### rollback()
 
-> **rollback**(`name`, `namespace`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **rollback**(`name`, `namespace?`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
 
 Rollback a specific migration
 
@@ -318,7 +318,7 @@ const { data, error } = await client.admin.migrations.rollback('001_create_users
 
 ### sync()
 
-> **sync**(`options`): `Promise`\<\{ `data`: [`SyncMigrationsResult`](/api/sdk/interfaces/syncmigrationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **sync**(`options?`): `Promise`\<\{ `data`: [`SyncMigrationsResult`](/api/sdk/interfaces/syncmigrationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Smart sync all registered migrations
 
@@ -366,7 +366,7 @@ const { data, error } = await client.admin.migrations.sync({
 
 ### update()
 
-> **update**(`name`, `updates`, `namespace`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **update**(`name`, `updates`, `namespace?`): `Promise`\<\{ `data`: [`Migration`](/api/sdk/interfaces/migration/) \| `null`; `error`: `Error` \| `null`; \}\>
 
 Update a migration (only if status is pending)
 

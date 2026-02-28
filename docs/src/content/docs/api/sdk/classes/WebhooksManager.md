@@ -156,7 +156,7 @@ webhooks.forEach(webhook => {
 
 ### listDeliveries()
 
-> **listDeliveries**(`webhookId`, `limit`): `Promise`\<[`ListWebhookDeliveriesResponse`](/api/sdk/interfaces/listwebhookdeliveriesresponse/)\>
+> **listDeliveries**(`webhookId`, `limit?`): `Promise`\<[`ListWebhookDeliveriesResponse`](/api/sdk/interfaces/listwebhookdeliveriesresponse/)\>
 
 List webhook delivery history
 

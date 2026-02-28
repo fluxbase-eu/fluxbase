@@ -57,7 +57,7 @@ Clear admin token
 
 ### deleteUser()
 
-> **deleteUser**(`userId`, `type`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`DeleteUserResponse`](/api/sdk/interfaces/deleteuserresponse/)\>\>
+> **deleteUser**(`userId`, `type?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`DeleteUserResponse`](/api/sdk/interfaces/deleteuserresponse/)\>\>
 
 Delete a user
 
@@ -147,7 +147,7 @@ Get current admin token
 
 ### getUserById()
 
-> **getUserById**(`userId`, `type`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`EnrichedUser`](/api/sdk/interfaces/enricheduser/)\>\>
+> **getUserById**(`userId`, `type?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`EnrichedUser`](/api/sdk/interfaces/enricheduser/)\>\>
 
 Get a user by ID
 
@@ -182,7 +182,7 @@ console.log('Last login:', dashboardUser.last_login_at);
 
 ### inviteUser()
 
-> **inviteUser**(`request`, `type`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`InviteUserResponse`](/api/sdk/interfaces/inviteuserresponse/)\>\>
+> **inviteUser**(`request`, `type?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`InviteUserResponse`](/api/sdk/interfaces/inviteuserresponse/)\>\>
 
 Invite a new user
 
@@ -218,7 +218,7 @@ console.log('Invitation link:', response.invitation_link);
 
 ### listUsers()
 
-> **listUsers**(`options`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`ListUsersResponse`](/api/sdk/interfaces/listusersresponse/)\>\>
+> **listUsers**(`options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`ListUsersResponse`](/api/sdk/interfaces/listusersresponse/)\>\>
 
 List all users
 
@@ -361,7 +361,7 @@ localStorage.setItem('admin_refresh_token', response.refresh_token);
 
 ### resetUserPassword()
 
-> **resetUserPassword**(`userId`, `type`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`ResetUserPasswordResponse`](/api/sdk/interfaces/resetuserpasswordresponse/)\>\>
+> **resetUserPassword**(`userId`, `type?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`ResetUserPasswordResponse`](/api/sdk/interfaces/resetuserpasswordresponse/)\>\>
 
 Reset user password
 
@@ -476,7 +476,7 @@ localStorage.setItem('admin_token', response.access_token);
 
 ### updateUserRole()
 
-> **updateUserRole**(`userId`, `role`, `type`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`EnrichedUser`](/api/sdk/interfaces/enricheduser/)\>\>
+> **updateUserRole**(`userId`, `role`, `type?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`EnrichedUser`](/api/sdk/interfaces/enricheduser/)\>\>
 
 Update user role
 

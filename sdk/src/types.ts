@@ -2234,9 +2234,9 @@ export interface OAuthProviderPublic {
 }
 
 /**
- * Public SAML provider information
+ * Public SAML provider information (for auth config response)
  */
-export interface SAMLProvider {
+export interface SAMLProviderInfo {
   /** Provider identifier */
   provider: string;
   /** Display name for UI */
@@ -2271,7 +2271,7 @@ export interface AuthConfig {
   /** Available OAuth providers for authentication */
   oauth_providers: OAuthProviderPublic[];
   /** Available SAML providers for enterprise SSO */
-  saml_providers: SAMLProvider[];
+  saml_providers: SAMLProviderInfo[];
   /** CAPTCHA configuration */
   captcha: CaptchaConfig | null;
 }

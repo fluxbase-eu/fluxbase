@@ -9,7 +9,7 @@ title: "FluxbaseRealtime"
 
 ### Constructor
 
-> **new FluxbaseRealtime**(`url`, `token`): `FluxbaseRealtime`
+> **new FluxbaseRealtime**(`url`, `token?`): `FluxbaseRealtime`
 
 #### Parameters
 
@@ -56,7 +56,7 @@ const channel = realtime.channel('room-1', {
 
 ### executionLogs()
 
-> **executionLogs**(`executionId`, `type`): [`ExecutionLogsChannel`](/api/sdk/classes/executionlogschannel/)
+> **executionLogs**(`executionId`, `type?`): [`ExecutionLogsChannel`](/api/sdk/classes/executionlogschannel/)
 
 Create an execution log subscription channel
 

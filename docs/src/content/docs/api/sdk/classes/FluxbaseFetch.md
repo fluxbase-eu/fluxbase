@@ -9,7 +9,7 @@ title: "FluxbaseFetch"
 
 ### Constructor
 
-> **new FluxbaseFetch**(`baseUrl`, `options`): `FluxbaseFetch`
+> **new FluxbaseFetch**(`baseUrl`, `options?`): `FluxbaseFetch`
 
 #### Parameters
 
@@ -29,7 +29,7 @@ title: "FluxbaseFetch"
 
 ### delete()
 
-> **delete**\<`T`\>(`path`, `options`): `Promise`\<`T`\>
+> **delete**\<`T`\>(`path`, `options?`): `Promise`\<`T`\>
 
 DELETE request
 
@@ -54,7 +54,7 @@ DELETE request
 
 ### get()
 
-> **get**\<`T`\>(`path`, `options`): `Promise`\<`T`\>
+> **get**\<`T`\>(`path`, `options?`): `Promise`\<`T`\>
 
 GET request
 
@@ -79,7 +79,7 @@ GET request
 
 ### getBlob()
 
-> **getBlob**(`path`, `options`): `Promise`\<`Blob`\>
+> **getBlob**(`path`, `options?`): `Promise`\<`Blob`\>
 
 GET request that returns response as Blob (for file downloads)
 
@@ -98,7 +98,7 @@ GET request that returns response as Blob (for file downloads)
 
 ### getWithHeaders()
 
-> **getWithHeaders**\<`T`\>(`path`, `options`): `Promise`\<`FetchResponseWithHeaders`\<`T`\>\>
+> **getWithHeaders**\<`T`\>(`path`, `options?`): `Promise`\<`FetchResponseWithHeaders`\<`T`\>\>
 
 GET request that returns response with headers (for count queries)
 
@@ -123,7 +123,7 @@ GET request that returns response with headers (for count queries)
 
 ### head()
 
-> **head**(`path`, `options`): `Promise`\<`Headers`\>
+> **head**(`path`, `options?`): `Promise`\<`Headers`\>
 
 HEAD request
 

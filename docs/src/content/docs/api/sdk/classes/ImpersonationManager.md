@@ -195,7 +195,7 @@ console.log('Session ID:', result.session.id)
 
 ### listSessions()
 
-> **listSessions**(`options`): `Promise`\<[`ListImpersonationSessionsResponse`](/api/sdk/interfaces/listimpersonationsessionsresponse/)\>
+> **listSessions**(`options?`): `Promise`\<[`ListImpersonationSessionsResponse`](/api/sdk/interfaces/listimpersonationsessionsresponse/)\>
 
 List impersonation sessions (audit trail)
 
