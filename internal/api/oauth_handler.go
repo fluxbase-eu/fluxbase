@@ -344,10 +344,11 @@ func (h *OAuthHandler) Callback(c fiber.Ctx) error {
 		})
 	}
 
-	// Generate JWT tokens with metadata
-	accessToken, refreshToken, _, err := h.jwtManager.GenerateTokenPair(user.ID, user.Email, user.Role, user.UserMetadata, user.AppMetadata)
+	// Generate JWT tokens and create session in database
+	// This is required for token refresh to work - the refresh endpoint looks up sessions by refresh token
+	tokenResp, err := h.authSvc.GenerateTokensForUser(ctx, user.ID)
 	if err != nil {
-		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to generate JWT tokens")
+		log.Error().Err(err).Str("user_id", user.ID).Msg("Failed to generate tokens and create session")
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to generate authentication token",
 		})
@@ -361,9 +362,9 @@ func (h *OAuthHandler) Callback(c fiber.Ctx) error {
 		Msg("OAuth authentication successful")
 
 	return c.JSON(fiber.Map{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"expires_in":    h.authSvc.GetAccessTokenExpirySeconds(),
+		"access_token":  tokenResp.AccessToken,
+		"refresh_token": tokenResp.RefreshToken,
+		"expires_in":    tokenResp.ExpiresIn,
 		"user":          user,
 		"is_new_user":   isNewUser,
 	})
