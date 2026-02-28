@@ -191,10 +191,11 @@ func (s *TokenBlacklistService) RevokeToken(ctx context.Context, token, reason s
 	}
 
 	// Service role tokens should never be revoked - they are system-level credentials
-	if serviceRoleClaims, err := s.jwtManager.ValidateServiceRoleToken(token); err == nil {
-		if serviceRoleClaims.Role == "service_role" {
-			return ErrCannotRevokeServiceRole
-		}
+	// This includes tokens with role "anon", "service_role", or any token validated by ValidateServiceRoleToken
+	if _, err := s.jwtManager.ValidateServiceRoleToken(token); err == nil {
+		// Block ALL service role tokens (anon, service_role, authenticated via this path)
+		// These are system-level credentials that should use emergency revocation instead
+		return ErrCannotRevokeServiceRole
 	}
 
 	// Validate and parse the token to get the JTI

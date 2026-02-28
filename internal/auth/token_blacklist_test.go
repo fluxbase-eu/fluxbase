@@ -29,7 +29,7 @@ func TestRevokeToken_ServiceRoleTokenRejected(t *testing.T) {
 	assert.ErrorIs(t, err, ErrCannotRevokeServiceRole)
 }
 
-func TestRevokeToken_AnonTokenNotBlockedByGuard(t *testing.T) {
+func TestRevokeToken_AnonTokenAlsoBlocked(t *testing.T) {
 	manager := NewJWTManager("test-secret", 15*time.Minute, 7*24*time.Hour)
 
 	// Generate an anon token
@@ -41,14 +41,29 @@ func TestRevokeToken_AnonTokenNotBlockedByGuard(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "anon", claims.Role)
 
-	// The guard only blocks "service_role", not "anon"
-	// Anon tokens should be revocable since they represent anonymous users
+	// Create service without repository (we only need the jwtManager for this test)
+	service := &TokenBlacklistService{
+		repo:       nil, // Not needed since we expect early return
+		jwtManager: manager,
+	}
+
+	// Anon tokens should also be blocked from revocation
+	// They are validated by ValidateServiceRoleToken and should be treated the same
+	err = service.RevokeToken(context.Background(), anonToken, "test revocation")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrCannotRevokeServiceRole)
 }
 
-func TestRevokeToken_OnlyServiceRoleBlocked(t *testing.T) {
+func TestRevokeToken_AllServiceRoleTokensBlocked(t *testing.T) {
 	manager := NewJWTManager("test-secret", 15*time.Minute, 7*24*time.Hour)
 
-	// Generate a service role token and verify it's blocked
+	// Create service without repository (we only need the jwtManager for this test)
+	service := &TokenBlacklistService{
+		repo:       nil, // Not needed since we expect early return
+		jwtManager: manager,
+	}
+
+	// Test service_role token
 	serviceRoleToken, err := manager.GenerateServiceRoleToken()
 	require.NoError(t, err)
 
@@ -56,8 +71,21 @@ func TestRevokeToken_OnlyServiceRoleBlocked(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "service_role", claims.Role)
 
-	// Only service_role tokens should be blocked from revocation
-	// This is because service_role is a system-level credential that should never be blacklisted
+	err = service.RevokeToken(context.Background(), serviceRoleToken, "test")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrCannotRevokeServiceRole)
+
+	// Test anon token - should also be blocked
+	anonToken, err := manager.GenerateAnonToken()
+	require.NoError(t, err)
+
+	anonClaims, err := manager.ValidateServiceRoleToken(anonToken)
+	require.NoError(t, err)
+	assert.Equal(t, "anon", anonClaims.Role)
+
+	err = service.RevokeToken(context.Background(), anonToken, "test")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrCannotRevokeServiceRole)
 }
 
 func TestRevokeToken_ServiceKeyRejected(t *testing.T) {
