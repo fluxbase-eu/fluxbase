@@ -242,7 +242,7 @@ func (r *DenoRuntime) Execute(
 				log.Warn().
 					Str("id", req.ID.String()).
 					Str("name", req.Name).
-					Str("runtime_type", string(r.runtimeType)).
+					Str("runtime_type", r.runtimeType.String()).
 					Int("requested_memory_mb", memoryLimitMB).
 					Uint64("available_memory_mb", availableMemoryMB).
 					Uint64("total_memory_mb", totalMemoryMB).
