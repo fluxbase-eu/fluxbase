@@ -1,0 +1,293 @@
+---
+// Build the full page URL for AI assistant links
+const pageUrl = Astro.site
+  ? new URL(Astro.url.pathname, Astro.site).toString()
+  : Astro.url.href;
+
+const chatGptUrl = `https://chatgpt.com/?hint=search&q=Read%20from%20${encodeURIComponent(pageUrl)}`;
+const claudeUrl = `https://claude.ai/new?q=Read%20from%20${encodeURIComponent(pageUrl)}`;
+---
+
+<div class="ai-assistant-buttons">
+  <button id="copy-markdown-btn" class="ai-btn" title="Copy page content as markdown">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+    <span>Copy as Markdown</span>
+  </button>
+  <a href={chatGptUrl} target="_blank" rel="noopener noreferrer" class="ai-btn" title="Ask ChatGPT about this page">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364l2.0201-1.1685a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.4043-.6813zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997z"/>
+    </svg>
+    <span>Ask ChatGPT</span>
+  </a>
+  <a href={claudeUrl} target="_blank" rel="noopener noreferrer" class="ai-btn" title="Ask Claude about this page">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+    </svg>
+    <span>Ask Claude</span>
+  </a>
+</div>
+
+<script>
+  // Simple HTML to Markdown converter (no external dependencies)
+  function htmlToMarkdown(html: string): string {
+    // Create a temporary element to parse HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    // Process nodes recursively
+    function processNode(node: Node): string {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent || '';
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return '';
+      }
+
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+      const children = Array.from(el.childNodes).map(processNode).join('');
+
+      switch (tag) {
+        case 'h1':
+          return `\n# ${children}\n\n`;
+        case 'h2':
+          return `\n## ${children}\n\n`;
+        case 'h3':
+          return `\n### ${children}\n\n`;
+        case 'h4':
+          return `\n#### ${children}\n\n`;
+        case 'h5':
+          return `\n##### ${children}\n\n`;
+        case 'h6':
+          return `\n###### ${children}\n\n`;
+        case 'p':
+          return `${children}\n\n`;
+        case 'br':
+          return '\n';
+        case 'hr':
+          return '\n---\n\n';
+        case 'strong':
+        case 'b':
+          return `**${children}**`;
+        case 'em':
+        case 'i':
+          return `*${children}*`;
+        case 'code':
+          return el.parentElement?.tagName.toLowerCase() === 'pre' ? children : `\`${children}\``;
+        case 'pre':
+          const codeEl = el.querySelector('code');
+          const codeText = codeEl ? codeEl.textContent : el.textContent;
+          const lang = codeEl?.className?.match(/language-(\w+)/)?.[1] || '';
+          return `\n\`\`\`${lang}\n${codeText}\n\`\`\`\n\n`;
+        case 'a':
+          const href = el.getAttribute('href') || '';
+          return `[${children}](${href})`;
+        case 'img':
+          const src = el.getAttribute('src') || '';
+          const alt = el.getAttribute('alt') || '';
+          return `![${alt}](${src})`;
+        case 'ul':
+          return `\n${Array.from(el.querySelectorAll(':scope > li')).map(li => `- ${processNode(li)}`).join('\n')}\n\n`;
+        case 'ol':
+          return `\n${Array.from(el.querySelectorAll(':scope > li')).map((li, i) => `${i + 1}. ${processNode(li)}`).join('\n')}\n\n`;
+        case 'li':
+          return children;
+        case 'blockquote':
+          return `\n> ${children.trim().replace(/\n/g, '\n> ')}\n\n`;
+        case 'table':
+          return processTable(el);
+        case 'div':
+        case 'section':
+        case 'article':
+        case 'main':
+        case 'span':
+          return children;
+        default:
+          return children;
+      }
+    }
+
+    function processTable(table: Element): string {
+      const rows = table.querySelectorAll('tr');
+      if (rows.length === 0) return '';
+
+      let result = '\n';
+      let headerProcessed = false;
+
+      rows.forEach((row, rowIndex) => {
+        const cells = row.querySelectorAll('th, td');
+        const cellContents = Array.from(cells).map(cell => cell.textContent?.trim() || '');
+
+        if (cellContents.length === 0) return;
+
+        result += '| ' + cellContents.join(' | ') + ' |\n';
+
+        // Add separator after header row
+        if (!headerProcessed && (row.querySelector('th') || rowIndex === 0)) {
+          result += '| ' + cellContents.map(() => '---').join(' | ') + ' |\n';
+          headerProcessed = true;
+        }
+      });
+
+      return result + '\n';
+    }
+
+    let markdown = processNode(temp);
+
+    // Clean up extra newlines
+    markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
+
+    return markdown;
+  }
+
+  function initCopyMarkdownButton(): void {
+    const copyBtn = document.getElementById('copy-markdown-btn') as HTMLButtonElement;
+    if (!copyBtn) return;
+
+    // Remove any existing listener by cloning
+    const newBtn = copyBtn.cloneNode(true) as HTMLButtonElement;
+    copyBtn.parentNode?.replaceChild(newBtn, copyBtn);
+
+    newBtn.addEventListener('click', async () => {
+      const contentEl = document.querySelector('.sl-markdown-content');
+      if (!contentEl) {
+        console.error('Could not find page content element');
+        return;
+      }
+
+      try {
+        // Clone the content to process it
+        const clone = contentEl.cloneNode(true) as HTMLElement;
+
+        // Remove unwanted elements
+        clone.querySelectorAll('.ai-assistant-buttons, .sl-anchor-link, .starlight-aside').forEach(el => el.remove());
+
+        // Handle Mermaid diagrams - replace rendered SVG with original source code
+        clone.querySelectorAll('.mermaid').forEach(mermaidEl => {
+          const wrapper = mermaidEl.closest('.expressive-code');
+          const copyBtn = wrapper?.querySelector('button[data-code]');
+          if (wrapper && copyBtn) {
+            // Get original mermaid source from data-code attribute
+            // The delimiter is ASCII char 127 (DEL)
+            const rawCode = copyBtn.getAttribute('data-code') || '';
+            const mermaidSource = rawCode.split(String.fromCharCode(127)).join('\n');
+
+            // Create a pre element with the original source
+            const pre = document.createElement('pre');
+            pre.setAttribute('data-language', 'mermaid');
+            const code = document.createElement('code');
+            code.className = 'language-mermaid';
+            code.textContent = mermaidSource;
+            pre.appendChild(code);
+
+            // Replace the wrapper with just the pre element
+            wrapper.replaceWith(pre);
+          } else {
+            // No source available, remove the rendered diagram
+            mermaidEl.remove();
+          }
+        });
+
+        const html = clone.innerHTML;
+        const markdown = htmlToMarkdown(html);
+
+        await navigator.clipboard.writeText(markdown);
+
+        // Visual feedback
+        const svg = newBtn.querySelector('svg');
+        const span = newBtn.querySelector('span');
+        if (svg && span) {
+          const originalSvg = svg.outerHTML;
+          const originalText = span.textContent;
+          svg.outerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          span.textContent = 'Copied!';
+          newBtn.classList.add('copied');
+
+          setTimeout(() => {
+            const currentSvg = newBtn.querySelector('svg');
+            if (currentSvg) currentSvg.outerHTML = originalSvg;
+            span.textContent = originalText;
+            newBtn.classList.remove('copied');
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('Failed to copy markdown:', err);
+        const span = newBtn.querySelector('span');
+        if (span) {
+          const originalText = span.textContent;
+          span.textContent = 'Failed!';
+          setTimeout(() => {
+            span.textContent = originalText;
+          }, 2000);
+        }
+      }
+    });
+  }
+
+  // Run on initial page load
+  initCopyMarkdownButton();
+
+  // Re-run on Astro page transitions
+  document.addEventListener('astro:page-load', initCopyMarkdownButton);
+</script>
+
+<style>
+  .ai-assistant-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--sl-color-gray-5);
+  }
+
+  .ai-btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.375rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg-nav);
+    color: var(--sl-color-gray-2);
+    transition: all 0.15s ease;
+    width: 100%;
+  }
+
+  .ai-btn:hover {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-text);
+    text-decoration: none;
+  }
+
+  .ai-btn:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  .ai-btn.copied {
+    border-color: var(--sl-color-green);
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--sl-color-green);
+  }
+
+  .ai-btn svg {
+    flex-shrink: 0;
+  }
+
+  .ai-btn span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>

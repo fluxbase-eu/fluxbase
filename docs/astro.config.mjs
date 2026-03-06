@@ -33,6 +33,7 @@ export default defineConfig({
       credits: true,
       components: {
         Footer: "./src/components/Footer.astro",
+        PageSidebar: "./src/components/PageSidebar.astro",
       },
       head: [
         // OpenGraph meta tags for social sharing

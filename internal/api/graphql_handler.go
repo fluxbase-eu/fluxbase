@@ -9,7 +9,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
-	internalMiddleware "github.com/fluxbase-eu/fluxbase/internal/middleware"
+	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/graphql/gqlerrors"
