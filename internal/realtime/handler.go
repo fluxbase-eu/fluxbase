@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -114,8 +115,31 @@ func (h *RealtimeHandler) HandleWebSocket(c fiber.Ctx) error {
 		return fiber.ErrUpgradeRequired
 	}
 
-	// Extract and validate JWT token from query parameter
-	token := c.Query("token")
+	// Extract JWT token - prefer Authorization header, fall back to query parameter
+	// Note: Query parameter tokens are less secure (logged in server logs, browser history, etc.)
+	// but are necessary for browser WebSocket connections which don't support custom headers.
+	var token string
+	var tokenSource string
+
+	// Try Authorization header first (preferred, more secure)
+	authHeader := c.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		token = strings.TrimPrefix(authHeader, "Bearer ")
+		tokenSource = "header"
+	}
+
+	// Fall back to query parameter (less secure, but needed for browser WebSocket)
+	if token == "" {
+		token = c.Query("token")
+		if token != "" {
+			tokenSource = "query"
+			// Log warning about using query parameter for auth
+			log.Warn().
+				Str("ip", c.IP()).
+				Msg("WebSocket auth via query parameter (consider using Authorization header for better security)")
+		}
+	}
+
 	var userID *string
 	var role = "anon" // Default to anonymous role
 	var rawClaims map[string]interface{}
@@ -123,7 +147,7 @@ func (h *RealtimeHandler) HandleWebSocket(c fiber.Ctx) error {
 	if token != "" && h.authService != nil {
 		claims, err := h.authService.ValidateToken(token)
 		if err != nil {
-			log.Debug().Err(err).Msg("Invalid WebSocket token")
+			log.Debug().Err(err).Str("token_source", tokenSource).Msg("Invalid WebSocket token")
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid or expired token",
 			})
