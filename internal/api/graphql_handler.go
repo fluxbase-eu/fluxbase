@@ -9,6 +9,7 @@ import (
 	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/fluxbase-eu/fluxbase/internal/database"
+	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/graphql/gqlerrors"
@@ -327,11 +328,11 @@ func (h *GraphQLHandler) RegisterRoutes(app *fiber.App, authService *auth.Servic
 	// GraphQL endpoint - requires authentication with RLS support
 	graphqlGroup := app.Group("/api/v1/graphql")
 
-	// POST /api/v1/graphql - execute queries/mutations
-	graphqlGroup.Post("/", h.HandleGraphQL)
+	// POST /api/v1/graphql - execute queries/mutations (requires auth)
+	graphqlGroup.Post("/", middleware.RequireAuthOrServiceKey(authService, clientKeyService, db, jwtManager), h.HandleGraphQL)
 
-	// GET /api/v1/graphql - introspection (if enabled)
-	graphqlGroup.Get("/", h.HandleIntrospection)
+	// GET /api/v1/graphql - introspection (if enabled, requires auth)
+	graphqlGroup.Get("/", middleware.RequireAuthOrServiceKey(authService, clientKeyService, db, jwtManager), h.HandleIntrospection)
 }
 
 // InvalidateSchema invalidates the cached GraphQL schema

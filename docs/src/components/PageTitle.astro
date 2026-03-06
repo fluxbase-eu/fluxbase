@@ -1,0 +1,22 @@
+---
+// PAGE_TITLE_ID is '_top' - defined in @astrojs/starlight/constants.ts
+// Cannot import directly as it's not in the package exports
+const PAGE_TITLE_ID = '_top';
+
+const { starlightRoute } = Astro.locals;
+const title = starlightRoute.entry.data.title;
+---
+
+<h1 id={PAGE_TITLE_ID}>{title}</h1>
+
+<style>
+  @layer starlight.core {
+    h1 {
+      margin-top: 1rem;
+      font-size: var(--sl-text-h1);
+      line-height: var(--sl-line-height-headings);
+      font-weight: 600;
+      color: var(--sl-color-white);
+    }
+  }
+</style>

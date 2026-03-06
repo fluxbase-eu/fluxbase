@@ -98,6 +98,7 @@ func TestRequireGlobalIPAllowlist_AllowsIPInRange(t *testing.T) {
 
 			cfg := &config.ServerConfig{
 				AllowedIPRanges: tt.ipRanges,
+				TrustedProxies:  []string{"0.0.0.0/0"}, // Trust all for testing
 			}
 
 			app.Use(RequireGlobalIPAllowlist(cfg))
@@ -131,6 +132,7 @@ func TestRequireGlobalIPAllowlist_MultipleRanges(t *testing.T) {
 			"172.16.0.0/12",
 			"203.0.113.0/24",
 		},
+		TrustedProxies: []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -203,6 +205,7 @@ func TestRequireGlobalIPAllowlist_InvalidCIDR(t *testing.T) {
 			"not-a-network",
 			"10.0.0.0/8", // Valid one should still work
 		},
+		TrustedProxies: []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -252,6 +255,7 @@ func TestRequireGlobalIPAllowlist_XRealIP(t *testing.T) {
 
 	cfg := &config.ServerConfig{
 		AllowedIPRanges: []string{"10.0.0.0/8"},
+		TrustedProxies:  []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -275,6 +279,7 @@ func TestRequireGlobalIPAllowlist_ProxyChain(t *testing.T) {
 
 	cfg := &config.ServerConfig{
 		AllowedIPRanges: []string{"203.0.113.0/24"},
+		TrustedProxies:  []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -298,6 +303,7 @@ func TestRequireGlobalIPAllowlist_ProxyChain_DeniedClient(t *testing.T) {
 
 	cfg := &config.ServerConfig{
 		AllowedIPRanges: []string{"10.0.0.0/8"}, // Only 10.x.x.x allowed
+		TrustedProxies:  []string{"0.0.0.0/0"},  // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -321,7 +327,8 @@ func TestRequireGlobalIPAllowlist_LocalhostIPv6(t *testing.T) {
 	app := fiber.New()
 
 	cfg := &config.ServerConfig{
-		AllowedIPRanges: []string{"::1/128"}, // Localhost IPv6
+		AllowedIPRanges: []string{"::1/128"},   // Localhost IPv6
+		TrustedProxies:  []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -347,6 +354,7 @@ func TestRequireGlobalIPAllowlist_MixedIPv4IPv6(t *testing.T) {
 			"10.0.0.0/8",
 			"2001:db8::/32",
 		},
+		TrustedProxies: []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -457,6 +465,7 @@ func BenchmarkRequireGlobalIPAllowlist_SingleRange(b *testing.B) {
 
 	cfg := &config.ServerConfig{
 		AllowedIPRanges: []string{"10.0.0.0/8"},
+		TrustedProxies:  []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -485,6 +494,7 @@ func BenchmarkRequireGlobalIPAllowlist_MultipleRanges(b *testing.B) {
 			"203.0.113.0/24",
 			"198.51.100.0/24",
 		},
+		TrustedProxies: []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))
@@ -507,6 +517,7 @@ func BenchmarkRequireGlobalIPAllowlist_Denied(b *testing.B) {
 
 	cfg := &config.ServerConfig{
 		AllowedIPRanges: []string{"10.0.0.0/8"},
+		TrustedProxies:  []string{"0.0.0.0/0"}, // Trust all for testing
 	}
 
 	app.Use(RequireGlobalIPAllowlist(cfg))

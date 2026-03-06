@@ -268,6 +268,33 @@ func (t *GetJobStatusTool) Execute(ctx context.Context, args map[string]any, aut
 		}, nil
 	}
 
+	// Ownership verification: Check if user has permission to view this job
+	// Allow access if:
+	// 1. User created the job (job.CreatedBy matches authCtx.UserID)
+	// 2. User has admin role (can view all jobs)
+	// 3. User has service role (bypasses ownership checks)
+	if authCtx != nil && authCtx.UserID != nil && *authCtx.UserID != "" {
+		userUUID, parseErr := uuid.Parse(*authCtx.UserID)
+		if parseErr == nil {
+			// Check if user is admin or service role
+			isAdmin := authCtx.UserRole == "admin" || authCtx.UserRole == "dashboard_admin" || authCtx.UserRole == "service_role"
+
+			// If not admin, verify ownership
+			if !isAdmin && job.CreatedBy != nil {
+				if *job.CreatedBy != userUUID {
+					log.Warn().
+						Str("job_id", jobIDStr).
+						Str("user_id", *authCtx.UserID).
+						Msg("MCP: Access denied - user does not own this job")
+					return &mcp.ToolResult{
+						Content: []mcp.Content{mcp.ErrorContent("Access denied: You do not have permission to view this job")},
+						IsError: true,
+					}, nil
+				}
+			}
+		}
+	}
+
 	result := map[string]any{
 		"job_id":      job.ID.String(),
 		"job_name":    job.JobName,
