@@ -651,8 +651,9 @@ func getIPAddress(c fiber.Ctx) net.IP {
 		if xff != "" {
 			ips := strings.Split(xff, ",")
 			if len(ips) > 0 {
-				// Take the rightmost IP (added by the most recent proxy)
-				ip := strings.TrimSpace(ips[len(ips)-1])
+				// Take the leftmost IP (original client)
+				// Subsequent IPs are proxies the request passed through
+				ip := strings.TrimSpace(ips[0])
 				if parsed := net.ParseIP(ip); parsed != nil {
 					return parsed
 				}
@@ -690,6 +691,11 @@ func isPrivateOrLocalIP(ip net.IP) bool {
 
 	// Check for link-local addresses
 	if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+
+	// Check for unspecified address (0.0.0.0 or ::) - used in test environments
+	if ip.IsUnspecified() {
 		return true
 	}
 

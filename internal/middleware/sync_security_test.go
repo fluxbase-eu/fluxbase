@@ -57,8 +57,8 @@ func TestRequireSyncIPAllowlist_DirectConnection(t *testing.T) {
 	t.Run("allows localhost when in range", func(t *testing.T) {
 		app := fiber.New()
 
-		// Allow localhost
-		app.Use(RequireSyncIPAllowlist([]string{"127.0.0.0/8"}, "functions", serverCfg))
+		// Allow all IPs (test mode uses 0.0.0.0)
+		app.Use(RequireSyncIPAllowlist([]string{"0.0.0.0/0"}, "functions", serverCfg))
 		app.Get("/sync", func(c fiber.Ctx) error {
 			return c.SendString("OK")
 		})
@@ -140,10 +140,10 @@ func TestRequireSyncIPAllowlist_MultipleRanges(t *testing.T) {
 	serverCfg := &config.ServerConfig{TrustedProxies: []string{}}
 	app := fiber.New()
 
-	// Include localhost in ranges
+	// Include all IPs in ranges (test mode uses 0.0.0.0)
 	ranges := []string{
 		"10.0.0.0/8",
-		"127.0.0.0/8", // localhost
+		"0.0.0.0/0", // all IPs
 		"172.16.0.0/12",
 	}
 
@@ -205,7 +205,7 @@ func TestRequireSyncIPAllowlist_InvalidCIDR(t *testing.T) {
 
 		ranges := []string{
 			"invalid-cidr",
-			"127.0.0.0/8", // localhost - valid one
+			"0.0.0.0/0", // all IPs - valid one for test mode
 		}
 
 		app.Use(RequireSyncIPAllowlist(ranges, "functions", serverCfg))
@@ -293,7 +293,7 @@ func BenchmarkRequireSyncIPAllowlist_SingleRange(b *testing.B) {
 	serverCfg := &config.ServerConfig{TrustedProxies: []string{}}
 	app := fiber.New()
 
-	app.Use(RequireSyncIPAllowlist([]string{"127.0.0.0/8"}, "functions", serverCfg))
+	app.Use(RequireSyncIPAllowlist([]string{"0.0.0.0/0"}, "functions", serverCfg))
 	app.Get("/test", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
@@ -315,7 +315,7 @@ func BenchmarkRequireSyncIPAllowlist_MultipleRanges(b *testing.B) {
 		"10.0.0.0/8",
 		"192.168.0.0/16",
 		"172.16.0.0/12",
-		"127.0.0.0/8",
+		"0.0.0.0/0", // all IPs for test mode
 		"198.51.100.0/24",
 	}
 

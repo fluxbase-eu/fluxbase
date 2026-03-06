@@ -126,10 +126,10 @@ func GetTrustedClientIP(c fiber.Ctx, cfg *config.ServerConfig) net.IP {
 	if xff != "" {
 		ips := strings.Split(xff, ",")
 		if len(ips) > 0 {
-			// The rightmost IP is the one added by the trusted proxy
-			// But typically we want the original client IP (leftmost non-trusted)
-			// For simplicity with a single trusted proxy, take the last IP
-			ip := strings.TrimSpace(ips[len(ips)-1])
+			// The leftmost IP is the original client IP
+			// Subsequent IPs are proxies the request passed through
+			// We want the original client IP for access control
+			ip := strings.TrimSpace(ips[0])
 			parsed := net.ParseIP(ip)
 			if parsed != nil {
 				return parsed

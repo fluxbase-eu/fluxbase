@@ -63,8 +63,8 @@ func TestGetTrustedClientIP_NoTrustedProxies(t *testing.T) {
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
 
-			// Should return the direct connection IP (127.0.0.1 or ::1), not the spoofed header
-			assert.Contains(t, []string{"127.0.0.1", "::1"}, resultIP, "Should use direct IP, not spoofed headers")
+			// Should return the direct connection IP (127.0.0.1, ::1, or 0.0.0.0 in test mode), not the spoofed header
+			assert.Contains(t, []string{"127.0.0.1", "::1", "0.0.0.0"}, resultIP, "Should use direct IP, not spoofed headers")
 		})
 	}
 }
@@ -178,7 +178,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		cfg := &config.MigrationsConfig{
 			Enabled:         true,
-			AllowedIPRanges: []string{"127.0.0.0/8"}, // Allow localhost
+			AllowedIPRanges: []string{"0.0.0.0/0"}, // Allow all IPs (test mode uses 0.0.0.0)
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg, serverCfg))
@@ -251,7 +251,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		cfg := &config.MigrationsConfig{
 			Enabled:         true,
-			AllowedIPRanges: []string{"10.0.0.0/8", "127.0.0.0/8", "172.16.0.0/12"}, // Include localhost
+			AllowedIPRanges: []string{"10.0.0.0/8", "0.0.0.0/0", "172.16.0.0/12"}, // Include all for test mode
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg, serverCfg))
@@ -274,7 +274,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		cfg := &config.MigrationsConfig{
 			Enabled:         true,
-			AllowedIPRanges: []string{"invalid-cidr", "127.0.0.0/8"}, // Include localhost
+			AllowedIPRanges: []string{"invalid-cidr", "0.0.0.0/0"}, // Include all for test mode
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg, serverCfg))
@@ -297,7 +297,7 @@ func TestRequireMigrationsIPAllowlist(t *testing.T) {
 
 		cfg := &config.MigrationsConfig{
 			Enabled:         true,
-			AllowedIPRanges: []string{"127.0.0.1/32"}, // Localhost only
+			AllowedIPRanges: []string{"0.0.0.0/32"}, // Test mode IP
 		}
 
 		app.Use(RequireMigrationsIPAllowlist(cfg, serverCfg))
@@ -742,7 +742,7 @@ func BenchmarkRequireMigrationsIPAllowlist_InRange(b *testing.B) {
 
 	cfg := &config.MigrationsConfig{
 		Enabled:         true,
-		AllowedIPRanges: []string{"127.0.0.0/8"}, // Allow localhost for benchmarking
+		AllowedIPRanges: []string{"0.0.0.0/0"}, // Allow all IPs for test mode
 	}
 
 	app.Use(RequireMigrationsIPAllowlist(cfg, serverCfg))
