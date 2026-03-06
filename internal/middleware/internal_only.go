@@ -171,9 +171,9 @@ func isTrustedProxy(ip net.IP, trustedProxies []string) bool {
 				parsedIP := net.ParseIP(proxyRange)
 				if parsedIP != nil {
 					if parsedIP.To4() != nil {
-						proxyRange = proxyRange + "/32"
+						proxyRange += "/32"
 					} else {
-						proxyRange = proxyRange + "/128"
+						proxyRange += "/128"
 					}
 				}
 			}

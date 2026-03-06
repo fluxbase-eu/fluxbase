@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -62,47 +60,6 @@ func logRateLimiterWarning() {
 // IsRateLimiterWarningDisplayed returns true if the rate limiter warning was displayed
 func IsRateLimiterWarningDisplayed() bool {
 	return rateLimiterWarningDisplayed
-}
-
-// extractRoleFromToken attempts to extract the role claim from a JWT token
-// without performing full signature validation.
-//
-// DEPRECATED: This function is NOT secure and should NOT be used for any security decisions.
-// It exists only for testing purposes. The role claim can be easily spoofed since
-// the JWT signature is not validated. Always use validated roles from context locals
-// (set by auth middleware) for security decisions.
-//
-// For rate limiting, use the validated role from c.Locals("user_role") instead.
-func extractRoleFromToken(token string) string {
-	// JWT format: header.payload.signature
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		log.Debug().Int("parts", len(parts)).Msg("Rate limiter: token is not a valid JWT (wrong number of parts)")
-		return ""
-	}
-
-	// Decode the payload (second part)
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		// Try standard base64 encoding
-		payload, err = base64.URLEncoding.DecodeString(parts[1])
-		if err != nil {
-			log.Debug().Err(err).Msg("Rate limiter: failed to decode JWT payload")
-			return ""
-		}
-	}
-
-	// Parse JSON to extract role
-	var claims struct {
-		Role string `json:"role"`
-	}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		log.Debug().Err(err).Msg("Rate limiter: failed to parse JWT payload JSON")
-		return ""
-	}
-
-	log.Debug().Str("role", claims.Role).Msg("Rate limiter: extracted role from JWT")
-	return claims.Role
 }
 
 // RateLimiterConfig holds configuration for rate limiting
