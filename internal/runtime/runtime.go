@@ -230,7 +230,9 @@ func (r *DenoRuntime) Execute(
 	}
 
 	var availableMemoryMB uint64
-	if r.runtimeType == RuntimeTypeJob && memoryLimitMB > 0 {
+	// Apply memory limits to ALL runtime types (not just jobs)
+	// This prevents edge functions from consuming unbounded memory
+	if memoryLimitMB > 0 {
 		// Check available system memory and warn if limit exceeds it
 		if vmStat, err := mem.VirtualMemory(); err == nil {
 			availableMemoryMB = vmStat.Available / 1024 / 1024
@@ -240,6 +242,7 @@ func (r *DenoRuntime) Execute(
 				log.Warn().
 					Str("id", req.ID.String()).
 					Str("name", req.Name).
+					Str("runtime_type", string(r.runtimeType)).
 					Int("requested_memory_mb", memoryLimitMB).
 					Uint64("available_memory_mb", availableMemoryMB).
 					Uint64("total_memory_mb", totalMemoryMB).
