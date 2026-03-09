@@ -13,9 +13,12 @@ FROM denoland/deno:bin-2.6.4 AS deno-bin
 # ------------------------------------------------------------------------------
 # Stage 1: Build SDKs and Admin UI
 # ------------------------------------------------------------------------------
-FROM node:25.8.0-bookworm AS admin-builder
+FROM oven/bun:1-debian AS admin-builder
 
 WORKDIR /build
+
+# Copy workspace configuration (bun uses workspaces from package.json)
+COPY package.json ./
 
 # Copy SDK packages first (admin depends on these)
 COPY sdk/ ./sdk/
@@ -23,21 +26,21 @@ COPY sdk-react/ ./sdk-react/
 
 # Build SDKs
 WORKDIR /build/sdk
-RUN npm ci && npm run build
+RUN bun install --frozen-lockfile && bun run build
 
 # Generate embedded SDK for job and function runtime
 RUN mkdir -p /build/internal/jobs /build/internal/runtime \
-    && npm run generate:embedded-sdk
+    && bun run generate:embedded-sdk
 
 WORKDIR /build/sdk-react
-RUN npm ci && npm run build
+RUN bun install --frozen-lockfile && bun run build
 
 # Build admin UI
 WORKDIR /build/admin
-COPY admin/package*.json ./
-RUN npm ci
+COPY admin/package.json ./
+RUN bun install --frozen-lockfile
 COPY admin/ ./
-RUN npm run build
+RUN bun run build
 
 
 # ------------------------------------------------------------------------------
