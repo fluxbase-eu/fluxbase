@@ -731,10 +731,9 @@ jobs:
           git add deploy/helm/fluxbase/Chart.yaml
           git add deploy/docker-compose*.yml
           git add deploy/.env.example
-          git add sdk/package.json bun.lockb
+          git add sdk/package.json bun.lock
           git add sdk-react/package.json
           git add admin/package.json
-          git add bun.lockb
           git add docs/src/content/docs/cli/installation.md
 
           if git diff --staged --quiet; then
