@@ -99,8 +99,7 @@ jobs:
         with:
           node-version: "24.14.0"
 
-      - name: Install Admin dependencies
-        working-directory: ./admin
+      - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
 
       - name: Lint Admin
@@ -123,8 +122,7 @@ jobs:
         with:
           node-version: "24.14.0"
 
-      - name: Install SDK dependencies
-        working-directory: ./sdk
+      - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
 
       - name: Verify test file content (debug)
@@ -156,10 +154,6 @@ jobs:
         working-directory: ./sdk
         run: bun run build
 
-      - name: Install SDK-React dependencies
-        working-directory: ./sdk-react
-        run: bun install --frozen-lockfile
-
       - name: Type check SDK-React
         working-directory: ./sdk-react
         run: bunx tsc --noEmit
@@ -167,10 +161,6 @@ jobs:
       - name: Build SDK-React
         working-directory: ./sdk-react
         run: bun run build
-
-      - name: Install Admin dependencies
-        working-directory: ./admin
-        run: bun install --frozen-lockfile
 
       - name: Type check Admin
         working-directory: ./admin
@@ -455,32 +445,29 @@ jobs:
         with:
           node-version: "24.14.0"
 
-      - name: Build SDKs
-        run: |
-          # Build SDK
-          cd sdk
-          bun install --frozen-lockfile
-          bun run build
+      - name: Install dependencies (workspace)
+        run: bun install --frozen-lockfile
 
-          # Build SDK React
-          cd ../sdk-react
-          bun install --frozen-lockfile
-          bun run build
+      - name: Build SDK
+        working-directory: ./sdk
+        run: bun run build
 
       - name: Generate embedded SDK for Jobs runtime
         working-directory: ./sdk
         run: bun run generate:embedded-sdk
 
-      - name: Build Admin UI
-        run: |
-          # Build Admin UI (depends on SDKs)
-          cd admin
-          bun install --frozen-lockfile
-          bun run build
+      - name: Build SDK React
+        working-directory: ./sdk-react
+        run: bun run build
 
-          # Copy built files to internal/adminui/dist for embedding
-          mkdir -p ../internal/adminui/dist
-          cp -r dist/* ../internal/adminui/dist/
+      - name: Build Admin UI
+        working-directory: ./admin
+        run: bun run build
+
+      - name: Copy Admin UI to internal/adminui/dist
+        run: |
+          mkdir -p internal/adminui/dist
+          cp -r admin/dist/* internal/adminui/dist/
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -562,23 +549,20 @@ jobs:
         with:
           node-version: "24.14.0"
 
-      - name: Build SDKs (required for TypeDoc)
-        run: |
-          # Build SDK
-          cd sdk
-          bun install --frozen-lockfile
-          bun run build
+      - name: Install dependencies (workspace)
+        run: bun install --frozen-lockfile
 
-          # Build SDK React
-          cd ../sdk-react
-          bun install --frozen-lockfile
-          bun run build
+      - name: Build SDK
+        working-directory: ./sdk
+        run: bun run build
+
+      - name: Build SDK React
+        working-directory: ./sdk-react
+        run: bun run build
 
       - name: Build docs site
         working-directory: ./docs
-        run: |
-          bun install --frozen-lockfile
-          bun run build
+        run: bun run build
 
       - name: Check for broken links
         uses: lycheeverse/lychee-action@v2

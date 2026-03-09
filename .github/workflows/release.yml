@@ -714,10 +714,8 @@ jobs:
           jq --arg version "^$VERSION" '.peerDependencies."@fluxbase/sdk" = $version' sdk-react/package.json > sdk-react/package.json.tmp
           mv sdk-react/package.json.tmp sdk-react/package.json
 
-          # Update bun lock files
-          cd sdk && bun install && cd ..
-          cd sdk-react && bun install && cd ..
-          cd admin && bun install && cd ..
+          # Update bun lock file from root (handles workspace properly)
+          bun install
 
       - name: Commit version updates
         run: |
@@ -769,21 +767,22 @@ jobs:
         with:
           node-version: "24.14.0"
 
-      - name: Build SDKs (required by Admin UI and Go embed)
+      - name: Install dependencies (workspace)
+        run: bun install --frozen-lockfile
+
+      - name: Build SDK
+        working-directory: ./sdk
         run: |
-          cd sdk
-          bun install --frozen-lockfile
           bun run build
           bun run generate:embedded-sdk
-          cd ../sdk-react
-          bun install --frozen-lockfile
-          bun run build
+
+      - name: Build SDK React
+        working-directory: ./sdk-react
+        run: bun run build
 
       - name: Build Admin UI
         working-directory: ./admin
-        run: |
-          bun install --frozen-lockfile
-          bun run build
+        run: bun run build
 
       - name: Copy Admin UI to embed location
         run: |
@@ -1034,23 +1033,20 @@ jobs:
         with:
           node-version: "24.14.0"
 
-      - name: Build SDKs (required for TypeDoc)
-        run: |
-          # Build SDK
-          cd sdk
-          bun install --frozen-lockfile
-          bun run build
+      - name: Install dependencies (workspace)
+        run: bun install --frozen-lockfile
 
-          # Build SDK React
-          cd ../sdk-react
-          bun install --frozen-lockfile
-          bun run build
+      - name: Build SDK
+        working-directory: ./sdk
+        run: bun run build
+
+      - name: Build SDK React
+        working-directory: ./sdk-react
+        run: bun run build
 
       - name: Build docs site
         working-directory: ./docs
-        run: |
-          bun install --frozen-lockfile
-          bun run build
+        run: bun run build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -1106,12 +1102,16 @@ jobs:
           node-version: "24.14.0"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build and Publish SDK
+      - name: Install dependencies (workspace)
+        run: bun install --frozen-lockfile
+
+      - name: Build SDK
+        working-directory: ./sdk
+        run: bun run build
+
+      - name: Publish SDK
         working-directory: ./sdk
         run: |
-          bun install --frozen-lockfile
-          bun run build
-
           # Update version in package.json directly using jq
           VERSION="${{ needs.get-version.outputs.version }}"
           jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
@@ -1145,18 +1145,20 @@ jobs:
           node-version: "24.14.0"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build core SDK first
-        working-directory: ./sdk
-        run: |
-          bun install --frozen-lockfile
-          bun run build
+      - name: Install dependencies (workspace)
+        run: bun install --frozen-lockfile
 
-      - name: Build and Publish React SDK
+      - name: Build core SDK
+        working-directory: ./sdk
+        run: bun run build
+
+      - name: Build React SDK
+        working-directory: ./sdk-react
+        run: bun run build
+
+      - name: Publish React SDK
         working-directory: ./sdk-react
         run: |
-          bun install --frozen-lockfile
-          bun run build
-
           # Update version in package.json directly using jq
           VERSION="${{ needs.get-version.outputs.version }}"
           jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
