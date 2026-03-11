@@ -870,6 +870,46 @@ export interface OAuthLogoutResponse {
   warning?: string;
 }
 
+// Provider Token Types
+/**
+ * Response from the provider token endpoint
+ * Contains OAuth tokens that can be used to call provider APIs (e.g., Google Drive)
+ */
+export interface ProviderTokenResponse {
+  /** OAuth provider name (e.g., 'google', 'github') */
+  provider: string;
+  /** Provider access token - use this to call provider APIs */
+  access_token: string;
+  /** Provider refresh token (may be empty for some providers) */
+  refresh_token?: string;
+  /** Token expiry timestamp in RFC3339 format */
+  token_expiry: string;
+  /** Seconds until token expires (0 if already expired) */
+  expires_in: number;
+  /** OpenID Connect ID token (if available) */
+  id_token?: string;
+  /** OAuth scopes granted for this token */
+  scopes?: string[];
+  /** Token type (always 'Bearer') */
+  token_type: string;
+}
+
+/**
+ * Error response when provider token is not found
+ */
+export interface ProviderTokenNotFoundError {
+  /** Error message */
+  error: string;
+  /** Error code for programmatic handling */
+  error_code: "oauth_token_not_found";
+  /** Hint for resolving the error */
+  error_hint: string;
+  /** Provider name */
+  provider: string;
+  /** URL to initiate OAuth flow for this provider */
+  authorize_url: string;
+}
+
 // SAML SSO Types
 /**
  * SAML Identity Provider configuration

@@ -2044,6 +2044,13 @@ func (s *Server) setupAuthRoutes(router fiber.Router) {
 	router.Get("/oauth/:provider/authorize", s.oauthHandler.Authorize)
 	router.Get("/oauth/:provider/callback", s.oauthHandler.Callback)
 
+	// OAuth token retrieval - allows users to get their stored provider tokens
+	// Requires authentication (user must be logged in with Fluxbase JWT)
+	router.Get("/oauth/:provider/token",
+		middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		s.oauthHandler.GetProviderToken,
+	)
+
 	// OAuth Single Logout routes
 	// Logout requires authentication, callback is public (validates via state parameter)
 	router.Post("/oauth/:provider/logout",

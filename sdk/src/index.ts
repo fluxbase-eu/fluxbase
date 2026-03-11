@@ -424,6 +424,11 @@ export type {
   // OAuth Logout types
   OAuthLogoutOptions,
   OAuthLogoutResponse,
+
+  // Provider Token types
+  ProviderTokenResponse,
+  ProviderTokenNotFoundError,
+
   AuthSettings,
   UpdateAuthSettingsRequest,
   UpdateAuthSettingsResponse,
