@@ -11,12 +11,12 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.0",
-    "@astrojs/starlight": "^0.37.7",
-    "astro": "^5.18.0",
+    "@astrojs/sitemap": "^3.7.1",
+    "@astrojs/starlight": "^0.38.0",
+    "astro": "^6.0.3",
     "sharp": "^0.34.5",
     "starlight-typedoc": "0.21.5",
-    "zod": "^3.24.2"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "typedoc": "0.28.17",
