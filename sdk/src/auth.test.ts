@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { FluxbaseAuth } from "./auth";
 import type { FluxbaseFetch } from "./fetch";
-import type { AuthResponse } from "./types";
+import type { AuthResponse, ProviderTokenResponse } from "./types";
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -2524,6 +2524,172 @@ describe("FluxbaseAuth", () => {
       expect(data?.requires_redirect).toBe(false);
 
       global.window = originalWindow;
+    });
+  });
+
+  describe("getProviderToken()", () => {
+    it("should throw error when not authenticated", async () => {
+      // Clear session
+      vi.mocked(mockFetch.get).mockClear();
+
+      const { data, error } = await auth.getProviderToken("google");
+
+      expect(data).toBeNull();
+      expect(error).toBeDefined();
+      expect(error?.message).toBe("Not authenticated");
+    });
+
+    it("should return provider tokens when authenticated", async () => {
+      // First sign in
+      const authResponse: AuthResponse = {
+        access_token: "fluxbase-token",
+        refresh_token: "fluxbase-refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: {
+          id: "user-1",
+          email: "user@example.com",
+          created_at: new Date().toISOString(),
+        },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      // Mock getProviderToken response
+      const providerTokenResponse: ProviderTokenResponse = {
+        provider: "google",
+        access_token: "ya29.a0...",
+        refresh_token: "1//...",
+        token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
+        expires_in: 3600,
+        scopes: ["openid", "email", "https://www.googleapis.com/auth/drive.readonly"],
+        token_type: "Bearer",
+      };
+      vi.mocked(mockFetch.get).mockResolvedValue(providerTokenResponse);
+
+      const { data, error } = await auth.getProviderToken("google");
+
+      expect(mockFetch.get).toHaveBeenCalledWith(
+        "/api/v1/auth/oauth/google/token",
+      );
+      expect(error).toBeNull();
+      expect(data).toBeDefined();
+      expect(data?.provider).toBe("google");
+      expect(data?.access_token).toBe("ya29.a0...");
+      expect(data?.refresh_token).toBe("1//...");
+      expect(data?.expires_in).toBe(3600);
+      expect(data?.token_type).toBe("Bearer");
+      expect(data?.scopes).toContain("https://www.googleapis.com/auth/drive.readonly");
+    });
+
+    it("should return error when provider token not found", async () => {
+      // First sign in
+      const authResponse: AuthResponse = {
+        access_token: "fluxbase-token",
+        refresh_token: "fluxbase-refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: {
+          id: "user-1",
+          email: "user@example.com",
+          created_at: new Date().toISOString(),
+        },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      // Mock not found error
+      const notFoundError = {
+        error: "No OAuth token found for this provider",
+        error_code: "oauth_token_not_found",
+        error_hint: "You need to sign in with this provider first",
+        provider: "google",
+        authorize_url: "http://localhost:8080/api/v1/auth/oauth/google/authorize",
+      };
+      vi.mocked(mockFetch.get).mockRejectedValue({
+        status: 404,
+        json: () => Promise.resolve(notFoundError),
+      });
+
+      const { data, error } = await auth.getProviderToken("google");
+
+      expect(data).toBeNull();
+      expect(error).toBeDefined();
+    });
+
+    it("should handle auto-refreshed tokens", async () => {
+      // First sign in
+      const authResponse: AuthResponse = {
+        access_token: "fluxbase-token",
+        refresh_token: "fluxbase-refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: {
+          id: "user-1",
+          email: "user@example.com",
+          created_at: new Date().toISOString(),
+        },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      // Mock refreshed token response
+      const refreshedTokenResponse: ProviderTokenResponse = {
+        provider: "google",
+        access_token: "ya29.refreshed...",
+        refresh_token: "1//new...",
+        token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
+        expires_in: 3600,
+        id_token: "eyJ...",
+        scopes: ["openid", "email", "https://www.googleapis.com/auth/drive.readonly"],
+        token_type: "Bearer",
+      };
+      vi.mocked(mockFetch.get).mockResolvedValue(refreshedTokenResponse);
+
+      const { data, error } = await auth.getProviderToken("google");
+
+      expect(error).toBeNull();
+      expect(data).toBeDefined();
+      expect(data?.access_token).toBe("ya29.refreshed...");
+      expect(data?.id_token).toBe("eyJ...");
+    });
+
+    it("should work with different providers", async () => {
+      // First sign in
+      const authResponse: AuthResponse = {
+        access_token: "fluxbase-token",
+        refresh_token: "fluxbase-refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+        user: {
+          id: "user-1",
+          email: "user@example.com",
+          created_at: new Date().toISOString(),
+        },
+      };
+      vi.mocked(mockFetch.post).mockResolvedValue(authResponse);
+      await auth.signIn({ email: "user@example.com", password: "password" });
+
+      // Mock GitHub token response
+      const githubTokenResponse: ProviderTokenResponse = {
+        provider: "github",
+        access_token: "gho_...",
+        token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
+        expires_in: 3600,
+        scopes: ["user:email", "read:user"],
+        token_type: "Bearer",
+      };
+      vi.mocked(mockFetch.get).mockResolvedValue(githubTokenResponse);
+
+      const { data, error } = await auth.getProviderToken("github");
+
+      expect(mockFetch.get).toHaveBeenCalledWith(
+        "/api/v1/auth/oauth/github/token",
+      );
+      expect(error).toBeNull();
+      expect(data?.provider).toBe("github");
+      expect(data?.access_token).toBe("gho_...");
+      expect(data?.scopes).toContain("user:email");
     });
   });
 });
