@@ -927,4 +927,246 @@ func (h *OAuthHandler) GetAndValidateState(state string) (*auth.StateMetadata, b
 	return h.stateStore.GetAndValidate(context.Background(), state)
 }
 
+// ProviderTokenResponse represents the response for getting provider tokens
+type ProviderTokenResponse struct {
+	Provider     string   `json:"provider"`
+	AccessToken  string   `json:"access_token"`
+	RefreshToken string   `json:"refresh_token,omitempty"`
+	TokenExpiry  string   `json:"token_expiry"`
+	ExpiresIn    int      `json:"expires_in"`
+	IDToken      string   `json:"id_token,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
+	TokenType    string   `json:"token_type"`
+}
+
+// GetProviderToken retrieves the OAuth provider tokens for the authenticated user
+// This endpoint allows users to retrieve their stored OAuth tokens to make API calls
+// to the provider (e.g., Google Drive API).
+// GET /api/v1/auth/oauth/:provider/token
+func (h *OAuthHandler) GetProviderToken(c fiber.Ctx) error {
+	ctx := c.RequestCtx()
+	providerName := c.Params("provider")
+
+	userID := c.Locals("user_id")
+	if userID == nil || userID.(string) == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Authentication required",
+		})
+	}
+	userIDStr := userID.(string)
+
+	if h.db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
+
+	oauthConfig, err := h.getProviderConfigForToken(ctx, providerName)
+	if err != nil {
+		log.Error().Err(err).Str("provider", providerName).Msg("Failed to get OAuth provider config for token retrieval")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("OAuth provider '%s' not configured or disabled", providerName),
+		})
+	}
+
+	storedToken, err := h.logoutService.GetUserOAuthToken(ctx, userIDStr, providerName)
+	if err != nil {
+		if errors.Is(err, auth.ErrOAuthTokenNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":         "No OAuth token found for this provider",
+				"error_code":    "oauth_token_not_found",
+				"error_hint":    "You need to sign in with this provider first",
+				"provider":      providerName,
+				"authorize_url": fmt.Sprintf("%s/api/v1/auth/oauth/%s/authorize", h.baseURL, providerName),
+			})
+		}
+		log.Error().Err(err).Str("provider", providerName).Str("user_id", userIDStr).Msg("Failed to get stored OAuth token")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve OAuth token",
+		})
+	}
+
+	accessToken := storedToken.AccessToken
+	refreshToken := storedToken.RefreshToken
+	idToken := storedToken.IDToken
+
+	if h.encryptionKey != "" {
+		if accessToken != "" {
+			decrypted, decErr := crypto.Decrypt(accessToken, h.encryptionKey)
+			if decErr == nil {
+				accessToken = decrypted
+			} else {
+				log.Warn().Err(decErr).Str("provider", providerName).Msg("Failed to decrypt access token")
+			}
+		}
+		if refreshToken != "" {
+			decrypted, decErr := crypto.Decrypt(refreshToken, h.encryptionKey)
+			if decErr == nil {
+				refreshToken = decrypted
+			}
+		}
+		if idToken != "" {
+			decrypted, decErr := crypto.Decrypt(idToken, h.encryptionKey)
+			if decErr == nil {
+				idToken = decrypted
+			}
+		}
+	}
+
+	tokenExpiry := storedToken.TokenExpiry
+	needsRefresh := !tokenExpiry.IsZero() && time.Now().After(tokenExpiry.Add(-5*time.Minute))
+
+	if needsRefresh && refreshToken != "" {
+		log.Info().Str("provider", providerName).Str("user_id", userIDStr).Msg("OAuth token expired or expiring soon, attempting refresh")
+
+		token := &oauth2.Token{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			Expiry:       tokenExpiry,
+		}
+		if idToken != "" {
+			token = token.WithExtra(map[string]interface{}{"id_token": idToken})
+		}
+
+		newToken, refreshErr := oauthConfig.TokenSource(ctx, token).Token()
+		if refreshErr != nil {
+			log.Warn().Err(refreshErr).Str("provider", providerName).Str("user_id", userIDStr).Msg("Failed to refresh OAuth token, returning existing token")
+		} else {
+			accessToken = newToken.AccessToken
+			refreshToken = newToken.RefreshToken
+			tokenExpiry = newToken.Expiry
+			if rawIDToken, ok := newToken.Extra("id_token").(string); ok {
+				idToken = rawIDToken
+			}
+
+			go func() {
+				refreshCtx := context.Background()
+				accessTokenToStore := newToken.AccessToken
+				refreshTokenToStore := newToken.RefreshToken
+				idTokenToStore := idToken
+
+				if h.encryptionKey != "" {
+					var encErr error
+					accessTokenToStore, encErr = crypto.EncryptIfNotEmpty(newToken.AccessToken, h.encryptionKey)
+					if encErr != nil {
+						log.Warn().Err(encErr).Str("provider", providerName).Msg("Failed to encrypt refreshed access token")
+						return
+					}
+					refreshTokenToStore, encErr = crypto.EncryptIfNotEmpty(newToken.RefreshToken, h.encryptionKey)
+					if encErr != nil {
+						log.Warn().Err(encErr).Str("provider", providerName).Msg("Failed to encrypt refreshed refresh token")
+						return
+					}
+					idTokenToStore, encErr = crypto.EncryptIfNotEmpty(idTokenToStore, h.encryptionKey)
+					if encErr != nil {
+						log.Warn().Err(encErr).Str("provider", providerName).Msg("Failed to encrypt refreshed id token")
+						return
+					}
+				}
+
+				_, err := h.db.Exec(refreshCtx, `
+					UPDATE auth.oauth_tokens
+					SET access_token = $1, refresh_token = $2, id_token = $3, token_expiry = $4, updated_at = CURRENT_TIMESTAMP
+					WHERE user_id = $5 AND provider = $6
+				`, accessTokenToStore, refreshTokenToStore, idTokenToStore, newToken.Expiry, userIDStr, providerName)
+				if err != nil {
+					log.Warn().Err(err).Str("provider", providerName).Str("user_id", userIDStr).Msg("Failed to update refreshed OAuth token in database")
+				} else {
+					log.Info().Str("provider", providerName).Str("user_id", userIDStr).Msg("OAuth token refreshed and updated in database")
+				}
+			}()
+		}
+	}
+
+	expiresIn := 0
+	if !tokenExpiry.IsZero() {
+		expiresIn = int(time.Until(tokenExpiry).Seconds())
+		if expiresIn < 0 {
+			expiresIn = 0
+		}
+	}
+
+	var scopes []string
+	if oauthConfig.Scopes != nil {
+		scopes = oauthConfig.Scopes
+	}
+
+	response := ProviderTokenResponse{
+		Provider:     providerName,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenExpiry:  tokenExpiry.UTC().Format(time.RFC3339),
+		ExpiresIn:    expiresIn,
+		IDToken:      idToken,
+		Scopes:       scopes,
+		TokenType:    "Bearer",
+	}
+
+	log.Info().
+		Str("provider", providerName).
+		Str("user_id", userIDStr).
+		Bool("was_refreshed", needsRefresh).
+		Msg("OAuth provider token retrieved")
+
+	return c.JSON(response)
+}
+
+// getProviderConfigForToken retrieves OAuth configuration for token operations
+// Unlike getProviderConfig, this doesn't require allow_app_login to be true
+// since the user already has a stored token from a previous OAuth flow
+func (h *OAuthHandler) getProviderConfigForToken(ctx context.Context, providerName string) (*oauth2.Config, error) {
+	query := `
+		SELECT client_id, client_secret, redirect_url, scopes,
+		       authorization_url, token_url, is_custom,
+		       COALESCE(is_encrypted, false) AS is_encrypted
+		FROM dashboard.oauth_providers
+		WHERE provider_name = $1 AND enabled = TRUE
+	`
+
+	var clientID, clientSecret, redirectURL string
+	var scopes []string
+	var authURL, tokenURL *string
+	var isCustom bool
+	var isEncrypted bool
+
+	err := h.db.QueryRow(ctx, query, providerName).Scan(
+		&clientID, &clientSecret, &redirectURL, &scopes,
+		&authURL, &tokenURL, &isCustom, &isEncrypted,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("OAuth provider '%s' not found or disabled", providerName)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query OAuth provider: %w", err)
+	}
+
+	if isEncrypted && clientSecret != "" {
+		decryptedSecret, decErr := crypto.Decrypt(clientSecret, h.encryptionKey)
+		if decErr != nil {
+			log.Error().Err(decErr).Str("provider", providerName).Msg("Failed to decrypt client secret")
+			return nil, fmt.Errorf("failed to decrypt client secret for provider '%s'", providerName)
+		}
+		clientSecret = decryptedSecret
+	}
+
+	config := &oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  redirectURL,
+		Scopes:       scopes,
+	}
+
+	if isCustom && authURL != nil && tokenURL != nil {
+		config.Endpoint = oauth2.Endpoint{
+			AuthURL:  *authURL,
+			TokenURL: *tokenURL,
+		}
+	} else {
+		config.Endpoint = h.getStandardEndpoint(providerName)
+	}
+
+	return config, nil
+}
+
 // fiber:context-methods migrated
