@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/storage"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"

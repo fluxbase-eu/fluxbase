@@ -3,9 +3,9 @@ package api
 import (
 	"fmt"
 
-	"github.com/fluxbase-eu/fluxbase/internal/ai"
-	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/internal/ai"
+	"github.com/nimbleflux/fluxbase/internal/auth"
 )
 
 // QuotaHandler handles quota-related HTTP requests

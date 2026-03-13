@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fluxbase-eu/fluxbase/internal/auth"
-	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/fluxbase-eu/fluxbase/internal/mcp/custom"
-	"github.com/fluxbase-eu/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nimbleflux/fluxbase/internal/auth"
+	"github.com/nimbleflux/fluxbase/internal/config"
+	"github.com/nimbleflux/fluxbase/internal/mcp/custom"
+	"github.com/nimbleflux/fluxbase/internal/middleware"
 )
 
 // CustomMCPHandler handles custom MCP tool and resource management requests.

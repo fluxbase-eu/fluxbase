@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/fluxbase-eu/fluxbase/internal/database"
-	"github.com/fluxbase-eu/fluxbase/internal/mcp"
 	"github.com/jackc/pgx/v5"
+	"github.com/nimbleflux/fluxbase/internal/database"
+	"github.com/nimbleflux/fluxbase/internal/mcp"
 	"github.com/rs/zerolog/log"
 )
 

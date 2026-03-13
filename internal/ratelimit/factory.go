@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/rs/zerolog/log"
 )
 

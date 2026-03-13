@@ -12,9 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/config"
-	"github.com/fluxbase-eu/fluxbase/internal/logutil"
-	"github.com/fluxbase-eu/fluxbase/internal/observability"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -24,6 +21,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nimbleflux/fluxbase/internal/config"
+	"github.com/nimbleflux/fluxbase/internal/logutil"
+	"github.com/nimbleflux/fluxbase/internal/observability"
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/rs/zerolog/log"
 )

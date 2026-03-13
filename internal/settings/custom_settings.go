@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/crypto"
-	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/nimbleflux/fluxbase/internal/crypto"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 var (

@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/database"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 // hashEmailVerificationToken creates a SHA-256 hash of a token and returns it as base64.
