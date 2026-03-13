@@ -3,8 +3,8 @@ package e2e
 import (
 	"testing"
 
-	"github.com/nimbleflux/fluxbase/test"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/test"
 )
 
 // TestHealth verifies that the basic health check endpoint works

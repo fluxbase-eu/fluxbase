@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/nimbleflux/fluxbase/internal/ai"
 	"github.com/nimbleflux/fluxbase/internal/mcp"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 

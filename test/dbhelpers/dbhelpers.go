@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

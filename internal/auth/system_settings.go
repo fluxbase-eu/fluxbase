@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 // ErrSettingNotFound is returned when a system setting is not found

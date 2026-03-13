@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/graphql-go/graphql"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/rs/zerolog/log"
 )
 

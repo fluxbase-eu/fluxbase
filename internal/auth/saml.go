@@ -20,9 +20,9 @@ import (
 
 	"github.com/crewjam/saml"
 	"github.com/crewjam/saml/samlsp"
-	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/rs/zerolog/log"
 )
 

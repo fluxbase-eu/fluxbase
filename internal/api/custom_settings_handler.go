@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/nimbleflux/fluxbase/internal/settings"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/nimbleflux/fluxbase/internal/settings"
 	"github.com/rs/zerolog/log"
 )
 

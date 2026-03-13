@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nimbleflux/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
+	"github.com/nimbleflux/fluxbase/internal/middleware"
 	"github.com/rs/zerolog/log"
 )
 

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nimbleflux/fluxbase/internal/migrations"
 	"github.com/nimbleflux/fluxbase/internal/testutil"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

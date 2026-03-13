@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/crypto"
 	"github.com/google/uuid"
+	"github.com/nimbleflux/fluxbase/internal/crypto"
 )
 
 // TestSecretStructs tests that the secret structs work correctly

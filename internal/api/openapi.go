@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 // OpenAPISpec represents the OpenAPI 3.0 specification

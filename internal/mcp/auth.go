@@ -1,8 +1,8 @@
 package mcp
 
 import (
-	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/internal/auth"
 )
 
 // AuthContext contains authentication information for MCP requests

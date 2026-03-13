@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/auth"
-	"github.com/nimbleflux/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nimbleflux/fluxbase/internal/auth"
+	"github.com/nimbleflux/fluxbase/internal/middleware"
 )
 
 // ClientKeyHandler handles client key-related requests

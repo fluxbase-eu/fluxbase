@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/runtime"
 	"github.com/nimbleflux/fluxbase/internal/secrets"
 	"github.com/nimbleflux/fluxbase/internal/settings"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 

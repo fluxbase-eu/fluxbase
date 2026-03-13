@@ -6,14 +6,14 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/nimbleflux/fluxbase/internal/jobs"
 	"github.com/nimbleflux/fluxbase/internal/logging"
 	"github.com/nimbleflux/fluxbase/internal/middleware"
 	"github.com/nimbleflux/fluxbase/internal/realtime"
 	"github.com/nimbleflux/fluxbase/internal/storage"
-	"github.com/gofiber/fiber/v3"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // MonitoringHandler handles system monitoring and health check endpoints

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nimbleflux/fluxbase/internal/mcp"
 	"github.com/nimbleflux/fluxbase/internal/runtime"
 	"github.com/nimbleflux/fluxbase/internal/secrets"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 

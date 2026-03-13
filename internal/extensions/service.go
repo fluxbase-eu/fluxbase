@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/jackc/pgx/v5"
+	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/rs/zerolog/log"
 )
 

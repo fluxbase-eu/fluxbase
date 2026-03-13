@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nimbleflux/fluxbase/internal/ai"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/internal/ai"
 	"github.com/rs/zerolog/log"
 )
 

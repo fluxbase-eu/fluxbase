@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nimbleflux/fluxbase/test"
 	"github.com/jackc/pgx/v5"
+	"github.com/nimbleflux/fluxbase/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

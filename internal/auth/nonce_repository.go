@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/jackc/pgx/v5"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 // NonceRepository handles database operations for reauthentication nonces.

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/graphql-go/graphql"
+	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/rs/zerolog/log"
 )
 

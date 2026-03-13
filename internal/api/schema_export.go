@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 // SchemaExportHandler handles schema export operations for type generation

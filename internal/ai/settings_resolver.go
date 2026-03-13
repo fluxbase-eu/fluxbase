@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/settings"
 	"github.com/google/uuid"
+	"github.com/nimbleflux/fluxbase/internal/settings"
 	"github.com/rs/zerolog/log"
 )
 

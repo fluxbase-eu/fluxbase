@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/auth"
-	"github.com/nimbleflux/fluxbase/internal/observability"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/storage/memory/v2"
+	"github.com/nimbleflux/fluxbase/internal/auth"
+	"github.com/nimbleflux/fluxbase/internal/observability"
 	"github.com/rs/zerolog/log"
 )
 

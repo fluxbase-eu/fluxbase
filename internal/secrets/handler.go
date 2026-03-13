@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nimbleflux/fluxbase/internal/auth"
-	"github.com/nimbleflux/fluxbase/internal/database"
-	"github.com/nimbleflux/fluxbase/internal/middleware"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nimbleflux/fluxbase/internal/auth"
+	"github.com/nimbleflux/fluxbase/internal/database"
+	"github.com/nimbleflux/fluxbase/internal/middleware"
 )
 
 // Handler manages HTTP endpoints for secrets

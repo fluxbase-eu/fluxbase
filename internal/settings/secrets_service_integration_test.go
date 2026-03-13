@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/nimbleflux/fluxbase/internal/settings"
 	"github.com/nimbleflux/fluxbase/internal/testutil"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

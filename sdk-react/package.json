@@ -44,6 +44,7 @@
     "react": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
+    "@nimbleflux/fluxbase-sdk": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

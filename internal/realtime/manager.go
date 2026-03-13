@@ -9,9 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/nimbleflux/fluxbase/internal/observability"
 	"github.com/nimbleflux/fluxbase/internal/pubsub"
-	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/rs/zerolog/log"
 )
 
