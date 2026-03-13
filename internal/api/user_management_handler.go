@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/fluxbase-eu/fluxbase/internal/auth"
 	"github.com/gofiber/fiber/v3"
+	"github.com/nimbleflux/fluxbase/internal/auth"
 )
 
 // UserManagementHandler handles admin user management operations

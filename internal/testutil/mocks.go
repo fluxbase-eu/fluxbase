@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/storage"
 	"github.com/google/uuid"
+	"github.com/nimbleflux/fluxbase/internal/storage"
 )
 
 // ErrMockObjectNotFound is returned when an object is not found in mock storage

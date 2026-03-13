@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fluxbase-eu/fluxbase/internal/jobs"
-	"github.com/fluxbase-eu/fluxbase/internal/mcp"
 	"github.com/google/uuid"
+	"github.com/nimbleflux/fluxbase/internal/jobs"
+	"github.com/nimbleflux/fluxbase/internal/mcp"
 	"github.com/rs/zerolog/log"
 )
 

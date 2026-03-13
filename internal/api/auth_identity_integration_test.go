@@ -6,8 +6,8 @@ package api_test
 import (
 	"testing"
 
-	"github.com/fluxbase-eu/fluxbase/internal/testutil"
 	"github.com/google/uuid"
+	"github.com/nimbleflux/fluxbase/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
