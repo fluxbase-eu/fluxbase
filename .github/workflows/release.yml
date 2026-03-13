@@ -638,7 +638,7 @@ jobs:
               echo ''
               echo '**NPM SDK:**'
               echo '```bash'
-              echo "npm install @fluxbase/sdk@${VERSION}"
+              echo "npm install @nimbleflux/fluxbase-sdk@${VERSION}"
               echo '```'
               echo ''
               echo '**Helm:**'
@@ -717,7 +717,7 @@ jobs:
           mv sdk-react/package.json.tmp sdk-react/package.json
 
           # Update sdk-react peerDependencies to reference the new SDK version
-          jq --arg version "^$VERSION" '.peerDependencies."@fluxbase/sdk" = $version' sdk-react/package.json > sdk-react/package.json.tmp
+          jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' sdk-react/package.json > sdk-react/package.json.tmp
           mv sdk-react/package.json.tmp sdk-react/package.json
 
           # Update bun lock file from root (handles workspace properly)
@@ -1170,7 +1170,7 @@ jobs:
           mv package.json.tmp package.json
 
           # Update peerDependencies to reference the new SDK version
-          jq --arg version "^$VERSION" '.peerDependencies."@fluxbase/sdk" = $version' package.json > package.json.tmp
+          jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
 
           # Use 'rc' tag for pre-releases, 'latest' for stable releases
@@ -1538,7 +1538,7 @@ jobs:
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
 
-          echo "Testing NPM SDK installation: @fluxbase/sdk@${VERSION}"
+          echo "Testing NPM SDK installation: @nimbleflux/fluxbase-sdk@${VERSION}"
 
           # Create a temp directory for testing
           mkdir -p /tmp/sdk-test
@@ -1552,7 +1552,7 @@ jobs:
 
           # Try to install the SDK (with retries for propagation delay)
           for i in 1 2 3; do
-            if npm install @fluxbase/sdk@${VERSION}; then
+            if npm install @nimbleflux/fluxbase-sdk@${VERSION}; then
               echo "✅ SDK installed successfully"
               break
             else
@@ -1562,9 +1562,9 @@ jobs:
           done
 
           # Verify the package is installed
-          if [ -d "node_modules/@fluxbase/sdk" ]; then
+          if [ -d "node_modules/@nimbleflux/fluxbase-sdk" ]; then
             echo "✅ NPM SDK smoke test passed"
-            npm list @fluxbase/sdk
+            npm list @nimbleflux/fluxbase-sdk
           else
             echo "::warning::SDK installation verification failed"
           fi
@@ -1574,7 +1574,7 @@ jobs:
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
 
-          echo "Testing NPM React SDK installation: @fluxbase/sdk-react@${VERSION}"
+          echo "Testing NPM React SDK installation: @nimbleflux/fluxbase-sdk-react@${VERSION}"
 
           # Create a temp directory for testing
           mkdir -p /tmp/sdk-react-test
@@ -1591,7 +1591,7 @@ jobs:
 
           # Try to install the React SDK (with retries for propagation delay)
           for i in 1 2 3; do
-            if npm install @fluxbase/sdk-react@${VERSION}; then
+            if npm install @nimbleflux/fluxbase-sdk-react@${VERSION}; then
               echo "✅ React SDK installed successfully"
               break
             else
@@ -1601,9 +1601,9 @@ jobs:
           done
 
           # Verify the package is installed
-          if [ -d "node_modules/@fluxbase/sdk-react" ]; then
+          if [ -d "node_modules/@nimbleflux/fluxbase-sdk-react" ]; then
             echo "✅ NPM React SDK smoke test passed"
-            npm list @fluxbase/sdk-react
+            npm list @nimbleflux/fluxbase-sdk-react
           else
             echo "::warning::React SDK installation verification failed"
           fi
