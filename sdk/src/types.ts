@@ -4447,6 +4447,11 @@ export interface UpdateRealtimeConfigRequest {
 // ============================================================================
 
 /**
+ * Tenant status
+ */
+export type TenantStatus = 'creating' | 'active' | 'deleting' | 'error';
+
+/**
  * Tenant in the system
  */
 export interface Tenant {
@@ -4456,6 +4461,10 @@ export interface Tenant {
   slug: string;
   /** Display name */
   name: string;
+  /** Database name (null = uses main database, for backward compatibility) */
+  db_name?: string | null;
+  /** Current status of the tenant */
+  status: TenantStatus;
   /** Whether this is the default tenant */
   is_default: boolean;
   /** Arbitrary metadata */
@@ -4469,29 +4478,36 @@ export interface Tenant {
 }
 
 /**
- * User's membership in a tenant
+ * Tenant admin assignment
+ * With database-per-tenant, admins are assigned to tenants (no roles needed)
  */
-export interface TenantMembership {
-  /** Unique identifier for the membership */
+export interface TenantAdminAssignment {
+  /** Unique identifier for the assignment */
   id: string;
   /** Tenant ID */
   tenant_id: string;
   /** User ID */
   user_id: string;
-  /** Role in tenant (tenant_admin or tenant_member) */
-  role: "tenant_admin" | "tenant_member";
   /** Creation timestamp */
   created_at: string;
-  /** Last update timestamp */
-  updated_at?: string;
+}
+
+/**
+ * Admin with user details (returned by listAdmins)
+ */
+export interface TenantAdminWithUser extends TenantAdminAssignment {
+  /** User's email */
+  email: string;
+  /** User's dashboard role */
+  dashboard_role: string;
 }
 
 /**
  * Tenant with user's role (for "my tenants" endpoint)
  */
 export interface TenantWithRole extends Tenant {
-  /** Current user's role in this tenant */
-  my_role: "tenant_admin" | "tenant_member";
+  /** Current user's role in this tenant (always tenant_admin with database-per-tenant) */
+  my_role: 'tenant_admin';
 }
 
 /**
@@ -4517,21 +4533,126 @@ export interface UpdateTenantOptions {
 }
 
 /**
- * Options for adding a member to a tenant
+ * Options for assigning an admin to a tenant
  */
-export interface AddTenantMemberOptions {
-  /** User ID to add */
+export interface AssignAdminOptions {
+  /** User ID to assign as admin */
   user_id: string;
-  /** Role to assign */
-  role: "tenant_admin" | "tenant_member";
+}
+
+// ============================================================================
+// Service Key Types
+// ============================================================================
+
+/**
+ * Service key for API authentication
+ * Each tenant has their own service_keys table in their database
+ */
+export interface ServiceKey {
+  /** Unique identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Description */
+  description?: string;
+  /** Key prefix (first 16 chars, for identification) */
+  key_prefix: string;
+  /** Key type: anon (anonymous access) or service (elevated privileges) */
+  key_type: 'anon' | 'service';
+  /** Permission scopes */
+  scopes: string[];
+  /** Allowed table namespaces */
+  allowed_namespaces?: string[];
+  /** Whether the key is enabled */
+  enabled: boolean;
+  /** Rate limit per minute */
+  rate_limit_per_minute?: number;
+  /** Rate limit per hour */
+  rate_limit_per_hour?: number;
+  /** User who created the key */
+  created_by?: string;
+  /** Creation timestamp */
+  created_at: string;
+  /** Last usage timestamp */
+  last_used_at?: string;
+  /** Expiration timestamp */
+  expires_at?: string;
+  /** Revocation timestamp */
+  revoked_at?: string;
+  /** Deprecation timestamp (for key rotation) */
+  deprecated_at?: string;
+  /** Grace period end for deprecated keys */
+  grace_period_ends_at?: string;
+  /** ID of replacement key (after rotation) */
+  replaced_by?: string;
 }
 
 /**
- * Options for updating a member's role
+ * Service key with the full key value (only returned on creation)
  */
-export interface UpdateTenantMemberOptions {
-  /** New role */
-  role: "tenant_admin" | "tenant_member";
+export interface ServiceKeyWithKey extends ServiceKey {
+  /** The full key value - only shown once at creation */
+  key: string;
+}
+
+/**
+ * Options for creating a service key
+ */
+export interface CreateServiceKeyRequest {
+  /** Display name */
+  name: string;
+  /** Description */
+  description?: string;
+  /** Key type: anon or service */
+  key_type: 'anon' | 'service';
+  /** Permission scopes (default: ['*'] for service, ['read'] for anon) */
+  scopes?: string[];
+  /** Allowed table namespaces */
+  allowed_namespaces?: string[];
+  /** Rate limit per minute */
+  rate_limit_per_minute?: number;
+  /** Rate limit per hour */
+  rate_limit_per_hour?: number;
+  /** Expiration timestamp */
+  expires_at?: string;
+}
+
+/**
+ * Options for updating a service key
+ */
+export interface UpdateServiceKeyRequest {
+  /** New display name */
+  name?: string;
+  /** New description */
+  description?: string;
+  /** New permission scopes */
+  scopes?: string[];
+  /** New allowed namespaces */
+  allowed_namespaces?: string[];
+  /** Enable/disable the key */
+  enabled?: boolean;
+  /** New rate limit per minute */
+  rate_limit_per_minute?: number;
+  /** New rate limit per hour */
+  rate_limit_per_hour?: number;
+}
+
+/**
+ * Options for revoking a service key
+ */
+export interface RevokeServiceKeyRequest {
+  /** Reason for revocation */
+  reason?: string;
+}
+
+/**
+ * Options for deprecating a service key
+ */
+export interface DeprecateServiceKeyRequest {
+  /** Reason for deprecation */
+  reason?: string;
+  /** Grace period in hours before key is disabled */
+  grace_period_hours?: number;
 }
 
 // ============================================================================

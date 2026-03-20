@@ -320,52 +320,47 @@ func (s *DashboardAuthService) Login(ctx context.Context, email, password string
 		`).Scan(&tenantID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				// No default tenant, try first tenant user is member of
+				// No default tenant, try first tenant user is assigned to
 				return tx.QueryRow(ctx, `
-					SELECT tm.tenant_id::text, tm.role
-					FROM platform.tenant_memberships tm
-					INNER JOIN platform.tenants t ON t.id = tm.tenant_id
-					WHERE tm.user_id = $1 AND t.deleted_at IS NULL
+					SELECT taa.tenant_id::text
+					FROM platform.tenant_admin_assignments taa
+					INNER JOIN platform.tenants t ON t.id = taa.tenant_id
+					WHERE taa.user_id = $1 AND t.deleted_at IS NULL
 					ORDER BY t.is_default DESC, t.created_at ASC
 					LIMIT 1
-				`, user.ID).Scan(&tenantID, &tenantRole)
+				`, user.ID).Scan(&tenantID)
 			}
 			return err
 		}
 		defaultTenantID = &tenantID
 
-		// Check if user is a member of this tenant and get their role
-		var isMember bool
+		// Check if user is assigned to this tenant
+		var isAssigned bool
 		err = tx.QueryRow(ctx, `
 			SELECT EXISTS(
-				SELECT 1 FROM platform.tenant_memberships
+				SELECT 1 FROM platform.tenant_admin_assignments
 				WHERE tenant_id = $1 AND user_id = $2
 			)
-		`, tenantID, user.ID).Scan(&isMember)
+		`, tenantID, user.ID).Scan(&isAssigned)
 		if err != nil {
 			return err
 		}
 
-		if isMember {
-			err = tx.QueryRow(ctx, `
-				SELECT role FROM platform.tenant_memberships
-				WHERE tenant_id = $1 AND user_id = $2
-			`, tenantID, user.ID).Scan(&tenantRole)
-			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-				return err
-			}
+		if isAssigned {
+			tenantRole = "tenant_admin"
 		} else {
-			// User is not a member of default tenant, try any tenant they're member of
+			// User is not assigned to default tenant, try any tenant they're assigned to
 			err = tx.QueryRow(ctx, `
-				SELECT tm.tenant_id::text, tm.role
-				FROM platform.tenant_memberships tm
-				INNER JOIN platform.tenants t ON t.id = tm.tenant_id
-				WHERE tm.user_id = $1 AND t.deleted_at IS NULL
+				SELECT taa.tenant_id::text
+				FROM platform.tenant_admin_assignments taa
+				INNER JOIN platform.tenants t ON t.id = taa.tenant_id
+				WHERE taa.user_id = $1 AND t.deleted_at IS NULL
 				ORDER BY t.is_default DESC, t.created_at ASC
 				LIMIT 1
-			`, user.ID).Scan(&tenantID, &tenantRole)
+			`, user.ID).Scan(&tenantID)
 			if err == nil {
 				defaultTenantID = &tenantID
+				tenantRole = "tenant_admin"
 			}
 		}
 		return nil

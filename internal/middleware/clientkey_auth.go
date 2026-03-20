@@ -813,7 +813,8 @@ func OptionalAuthOrServiceKey(authService *auth.Service, clientKeyService *auth.
 	}
 }
 
-// validateServiceKey validates a service key against the unified platform.service_keys table
+// validateServiceKey validates a service key against auth.service_keys in the tenant's database
+// For database-per-tenant multi-tenancy, each tenant has their own service_keys table
 // Returns true if valid, false otherwise
 func validateServiceKey(c fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
 	// Extract key prefix (first 16 chars for identification)
@@ -823,36 +824,42 @@ func validateServiceKey(c fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
 	}
 	keyPrefix := serviceKey[:16]
 
-	// Look up service key in unified platform.service_keys table by prefix
+	// Use tenant pool if available (database-per-tenant), otherwise use main pool
+	pool := GetTenantPool(c)
+	if pool == nil {
+		pool = db
+	}
+
+	// Look up service key in auth.service_keys table by prefix
 	var keyHash string
 	var keyID string
 	var keyName string
 	var keyType string
-	var tenantID *string
-	var userID *string
 	var scopes []string
 	var allowedNamespaces *[]string
-	var isActive bool
+	var enabled bool
 	var expiresAt *time.Time
-	var revokedAt *time.Time
 	var rateLimitPerMinute *int
+	var rateLimitPerHour *int
+	var revokedAt *time.Time
 
-	err := db.QueryRow(c.RequestCtx(),
-		`SELECT id, name, key_hash, key_type, tenant_id, user_id, scopes, allowed_namespaces,
-		        is_active, expires_at, revoked_at, rate_limit_per_minute
-		 FROM platform.service_keys
+	err := pool.QueryRow(c.RequestCtx(),
+		`SELECT id, name, key_hash, COALESCE(key_type, 'service'), scopes, allowed_namespaces,
+		        enabled, expires_at, rate_limit_per_minute, rate_limit_per_hour,
+		        revoked_at
+		 FROM auth.service_keys
 		 WHERE key_prefix = $1`,
 		keyPrefix,
-	).Scan(&keyID, &keyName, &keyHash, &keyType, &tenantID, &userID, &scopes, &allowedNamespaces,
-		&isActive, &expiresAt, &revokedAt, &rateLimitPerMinute)
+	).Scan(&keyID, &keyName, &keyHash, &keyType, &scopes, &allowedNamespaces,
+		&enabled, &expiresAt, &rateLimitPerMinute, &rateLimitPerHour, &revokedAt)
 	if err != nil {
 		log.Debug().Err(err).Str("prefix", keyPrefix).Msg("Service key not found")
 		return false
 	}
 
-	// Check if key is active
-	if !isActive {
-		log.Debug().Str("key_id", keyID).Msg("Service key is inactive")
+	// Check if key is enabled
+	if !enabled {
+		log.Debug().Str("key_id", keyID).Msg("Service key is disabled")
 		return false
 	}
 
@@ -880,22 +887,18 @@ func validateServiceKey(c fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
 	switch keyType {
 	case "anon":
 		role = "anon"
-	case "publishable":
-		role = "authenticated"
-	case "tenant_service":
-		role = "tenant_service"
-	case "global_service":
+	case "service":
 		role = "service_role"
 	default:
-		role = "anon"
+		role = "service_role"
 	}
 
 	// Update last_used_at timestamp (fire and forget)
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_, _ = db.Exec(ctx,
-			`UPDATE platform.service_keys SET last_used_at = NOW() WHERE id = $1`,
+		_, _ = pool.Exec(ctx,
+			`UPDATE auth.service_keys SET last_used_at = NOW() WHERE id = $1`,
 			keyID,
 		)
 	}()
@@ -911,16 +914,6 @@ func validateServiceKey(c fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
 	// Store rate limits in context
 	c.Locals("service_key_rate_limit_per_minute", rateLimitPerMinute)
 
-	// Store tenant_id for tenant-scoped keys
-	if tenantID != nil {
-		c.Locals("tenant_id", *tenantID)
-	}
-
-	// Store user_id for publishable keys
-	if userID != nil {
-		c.Locals("user_id", *userID)
-	}
-
 	// Store allowed namespaces if present
 	if allowedNamespaces != nil {
 		c.Locals("allowed_namespaces", *allowedNamespaces)
@@ -928,20 +921,16 @@ func validateServiceKey(c fiber.Ctx, db *pgxpool.Pool, serviceKey string) bool {
 
 	// For RLS context
 	c.Locals("rls_role", role)
-	if userID != nil {
-		c.Locals("rls_user_id", *userID)
-	} else {
-		c.Locals("rls_user_id", nil)
-	}
+	c.Locals("rls_user_id", nil)
 
 	log.Debug().
 		Str("key_id", keyID).
 		Str("key_name", keyName).
 		Str("key_type", keyType).
 		Str("role", role).
-		Interface("tenant_id", tenantID).
 		Interface("rate_limit_per_minute", rateLimitPerMinute).
-		Msg("Authenticated with service key from platform.service_keys")
+		Bool("uses_tenant_db", pool != db).
+		Msg("Authenticated with service key")
 
 	return true
 }

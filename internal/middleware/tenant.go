@@ -139,16 +139,22 @@ func TenantMiddleware(cfg TenantConfig) fiber.Handler {
 	}
 }
 
-// ValidateTenantMembership checks if user is a member of the specified tenant
+// ValidateTenantMembership checks if user is assigned to manage the specified tenant
 func ValidateTenantMembership(ctx context.Context, db *database.Connection, userID, tenantID string) (bool, error) {
 	var isMember bool
 	err := db.Pool().QueryRow(ctx,
 		`SELECT EXISTS(
-			SELECT 1 FROM platform.tenant_memberships tm
-			INNER JOIN platform.tenants t ON t.id = tm.tenant_id
-			WHERE tm.user_id = $1::uuid
-			AND tm.tenant_id = $2::uuid
+			SELECT 1 FROM platform.tenant_admin_assignments taa
+			INNER JOIN platform.tenants t ON t.id = taa.tenant_id
+			WHERE taa.user_id = $1::uuid
+			AND taa.tenant_id = $2::uuid
 			AND t.deleted_at IS NULL
+		) OR EXISTS (
+			SELECT 1 FROM platform.users pu
+			WHERE pu.id = $1::uuid
+			AND pu.role = 'instance_admin'
+			AND pu.deleted_at IS NULL
+			AND pu.is_active = true
 		)`,
 		userID, tenantID,
 	).Scan(&isMember)
@@ -159,25 +165,46 @@ func ValidateTenantMembership(ctx context.Context, db *database.Connection, user
 	return isMember, nil
 }
 
-// GetUserTenantRole gets the user's role in the specified tenant
+// GetUserTenantRole gets the user's role for the specified tenant
+// Returns 'tenant_admin' if assigned to the tenant, 'instance_admin' if instance admin
 func GetUserTenantRole(ctx context.Context, db *database.Connection, userID, tenantID string) (string, error) {
-	var role string
+	var isAdmin bool
 	err := db.Pool().QueryRow(ctx,
-		`SELECT tm.role FROM platform.tenant_memberships tm
-		INNER JOIN platform.tenants t ON t.id = tm.tenant_id
-		WHERE tm.user_id = $1::uuid
-		AND tm.tenant_id = $2::uuid
-		AND t.deleted_at IS NULL`,
-		userID, tenantID,
-	).Scan(&role)
+		`SELECT EXISTS(
+			SELECT 1 FROM platform.users
+			WHERE id = $1::uuid
+			AND role = 'instance_admin'
+			AND deleted_at IS NULL
+			AND is_active = true
+		)`,
+		userID,
+	).Scan(&isAdmin)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", nil
-		}
-		return "", fmt.Errorf("failed to get tenant role: %w", err)
+		return "", fmt.Errorf("failed to check instance admin: %w", err)
+	}
+	if isAdmin {
+		return "instance_admin", nil
 	}
 
-	return role, nil
+	var isAssigned bool
+	err = db.Pool().QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM platform.tenant_admin_assignments taa
+			INNER JOIN platform.tenants t ON t.id = taa.tenant_id
+			WHERE taa.user_id = $1::uuid
+			AND taa.tenant_id = $2::uuid
+			AND t.deleted_at IS NULL
+		)`,
+		userID, tenantID,
+	).Scan(&isAssigned)
+	if err != nil {
+		return "", fmt.Errorf("failed to check tenant assignment: %w", err)
+	}
+	if isAssigned {
+		return "tenant_admin", nil
+	}
+
+	return "", nil
 }
 
 // GetDefaultTenantID gets the default tenant ID
@@ -284,12 +311,50 @@ func RequireInstanceAdmin() fiber.Handler {
 	}
 }
 
-// GetUserTenantIDs gets all tenant IDs that a user is a member of
+// GetUserTenantIDs gets all tenant IDs that a user can manage
+// Instance admins get all tenants, others get only their assigned tenants
 func GetUserTenantIDs(ctx context.Context, db *database.Connection, userID string) ([]string, error) {
+	var isAdmin bool
+	err := db.Pool().QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM platform.users
+			WHERE id = $1::uuid
+			AND role = 'instance_admin'
+			AND deleted_at IS NULL
+			AND is_active = true
+		)`,
+		userID,
+	).Scan(&isAdmin)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check instance admin: %w", err)
+	}
+
+	if isAdmin {
+		rows, err := db.Pool().Query(ctx,
+			`SELECT id::text FROM platform.tenants
+			WHERE deleted_at IS NULL
+			ORDER BY name`,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get all tenants: %w", err)
+		}
+		defer rows.Close()
+
+		var tenantIDs []string
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return nil, fmt.Errorf("failed to scan tenant ID: %w", err)
+			}
+			tenantIDs = append(tenantIDs, id)
+		}
+		return tenantIDs, nil
+	}
+
 	rows, err := db.Pool().Query(ctx,
-		`SELECT tm.tenant_id::text FROM platform.tenant_memberships tm
-		INNER JOIN platform.tenants t ON t.id = tm.tenant_id
-		WHERE tm.user_id = $1::uuid
+		`SELECT taa.tenant_id::text FROM platform.tenant_admin_assignments taa
+		INNER JOIN platform.tenants t ON t.id = taa.tenant_id
+		WHERE taa.user_id = $1::uuid
 		AND t.deleted_at IS NULL
 		ORDER BY t.name`,
 		userID,

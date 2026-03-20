@@ -1,17 +1,17 @@
 /**
  * FluxbaseTenant - Multi-tenant management module
  *
- * Provides methods for managing tenants and memberships.
+ * Provides methods for managing tenants and admin assignments.
+ * With database-per-tenant architecture, each tenant has its own isolated database.
  */
 import { FluxbaseFetch } from "./fetch";
 import type {
   Tenant,
-  TenantMembership,
+  TenantAdminAssignment,
   TenantWithRole,
   CreateTenantOptions,
   UpdateTenantOptions,
-  AddTenantMemberOptions,
-  UpdateTenantMemberOptions,
+  AssignAdminOptions,
 } from "./types";
 
 import type { FluxbaseResponse } from "./response";
@@ -33,10 +33,9 @@ import type { FluxbaseResponse } from "./response";
  *   name: 'Acme Corporation'
  * })
  *
- * // Add member to tenant (tenant admin only)
- * await client.tenant.addMember('tenant-id', {
- *   user_id: 'user-id',
- *   role: 'tenant_member'
+ * // Assign admin to tenant (tenant admin only)
+ * await client.tenant.assignAdmin('tenant-id', {
+ *   user_id: 'user-id'
  * })
  * ```
  *
@@ -72,7 +71,7 @@ export class FluxbaseTenant {
    * @example
    * ```typescript
    * const { data, error } = await client.tenant.listMine()
-   * // data: [{ id: '...', slug: 'acme', name: 'Acme', my_role: 'tenant_admin' }]
+   * // data: [{ id: '...', slug: 'acme', name: 'Acme', my_role: 'tenant_admin', status: 'active' }]
    * ```
    */
   async listMine(): Promise<FluxbaseResponse<TenantWithRole[]>> {
@@ -106,6 +105,8 @@ export class FluxbaseTenant {
 
   /**
    * Create a new tenant (instance admin only)
+   *
+   * This creates a new isolated database for the tenant.
    *
    * @param options - Tenant creation options
    * @returns Promise with created tenant or error
@@ -154,6 +155,9 @@ export class FluxbaseTenant {
   /**
    * Delete a tenant (instance admin only)
    *
+   * This permanently deletes the tenant's database and all its data.
+   * Cannot delete the default tenant.
+   *
    * @param id - Tenant ID
    * @returns Promise that resolves when deleted
    *
@@ -172,19 +176,20 @@ export class FluxbaseTenant {
   }
 
   /**
-   * List members of a tenant
+   * Migrate a tenant database to the latest schema (instance admin only)
    *
-   * @param tenantId - Tenant ID
-   * @returns Promise with member list or error
+   * @param id - Tenant ID
+   * @returns Promise with migration status or error
    *
    * @example
    * ```typescript
-   * const { data, error } = await client.tenant.listMembers('tenant-id')
+   * const { data, error } = await client.tenant.migrate('tenant-id')
+   * // data: { status: 'migrated' }
    * ```
    */
-  async listMembers(tenantId: string): Promise<FluxbaseResponse<TenantMembership[]>> {
+  async migrate(id: string): Promise<FluxbaseResponse<{ status: string }>> {
     try {
-      const data = await this.fetch.get<TenantMembership[]>(`/tenants/${tenantId}/members`);
+      const data = await this.fetch.post<{ status: string }>(`/tenants/${id}/migrate`, {});
       return { data, error: null };
     } catch (error) {
       return { data: null, error: error as Error };
@@ -192,27 +197,47 @@ export class FluxbaseTenant {
   }
 
   /**
-   * Add a member to a tenant (tenant admin only)
+   * List admins of a tenant
    *
    * @param tenantId - Tenant ID
-   * @param options - Member options
-   * @returns Promise with created membership or error
+   * @returns Promise with admin list or error
    *
    * @example
    * ```typescript
-   * const { data, error } = await client.tenant.addMember('tenant-id', {
-   *   user_id: 'user-id',
-   *   role: 'tenant_member'
+   * const { data, error } = await client.tenant.listAdmins('tenant-id')
+   * // data: [{ id: '...', tenant_id: '...', user_id: '...', email: 'admin@example.com' }]
+   * ```
+   */
+  async listAdmins(tenantId: string): Promise<FluxbaseResponse<TenantAdminAssignment[]>> {
+    try {
+      const data = await this.fetch.get<TenantAdminAssignment[]>(`/tenants/${tenantId}/admins`);
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Assign an admin to a tenant (tenant admin only)
+   *
+   * @param tenantId - Tenant ID
+   * @param options - Admin assignment options
+   * @returns Promise with created assignment or error
+   *
+   * @example
+   * ```typescript
+   * const { data, error } = await client.tenant.assignAdmin('tenant-id', {
+   *   user_id: 'user-id'
    * })
    * ```
    */
-  async addMember(
+  async assignAdmin(
     tenantId: string,
-    options: AddTenantMemberOptions,
-  ): Promise<FluxbaseResponse<TenantMembership>> {
+    options: AssignAdminOptions,
+  ): Promise<FluxbaseResponse<TenantAdminAssignment>> {
     try {
-      const data = await this.fetch.post<TenantMembership>(
-        `/tenants/${tenantId}/members`,
+      const data = await this.fetch.post<TenantAdminAssignment>(
+        `/tenants/${tenantId}/admins`,
         options,
       );
       return { data, error: null };
@@ -222,38 +247,7 @@ export class FluxbaseTenant {
   }
 
   /**
-   * Update a member's role (tenant admin only)
-   *
-   * @param tenantId - Tenant ID
-   * @param userId - User ID
-   * @param options - Update options
-   * @returns Promise that resolves when updated
-   *
-   * @example
-   * ```typescript
-   * const { error } = await client.tenant.updateMember('tenant-id', 'user-id', {
-   *   role: 'tenant_admin'
-   * })
-   * ```
-   */
-  async updateMember(
-    tenantId: string,
-    userId: string,
-    options: UpdateTenantMemberOptions,
-  ): Promise<FluxbaseResponse<void>> {
-    try {
-      await this.fetch.patch(
-        `/tenants/${tenantId}/members/${userId}`,
-        options,
-      );
-      return { data: undefined, error: null };
-    } catch (error) {
-      return { data: null, error: error as Error };
-    }
-  }
-
-  /**
-   * Remove a member from a tenant (tenant admin only)
+   * Remove an admin from a tenant (tenant admin only)
    *
    * @param tenantId - Tenant ID
    * @param userId - User ID
@@ -261,15 +255,15 @@ export class FluxbaseTenant {
    *
    * @example
    * ```typescript
-   * const { error } = await client.tenant.removeMember('tenant-id', 'user-id')
+   * const { error } = await client.tenant.removeAdmin('tenant-id', 'user-id')
    * ```
    */
-  async removeMember(
+  async removeAdmin(
     tenantId: string,
     userId: string,
   ): Promise<FluxbaseResponse<void>> {
     try {
-      await this.fetch.delete(`/tenants/${tenantId}/members/${userId}`);
+      await this.fetch.delete(`/tenants/${tenantId}/admins/${userId}`);
       return { data: undefined, error: null };
     } catch (error) {
       return { data: null, error: error as Error };

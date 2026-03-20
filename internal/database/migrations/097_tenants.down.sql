@@ -2,14 +2,9 @@
 -- MULTI-TENANCY: ROLLBACK CORE TENANT TABLES
 --
 
--- Drop triggers
-DROP TRIGGER IF EXISTS tenants_updated_at ON tenants;
-DROP TRIGGER IF EXISTS tenant_memberships_updated_at ON tenant_memberships;
-
--- Drop trigger functions
-DROP FUNCTION IF EXISTS update_tenants_updated_at();
-DROP FUNCTION IF EXISTS update_tenant_memberships_updated_at();
-
--- Drop tables (order matters due to foreign keys)
-DROP TABLE IF EXISTS tenant_memberships;
-DROP TABLE IF EXISTS tenants;
+DROP TRIGGER IF EXISTS platform_tenants_updated_at ON platform.tenants;
+DROP FUNCTION IF EXISTS update_platform_tenants_updated_at();
+DROP FUNCTION IF EXISTS is_instance_admin(UUID);
+ALTER TABLE platform.tenants DISABLE ROW LEVEL SECURITY;
+DROP TABLE IF EXISTS platform.tenants;
+DROP SCHEMA IF EXISTS platform;

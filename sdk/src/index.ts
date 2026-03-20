@@ -154,6 +154,7 @@ export { DDLManager } from "./ddl";
 
 // Realtime Admin module
 export { FluxbaseAdminRealtime } from "./admin-realtime";
+export { ServiceKeysManager } from "./admin-service-keys";
 
 // OAuth configuration module
 export {
@@ -528,27 +529,21 @@ export type {
 
   // Multi-tenancy types
   Tenant,
-  TenantMembership,
+  TenantStatus,
+  TenantAdminAssignment,
+  TenantAdminWithUser,
   TenantWithRole,
   CreateTenantOptions,
   UpdateTenantOptions,
-  AddTenantMemberOptions,
-  UpdateTenantMemberOptions,
+  AssignAdminOptions,
 
-  // Branching types
-  BranchStatus,
-  BranchType,
-  DataCloneMode,
-  Branch,
-  CreateBranchOptions,
-  ListBranchesOptions,
-  ListBranchesResponse,
-  BranchActivity,
-  BranchPoolStats,
-
-  // Deprecated Supabase-compatible aliases
-  SupabaseResponse,
-  SupabaseAuthResponse,
+  // Service Key types
+  ServiceKey,
+  ServiceKeyWithKey,
+  CreateServiceKeyRequest,
+  UpdateServiceKeyRequest,
+  RevokeServiceKeyRequest,
+  DeprecateServiceKeyRequest,
 } from "./types";
 
 // Secrets types (defined in secrets module)

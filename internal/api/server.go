@@ -42,6 +42,7 @@ import (
 	"github.com/nimbleflux/fluxbase/internal/secrets"
 	"github.com/nimbleflux/fluxbase/internal/settings"
 	"github.com/nimbleflux/fluxbase/internal/storage"
+	"github.com/nimbleflux/fluxbase/internal/tenantdb"
 	"github.com/nimbleflux/fluxbase/internal/webhook"
 	"github.com/rs/zerolog/log"
 )
@@ -126,6 +127,10 @@ type Server struct {
 	branchHandler   *BranchHandler
 	githubWebhook   *GitHubWebhookHandler
 	branchScheduler *branching.CleanupScheduler
+
+	// Multi-tenancy components
+	tenantManager *tenantdb.Manager
+	tenantStorage *tenantdb.Storage
 
 	// Leader election for schedulers (used in multi-instance deployments)
 	jobsSchedulerLeader      *scaling.LeaderElector
@@ -359,7 +364,32 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	ddlHandler := NewDDLHandler(db)
 	realtimeAdminHandler := NewRealtimeAdminHandler(db)
 	serviceKeyHandler := NewServiceKeyHandler(db.Pool())
-	tenantHandler := NewTenantHandler(db)
+
+	// Initialize multi-tenancy components
+	var tenantManager *tenantdb.Manager
+	var tenantStorage *tenantdb.Storage
+	if cfg.Tenants.Enabled {
+		tenantStorage = tenantdb.NewStorage(db.Pool())
+		dbURL := cfg.Database.RuntimeConnectionString()
+		tenantCfg := tenantdb.Config{
+			Enabled:        cfg.Tenants.Enabled,
+			DatabasePrefix: cfg.Tenants.DatabasePrefix,
+			MaxTenants:     cfg.Tenants.MaxTenants,
+			Pool: tenantdb.PoolConfig{
+				MaxTotalConnections: cfg.Tenants.Pool.MaxTotalConnections,
+				EvictionAge:         cfg.Tenants.Pool.EvictionAge,
+			},
+			Migrations: tenantdb.MigrationsConfig{
+				CheckInterval: cfg.Tenants.Migrations.CheckInterval,
+				OnCreate:      cfg.Tenants.Migrations.OnCreate,
+				OnAccess:      cfg.Tenants.Migrations.OnAccess,
+				Background:    cfg.Tenants.Migrations.Background,
+			},
+		}
+		tenantManager = tenantdb.NewManager(tenantStorage, tenantCfg, db.Pool(), dbURL)
+		log.Info().Msg("Multi-tenancy enabled")
+	}
+	tenantHandler := NewTenantHandler(db, tenantManager, tenantStorage)
 	oauthProviderHandler := NewOAuthProviderHandler(db.Pool(), authService.GetSettingsCache(), cfg.EncryptionKey, cfg.GetPublicBaseURL(), cfg.Auth.OAuthProviders)
 	jwtManager, err := auth.NewJWTManager(cfg.Auth.JWTSecret, cfg.Auth.JWTExpiry, cfg.Auth.RefreshExpiry)
 	if err != nil {
@@ -848,6 +878,10 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			Str("default_clone_mode", cfg.Branching.DefaultDataCloneMode).
 			Msg("Database Branching enabled")
 	}
+
+	// Store tenant components in server (initialized earlier)
+	server.tenantManager = tenantManager
+	server.tenantStorage = tenantStorage
 
 	// Create GraphQL handler (if enabled)
 	if cfg.GraphQL.Enabled {
@@ -1513,19 +1547,6 @@ func (s *Server) setupRoutes() {
 
 	if err := s.registerRoutesViaRegistry(); err != nil {
 		log.Fatal().Err(err).Msg("Failed to setup routes via registry")
-	}
-
-	// AI user knowledge base routes - conditional setup based on docProcessor availability
-	if s.kbStorage != nil {
-		userKBRouter := s.app.Group("/api/v1/ai",
-			middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
-			middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		)
-		if s.docProcessor != nil {
-			ai.RegisterUserKnowledgeBaseRoutesWithDocuments(userKBRouter, s.kbStorage, s.docProcessor)
-		} else {
-			ai.RegisterUserKnowledgeBaseRoutes(userKBRouter, s.kbStorage)
-		}
 	}
 
 	// Admin UI routes - external package

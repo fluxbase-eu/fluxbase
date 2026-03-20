@@ -56,9 +56,28 @@ type AdminConfig struct {
 
 // TenantsConfig contains tenant configuration settings
 type TenantsConfig struct {
-	Default   DefaultTenantConfig        `mapstructure:"default"`
-	Configs   map[string]TenantOverrides `mapstructure:"configs"`    // slug -> overrides
-	ConfigDir string                     `mapstructure:"config_dir"` // optional tenants/*.yaml directory
+	Enabled        bool                       `mapstructure:"enabled"`
+	DatabasePrefix string                     `mapstructure:"database_prefix"`
+	MaxTenants     int                        `mapstructure:"max_tenants"`
+	Pool           TenantPoolConfig           `mapstructure:"pool"`
+	Migrations     TenantMigrationsConfig     `mapstructure:"migrations"`
+	Default        DefaultTenantConfig        `mapstructure:"default"`
+	Configs        map[string]TenantOverrides `mapstructure:"configs"`
+	ConfigDir      string                     `mapstructure:"config_dir"`
+}
+
+// TenantPoolConfig contains connection pool settings for tenant databases
+type TenantPoolConfig struct {
+	MaxTotalConnections int32         `mapstructure:"max_total_connections"`
+	EvictionAge         time.Duration `mapstructure:"eviction_age"`
+}
+
+// TenantMigrationsConfig contains migration settings for tenant databases
+type TenantMigrationsConfig struct {
+	CheckInterval time.Duration `mapstructure:"check_interval"`
+	OnCreate      bool          `mapstructure:"on_create"`
+	OnAccess      bool          `mapstructure:"on_access"`
+	Background    bool          `mapstructure:"background"`
 }
 
 // TenantOverrides holds configuration overrides for a specific tenant
@@ -838,6 +857,15 @@ func setDefaults() {
 	viper.SetDefault("admin.enabled", false) // Admin dashboard disabled by default
 
 	// Tenants defaults
+	viper.SetDefault("tenants.enabled", true)
+	viper.SetDefault("tenants.database_prefix", "tenant_")
+	viper.SetDefault("tenants.max_tenants", 100)
+	viper.SetDefault("tenants.pool.max_total_connections", 100)
+	viper.SetDefault("tenants.pool.eviction_age", "30m")
+	viper.SetDefault("tenants.migrations.check_interval", "5m")
+	viper.SetDefault("tenants.migrations.on_create", true)
+	viper.SetDefault("tenants.migrations.on_access", true)
+	viper.SetDefault("tenants.migrations.background", true)
 	viper.SetDefault("tenants.default.name", "default")
 	viper.SetDefault("tenants.default.anon_key", "")
 	viper.SetDefault("tenants.default.service_key", "")
