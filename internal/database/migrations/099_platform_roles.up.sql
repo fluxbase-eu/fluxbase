@@ -5,6 +5,7 @@
 --
 
 ALTER TABLE platform.users DROP CONSTRAINT IF EXISTS dashboard_users_role_check;
+ALTER TABLE platform.users DROP CONSTRAINT IF EXISTS platform_users_role_check;
 ALTER TABLE platform.users ADD CONSTRAINT platform_users_role_check
     CHECK (role IN ('instance_admin', 'tenant_admin', 'dashboard_admin', 'dashboard_user'));
 

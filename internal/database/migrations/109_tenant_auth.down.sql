@@ -36,17 +36,17 @@ DROP FUNCTION IF EXISTS auth.set_tenant_id_from_context();
 -- STEP 4: Remove partial unique indexes
 -- ============================================================================
 
-DROP INDEX IF EXISTS auth_users_email_tenant_null_unique;
-DROP INDEX IF EXISTS auth_users_email_tenant_unique;
-DROP INDEX IF EXISTS auth_service_keys_name_tenant_null_unique;
-DROP INDEX IF EXISTS auth_service_keys_name_tenant_unique;
+DROP INDEX IF EXISTS auth.auth_users_email_tenant_null_unique;
+DROP INDEX IF EXISTS auth.auth_users_email_tenant_unique;
+DROP INDEX IF EXISTS auth.auth_service_keys_name_tenant_null_unique;
+DROP INDEX IF EXISTS auth.auth_service_keys_name_tenant_unique;
 
 -- ============================================================================
 -- STEP 5: Remove lookup indexes
 -- ============================================================================
 
-DROP INDEX IF EXISTS idx_auth_users_tenant_id;
-DROP INDEX IF EXISTS idx_auth_service_keys_tenant_id;
+DROP INDEX IF EXISTS auth.idx_auth_users_tenant_id;
+DROP INDEX IF EXISTS auth.idx_auth_service_keys_tenant_id;
 
 -- ============================================================================
 -- STEP 6: Remove tenant_id columns
@@ -61,8 +61,6 @@ ALTER TABLE auth.service_keys DROP COLUMN IF EXISTS tenant_id;
 
 REVOKE SELECT, INSERT, UPDATE, DELETE ON auth.users FROM tenant_service;
 REVOKE SELECT, INSERT, UPDATE, DELETE ON auth.service_keys FROM tenant_service;
-REVOKE USAGE, SELECT ON SEQUENCE auth.users_id_seq FROM tenant_service;
-REVOKE USAGE, SELECT ON SEQUENCE auth.service_keys_id_seq FROM tenant_service;
 
 -- ============================================================================
 -- STEP 8: Restore original unique constraint on email

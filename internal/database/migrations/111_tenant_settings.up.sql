@@ -345,8 +345,8 @@ CREATE POLICY tenant_settings_select ON platform.tenant_settings
         -- Instance admins can see all tenant settings
         OR EXISTS (
             SELECT 1 FROM auth.users
-            WHERE id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
-            AND is_instance_admin = TRUE
+            WHERE id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
+            AND is_instance_admin(id)
         )
         -- Tenant has access to its own settings
         OR auth.has_tenant_access(tenant_id)
@@ -360,8 +360,8 @@ CREATE POLICY tenant_settings_insert ON platform.tenant_settings
         -- Instance admins can insert any tenant settings
         OR EXISTS (
             SELECT 1 FROM auth.users
-            WHERE id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
-            AND is_instance_admin = TRUE
+            WHERE id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
+            AND is_instance_admin(id)
         )
         -- Tenant can insert its own settings (if overridable)
         OR auth.has_tenant_access(tenant_id)
@@ -375,8 +375,8 @@ CREATE POLICY tenant_settings_update ON platform.tenant_settings
         -- Instance admins can update any tenant settings
         OR EXISTS (
             SELECT 1 FROM auth.users
-            WHERE id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
-            AND is_instance_admin = TRUE
+            WHERE id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
+            AND is_instance_admin(id)
         )
         -- Tenant can update its own settings
         OR auth.has_tenant_access(tenant_id)
@@ -390,8 +390,8 @@ CREATE POLICY tenant_settings_delete ON platform.tenant_settings
         -- Instance admins can delete any tenant settings
         OR EXISTS (
             SELECT 1 FROM auth.users
-            WHERE id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
-            AND is_instance_admin = TRUE
+            WHERE id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
+            AND is_instance_admin(id)
         )
         -- Tenant can delete its own settings
         OR auth.has_tenant_access(tenant_id)
@@ -424,8 +424,8 @@ CREATE POLICY instance_settings_insert ON platform.instance_settings
         current_user = 'service_role'
         OR EXISTS (
             SELECT 1 FROM auth.users
-            WHERE id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
-            AND is_instance_admin = TRUE
+            WHERE id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
+            AND is_instance_admin(id)
         )
     );
 
@@ -436,8 +436,8 @@ CREATE POLICY instance_settings_update ON platform.instance_settings
         current_user = 'service_role'
         OR EXISTS (
             SELECT 1 FROM auth.users
-            WHERE id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
-            AND is_instance_admin = TRUE
+            WHERE id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
+            AND is_instance_admin(id)
         )
     );
 

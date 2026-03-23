@@ -32,7 +32,7 @@ AS $$
             resource_tenant_id IS NULL
         ELSE
             -- Tenant context is set, check if resource belongs to same tenant
-            resource_tenant_id::TEXT = current_setting('app.current_tenant_id', TRUE)
+            resource_tenant_id::text = current_setting('app.current_tenant_id', TRUE)
     END;
 $$;
 
@@ -50,9 +50,9 @@ COMMENT ON FUNCTION auth.has_tenant_access(UUID) IS
 -- STEP 4: Create partial unique indexes for tenant-scoped uniqueness
 -- ============================================================================
 
--- Drop the existing unique constraint on email (if exists as an index)
-DROP INDEX IF EXISTS auth.users_email_unique;
-DROP INDEX IF EXISTS auth.users_email_key;
+-- Drop the existing unique constraint on email (it's a constraint, not just an index)
+ALTER TABLE auth.users DROP CONSTRAINT IF EXISTS users_email_unique;
+ALTER TABLE auth.users DROP CONSTRAINT IF EXISTS users_email_key;
 
 -- Create partial unique indexes for email uniqueness per tenant
 -- This allows the same email in different tenants
@@ -139,7 +139,7 @@ CREATE POLICY auth_users_select ON auth.users
         -- Service role can see all users
         current_user = 'service_role'
         -- Or user is accessing their own record
-        OR id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
+        OR id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
         -- Or has tenant access (tenant_service or tenant admin)
         OR auth.has_tenant_access(tenant_id)
     );
@@ -159,7 +159,7 @@ CREATE POLICY auth_users_update ON auth.users
         -- Service role can update any user
         current_user = 'service_role'
         -- Or user is updating their own record
-        OR id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
+        OR id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
         -- Or has tenant access
         OR auth.has_tenant_access(tenant_id)
     )
@@ -167,7 +167,7 @@ CREATE POLICY auth_users_update ON auth.users
         -- Service role can update any user
         current_user = 'service_role'
         -- Or user is updating their own record (but not tenant_id)
-        OR id = current_setting('request.jwt.claims', TRUE)::JSONB->>'sub'
+        OR id = (current_setting('request.jwt.claims', TRUE)::JSONB->>'sub')::UUID
         -- Or has tenant access
         OR auth.has_tenant_access(tenant_id)
     );
@@ -231,10 +231,6 @@ CREATE POLICY auth_service_keys_delete ON auth.service_keys
 -- Grant SELECT, INSERT, UPDATE, DELETE on auth tables to tenant_service
 GRANT SELECT, INSERT, UPDATE, DELETE ON auth.users TO tenant_service;
 GRANT SELECT, INSERT, UPDATE, DELETE ON auth.service_keys TO tenant_service;
-
--- Grant USAGE on sequences
-GRANT USAGE, SELECT ON SEQUENCE auth.users_id_seq TO tenant_service;
-GRANT USAGE, SELECT ON SEQUENCE auth.service_keys_id_seq TO tenant_service;
 
 -- ============================================================================
 -- STEP 8: Add foreign key constraints to platform.tenants

@@ -1630,10 +1630,22 @@ func (s *Server) handleHealth(c fiber.Ctx) error {
 		httpStatus = fiber.StatusServiceUnavailable
 	}
 
-	return c.Status(httpStatus).JSON(fiber.Map{
+	// Base response (public)
+	response := fiber.Map{
 		"status":    status,
 		"timestamp": time.Now().UTC(),
-	})
+	}
+
+	// Add service details for authenticated admin users
+	role, hasRole := GetUserRole(c)
+	if hasRole && (role == "admin" || role == "instance_admin" || role == "service_role" || role == "tenant_admin") {
+		response["services"] = fiber.Map{
+			"database": dbHealthy,
+			"realtime": true, // WebSocket server is part of this process
+		}
+	}
+
+	return c.Status(httpStatus).JSON(response)
 }
 
 func (s *Server) handleGetTables(c fiber.Ctx) error {

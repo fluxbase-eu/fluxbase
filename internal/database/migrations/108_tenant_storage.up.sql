@@ -50,8 +50,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS storage_buckets_name_tenant_null
     ON storage.buckets(name)
     WHERE tenant_id IS NULL;
 
-COMMENT ON INDEX storage_buckets_name_tenant_not_null IS 'Ensures bucket names are unique within each tenant';
-COMMENT ON INDEX storage_buckets_name_tenant_null IS 'Ensures bucket names are unique in the default tenant (NULL tenant_id)';
+COMMENT ON INDEX storage.storage_buckets_name_tenant_not_null IS 'Ensures bucket names are unique within each tenant';
+COMMENT ON INDEX storage.storage_buckets_name_tenant_null IS 'Ensures bucket names are unique in the default tenant (NULL tenant_id)';
 
 -- ============================================================================
 -- PHASE 4: AUTO-POPULATE TRIGGER
@@ -103,7 +103,7 @@ CREATE TRIGGER storage_chunked_sessions_set_tenant_id
 -- ============================================================================
 
 -- Update bucket_exists to be tenant-aware
-DROP FUNCTION IF EXISTS storage.bucket_exists(TEXT);
+-- First create the new two-parameter overload
 CREATE OR REPLACE FUNCTION storage.bucket_exists(
     p_bucket_name TEXT,
     p_tenant_id UUID DEFAULT NULL
@@ -136,7 +136,7 @@ COMMENT ON FUNCTION storage.bucket_exists(TEXT, UUID) IS
     'Check if a bucket exists in a specific tenant context. p_tenant_id = NULL checks default tenant. SECURITY DEFINER bypasses RLS.';
 
 -- Overload for backward compatibility (uses session context)
-CREATE OR REPLACE FUNCTION storage.bucket_exists(p_bucket_name TEXT)
+CREATE OR REPLACE FUNCTION storage.bucket_exists(bucket_name TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 STABLE
@@ -150,7 +150,7 @@ BEGIN
     v_tenant_id := NULLIF(current_setting('app.current_tenant_id', true), '')::uuid;
 
     -- Use the tenant-aware version
-    RETURN storage.bucket_exists(p_bucket_name, v_tenant_id);
+    RETURN storage.bucket_exists(bucket_name, v_tenant_id);
 END;
 $$;
 
@@ -158,7 +158,7 @@ COMMENT ON FUNCTION storage.bucket_exists(TEXT) IS
     'Check if a bucket exists using session tenant context. SECURITY DEFINER bypasses RLS.';
 
 -- Update get_bucket_settings to be tenant-aware
-DROP FUNCTION IF EXISTS storage.get_bucket_settings(TEXT);
+-- First create the new two-parameter overload
 CREATE OR REPLACE FUNCTION storage.get_bucket_settings(
     p_bucket_name TEXT,
     p_tenant_id UUID DEFAULT NULL
@@ -194,7 +194,7 @@ COMMENT ON FUNCTION storage.get_bucket_settings(TEXT, UUID) IS
     'Get bucket settings for a specific tenant context. p_tenant_id = NULL checks default tenant. SECURITY DEFINER bypasses RLS.';
 
 -- Overload for backward compatibility (uses session context)
-CREATE OR REPLACE FUNCTION storage.get_bucket_settings(p_bucket_name TEXT)
+CREATE OR REPLACE FUNCTION storage.get_bucket_settings(bucket_name TEXT)
 RETURNS TABLE (
     max_file_size BIGINT,
     allowed_mime_types TEXT[]
@@ -211,7 +211,7 @@ BEGIN
     v_tenant_id := NULLIF(current_setting('app.current_tenant_id', true), '')::uuid;
 
     -- Use the tenant-aware version
-    RETURN QUERY SELECT * FROM storage.get_bucket_settings(p_bucket_name, v_tenant_id);
+    RETURN QUERY SELECT * FROM storage.get_bucket_settings(bucket_name, v_tenant_id);
 END;
 $$;
 
@@ -219,7 +219,7 @@ COMMENT ON FUNCTION storage.get_bucket_settings(TEXT) IS
     'Get bucket settings using session tenant context. SECURITY DEFINER bypasses RLS.';
 
 -- Update is_bucket_public to be tenant-aware
-DROP FUNCTION IF EXISTS storage.is_bucket_public(TEXT);
+-- First create the new two-parameter overload
 CREATE OR REPLACE FUNCTION storage.is_bucket_public(
     p_bucket_name TEXT,
     p_tenant_id UUID DEFAULT NULL
@@ -255,7 +255,7 @@ COMMENT ON FUNCTION storage.is_bucket_public(TEXT, UUID) IS
     'Check if a bucket is public in a specific tenant context. SECURITY DEFINER bypasses RLS.';
 
 -- Overload for backward compatibility (uses session context)
-CREATE OR REPLACE FUNCTION storage.is_bucket_public(p_bucket_name TEXT)
+CREATE OR REPLACE FUNCTION storage.is_bucket_public(bucket_name TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 STABLE
@@ -269,7 +269,7 @@ BEGIN
     v_tenant_id := NULLIF(current_setting('app.current_tenant_id', true), '')::uuid;
 
     -- Use the tenant-aware version
-    RETURN storage.is_bucket_public(p_bucket_name, v_tenant_id);
+    RETURN storage.is_bucket_public(bucket_name, v_tenant_id);
 END;
 $$;
 

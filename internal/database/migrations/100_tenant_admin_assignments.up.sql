@@ -23,13 +23,23 @@ COMMENT ON COLUMN platform.tenant_admin_assignments.tenant_id IS 'Reference to t
 COMMENT ON COLUMN platform.tenant_admin_assignments.assigned_by IS 'Platform user who assigned this admin role';
 COMMENT ON COLUMN platform.tenant_admin_assignments.assigned_at IS 'Timestamp when the admin assignment was created';
 
-ALTER TABLE platform.tenants
-ADD CONSTRAINT check_platform_tenants_db_name_valid
-CHECK (
-    (is_default = true AND db_name IS NULL)
-    OR
-    (is_default = false AND db_name IS NOT NULL AND db_name != '')
-);
+-- Add check constraint for db_name validity (if not exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'check_platform_tenants_db_name_valid'
+        AND conrelid = 'platform.tenants'::regclass
+    ) THEN
+        ALTER TABLE platform.tenants
+        ADD CONSTRAINT check_platform_tenants_db_name_valid
+        CHECK (
+            (is_default = true AND db_name IS NULL)
+            OR
+            (is_default = false AND db_name IS NOT NULL AND db_name != '')
+        );
+    END IF;
+END $$;
 
 ALTER TABLE platform.tenant_admin_assignments ENABLE ROW LEVEL SECURITY;
 

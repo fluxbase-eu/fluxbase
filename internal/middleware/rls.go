@@ -137,11 +137,12 @@ func SetRLSContext(ctx context.Context, tx pgx.Tx, userID string, role string, c
 		Bool("has_claims", claims != nil).
 		Msg("SetRLSContext: Starting RLS context setup")
 
-	// Validate database role (defense in depth - should always be one of these three)
+	// Validate database role (defense in depth - should always be one of these)
 	validDBRoles := map[string]bool{
-		"anon":          true,
-		"authenticated": true,
-		"service_role":  true,
+		"anon":           true,
+		"authenticated":  true,
+		"service_role":   true,
+		"tenant_service": true,
 	}
 
 	if !validDBRoles[dbRole] {

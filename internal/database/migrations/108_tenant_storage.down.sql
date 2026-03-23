@@ -121,8 +121,8 @@ COMMENT ON FUNCTION storage.is_bucket_public(TEXT) IS 'Check if a bucket is publ
 -- PHASE 5: DROP UNIQUE INDEXES AND RESTORE CONSTRAINT
 -- ============================================================================
 
-DROP INDEX IF EXISTS storage_buckets_name_tenant_not_null;
-DROP INDEX IF EXISTS storage_buckets_name_tenant_null;
+DROP INDEX IF EXISTS storage.storage_buckets_name_tenant_not_null;
+DROP INDEX IF EXISTS storage.storage_buckets_name_tenant_null;
 
 -- Restore global unique constraint on bucket name
 ALTER TABLE storage.buckets ADD CONSTRAINT storage_buckets_name_key UNIQUE (name);
@@ -131,10 +131,10 @@ ALTER TABLE storage.buckets ADD CONSTRAINT storage_buckets_name_key UNIQUE (name
 -- PHASE 6: DROP INDEXES
 -- ============================================================================
 
-DROP INDEX IF EXISTS idx_storage_buckets_tenant_id;
-DROP INDEX IF EXISTS idx_storage_objects_tenant_id;
-DROP INDEX IF EXISTS idx_storage_object_permissions_tenant_id;
-DROP INDEX IF EXISTS idx_storage_chunked_sessions_tenant_id;
+DROP INDEX IF EXISTS storage.idx_storage_buckets_tenant_id;
+DROP INDEX IF EXISTS storage.idx_storage_objects_tenant_id;
+DROP INDEX IF EXISTS storage.idx_storage_object_permissions_tenant_id;
+DROP INDEX IF EXISTS storage.idx_storage_chunked_sessions_tenant_id;
 
 -- ============================================================================
 -- PHASE 7: DROP TENANT_ID COLUMNS

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { EmptyState } from '@/components/empty-state'
-import { createFileRoute } from '@tanstack/react-router'
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { EmptyState } from "@/components/empty-state";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Play,
   Copy,
@@ -22,16 +22,18 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { useImpersonationStore } from '@/stores/impersonation-store'
+  Code,
+  AlignLeft,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useImpersonationStore } from "@/stores/impersonation-store";
 import {
   functionsApi,
   type EdgeFunction,
   type EdgeFunctionExecution,
-} from '@/lib/api'
-import { getPageNumbers } from '@/lib/utils'
-import { useExecutionLogs } from '@/hooks/use-execution-logs'
+} from "@/lib/api";
+import { getPageNumbers } from "@/lib/utils";
+import { useExecutionLogs } from "@/hooks/use-execution-logs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,10 +43,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -52,187 +54,187 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { ImpersonationPopover } from '@/features/impersonation/components/impersonation-popover'
+} from "@/components/ui/tooltip";
+import { ImpersonationPopover } from "@/features/impersonation/components/impersonation-popover";
 
-export const Route = createFileRoute('/_authenticated/functions/')({
+export const Route = createFileRoute("/_authenticated/functions/")({
   component: FunctionsPage,
-})
+});
 
 function FunctionsPage() {
   return (
-    <div className='flex h-full flex-col'>
-      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
-        <div className='flex items-center gap-3'>
-          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
-            <Zap className='text-primary h-5 w-5' />
+    <div className="flex h-full flex-col">
+      <div className="bg-background flex items-center justify-between border-b px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+            <Zap className="text-primary h-5 w-5" />
           </div>
           <div>
-            <h1 className='text-xl font-semibold'>Edge Functions</h1>
-            <p className='text-muted-foreground text-sm'>
+            <h1 className="text-xl font-semibold">Edge Functions</h1>
+            <p className="text-muted-foreground text-sm">
               Deploy and run TypeScript/JavaScript functions with Deno runtime
             </p>
           </div>
         </div>
         <ImpersonationPopover
-          contextLabel='Invoking as'
-          defaultReason='Testing function invocation'
+          contextLabel="Invoking as"
+          defaultReason="Testing function invocation"
         />
       </div>
 
-      <div className='flex-1 overflow-auto p-6'>
+      <div className="flex-1 overflow-auto p-6">
         <EdgeFunctionsTab />
       </div>
     </div>
-  )
+  );
 }
 
 // Headers Editor Component
 interface HeadersEditorProps {
-  headers: Array<{ key: string; value: string }>
-  onChange: (headers: Array<{ key: string; value: string }>) => void
+  headers: Array<{ key: string; value: string }>;
+  onChange: (headers: Array<{ key: string; value: string }>) => void;
 }
 
 function HeadersEditor({ headers, onChange }: HeadersEditorProps) {
   const addHeader = () => {
-    onChange([...headers, { key: '', value: '' }])
-  }
+    onChange([...headers, { key: "", value: "" }]);
+  };
 
   const updateHeader = (
     index: number,
-    field: 'key' | 'value',
-    value: string
+    field: "key" | "value",
+    value: string,
   ) => {
-    const updated = [...headers]
-    updated[index][field] = value
-    onChange(updated)
-  }
+    const updated = [...headers];
+    updated[index][field] = value;
+    onChange(updated);
+  };
 
   const removeHeader = (index: number) => {
-    onChange(headers.filter((_, i) => i !== index))
-  }
+    onChange(headers.filter((_, i) => i !== index));
+  };
 
   return (
-    <div className='space-y-2'>
+    <div className="space-y-2">
       {headers.map((header, index) => (
-        <div key={index} className='flex gap-2'>
+        <div key={index} className="flex gap-2">
           <Input
-            placeholder='Header name'
+            placeholder="Header name"
             value={header.key}
-            onChange={(e) => updateHeader(index, 'key', e.target.value)}
-            className='flex-1'
+            onChange={(e) => updateHeader(index, "key", e.target.value)}
+            className="flex-1"
           />
           <Input
-            placeholder='Header value'
+            placeholder="Header value"
             value={header.value}
-            onChange={(e) => updateHeader(index, 'value', e.target.value)}
-            className='flex-1'
+            onChange={(e) => updateHeader(index, "value", e.target.value)}
+            className="flex-1"
           />
-          <Button variant='ghost' size='sm' onClick={() => removeHeader(index)}>
-            <Trash2 className='h-4 w-4' />
+          <Button variant="ghost" size="sm" onClick={() => removeHeader(index)}>
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ))}
-      <Button variant='outline' size='sm' onClick={addHeader}>
-        <Plus className='mr-2 h-4 w-4' />
+      <Button variant="outline" size="sm" onClick={addHeader}>
+        <Plus className="mr-2 h-4 w-4" />
         Add Header
       </Button>
     </div>
-  )
+  );
 }
 
 // Edge Functions Component
 function EdgeFunctionsTab() {
   // Tab state
-  const [activeTab, setActiveTab] = useState<'executions' | 'functions'>(
-    'executions'
-  )
+  const [activeTab, setActiveTab] = useState<"executions" | "functions">(
+    "executions",
+  );
 
   // Existing state
-  const [edgeFunctions, setEdgeFunctions] = useState<EdgeFunction[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showInvokeDialog, setShowInvokeDialog] = useState(false)
-  const [showLogsDialog, setShowLogsDialog] = useState(false)
-  const [showResultDialog, setShowResultDialog] = useState(false)
+  const [edgeFunctions, setEdgeFunctions] = useState<EdgeFunction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showInvokeDialog, setShowInvokeDialog] = useState(false);
+  const [showLogsDialog, setShowLogsDialog] = useState(false);
+  const [showResultDialog, setShowResultDialog] = useState(false);
   const [selectedFunction, setSelectedFunction] = useState<EdgeFunction | null>(
-    null
-  )
-  const [executions, setExecutions] = useState<EdgeFunctionExecution[]>([])
-  const [invoking, setInvoking] = useState(false)
+    null,
+  );
+  const [executions, setExecutions] = useState<EdgeFunctionExecution[]>([]);
+  const [invoking, setInvoking] = useState(false);
 
   // All executions state (for admin executions tab)
   const [allExecutions, setAllExecutions] = useState<EdgeFunctionExecution[]>(
-    []
-  )
-  const [executionsLoading, setExecutionsLoading] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const [totalExecutions, setTotalExecutions] = useState(0)
+    [],
+  );
+  const [executionsLoading, setExecutionsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [totalExecutions, setTotalExecutions] = useState(0);
   // Pagination state
-  const [executionsPage, setExecutionsPage] = useState(0) // 0-indexed
-  const [executionsPageSize, setExecutionsPageSize] = useState(25)
+  const [executionsPage, setExecutionsPage] = useState(0); // 0-indexed
+  const [executionsPageSize, setExecutionsPageSize] = useState(25);
 
   // Filters state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [invokeResult, setInvokeResult] = useState<{
-    success: boolean
-    data: string
-    error?: string
-  } | null>(null)
-  const [wordWrap, setWordWrap] = useState(false)
-  const [logsWordWrap, setLogsWordWrap] = useState(false)
-  const [reloading, setReloading] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [fetchingFunction, setFetchingFunction] = useState(false)
-  const [namespaces, setNamespaces] = useState<string[]>(['default'])
-  const [selectedNamespace, setSelectedNamespace] = useState<string>('default')
+    success: boolean;
+    data: string;
+    error?: string;
+  } | null>(null);
+  const [wordWrap, setWordWrap] = useState(false);
+  const [logsWordWrap, setLogsWordWrap] = useState(false);
+  const [reloading, setReloading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [fetchingFunction, setFetchingFunction] = useState(false);
+  const [namespaces, setNamespaces] = useState<string[]>(["default"]);
+  const [selectedNamespace, setSelectedNamespace] = useState<string>("default");
 
   // Execution detail dialog state
   const [showExecutionDetailDialog, setShowExecutionDetailDialog] =
-    useState(false)
+    useState(false);
   const [selectedExecution, setSelectedExecution] =
-    useState<EdgeFunctionExecution | null>(null)
-  const [logLevelFilter, setLogLevelFilter] = useState<string>('all')
+    useState<EdgeFunctionExecution | null>(null);
+  const [logLevelFilter, setLogLevelFilter] = useState<string>("all");
 
   // Use the real-time execution logs hook
   const { logs: executionLogs, loading: executionLogsLoading } =
     useExecutionLogs({
       executionId: selectedExecution?.id || null,
-      executionType: 'function',
+      executionType: "function",
       enabled: showExecutionDetailDialog,
-    })
+    });
 
   // Ref to track initial fetch (prevents debounced search from re-fetching on mount)
-  const hasInitialFetch = useRef(false)
+  const hasInitialFetch = useRef(false);
   // Ref to hold latest fetchAllExecutions to avoid it being a dependency in effects
   const fetchAllExecutionsRef = useRef<(reset?: boolean) => Promise<void>>(() =>
-    Promise.resolve()
-  )
+    Promise.resolve(),
+  );
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     code: `interface Request {
   method: string;
   url: string;
@@ -256,113 +258,113 @@ async function handler(req: Request) {
     allow_env: true,
     allow_read: false,
     allow_write: false,
-    cron_schedule: '',
-  })
+    cron_schedule: "",
+  });
 
-  const [invokeBody, setInvokeBody] = useState('{}')
+  const [invokeBody, setInvokeBody] = useState("{}");
   const [invokeMethod, setInvokeMethod] = useState<
-    'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
-  >('POST')
+    "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
+  >("POST");
   const [invokeHeaders, setInvokeHeaders] = useState<
     Array<{ key: string; value: string }>
-  >([{ key: '', value: '' }])
+  >([{ key: "", value: "" }]);
 
   const reloadFunctionsFromDisk = async (showToast = false) => {
     try {
-      const result = await functionsApi.reload()
+      const result = await functionsApi.reload();
       if (showToast) {
-        const created = result.created?.length ?? 0
-        const updated = result.updated?.length ?? 0
-        const deleted = result.deleted?.length ?? 0
-        const errors = result.errors?.length ?? 0
+        const created = result.created?.length ?? 0;
+        const updated = result.updated?.length ?? 0;
+        const deleted = result.deleted?.length ?? 0;
+        const errors = result.errors?.length ?? 0;
 
         if (created > 0 || updated > 0 || deleted > 0) {
-          const messages = []
-          if (created > 0) messages.push(`${created} created`)
-          if (updated > 0) messages.push(`${updated} updated`)
-          if (deleted > 0) messages.push(`${deleted} deleted`)
+          const messages = [];
+          if (created > 0) messages.push(`${created} created`);
+          if (updated > 0) messages.push(`${updated} updated`);
+          if (deleted > 0) messages.push(`${deleted} deleted`);
 
-          toast.success(`Functions reloaded: ${messages.join(', ')}`)
+          toast.success(`Functions reloaded: ${messages.join(", ")}`);
         } else if (errors > 0) {
-          toast.error(`Failed to reload functions: ${errors} errors`)
+          toast.error(`Failed to reload functions: ${errors} errors`);
         } else {
-          toast.info('No changes detected')
+          toast.info("No changes detected");
         }
       }
-      return result
+      return result;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error reloading functions:', error)
+      console.error("Error reloading functions:", error);
       if (showToast) {
-        toast.error('Failed to reload functions from filesystem')
+        toast.error("Failed to reload functions from filesystem");
       }
-      throw error
+      throw error;
     }
-  }
+  };
 
   const handleReloadClick = async () => {
-    setReloading(true)
+    setReloading(true);
     try {
-      await reloadFunctionsFromDisk(true)
-      await fetchEdgeFunctions(false) // Refresh the list without reloading again
+      await reloadFunctionsFromDisk(true);
+      await fetchEdgeFunctions(false); // Refresh the list without reloading again
     } finally {
-      setReloading(false)
+      setReloading(false);
     }
-  }
+  };
 
   const fetchEdgeFunctions = useCallback(
     async (shouldReload = true, namespace?: string) => {
-      setLoading(true)
+      setLoading(true);
       try {
         // First, reload functions from disk (only on initial load or manual refresh)
         if (shouldReload) {
-          await reloadFunctionsFromDisk()
+          await reloadFunctionsFromDisk();
         }
 
-        const ns = namespace ?? selectedNamespace
-        const data = await functionsApi.list(ns)
-        setEdgeFunctions(data || [])
+        const ns = namespace ?? selectedNamespace;
+        const data = await functionsApi.list(ns);
+        setEdgeFunctions(data || []);
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Error fetching edge functions:', error)
-        toast.error('Failed to fetch edge functions')
+        console.error("Error fetching edge functions:", error);
+        toast.error("Failed to fetch edge functions");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     },
-    [selectedNamespace]
-  )
+    [selectedNamespace],
+  );
 
   // Fetch all executions for the executions tab
   const fetchAllExecutions = useCallback(async () => {
     // Only show full loading spinner on initial load, not on refetches
     if (isInitialLoad) {
-      setExecutionsLoading(true)
+      setExecutionsLoading(true);
     }
 
     try {
-      const offset = executionsPage * executionsPageSize
+      const offset = executionsPage * executionsPageSize;
       const result = await functionsApi.listAllExecutions({
-        namespace: selectedNamespace !== 'all' ? selectedNamespace : undefined,
+        namespace: selectedNamespace !== "all" ? selectedNamespace : undefined,
         function_name: searchQuery || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
         limit: executionsPageSize,
         offset,
-      })
+      });
 
-      setAllExecutions(result.executions || [])
-      setTotalExecutions(result.count || 0)
+      setAllExecutions(result.executions || []);
+      setTotalExecutions(result.count || 0);
 
       // Mark initial load as complete
       if (isInitialLoad) {
-        setIsInitialLoad(false)
+        setIsInitialLoad(false);
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error fetching executions:', error)
-      toast.error('Failed to fetch executions')
+      console.error("Error fetching executions:", error);
+      toast.error("Failed to fetch executions");
     } finally {
-      setExecutionsLoading(false)
+      setExecutionsLoading(false);
     }
   }, [
     selectedNamespace,
@@ -371,86 +373,86 @@ async function handler(req: Request) {
     executionsPage,
     executionsPageSize,
     isInitialLoad,
-  ])
+  ]);
 
   // Keep the ref updated with the latest fetchAllExecutions
   useEffect(() => {
-    fetchAllExecutionsRef.current = fetchAllExecutions
-  }, [fetchAllExecutions])
+    fetchAllExecutionsRef.current = fetchAllExecutions;
+  }, [fetchAllExecutions]);
 
   // Filter executions from past 24 hours (for stats display only)
   const executions24h = useMemo(() => {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     return allExecutions.filter((exec) => {
-      const execTime = new Date(exec.executed_at).getTime()
-      return execTime >= cutoff
-    })
-  }, [allExecutions])
+      const execTime = new Date(exec.executed_at).getTime();
+      return execTime >= cutoff;
+    });
+  }, [allExecutions]);
 
   // Calculate stats from past 24 hours
   const executionStats = useMemo(() => {
-    const success = executions24h.filter((e) => e.status === 'success').length
+    const success = executions24h.filter((e) => e.status === "success").length;
     const failed = executions24h.filter(
-      (e) => e.status === 'error' || e.status === 'failed'
-    ).length
-    const total = executions24h.length
+      (e) => e.status === "error" || e.status === "failed",
+    ).length;
+    const total = executions24h.length;
     const avgDuration =
       executions24h.length > 0
         ? Math.round(
             executions24h.reduce((sum, e) => sum + (e.duration_ms || 0), 0) /
-              executions24h.length
+              executions24h.length,
           )
-        : 0
-    return { success, failed, total, avgDuration }
-  }, [executions24h])
+        : 0;
+    return { success, failed, total, avgDuration };
+  }, [executions24h]);
 
   // Filter logs by level
   const filteredLogs = useMemo(() => {
-    if (logLevelFilter === 'all') return executionLogs
-    return executionLogs.filter((log) => log.level === logLevelFilter)
-  }, [executionLogs, logLevelFilter])
+    if (logLevelFilter === "all") return executionLogs;
+    return executionLogs.filter((log) => log.level === logLevelFilter);
+  }, [executionLogs, logLevelFilter]);
 
   // Open execution detail dialog
   const openExecutionDetail = (exec: EdgeFunctionExecution) => {
-    setSelectedExecution(exec)
-    setShowExecutionDetailDialog(true)
-    setLogLevelFilter('all')
+    setSelectedExecution(exec);
+    setShowExecutionDetailDialog(true);
+    setLogLevelFilter("all");
     // The useExecutionLogs hook handles fetching and real-time updates automatically
-  }
+  };
 
   // Copy to clipboard helper
   const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success(`${label} copied to clipboard`)
-  }
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
 
   // Fetch namespaces on mount and select best default
   useEffect(() => {
     const fetchNamespaces = async () => {
       try {
-        const data = await functionsApi.listNamespaces()
+        const data = await functionsApi.listNamespaces();
         // Filter out empty strings to prevent Select component errors
-        const validNamespaces = data.filter((ns: string) => ns !== '')
+        const validNamespaces = data.filter((ns: string) => ns !== "");
         setNamespaces(
-          validNamespaces.length > 0 ? validNamespaces : ['default']
-        )
+          validNamespaces.length > 0 ? validNamespaces : ["default"],
+        );
 
         // Smart namespace selection: if 'default' is empty but other namespaces have items,
         // select a non-empty namespace instead
-        let bestNamespace = validNamespaces[0] || 'default'
+        let bestNamespace = validNamespaces[0] || "default";
 
-        if (validNamespaces.includes('default') && validNamespaces.length > 1) {
+        if (validNamespaces.includes("default") && validNamespaces.length > 1) {
           // Check if 'default' namespace has any functions
           try {
-            const defaultFunctions = await functionsApi.list('default')
+            const defaultFunctions = await functionsApi.list("default");
             if (!defaultFunctions || defaultFunctions.length === 0) {
               // Default is empty, find first non-empty namespace
               for (const ns of validNamespaces) {
-                if (ns !== 'default') {
-                  const nsFunctions = await functionsApi.list(ns)
+                if (ns !== "default") {
+                  const nsFunctions = await functionsApi.list(ns);
                   if (nsFunctions && nsFunctions.length > 0) {
-                    bestNamespace = ns
-                    break
+                    bestNamespace = ns;
+                    break;
                   }
                 }
               }
@@ -461,24 +463,24 @@ async function handler(req: Request) {
         }
 
         setSelectedNamespace((current) =>
-          validNamespaces.includes(current) ? current : bestNamespace
-        )
+          validNamespaces.includes(current) ? current : bestNamespace,
+        );
       } catch {
-        setNamespaces(['default'])
+        setNamespaces(["default"]);
       }
-    }
-    fetchNamespaces()
-  }, []) // Only run on mount - no dependencies needed
+    };
+    fetchNamespaces();
+  }, []); // Only run on mount - no dependencies needed
 
   useEffect(() => {
-    fetchEdgeFunctions()
-  }, [fetchEdgeFunctions, selectedNamespace])
+    fetchEdgeFunctions();
+  }, [fetchEdgeFunctions, selectedNamespace]);
 
   // Fetch executions when tab changes or any fetch-related state changes
   useEffect(() => {
-    if (activeTab === 'executions') {
-      hasInitialFetch.current = true
-      fetchAllExecutionsRef.current()
+    if (activeTab === "executions") {
+      hasInitialFetch.current = true;
+      fetchAllExecutionsRef.current();
     }
     // Using ref to avoid fetchAllExecutions in dependencies which would cause double-fetches
     // All filter/pagination changes will trigger this effect via their state changes
@@ -488,40 +490,40 @@ async function handler(req: Request) {
     statusFilter,
     executionsPage,
     executionsPageSize,
-  ])
+  ]);
 
   // Debounced search - resets page to 0 and fetches
   useEffect(() => {
-    if (activeTab !== 'executions') return
+    if (activeTab !== "executions") return;
     // Skip the first render - the main effect above handles initial fetch
-    if (!hasInitialFetch.current) return
+    if (!hasInitialFetch.current) return;
     const timer = setTimeout(() => {
       // Reset to page 0 when search changes - this will trigger the main effect
-      setExecutionsPage(0)
-    }, 300)
-    return () => clearTimeout(timer)
+      setExecutionsPage(0);
+    }, 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery])
+  }, [searchQuery]);
 
   const createFunction = async () => {
     try {
       await functionsApi.create({
         ...formData,
         cron_schedule: formData.cron_schedule || null,
-      })
-      toast.success('Edge function created successfully')
-      setShowCreateDialog(false)
-      resetForm()
-      fetchEdgeFunctions(false) // Don't reload from disk after creating
+      });
+      toast.success("Edge function created successfully");
+      setShowCreateDialog(false);
+      resetForm();
+      fetchEdgeFunctions(false); // Don't reload from disk after creating
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error creating edge function:', error)
-      toast.error('Failed to create edge function')
+      console.error("Error creating edge function:", error);
+      toast.error("Failed to create edge function");
     }
-  }
+  };
 
   const updateFunction = async () => {
-    if (!selectedFunction) return
+    if (!selectedFunction) return;
 
     try {
       await functionsApi.update(selectedFunction.name, {
@@ -533,33 +535,33 @@ async function handler(req: Request) {
         allow_read: formData.allow_read,
         allow_write: formData.allow_write,
         cron_schedule: formData.cron_schedule || null,
-      })
-      toast.success('Edge function updated successfully')
-      setShowEditDialog(false)
-      fetchEdgeFunctions(false) // Don't reload from disk after updating
+      });
+      toast.success("Edge function updated successfully");
+      setShowEditDialog(false);
+      fetchEdgeFunctions(false); // Don't reload from disk after updating
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error updating edge function:', error)
-      toast.error('Failed to update edge function')
+      console.error("Error updating edge function:", error);
+      toast.error("Failed to update edge function");
     }
-  }
+  };
 
   const deleteFunction = async (name: string) => {
     try {
-      await functionsApi.delete(name)
-      toast.success('Edge function deleted successfully')
-      fetchEdgeFunctions(false) // Don't reload from disk after deleting
+      await functionsApi.delete(name);
+      toast.success("Edge function deleted successfully");
+      fetchEdgeFunctions(false); // Don't reload from disk after deleting
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error deleting edge function:', error)
-      toast.error('Failed to delete edge function')
+      console.error("Error deleting edge function:", error);
+      toast.error("Failed to delete edge function");
     } finally {
-      setDeleteConfirm(null)
+      setDeleteConfirm(null);
     }
-  }
+  };
 
   const toggleFunction = async (fn: EdgeFunction) => {
-    const newEnabledState = !fn.enabled
+    const newEnabledState = !fn.enabled;
 
     try {
       await functionsApi.update(fn.name, {
@@ -572,32 +574,32 @@ async function handler(req: Request) {
         allow_write: fn.allow_write,
         cron_schedule: fn.cron_schedule || null,
         enabled: newEnabledState,
-      })
-      toast.success(`Function ${newEnabledState ? 'enabled' : 'disabled'}`)
-      fetchEdgeFunctions(false) // Don't reload from disk after toggling
+      });
+      toast.success(`Function ${newEnabledState ? "enabled" : "disabled"}`);
+      fetchEdgeFunctions(false); // Don't reload from disk after toggling
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error toggling function:', error)
-      toast.error('Failed to toggle function')
+      console.error("Error toggling function:", error);
+      toast.error("Failed to toggle function");
     }
-  }
+  };
 
   const invokeFunction = async () => {
-    if (!selectedFunction) return
+    if (!selectedFunction) return;
 
-    setInvoking(true)
+    setInvoking(true);
     try {
       // Convert headers array to object, filtering empty ones
       const headersObj = invokeHeaders
-        .filter((h) => h.key.trim() !== '')
-        .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {})
+        .filter((h) => h.key.trim() !== "")
+        .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {});
 
       // Build config with impersonation token if active
       const { isImpersonating, impersonationToken } =
-        useImpersonationStore.getState()
-      const config: { headers?: Record<string, string> } = {}
+        useImpersonationStore.getState();
+      const config: { headers?: Record<string, string> } = {};
       if (isImpersonating && impersonationToken) {
-        config.headers = { 'X-Impersonation-Token': impersonationToken }
+        config.headers = { "X-Impersonation-Token": impersonationToken };
       }
 
       const result = await functionsApi.invoke(
@@ -607,75 +609,75 @@ async function handler(req: Request) {
           headers: headersObj,
           body: invokeBody,
         },
-        config
-      )
-      toast.success('Function invoked successfully')
-      setInvokeResult({ success: true, data: result })
-      setShowInvokeDialog(false)
-      setShowResultDialog(true)
+        config,
+      );
+      toast.success("Function invoked successfully");
+      setInvokeResult({ success: true, data: result });
+      setShowInvokeDialog(false);
+      setShowResultDialog(true);
     } catch (error: unknown) {
       // eslint-disable-next-line no-console
-      console.error('Error invoking function:', error)
-      toast.error('Failed to invoke function')
+      console.error("Error invoking function:", error);
+      toast.error("Failed to invoke function");
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      setInvokeResult({ success: false, data: '', error: errorMessage })
-      setShowInvokeDialog(false)
-      setShowResultDialog(true)
+        error instanceof Error ? error.message : "Unknown error";
+      setInvokeResult({ success: false, data: "", error: errorMessage });
+      setShowInvokeDialog(false);
+      setShowResultDialog(true);
     } finally {
-      setInvoking(false)
+      setInvoking(false);
     }
-  }
+  };
 
   const fetchExecutions = async (functionName: string) => {
     try {
-      const data = await functionsApi.getExecutions(functionName, 20)
-      setExecutions(data || [])
-      setShowLogsDialog(true)
+      const data = await functionsApi.getExecutions(functionName, 20);
+      setExecutions(data || []);
+      setShowLogsDialog(true);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error fetching executions:', error)
-      toast.error('Failed to fetch execution logs')
+      console.error("Error fetching executions:", error);
+      toast.error("Failed to fetch execution logs");
     }
-  }
+  };
 
   const openEditDialog = async (fn: EdgeFunction) => {
-    setSelectedFunction(fn)
-    setFetchingFunction(true)
-    setShowEditDialog(true)
+    setSelectedFunction(fn);
+    setFetchingFunction(true);
+    setShowEditDialog(true);
     try {
       // Fetch full function details including code
-      const fullFunction = await functionsApi.get(fn.name)
+      const fullFunction = await functionsApi.get(fn.name);
       setFormData({
         name: fullFunction.name,
-        description: fullFunction.description || '',
-        code: fullFunction.code || '',
+        description: fullFunction.description || "",
+        code: fullFunction.code || "",
         timeout_seconds: fullFunction.timeout_seconds,
         memory_limit_mb: fullFunction.memory_limit_mb,
         allow_net: fullFunction.allow_net,
         allow_env: fullFunction.allow_env,
         allow_read: fullFunction.allow_read,
         allow_write: fullFunction.allow_write,
-        cron_schedule: fullFunction.cron_schedule || '',
-      })
+        cron_schedule: fullFunction.cron_schedule || "",
+      });
     } catch {
-      toast.error('Failed to load function details')
-      setShowEditDialog(false)
+      toast.error("Failed to load function details");
+      setShowEditDialog(false);
     } finally {
-      setFetchingFunction(false)
+      setFetchingFunction(false);
     }
-  }
+  };
 
   const openInvokeDialog = (fn: EdgeFunction) => {
-    setSelectedFunction(fn)
-    setInvokeBody('{\n  "name": "World"\n}')
-    setShowInvokeDialog(true)
-  }
+    setSelectedFunction(fn);
+    setInvokeBody('{\n  "name": "World"\n}');
+    setShowInvokeDialog(true);
+  };
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      description: '',
+      name: "",
+      description: "",
       code: `interface Request {
   method: string;
   url: string;
@@ -699,65 +701,65 @@ async function handler(req: Request) {
       allow_env: true,
       allow_read: false,
       allow_write: false,
-      cron_schedule: '',
-    })
-  }
+      cron_schedule: "",
+    });
+  };
 
   if (loading) {
     return (
-      <div className='flex h-96 items-center justify-center'>
-        <RefreshCw className='text-muted-foreground h-8 w-8 animate-spin' />
+      <div className="flex h-96 items-center justify-center">
+        <RefreshCw className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
     <>
       {/* Stats (Past 24 hours) */}
-      <Card className='!gap-0 !py-0 mb-6'>
-        <CardContent className='px-4 py-2'>
-          <div className='flex items-center gap-4'>
-            <span className='text-muted-foreground text-xs'>
+      <Card className="!gap-0 !py-0 mb-6">
+        <CardContent className="px-4 py-2">
+          <div className="flex items-center gap-4">
+            <span className="text-muted-foreground text-xs">
               (Past 24 hours)
             </span>
-            <div className='flex items-center gap-1'>
-              <span className='text-muted-foreground text-xs'>Success:</span>
-              <span className='text-sm font-semibold'>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-xs">Success:</span>
+              <span className="text-sm font-semibold">
                 {executionStats.success}
               </span>
             </div>
-            <div className='flex items-center gap-1'>
-              <span className='text-muted-foreground text-xs'>Failed:</span>
-              <span className='text-sm font-semibold'>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-xs">Failed:</span>
+              <span className="text-sm font-semibold">
                 {executionStats.failed}
               </span>
             </div>
-            <div className='flex items-center gap-1'>
-              <span className='text-muted-foreground text-xs'>Total:</span>
-              <span className='text-sm font-semibold'>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-xs">Total:</span>
+              <span className="text-sm font-semibold">
                 {executionStats.total}
               </span>
             </div>
-            <div className='flex items-center gap-1'>
-              <span className='text-muted-foreground text-xs'>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-xs">
                 Success Rate:
               </span>
               {(() => {
-                const total = executionStats.success + executionStats.failed
+                const total = executionStats.success + executionStats.failed;
                 const successRate =
                   total > 0
                     ? ((executionStats.success / total) * 100).toFixed(0)
-                    : '0'
+                    : "0";
                 return (
-                  <span className='text-sm font-semibold'>{successRate}%</span>
-                )
+                  <span className="text-sm font-semibold">{successRate}%</span>
+                );
               })()}
             </div>
-            <div className='flex items-center gap-1'>
-              <span className='text-muted-foreground text-xs'>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-xs">
                 Avg. Duration:
               </span>
-              <span className='text-sm font-semibold'>
+              <span className="text-sm font-semibold">
                 {executionStats.avgDuration}ms
               </span>
             </div>
@@ -768,42 +770,42 @@ async function handler(req: Request) {
       {/* Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as 'executions' | 'functions')}
-        className='flex min-h-0 flex-1 flex-col'
+        onValueChange={(v) => setActiveTab(v as "executions" | "functions")}
+        className="flex min-h-0 flex-1 flex-col"
       >
-        <div className='mb-4 flex items-center justify-between'>
-          <TabsList className='grid w-full max-w-md grid-cols-2'>
-            <TabsTrigger value='executions'>
-              <Activity className='mr-2 h-4 w-4' />
+        <div className="mb-4 flex items-center justify-between">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="executions">
+              <Activity className="mr-2 h-4 w-4" />
               Execution Logs
             </TabsTrigger>
-            <TabsTrigger value='functions'>
-              <Zap className='mr-2 h-4 w-4' />
+            <TabsTrigger value="functions">
+              <Zap className="mr-2 h-4 w-4" />
               Functions
             </TabsTrigger>
           </TabsList>
         </div>
 
         {/* Executions Tab */}
-        <TabsContent value='executions' className='mt-0 flex-1'>
+        <TabsContent value="executions" className="mt-0 flex-1">
           {/* Executions Filters */}
-          <div className='mb-4 flex items-center gap-3'>
-            <div className='flex items-center gap-2'>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Label
-                htmlFor='exec-namespace-select'
-                className='text-muted-foreground text-sm whitespace-nowrap'
+                htmlFor="exec-namespace-select"
+                className="text-muted-foreground text-sm whitespace-nowrap"
               >
                 Namespace:
               </Label>
               <Select
                 value={selectedNamespace}
                 onValueChange={(value) => {
-                  setSelectedNamespace(value)
-                  setExecutionsPage(0)
+                  setSelectedNamespace(value);
+                  setExecutionsPage(0);
                 }}
               >
-                <SelectTrigger id='exec-namespace-select' className='w-[150px]'>
-                  <SelectValue placeholder='Select namespace' />
+                <SelectTrigger id="exec-namespace-select" className="w-[150px]">
+                  <SelectValue placeholder="Select namespace" />
                 </SelectTrigger>
                 <SelectContent>
                   {namespaces.map((ns) => (
@@ -814,108 +816,108 @@ async function handler(req: Request) {
                 </SelectContent>
               </Select>
             </div>
-            <div className='relative max-w-xs flex-1'>
-              <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+            <div className="relative max-w-xs flex-1">
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                placeholder='Search by function name...'
+                placeholder="Search by function name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className='pl-9'
+                className="pl-9"
               />
             </div>
             <Select
               value={statusFilter}
               onValueChange={(value) => {
-                setStatusFilter(value)
-                setExecutionsPage(0)
+                setStatusFilter(value);
+                setExecutionsPage(0);
               }}
             >
-              <SelectTrigger className='w-[150px]'>
-                <Filter className='mr-2 h-4 w-4' />
+              <SelectTrigger className="w-[150px]">
+                <Filter className="mr-2 h-4 w-4" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='all'>All Status</SelectItem>
-                <SelectItem value='success'>Success</SelectItem>
-                <SelectItem value='error'>Error</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="success">Success</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
               </SelectContent>
             </Select>
             <Button
               onClick={() => fetchAllExecutionsRef.current()}
-              variant='outline'
-              size='sm'
+              variant="outline"
+              size="sm"
             >
-              <RefreshCw className='mr-2 h-4 w-4' />
+              <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
           </div>
 
           {/* Executions List */}
-          <ScrollArea className='h-[calc(100vh-28rem)]'>
+          <ScrollArea className="h-[calc(100vh-28rem)]">
             {executionsLoading && isInitialLoad ? (
-              <div className='flex h-48 items-center justify-center'>
-                <Loader2 className='text-muted-foreground h-8 w-8 animate-spin' />
+              <div className="flex h-48 items-center justify-center">
+                <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
               </div>
             ) : allExecutions.length === 0 ? (
               <Card>
-                <CardContent className='p-12 text-center'>
-                  <Activity className='text-muted-foreground mx-auto mb-4 h-12 w-12' />
-                  <p className='mb-2 text-lg font-medium'>
+                <CardContent className="p-12 text-center">
+                  <Activity className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                  <p className="mb-2 text-lg font-medium">
                     No executions found
                   </p>
-                  <p className='text-muted-foreground text-sm'>
+                  <p className="text-muted-foreground text-sm">
                     Execute some functions to see their logs here
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className='grid gap-1'>
+              <div className="grid gap-1">
                 {/* Inline loading indicator for refetches */}
                 {executionsLoading && !isInitialLoad && (
-                  <div className='text-muted-foreground flex items-center justify-center py-2'>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    <span className='text-xs'>Refreshing...</span>
+                  <div className="text-muted-foreground flex items-center justify-center py-2">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span className="text-xs">Refreshing...</span>
                   </div>
                 )}
                 {allExecutions.map((exec) => (
                   <div
                     key={exec.id}
-                    className='hover:border-primary/50 bg-card flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2 transition-colors'
+                    className="hover:border-primary/50 bg-card flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2 transition-colors"
                     onClick={() => openExecutionDetail(exec)}
                   >
-                    <div className='flex min-w-0 flex-1 items-center gap-3'>
-                      {exec.status === 'success' ? (
-                        <CheckCircle className='h-4 w-4 shrink-0 text-green-500' />
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      {exec.status === "success" ? (
+                        <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
                       ) : (
-                        <XCircle className='h-4 w-4 shrink-0 text-red-500' />
+                        <XCircle className="h-4 w-4 shrink-0 text-red-500" />
                       )}
-                      <span className='truncate text-sm font-medium'>
-                        {exec.function_name || 'Unknown'}
+                      <span className="truncate text-sm font-medium">
+                        {exec.function_name || "Unknown"}
                       </span>
                       <Badge
                         variant={
-                          exec.status === 'success'
-                            ? 'secondary'
-                            : 'destructive'
+                          exec.status === "success"
+                            ? "secondary"
+                            : "destructive"
                         }
-                        className='h-4 shrink-0 px-1.5 py-0 text-[10px]'
+                        className="h-4 shrink-0 px-1.5 py-0 text-[10px]"
                       >
                         {exec.status}
                       </Badge>
                       {exec.status_code && (
                         <Badge
-                          variant='outline'
-                          className='h-4 shrink-0 px-1.5 py-0 text-[10px]'
+                          variant="outline"
+                          className="h-4 shrink-0 px-1.5 py-0 text-[10px]"
                         >
                           {exec.status_code}
                         </Badge>
                       )}
                     </div>
-                    <div className='flex shrink-0 items-center gap-3'>
-                      <span className='text-muted-foreground text-xs'>
-                        {exec.duration_ms ? `${exec.duration_ms}ms` : '-'}
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="text-muted-foreground text-xs">
+                        {exec.duration_ms ? `${exec.duration_ms}ms` : "-"}
                       </span>
-                      <span className='text-muted-foreground text-xs'>
+                      <span className="text-muted-foreground text-xs">
                         {new Date(exec.executed_at).toLocaleString()}
                       </span>
                     </div>
@@ -927,22 +929,22 @@ async function handler(req: Request) {
 
           {/* Pagination Controls */}
           {allExecutions.length > 0 && (
-            <div className='flex items-center justify-between border-t px-2 py-3'>
-              <div className='flex items-center gap-2'>
-                <span className='text-muted-foreground text-sm'>
+            <div className="flex items-center justify-between border-t px-2 py-3">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
                   Rows per page
                 </span>
                 <Select
                   value={`${executionsPageSize}`}
                   onValueChange={(value) => {
-                    setExecutionsPageSize(Number(value))
-                    setExecutionsPage(0)
+                    setExecutionsPageSize(Number(value));
+                    setExecutionsPage(0);
                   }}
                 >
-                  <SelectTrigger className='h-8 w-[70px]'>
+                  <SelectTrigger className="h-8 w-[70px]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent side='top'>
+                  <SelectContent side="top">
                     {[10, 25, 50, 100].map((size) => (
                       <SelectItem key={size} value={`${size}`}>
                         {size}
@@ -952,44 +954,44 @@ async function handler(req: Request) {
                 </Select>
               </div>
 
-              <div className='flex items-center gap-2'>
-                <span className='text-muted-foreground text-sm'>
-                  Page {executionsPage + 1} of{' '}
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  Page {executionsPage + 1} of{" "}
                   {Math.ceil(totalExecutions / executionsPageSize) || 1} (
                   {totalExecutions} total)
                 </span>
 
                 {/* First page */}
                 <Button
-                  variant='outline'
-                  size='sm'
-                  className='h-8 w-8 p-0'
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
                   onClick={() => setExecutionsPage(0)}
                   disabled={executionsPage === 0}
                 >
-                  <ChevronsLeft className='h-4 w-4' />
+                  <ChevronsLeft className="h-4 w-4" />
                 </Button>
 
                 {/* Previous page */}
                 <Button
-                  variant='outline'
-                  size='sm'
-                  className='h-8 w-8 p-0'
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
                   onClick={() => setExecutionsPage((p) => p - 1)}
                   disabled={executionsPage === 0}
                 >
-                  <ChevronLeft className='h-4 w-4' />
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
 
                 {/* Page numbers */}
                 {getPageNumbers(
                   executionsPage + 1,
-                  Math.ceil(totalExecutions / executionsPageSize) || 1
+                  Math.ceil(totalExecutions / executionsPageSize) || 1,
                 ).map((pageNum, idx) =>
-                  pageNum === '...' ? (
+                  pageNum === "..." ? (
                     <span
                       key={`ellipsis-${idx}`}
-                      className='text-muted-foreground px-1'
+                      className="text-muted-foreground px-1"
                     >
                       ...
                     </span>
@@ -997,39 +999,39 @@ async function handler(req: Request) {
                     <Button
                       key={pageNum}
                       variant={
-                        executionsPage + 1 === pageNum ? 'default' : 'outline'
+                        executionsPage + 1 === pageNum ? "default" : "outline"
                       }
-                      size='sm'
-                      className='h-8 min-w-8 px-2'
+                      size="sm"
+                      className="h-8 min-w-8 px-2"
                       onClick={() => setExecutionsPage((pageNum as number) - 1)}
                     >
                       {pageNum}
                     </Button>
-                  )
+                  ),
                 )}
 
                 {/* Next page */}
                 <Button
-                  variant='outline'
-                  size='sm'
-                  className='h-8 w-8 p-0'
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
                   onClick={() => setExecutionsPage((p) => p + 1)}
                   disabled={
                     executionsPage >=
                     Math.ceil(totalExecutions / executionsPageSize) - 1
                   }
                 >
-                  <ChevronRight className='h-4 w-4' />
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
 
                 {/* Last page */}
                 <Button
-                  variant='outline'
-                  size='sm'
-                  className='h-8 w-8 p-0'
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
                   onClick={() =>
                     setExecutionsPage(
-                      Math.ceil(totalExecutions / executionsPageSize) - 1
+                      Math.ceil(totalExecutions / executionsPageSize) - 1,
                     )
                   }
                   disabled={
@@ -1037,7 +1039,7 @@ async function handler(req: Request) {
                     Math.ceil(totalExecutions / executionsPageSize) - 1
                   }
                 >
-                  <ChevronsRight className='h-4 w-4' />
+                  <ChevronsRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -1045,13 +1047,13 @@ async function handler(req: Request) {
         </TabsContent>
 
         {/* Functions Tab */}
-        <TabsContent value='functions' className='mt-0 flex-1'>
+        <TabsContent value="functions" className="mt-0 flex-1">
           {/* Functions Controls */}
-          <div className='mb-4 flex items-center justify-end gap-2'>
-            <div className='flex items-center gap-2'>
+          <div className="mb-4 flex items-center justify-end gap-2">
+            <div className="flex items-center gap-2">
               <Label
-                htmlFor='func-namespace-select'
-                className='text-muted-foreground text-sm whitespace-nowrap'
+                htmlFor="func-namespace-select"
+                className="text-muted-foreground text-sm whitespace-nowrap"
               >
                 Namespace:
               </Label>
@@ -1059,8 +1061,8 @@ async function handler(req: Request) {
                 value={selectedNamespace}
                 onValueChange={setSelectedNamespace}
               >
-                <SelectTrigger id='func-namespace-select' className='w-[180px]'>
-                  <SelectValue placeholder='Select namespace' />
+                <SelectTrigger id="func-namespace-select" className="w-[180px]">
+                  <SelectValue placeholder="Select namespace" />
                 </SelectTrigger>
                 <SelectContent>
                   {namespaces.map((ns) => (
@@ -1073,81 +1075,93 @@ async function handler(req: Request) {
             </div>
             <Button
               onClick={handleReloadClick}
-              variant='outline'
-              size='sm'
+              variant="outline"
+              size="sm"
               disabled={reloading}
             >
               {reloading ? (
                 <>
-                  <RefreshCw className='mr-2 h-4 w-4 animate-spin' />
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Reloading...
                 </>
               ) : (
                 <>
-                  <HardDrive className='mr-2 h-4 w-4' />
+                  <HardDrive className="mr-2 h-4 w-4" />
                   Reload from Filesystem
                 </>
               )}
             </Button>
             <Button
               onClick={() => fetchEdgeFunctions()}
-              variant='outline'
-              size='sm'
+              variant="outline"
+              size="sm"
             >
-              <RefreshCw className='mr-2 h-4 w-4' />
+              <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)} size='sm'>
-              <Plus className='mr-2 h-4 w-4' />
+            <Button onClick={() => setShowCreateDialog(true)} size="sm">
+              <Plus className="mr-2 h-4 w-4" />
               New Function
             </Button>
           </div>
 
           {/* Functions Stats */}
-          <div className='mb-4 flex gap-4 text-sm'>
-            <div className='flex items-center gap-1.5'>
-              <span className='text-muted-foreground'>Total:</span>
-              <Badge variant='secondary' className='h-5 px-2'>
+          <div className="mb-4 flex gap-4 text-sm">
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Total:</span>
+              <Badge variant="secondary" className="h-5 px-2">
                 {edgeFunctions.length}
               </Badge>
             </div>
-            <div className='flex items-center gap-1.5'>
-              <span className='text-muted-foreground'>Active:</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Active:</span>
               <Badge
-                variant='secondary'
-                className='h-5 bg-green-500/10 px-2 text-green-600 dark:text-green-400'
+                variant="secondary"
+                className="h-5 bg-green-500/10 px-2 text-green-600 dark:text-green-400"
               >
                 {edgeFunctions.filter((f) => f.enabled).length}
               </Badge>
             </div>
-            <div className='flex items-center gap-1.5'>
-              <span className='text-muted-foreground'>Scheduled:</span>
-              <Badge variant='secondary' className='h-5 px-2'>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Scheduled:</span>
+              <Badge variant="secondary" className="h-5 px-2">
                 {edgeFunctions.filter((f) => f.cron_schedule).length}
               </Badge>
             </div>
           </div>
 
           {/* Functions List */}
-          <ScrollArea className='h-[calc(100vh-20rem)]'>
-            <div className='grid gap-1'>
+          <ScrollArea className="h-[calc(100vh-20rem)]">
+            <div className="grid gap-1">
               {edgeFunctions.length === 0 ? (
-                <div className='p-2'>
+                <div className="p-2">
                   <EmptyState
                     icon={Zap}
-                    title='No edge functions yet'
-                    description='Deploy serverless functions or start from a template'
+                    title="No edge functions yet"
+                    description="Deploy serverless functions or start from a template"
                     templates={[
-                      { label: 'HTTP Handler', onClick: () => setShowCreateDialog(true) },
-                      { label: 'Webhook', onClick: () => setShowCreateDialog(true) },
-                      { label: 'Scheduled Job', onClick: () => setShowCreateDialog(true) },
-                      { label: 'Auth Middleware', onClick: () => setShowCreateDialog(true) },
+                      {
+                        label: "HTTP Handler",
+                        onClick: () => setShowCreateDialog(true),
+                      },
+                      {
+                        label: "Webhook",
+                        onClick: () => setShowCreateDialog(true),
+                      },
+                      {
+                        label: "Scheduled Job",
+                        onClick: () => setShowCreateDialog(true),
+                      },
+                      {
+                        label: "Auth Middleware",
+                        onClick: () => setShowCreateDialog(true),
+                      },
                     ]}
                     actions={[
                       {
-                        label: 'Create Function',
+                        label: "Create Function",
                         onClick: () => setShowCreateDialog(true),
-                        icon: <Plus className='h-4 w-4' />,
+                        icon: <Plus className="h-4 w-4" />,
                       },
                     ]}
                   />
@@ -1156,54 +1170,54 @@ async function handler(req: Request) {
                 edgeFunctions.map((fn) => (
                   <div
                     key={fn.id}
-                    className='hover:border-primary/50 bg-card flex items-center justify-between gap-2 rounded-md border px-3 py-1.5 transition-colors'
+                    className="hover:border-primary/50 bg-card flex items-center justify-between gap-2 rounded-md border px-3 py-1.5 transition-colors"
                   >
-                    <div className='flex min-w-0 flex-1 items-center gap-2'>
-                      <span className='truncate text-sm font-medium'>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="truncate text-sm font-medium">
                         {fn.name}
                       </span>
                       <Badge
-                        variant='outline'
-                        className='h-4 shrink-0 px-1 py-0 text-[10px]'
+                        variant="outline"
+                        className="h-4 shrink-0 px-1 py-0 text-[10px]"
                       >
                         v{fn.version}
                       </Badge>
                       {fn.cron_schedule && (
                         <Badge
-                          variant='outline'
-                          className='h-4 shrink-0 px-1 py-0 text-[10px]'
+                          variant="outline"
+                          className="h-4 shrink-0 px-1 py-0 text-[10px]"
                         >
-                          <Clock className='mr-0.5 h-2.5 w-2.5' />
+                          <Clock className="mr-0.5 h-2.5 w-2.5" />
                           cron
                         </Badge>
                       )}
                       <Switch
                         checked={fn.enabled}
                         onCheckedChange={() => toggleFunction(fn)}
-                        className='scale-75'
+                        className="scale-75"
                       />
                     </div>
-                    <div className='flex shrink-0 items-center gap-0.5'>
-                      {fn.source === 'filesystem' && fn.updated_at && (
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {fn.source === "filesystem" && fn.updated_at && (
                         <span
-                          className='text-muted-foreground mr-1 text-[10px]'
+                          className="text-muted-foreground mr-1 text-[10px]"
                           title={`Last synced: ${new Date(fn.updated_at).toLocaleString()}`}
                         >
                           synced {new Date(fn.updated_at).toLocaleDateString()}
                         </span>
                       )}
-                      <span className='text-muted-foreground mr-1 text-[10px]'>
+                      <span className="text-muted-foreground mr-1 text-[10px]">
                         {fn.timeout_seconds}s
                       </span>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             onClick={() => fetchExecutions(fn.name)}
-                            variant='ghost'
-                            size='sm'
-                            className='h-6 w-6 p-0'
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
                           >
-                            <History className='h-3 w-3' />
+                            <History className="h-3 w-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>View logs</TooltipContent>
@@ -1212,12 +1226,12 @@ async function handler(req: Request) {
                         <TooltipTrigger asChild>
                           <Button
                             onClick={() => openInvokeDialog(fn)}
-                            size='sm'
-                            variant='ghost'
-                            className='h-6 w-6 p-0'
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
                             disabled={!fn.enabled}
                           >
-                            <Play className='h-3 w-3' />
+                            <Play className="h-3 w-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Invoke function</TooltipContent>
@@ -1226,11 +1240,11 @@ async function handler(req: Request) {
                         <TooltipTrigger asChild>
                           <Button
                             onClick={() => openEditDialog(fn)}
-                            size='sm'
-                            variant='ghost'
-                            className='h-6 w-6 p-0'
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
                           >
-                            <Edit className='h-3 w-3' />
+                            <Edit className="h-3 w-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Edit function</TooltipContent>
@@ -1239,11 +1253,11 @@ async function handler(req: Request) {
                         <TooltipTrigger asChild>
                           <Button
                             onClick={() => setDeleteConfirm(fn.name)}
-                            size='sm'
-                            variant='ghost'
-                            className='text-destructive hover:text-destructive hover:bg-destructive/10 h-6 w-6 p-0'
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-6 w-6 p-0"
                           >
-                            <Trash2 className='h-3 w-3' />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Delete function</TooltipContent>
@@ -1274,7 +1288,7 @@ async function handler(req: Request) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteConfirm && deleteFunction(deleteConfirm)}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>
@@ -1284,7 +1298,7 @@ async function handler(req: Request) {
 
       {/* Create Function Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className='max-h-[90vh] max-w-4xl overflow-y-auto'>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Edge Function</DialogTitle>
             <DialogDescription>
@@ -1292,12 +1306,12 @@ async function handler(req: Request) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className='space-y-4'>
+          <div className="space-y-4">
             <div>
-              <Label htmlFor='name'>Function Name</Label>
+              <Label htmlFor="name">Function Name</Label>
               <Input
-                id='name'
-                placeholder='my_function'
+                id="name"
+                placeholder="my_function"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -1306,10 +1320,10 @@ async function handler(req: Request) {
             </div>
 
             <div>
-              <Label htmlFor='description'>Description (optional)</Label>
+              <Label htmlFor="description">Description (optional)</Label>
               <Input
-                id='description'
-                placeholder='What does this function do?'
+                id="description"
+                placeholder="What does this function do?"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
@@ -1318,10 +1332,10 @@ async function handler(req: Request) {
             </div>
 
             <div>
-              <Label htmlFor='code'>Code (TypeScript)</Label>
+              <Label htmlFor="code">Code (TypeScript)</Label>
               <Textarea
-                id='code'
-                className='min-h-[400px] font-mono text-sm'
+                id="code"
+                className="min-h-[400px] font-mono text-sm"
                 value={formData.code}
                 onChange={(e) =>
                   setFormData({ ...formData, code: e.target.value })
@@ -1329,12 +1343,12 @@ async function handler(req: Request) {
               />
             </div>
 
-            <div className='grid grid-cols-2 gap-4'>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor='timeout'>Timeout (seconds)</Label>
+                <Label htmlFor="timeout">Timeout (seconds)</Label>
                 <Input
-                  id='timeout'
-                  type='number'
+                  id="timeout"
+                  type="number"
                   min={1}
                   max={300}
                   value={formData.timeout_seconds}
@@ -1348,10 +1362,10 @@ async function handler(req: Request) {
               </div>
 
               <div>
-                <Label htmlFor='cron'>Cron Schedule (optional)</Label>
+                <Label htmlFor="cron">Cron Schedule (optional)</Label>
                 <Input
-                  id='cron'
-                  placeholder='0 0 * * *'
+                  id="cron"
+                  placeholder="0 0 * * *"
                   value={formData.cron_schedule}
                   onChange={(e) =>
                     setFormData({ ...formData, cron_schedule: e.target.value })
@@ -1362,10 +1376,10 @@ async function handler(req: Request) {
 
             <div>
               <Label>Permissions</Label>
-              <div className='mt-2 grid grid-cols-2 gap-3'>
-                <label className='flex cursor-pointer items-center gap-2'>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <label className="flex cursor-pointer items-center gap-2">
                   <input
-                    type='checkbox'
+                    type="checkbox"
                     checked={formData.allow_net}
                     onChange={(e) =>
                       setFormData({ ...formData, allow_net: e.target.checked })
@@ -1373,9 +1387,9 @@ async function handler(req: Request) {
                   />
                   <span>Allow Network Access</span>
                 </label>
-                <label className='flex cursor-pointer items-center gap-2'>
+                <label className="flex cursor-pointer items-center gap-2">
                   <input
-                    type='checkbox'
+                    type="checkbox"
                     checked={formData.allow_env}
                     onChange={(e) =>
                       setFormData({ ...formData, allow_env: e.target.checked })
@@ -1383,9 +1397,9 @@ async function handler(req: Request) {
                   />
                   <span>Allow Environment Variables</span>
                 </label>
-                <label className='flex cursor-pointer items-center gap-2'>
+                <label className="flex cursor-pointer items-center gap-2">
                   <input
-                    type='checkbox'
+                    type="checkbox"
                     checked={formData.allow_read}
                     onChange={(e) =>
                       setFormData({ ...formData, allow_read: e.target.checked })
@@ -1393,9 +1407,9 @@ async function handler(req: Request) {
                   />
                   <span>Allow File Read</span>
                 </label>
-                <label className='flex cursor-pointer items-center gap-2'>
+                <label className="flex cursor-pointer items-center gap-2">
                   <input
-                    type='checkbox'
+                    type="checkbox"
                     checked={formData.allow_write}
                     onChange={(e) =>
                       setFormData({
@@ -1412,7 +1426,7 @@ async function handler(req: Request) {
 
           <DialogFooter>
             <Button
-              variant='outline'
+              variant="outline"
               onClick={() => setShowCreateDialog(false)}
             >
               Cancel
@@ -1424,7 +1438,7 @@ async function handler(req: Request) {
 
       {/* Edit Function Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className='max-h-[90vh] max-w-4xl overflow-y-auto'>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Edge Function</DialogTitle>
             <DialogDescription>
@@ -1433,15 +1447,15 @@ async function handler(req: Request) {
           </DialogHeader>
 
           {fetchingFunction ? (
-            <div className='flex items-center justify-center py-12'>
-              <Loader2 className='text-muted-foreground h-8 w-8 animate-spin' />
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <div className='space-y-4'>
+            <div className="space-y-4">
               <div>
-                <Label htmlFor='edit-description'>Description</Label>
+                <Label htmlFor="edit-description">Description</Label>
                 <Input
-                  id='edit-description'
+                  id="edit-description"
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
@@ -1450,10 +1464,10 @@ async function handler(req: Request) {
               </div>
 
               <div>
-                <Label htmlFor='edit-code'>Code</Label>
+                <Label htmlFor="edit-code">Code</Label>
                 <Textarea
-                  id='edit-code'
-                  className='min-h-[400px] font-mono text-sm'
+                  id="edit-code"
+                  className="min-h-[400px] font-mono text-sm"
                   value={formData.code}
                   onChange={(e) =>
                     setFormData({ ...formData, code: e.target.value })
@@ -1461,12 +1475,12 @@ async function handler(req: Request) {
                 />
               </div>
 
-              <div className='grid grid-cols-2 gap-4'>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor='edit-timeout'>Timeout (seconds)</Label>
+                  <Label htmlFor="edit-timeout">Timeout (seconds)</Label>
                   <Input
-                    id='edit-timeout'
-                    type='number'
+                    id="edit-timeout"
+                    type="number"
                     min={1}
                     max={300}
                     value={formData.timeout_seconds}
@@ -1480,10 +1494,10 @@ async function handler(req: Request) {
                 </div>
 
                 <div>
-                  <Label htmlFor='edit-cron'>Cron Schedule</Label>
+                  <Label htmlFor="edit-cron">Cron Schedule</Label>
                   <Input
-                    id='edit-cron'
-                    placeholder='0 0 * * *'
+                    id="edit-cron"
+                    placeholder="0 0 * * *"
                     value={formData.cron_schedule}
                     onChange={(e) =>
                       setFormData({
@@ -1497,10 +1511,10 @@ async function handler(req: Request) {
 
               <div>
                 <Label>Permissions</Label>
-                <div className='mt-2 grid grid-cols-2 gap-3'>
-                  <label className='flex cursor-pointer items-center gap-2'>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <label className="flex cursor-pointer items-center gap-2">
                     <input
-                      type='checkbox'
+                      type="checkbox"
                       checked={formData.allow_net}
                       onChange={(e) =>
                         setFormData({
@@ -1511,9 +1525,9 @@ async function handler(req: Request) {
                     />
                     <span>Allow Network Access</span>
                   </label>
-                  <label className='flex cursor-pointer items-center gap-2'>
+                  <label className="flex cursor-pointer items-center gap-2">
                     <input
-                      type='checkbox'
+                      type="checkbox"
                       checked={formData.allow_env}
                       onChange={(e) =>
                         setFormData({
@@ -1524,9 +1538,9 @@ async function handler(req: Request) {
                     />
                     <span>Allow Environment Variables</span>
                   </label>
-                  <label className='flex cursor-pointer items-center gap-2'>
+                  <label className="flex cursor-pointer items-center gap-2">
                     <input
-                      type='checkbox'
+                      type="checkbox"
                       checked={formData.allow_read}
                       onChange={(e) =>
                         setFormData({
@@ -1537,9 +1551,9 @@ async function handler(req: Request) {
                     />
                     <span>Allow File Read</span>
                   </label>
-                  <label className='flex cursor-pointer items-center gap-2'>
+                  <label className="flex cursor-pointer items-center gap-2">
                     <input
-                      type='checkbox'
+                      type="checkbox"
                       checked={formData.allow_write}
                       onChange={(e) =>
                         setFormData({
@@ -1556,7 +1570,7 @@ async function handler(req: Request) {
           )}
 
           <DialogFooter>
-            <Button variant='outline' onClick={() => setShowEditDialog(false)}>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
             <Button onClick={updateFunction} disabled={fetchingFunction}>
@@ -1568,7 +1582,7 @@ async function handler(req: Request) {
 
       {/* Invoke Function Dialog */}
       <Dialog open={showInvokeDialog} onOpenChange={setShowInvokeDialog}>
-        <DialogContent className='max-h-[90vh] w-[90vw] max-w-5xl overflow-y-auto'>
+        <DialogContent className="max-h-[90vh] w-[90vw] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Invoke Edge Function</DialogTitle>
             <DialogDescription>
@@ -1576,52 +1590,61 @@ async function handler(req: Request) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className='space-y-4'>
+          <div className="space-y-4">
             {/* Method selector */}
-            <div className='flex items-center gap-4'>
-              <Label htmlFor='method'>HTTP Method</Label>
+            <div className="flex items-center gap-4">
+              <Label htmlFor="method">HTTP Method</Label>
               <Select
                 value={invokeMethod}
                 onValueChange={(value) =>
                   setInvokeMethod(
-                    value as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+                    value as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
                   )
                 }
               >
-                <SelectTrigger className='w-[180px]' id='method'>
+                <SelectTrigger className="w-[180px]" id="method">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='GET'>GET</SelectItem>
-                  <SelectItem value='POST'>POST</SelectItem>
-                  <SelectItem value='PUT'>PUT</SelectItem>
-                  <SelectItem value='DELETE'>DELETE</SelectItem>
-                  <SelectItem value='PATCH'>PATCH</SelectItem>
+                  <SelectItem value="GET">GET</SelectItem>
+                  <SelectItem value="POST">POST</SelectItem>
+                  <SelectItem value="PUT">PUT</SelectItem>
+                  <SelectItem value="DELETE">DELETE</SelectItem>
+                  <SelectItem value="PATCH">PATCH</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Tabbed interface for Body/Headers */}
-            <Tabs defaultValue='body' className='space-y-4'>
-              <TabsList className='grid w-full grid-cols-2'>
-                <TabsTrigger value='body'>Body</TabsTrigger>
-                <TabsTrigger value='headers'>Headers</TabsTrigger>
+            <Tabs defaultValue="body" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="body" className="flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  Body
+                </TabsTrigger>
+                <TabsTrigger
+                  value="headers"
+                  className="flex items-center gap-2"
+                >
+                  <AlignLeft className="h-4 w-4" />
+                  Headers
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value='body' className='space-y-2'>
-                <Label htmlFor='invoke-body'>Request Body (JSON)</Label>
+              <TabsContent value="body" className="space-y-2">
+                <Label htmlFor="invoke-body">Request Body (JSON)</Label>
                 <Textarea
-                  id='invoke-body'
-                  className='min-h-[300px] font-mono text-sm'
+                  id="invoke-body"
+                  className="min-h-[300px] font-mono text-sm"
                   value={invokeBody}
                   onChange={(e) => setInvokeBody(e.target.value)}
                   placeholder='{"key": "value"}'
                 />
               </TabsContent>
 
-              <TabsContent value='headers' className='space-y-2'>
+              <TabsContent value="headers" className="space-y-2">
                 <Label>Custom Headers</Label>
-                <ScrollArea className='max-h-[350px]'>
+                <ScrollArea className="max-h-[350px]">
                   <HeadersEditor
                     headers={invokeHeaders}
                     onChange={setInvokeHeaders}
@@ -1633,7 +1656,7 @@ async function handler(req: Request) {
 
           <DialogFooter>
             <Button
-              variant='outline'
+              variant="outline"
               onClick={() => setShowInvokeDialog(false)}
             >
               Cancel
@@ -1641,12 +1664,12 @@ async function handler(req: Request) {
             <Button onClick={invokeFunction} disabled={invoking}>
               {invoking ? (
                 <>
-                  <RefreshCw className='mr-2 h-4 w-4 animate-spin' />
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Invoking...
                 </>
               ) : (
                 <>
-                  <Play className='mr-2 h-4 w-4' />
+                  <Play className="mr-2 h-4 w-4" />
                   Invoke
                 </>
               )}
@@ -1657,75 +1680,75 @@ async function handler(req: Request) {
 
       {/* Execution Logs Dialog */}
       <Dialog open={showLogsDialog} onOpenChange={setShowLogsDialog}>
-        <DialogContent className='flex max-h-[95vh] !w-[95vw] !max-w-[95vw] flex-col overflow-hidden'>
-          <DialogHeader className='flex-shrink-0'>
+        <DialogContent className="flex max-h-[95vh] !w-[95vw] !max-w-[95vw] flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Execution Logs</DialogTitle>
             <DialogDescription>
               Recent executions for {selectedFunction?.name}
             </DialogDescription>
           </DialogHeader>
 
-          <div className='flex flex-shrink-0 items-center space-x-2'>
+          <div className="flex flex-shrink-0 items-center space-x-2">
             <Switch
-              id='logs-word-wrap'
+              id="logs-word-wrap"
               checked={logsWordWrap}
               onCheckedChange={setLogsWordWrap}
             />
-            <Label htmlFor='logs-word-wrap' className='cursor-pointer'>
+            <Label htmlFor="logs-word-wrap" className="cursor-pointer">
               Word wrap
             </Label>
           </div>
 
-          <div className='min-h-0 flex-1 space-y-3 overflow-auto rounded-lg border p-4'>
+          <div className="min-h-0 flex-1 space-y-3 overflow-auto rounded-lg border p-4">
             {executions.length === 0 ? (
-              <div className='text-muted-foreground py-12 text-center'>
-                <History className='mx-auto mb-4 h-12 w-12 opacity-50' />
+              <div className="text-muted-foreground py-12 text-center">
+                <History className="mx-auto mb-4 h-12 w-12 opacity-50" />
                 <p>No executions yet</p>
               </div>
             ) : (
               executions.map((exec) => (
-                <Card key={exec.id} className='overflow-hidden'>
-                  <CardHeader className='pb-3'>
-                    <div className='flex items-start justify-between'>
-                      <div className='flex-1'>
-                        <div className='mb-1 flex items-center gap-2'>
+                <Card key={exec.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="mb-1 flex items-center gap-2">
                           <Badge
                             variant={
-                              exec.status === 'success'
-                                ? 'default'
-                                : 'destructive'
+                              exec.status === "success"
+                                ? "default"
+                                : "destructive"
                             }
                           >
                             {exec.status}
                           </Badge>
-                          <Badge variant='outline'>{exec.trigger_type}</Badge>
+                          <Badge variant="outline">{exec.trigger_type}</Badge>
                           {exec.status_code && (
-                            <Badge variant='secondary'>
+                            <Badge variant="secondary">
                               {exec.status_code}
                             </Badge>
                           )}
                           {exec.duration_ms && (
-                            <span className='text-muted-foreground text-xs'>
+                            <span className="text-muted-foreground text-xs">
                               {exec.duration_ms}ms
                             </span>
                           )}
                         </div>
-                        <p className='text-muted-foreground text-xs'>
+                        <p className="text-muted-foreground text-xs">
                           {new Date(exec.executed_at).toLocaleString()}
                         </p>
                       </div>
                     </div>
                   </CardHeader>
                   {(exec.logs || exec.error_message || exec.result) && (
-                    <CardContent className='overflow-hidden pt-0'>
+                    <CardContent className="overflow-hidden pt-0">
                       {exec.error_message && (
-                        <div className='mb-2 min-w-0'>
-                          <Label className='text-destructive text-xs'>
+                        <div className="mb-2 min-w-0">
+                          <Label className="text-destructive text-xs">
                             Error:
                           </Label>
-                          <div className='bg-destructive/10 mt-1 max-h-40 max-w-full overflow-auto rounded border'>
+                          <div className="bg-destructive/10 mt-1 max-h-40 max-w-full overflow-auto rounded border">
                             <pre
-                              className={`min-w-0 p-2 text-xs ${logsWordWrap ? 'break-words whitespace-pre-wrap' : 'whitespace-pre'}`}
+                              className={`min-w-0 p-2 text-xs ${logsWordWrap ? "break-words whitespace-pre-wrap" : "whitespace-pre"}`}
                             >
                               {exec.error_message}
                             </pre>
@@ -1733,11 +1756,11 @@ async function handler(req: Request) {
                         </div>
                       )}
                       {exec.logs && (
-                        <div className='mb-2 min-w-0'>
-                          <Label className='text-xs'>Logs:</Label>
-                          <div className='bg-muted mt-1 max-h-40 max-w-full overflow-auto rounded border'>
+                        <div className="mb-2 min-w-0">
+                          <Label className="text-xs">Logs:</Label>
+                          <div className="bg-muted mt-1 max-h-40 max-w-full overflow-auto rounded border">
                             <pre
-                              className={`min-w-0 p-2 text-xs ${logsWordWrap ? 'break-words whitespace-pre-wrap' : 'whitespace-pre'}`}
+                              className={`min-w-0 p-2 text-xs ${logsWordWrap ? "break-words whitespace-pre-wrap" : "whitespace-pre"}`}
                             >
                               {exec.logs}
                             </pre>
@@ -1745,11 +1768,11 @@ async function handler(req: Request) {
                         </div>
                       )}
                       {exec.result && !exec.error_message && (
-                        <div className='min-w-0'>
-                          <Label className='text-xs'>Result:</Label>
-                          <div className='bg-muted mt-1 max-h-40 max-w-full overflow-auto rounded border'>
+                        <div className="min-w-0">
+                          <Label className="text-xs">Result:</Label>
+                          <div className="bg-muted mt-1 max-h-40 max-w-full overflow-auto rounded border">
                             <pre
-                              className={`min-w-0 p-2 text-xs ${logsWordWrap ? 'break-words whitespace-pre-wrap' : 'whitespace-pre'}`}
+                              className={`min-w-0 p-2 text-xs ${logsWordWrap ? "break-words whitespace-pre-wrap" : "whitespace-pre"}`}
                             >
                               {exec.result}
                             </pre>
@@ -1767,39 +1790,39 @@ async function handler(req: Request) {
 
       {/* Result Dialog */}
       <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
-        <DialogContent className='max-h-[95vh] w-[95vw] max-w-[95vw]'>
+        <DialogContent className="max-h-[95vh] w-[95vw] max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>
-              {invokeResult?.success ? 'Function Result' : 'Function Error'}
+              {invokeResult?.success ? "Function Result" : "Function Error"}
             </DialogTitle>
             <DialogDescription>
               {invokeResult?.success
-                ? 'Function executed successfully'
-                : 'Function execution failed'}
+                ? "Function executed successfully"
+                : "Function execution failed"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className='space-y-4'>
-            <div className='flex items-center space-x-2'>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
               <Switch
-                id='word-wrap'
+                id="word-wrap"
                 checked={wordWrap}
                 onCheckedChange={setWordWrap}
               />
-              <Label htmlFor='word-wrap' className='cursor-pointer'>
+              <Label htmlFor="word-wrap" className="cursor-pointer">
                 Word wrap
               </Label>
             </div>
 
             {invokeResult?.success ? (
-              <div className='w-full overflow-hidden'>
+              <div className="w-full overflow-hidden">
                 <Label>Response</Label>
-                <div className='bg-muted mt-2 h-[70vh] overflow-auto rounded-lg border'>
+                <div className="bg-muted mt-2 h-[70vh] overflow-auto rounded-lg border">
                   <pre
                     className={`p-4 text-xs ${
                       wordWrap
-                        ? 'break-words whitespace-pre-wrap'
-                        : 'whitespace-pre'
+                        ? "break-words whitespace-pre-wrap"
+                        : "whitespace-pre"
                     }`}
                   >
                     {invokeResult.data}
@@ -1807,14 +1830,14 @@ async function handler(req: Request) {
                 </div>
               </div>
             ) : (
-              <div className='w-full overflow-hidden'>
+              <div className="w-full overflow-hidden">
                 <Label>Error</Label>
-                <div className='bg-destructive/10 mt-2 h-[70vh] overflow-auto rounded-lg border'>
+                <div className="bg-destructive/10 mt-2 h-[70vh] overflow-auto rounded-lg border">
                   <pre
                     className={`text-destructive p-4 text-xs ${
                       wordWrap
-                        ? 'break-words whitespace-pre-wrap'
-                        : 'whitespace-pre'
+                        ? "break-words whitespace-pre-wrap"
+                        : "whitespace-pre"
                     }`}
                   >
                     {invokeResult?.error}
@@ -1826,16 +1849,16 @@ async function handler(req: Request) {
 
           <DialogFooter>
             <Button
-              variant='outline'
+              variant="outline"
               onClick={() => {
                 if (invokeResult?.success) {
-                  navigator.clipboard.writeText(invokeResult.data)
-                  toast.success('Copied to clipboard')
+                  navigator.clipboard.writeText(invokeResult.data);
+                  toast.success("Copied to clipboard");
                 }
               }}
               disabled={!invokeResult?.success}
             >
-              <Copy className='mr-2 h-4 w-4' />
+              <Copy className="mr-2 h-4 w-4" />
               Copy
             </Button>
             <Button onClick={() => setShowResultDialog(false)}>Close</Button>
@@ -1848,29 +1871,29 @@ async function handler(req: Request) {
         open={showExecutionDetailDialog}
         onOpenChange={setShowExecutionDetailDialog}
       >
-        <DialogContent className='flex max-h-[90vh] w-[90vw] max-w-[1600px] flex-col overflow-hidden sm:max-w-none'>
+        <DialogContent className="flex max-h-[90vh] w-[90vw] max-w-[1600px] flex-col overflow-hidden sm:max-w-none">
           <DialogHeader>
             <DialogTitle>Execution Details</DialogTitle>
             <DialogDescription>
-              {selectedExecution?.function_name || 'Unknown Function'} -{' '}
+              {selectedExecution?.function_name || "Unknown Function"} -{" "}
               {selectedExecution?.id?.slice(0, 8)}
             </DialogDescription>
           </DialogHeader>
 
           {selectedExecution && (
-            <div className='flex flex-1 flex-col gap-4 overflow-y-auto pr-2'>
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-2">
               {/* Status and Metadata */}
-              <div className='grid grid-cols-2 gap-4 md:grid-cols-4'>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <div>
-                  <Label className='text-muted-foreground text-xs'>
+                  <Label className="text-muted-foreground text-xs">
                     Status
                   </Label>
-                  <div className='mt-1'>
+                  <div className="mt-1">
                     <Badge
                       variant={
-                        selectedExecution.status === 'success'
-                          ? 'secondary'
-                          : 'destructive'
+                        selectedExecution.status === "success"
+                          ? "secondary"
+                          : "destructive"
                       }
                     >
                       {selectedExecution.status}
@@ -1878,52 +1901,52 @@ async function handler(req: Request) {
                   </div>
                 </div>
                 <div>
-                  <Label className='text-muted-foreground text-xs'>
+                  <Label className="text-muted-foreground text-xs">
                     Status Code
                   </Label>
-                  <p className='font-mono text-sm'>
-                    {selectedExecution.status_code ?? '-'}
+                  <p className="font-mono text-sm">
+                    {selectedExecution.status_code ?? "-"}
                   </p>
                 </div>
                 <div>
-                  <Label className='text-muted-foreground text-xs'>
+                  <Label className="text-muted-foreground text-xs">
                     Duration
                   </Label>
-                  <p className='font-mono text-sm'>
+                  <p className="font-mono text-sm">
                     {selectedExecution.duration_ms
                       ? `${selectedExecution.duration_ms}ms`
-                      : '-'}
+                      : "-"}
                   </p>
                 </div>
                 <div>
-                  <Label className='text-muted-foreground text-xs'>
+                  <Label className="text-muted-foreground text-xs">
                     Trigger
                   </Label>
-                  <p className='font-mono text-sm'>
+                  <p className="font-mono text-sm">
                     {selectedExecution.trigger_type}
                   </p>
                 </div>
               </div>
 
-              <div className='grid grid-cols-2 gap-4'>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className='text-muted-foreground text-xs'>
+                  <Label className="text-muted-foreground text-xs">
                     Started
                   </Label>
-                  <p className='font-mono text-sm'>
+                  <p className="font-mono text-sm">
                     {new Date(selectedExecution.executed_at).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <Label className='text-muted-foreground text-xs'>
+                  <Label className="text-muted-foreground text-xs">
                     Completed
                   </Label>
-                  <p className='font-mono text-sm'>
+                  <p className="font-mono text-sm">
                     {selectedExecution.completed_at
                       ? new Date(
-                          selectedExecution.completed_at
+                          selectedExecution.completed_at,
                         ).toLocaleString()
-                      : '-'}
+                      : "-"}
                   </p>
                 </div>
               </div>
@@ -1931,22 +1954,22 @@ async function handler(req: Request) {
               {/* Result */}
               {selectedExecution.result && (
                 <div>
-                  <div className='mb-2 flex items-center justify-between'>
+                  <div className="mb-2 flex items-center justify-between">
                     <Label>Result</Label>
                     <Button
-                      variant='ghost'
-                      size='sm'
+                      variant="ghost"
+                      size="sm"
                       onClick={() =>
                         copyToClipboard(
-                          selectedExecution.result || '',
-                          'Result'
+                          selectedExecution.result || "",
+                          "Result",
                         )
                       }
                     >
-                      <Copy className='h-3 w-3' />
+                      <Copy className="h-3 w-3" />
                     </Button>
                   </div>
-                  <pre className='bg-muted max-h-32 overflow-auto rounded-md p-3 text-xs'>
+                  <pre className="bg-muted max-h-32 overflow-auto rounded-md p-3 text-xs">
                     {selectedExecution.result}
                   </pre>
                 </div>
@@ -1955,91 +1978,91 @@ async function handler(req: Request) {
               {/* Error */}
               {selectedExecution.error_message && (
                 <div>
-                  <Label className='text-destructive'>Error</Label>
-                  <pre className='bg-destructive/10 text-destructive mt-2 max-h-32 overflow-auto rounded-md p-3 text-xs'>
+                  <Label className="text-destructive">Error</Label>
+                  <pre className="bg-destructive/10 text-destructive mt-2 max-h-32 overflow-auto rounded-md p-3 text-xs">
                     {selectedExecution.error_message}
                   </pre>
                 </div>
               )}
 
               {/* Logs Section */}
-              <div className='min-h-0 flex-1'>
-                <div className='mb-2 flex items-center justify-between'>
+              <div className="min-h-0 flex-1">
+                <div className="mb-2 flex items-center justify-between">
                   <Label>Logs</Label>
-                  <div className='flex items-center gap-2'>
+                  <div className="flex items-center gap-2">
                     <Select
                       value={logLevelFilter}
                       onValueChange={setLogLevelFilter}
                     >
-                      <SelectTrigger className='h-8 w-[120px] text-xs'>
-                        <SelectValue placeholder='Filter level' />
+                      <SelectTrigger className="h-8 w-[120px] text-xs">
+                        <SelectValue placeholder="Filter level" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='all'>All Levels</SelectItem>
-                        <SelectItem value='debug'>Debug</SelectItem>
-                        <SelectItem value='info'>Info</SelectItem>
-                        <SelectItem value='warn'>Warn</SelectItem>
-                        <SelectItem value='error'>Error</SelectItem>
+                        <SelectItem value="all">All Levels</SelectItem>
+                        <SelectItem value="debug">Debug</SelectItem>
+                        <SelectItem value="info">Info</SelectItem>
+                        <SelectItem value="warn">Warn</SelectItem>
+                        <SelectItem value="error">Error</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
-                      variant='ghost'
-                      size='sm'
+                      variant="ghost"
+                      size="sm"
                       onClick={() => {
                         const logsText =
                           filteredLogs.length > 0
                             ? filteredLogs
                                 .map(
                                   (l) =>
-                                    `[${l.level.toUpperCase()}] ${l.message}`
+                                    `[${l.level.toUpperCase()}] ${l.message}`,
                                 )
-                                .join('\n')
-                            : selectedExecution.logs || ''
-                        copyToClipboard(logsText, 'Logs')
+                                .join("\n")
+                            : selectedExecution.logs || "";
+                        copyToClipboard(logsText, "Logs");
                       }}
                     >
-                      <Copy className='h-3 w-3' />
+                      <Copy className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
 
                 {executionLogsLoading ? (
-                  <div className='flex h-48 items-center justify-center'>
-                    <Loader2 className='text-muted-foreground h-6 w-6 animate-spin' />
+                  <div className="flex h-48 items-center justify-center">
+                    <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
                   </div>
                 ) : filteredLogs.length > 0 ? (
-                  <ScrollArea className='bg-muted h-64 rounded-md'>
-                    <div className='space-y-1 p-3'>
+                  <ScrollArea className="bg-muted h-64 rounded-md">
+                    <div className="space-y-1 p-3">
                       {filteredLogs.map((log) => (
                         <div
                           key={log.id}
-                          className='flex gap-2 font-mono text-xs'
+                          className="flex gap-2 font-mono text-xs"
                         >
                           <Badge
                             variant={
-                              log.level === 'error'
-                                ? 'destructive'
-                                : log.level === 'warn'
-                                  ? 'secondary'
-                                  : log.level === 'debug'
-                                    ? 'outline'
-                                    : 'default'
+                              log.level === "error"
+                                ? "destructive"
+                                : log.level === "warn"
+                                  ? "secondary"
+                                  : log.level === "debug"
+                                    ? "outline"
+                                    : "default"
                             }
-                            className='h-4 shrink-0 px-1 py-0 text-[10px]'
+                            className="h-4 shrink-0 px-1 py-0 text-[10px]"
                           >
                             {log.level.toUpperCase()}
                           </Badge>
-                          <span className='break-all'>{log.message}</span>
+                          <span className="break-all">{log.message}</span>
                         </div>
                       ))}
                     </div>
                   </ScrollArea>
                 ) : selectedExecution.logs ? (
-                  <pre className='bg-muted h-64 overflow-auto rounded-md p-3 text-xs'>
+                  <pre className="bg-muted h-64 overflow-auto rounded-md p-3 text-xs">
                     {selectedExecution.logs}
                   </pre>
                 ) : (
-                  <div className='text-muted-foreground flex h-48 items-center justify-center text-sm'>
+                  <div className="text-muted-foreground flex h-48 items-center justify-center text-sm">
                     No logs available
                   </div>
                 )}
@@ -2047,7 +2070,7 @@ async function handler(req: Request) {
             </div>
           )}
 
-          <DialogFooter className='mt-4'>
+          <DialogFooter className="mt-4">
             <Button onClick={() => setShowExecutionDetailDialog(false)}>
               Close
             </Button>
@@ -2055,5 +2078,5 @@ async function handler(req: Request) {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
