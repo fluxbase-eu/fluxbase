@@ -107,13 +107,6 @@ func NewManager(ctx context.Context) *Manager {
 	return NewManagerWithConfig(ctx, ManagerConfig{}) // All defaults (unlimited)
 }
 
-// NewManagerWithLimit creates a new connection manager with a connection limit
-//
-// Deprecated: Use NewManagerWithConfig for more control
-func NewManagerWithLimit(ctx context.Context, maxConnections int) *Manager {
-	return NewManagerWithConfig(ctx, ManagerConfig{MaxConnections: maxConnections})
-}
-
 // NewManagerWithConfig creates a new connection manager with full configuration
 func NewManagerWithConfig(ctx context.Context, config ManagerConfig) *Manager {
 	ctx, cancel := context.WithCancel(ctx)

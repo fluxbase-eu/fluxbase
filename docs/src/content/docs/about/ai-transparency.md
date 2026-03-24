@@ -58,20 +58,25 @@ Each route declares what it needs (auth, scopes, roles) and middleware is auto-i
 
 ### Declarative Schema with pgschema
 
-Instead of numbered migration files that are hard to follow, we use [`pgschema`](https://www.pgschema.com/) to manage our internal schema declaratively. There's a single SQL file that shows the **desired state** of the database:
+Instead of numbered migration files that are hard to follow, we use [`pgschema`](https://www.pgschema.com/) to manage our internal schema declaratively. Each schema has its own SQL file showing the **desired state**:
 
 ```text
-internal/database/schema/fluxbase.sql
+internal/database/schema/schemas/
+├── auth.sql       # Authentication tables
+├── storage.sql    # File storage
+├── jobs.sql       # Background jobs
+├── platform.sql   # Multi-tenancy
+└── ...            # Other schemas
 ```
 
-Anyone can read this file and immediately understand:
+Anyone can read these files and immediately understand:
 
 - Which tables exist
 - How they're structured
 - What indexes and constraints are in place
 - What comments document each object
 
-No hunting through migration history to piece together the current state. The schema file IS the source of truth, and `pgschema` handles the diffing and applying changes.
+No hunting through migration history to piece together the current state. The schema files ARE the source of truth, and `pgschema` handles the diffing and applying changes.
 
 ## What This Means for You
 

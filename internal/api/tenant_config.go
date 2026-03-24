@@ -130,7 +130,10 @@ func GetStorageConfig(c fiber.Ctx, baseConfig *config.Config) *config.StorageCon
 	if tc, ok := c.Locals("tenant_config").(*config.Config); ok && tc != nil {
 		return &tc.Storage
 	}
-	return &baseConfig.Storage
+	if baseConfig != nil {
+		return &baseConfig.Storage
+	}
+	return nil
 }
 
 // GetAuthConfig returns the auth config to use for the current request.

@@ -167,9 +167,7 @@ test/e2e/                # End-to-end tests
 - `internal/api/tenant_handler.go` - Tenant CRUD HTTP handlers
 - `internal/api/service_key_handler.go` - Service key management API
 - `internal/middleware/tenant.go` - Tenant context extraction middleware
-- `internal/database/migrations/097_tenants.up.sql` - Platform schema and tenants table
-- `internal/database/migrations/105_unified_service_keys.up.sql` - Service keys table
-- `internal/database/migrations/107_tenant_admin_assignments.up.sql` - Admin assignment table
+- `internal/database/schema/schemas/platform.sql` - Platform schema with tenants table (declarative)
 
 ## Common Commands
 
@@ -179,9 +177,8 @@ make dev              # Start backend + admin UI dev servers
 make build            # Production build with embedded admin
 
 # Database Operations
-make migrate-up       # Run database migrations
-make migrate-down     # Rollback last migration
 make db-reset         # Reset database (preserve user data)
+make db-reset-full    # Full reset - bootstrap runs on next server start
 make db-reset-full    # Full reset (destroys all data)
 
 # Testing
@@ -336,15 +333,38 @@ Git pre-commit hooks automatically run:
 
 ## Migrations
 
-SQL files in `internal/database/migrations/` numbered sequentially (001-089+).
-Format: `NNN_description.up.sql` / `NNN_description.down.sql`
+Fluxbase uses a **hybrid migration system**:
 
-**Recent Migrations (082-089):**
+### Internal Schema (Declarative)
 
-- Knowledge base ownership with visibility control (private, shared, public)
-- User-scoped RLS policies for knowledge bases
-- Execution log migration to centralized logging
-- TimescaleDB hypertable with compression (7-day) and retention (90-day) policies
+Internal Fluxbase tables (auth, storage, functions, jobs, etc.) are managed declaratively:
+
+- **Bootstrap:** `internal/database/bootstrap/bootstrap.sql` - Creates schemas, extensions, roles, default privileges
+- **Schema files:** `internal/database/schema/schemas/*.sql` - Declarative SQL files for each schema
+- **Applied automatically:** Server applies bootstrap + declarative schema on startup
+
+### User Schema (Choice: Imperative or Declarative)
+
+Users can choose their preferred approach:
+
+**Option 1: Imperative Migrations**
+- SQL files in `internal/database/migrations/` numbered sequentially (001-113+)
+- Format: `NNN_description.up.sql` / `NNN_description.down.sql`
+- Commands: `make migrate-up`, `make migrate-down`, `make migrate-create`
+
+**Option 2: Declarative Schema**
+- Users can manage their `public` schema declaratively using pgschema
+- Schema files compared to actual database state
+- Changes applied as diffs
+
+### Common Commands
+
+```bash
+make db-reset         # Reset database (preserve user data)
+make db-reset-full    # Full reset - bootstrap runs on next server start
+make migrate-up       # Apply user imperative migrations
+make migrate-down     # Rollback last user migration
+```
 
 ## Testing
 

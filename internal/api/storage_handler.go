@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -128,6 +129,9 @@ func NewStorageHandlerWithCache(storageMgr *storage.Manager, db *database.Connec
 // getService returns the storage service for the current request context.
 // It uses the tenant-specific configuration if available, otherwise returns the base service.
 func (h *StorageHandler) getService(c fiber.Ctx) (*storage.Service, error) {
+	if h.storageManager == nil {
+		return nil, fmt.Errorf("storage manager not initialized")
+	}
 	cfg := GetStorageConfig(c, h.baseConfig)
 	return h.storageManager.GetService(cfg)
 }

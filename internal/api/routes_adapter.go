@@ -749,6 +749,14 @@ func (s *Server) buildAdminRouteDeps() *routes.AdminDeps {
 		UpdateTenantSettings: s.tenantSettingsHandler.UpdateTenantSettings,
 		DeleteTenantSetting:  s.tenantSettingsHandler.DeleteTenantSetting,
 		GetTenantSetting:     s.tenantSettingsHandler.GetTenantSetting,
+
+		// Internal Schema (Declarative)
+		DumpInternalSchema:      s.internalSchemaHandler.DumpSchema,
+		PlanInternalSchema:      s.internalSchemaHandler.PlanSchema,
+		ApplyInternalSchema:     s.internalSchemaHandler.ApplySchema,
+		ValidateInternalSchema:  s.internalSchemaHandler.ValidateSchema,
+		GetInternalSchemaStatus: s.internalSchemaHandler.GetSchemaStatus,
+		MigrateInternalSchema:   s.internalSchemaHandler.MigrateSchema,
 	}
 }
 

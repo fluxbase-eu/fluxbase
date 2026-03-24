@@ -106,9 +106,25 @@ func getTenantPool(c fiber.Ctx, db *pgxpool.Pool) *pgxpool.Pool {
 	return pool
 }
 
+// errDBNotInitialized is returned when database connection is not available
+var errDBNotInitialized = fmt.Errorf("database connection not initialized")
+
+// checkDB checks if database connection is available
+func (h *ServiceKeyHandler) checkDB(c fiber.Ctx) (*pgxpool.Pool, error) {
+	if h.db == nil {
+		return nil, errDBNotInitialized
+	}
+	return getTenantPool(c, h.db), nil
+}
+
 // ListServiceKeys lists all service keys
 func (h *ServiceKeyHandler) ListServiceKeys(c fiber.Ctx) error {
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	rows, err := pool.Query(c.RequestCtx(), `
 		SELECT id, name, description, key_prefix, COALESCE(key_type, 'service'), scopes, allowed_namespaces, enabled,
@@ -158,7 +174,12 @@ func (h *ServiceKeyHandler) GetServiceKey(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	var key ServiceKey
 	err = pool.QueryRow(c.RequestCtx(), `
@@ -207,7 +228,12 @@ func (h *ServiceKeyHandler) CreateServiceKey(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	keyBytes := make([]byte, 32)
 	if _, err := rand.Read(keyBytes); err != nil {
@@ -295,7 +321,21 @@ func (h *ServiceKeyHandler) UpdateServiceKey(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	// Validate that at least one field is provided for update
+	if req.Name == nil && req.Description == nil && req.Scopes == nil &&
+		req.AllowedNamespaces == nil && req.Enabled == nil &&
+		req.RateLimitPerMinute == nil && req.RateLimitPerHour == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "No fields to update",
+		})
+	}
+
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	result, err := pool.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys
@@ -335,7 +375,12 @@ func (h *ServiceKeyHandler) DeleteServiceKey(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	result, err := pool.Exec(c.RequestCtx(), `DELETE FROM auth.service_keys WHERE id = $1`, id)
 	if err != nil {
@@ -366,7 +411,12 @@ func (h *ServiceKeyHandler) DisableServiceKey(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	result, err := pool.Exec(c.RequestCtx(), `UPDATE auth.service_keys SET enabled = false WHERE id = $1`, id)
 	if err != nil {
@@ -397,7 +447,12 @@ func (h *ServiceKeyHandler) EnableServiceKey(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	result, err := pool.Exec(c.RequestCtx(), `UPDATE auth.service_keys SET enabled = true WHERE id = $1`, id)
 	if err != nil {
@@ -431,7 +486,12 @@ func (h *ServiceKeyHandler) RevokeServiceKey(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(uuid.UUID)
 	reason := c.FormValue("reason", "")
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	result, err := pool.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys
@@ -478,7 +538,12 @@ func (h *ServiceKeyHandler) DeprecateServiceKey(c fiber.Ctx) error {
 
 	gracePeriodEndsAt := time.Now().Add(time.Duration(gracePeriodHours) * time.Hour)
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	result, err := pool.Exec(c.RequestCtx(), `
 		UPDATE auth.service_keys
@@ -517,7 +582,12 @@ func (h *ServiceKeyHandler) RotateServiceKey(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	var oldKey ServiceKey
 	err = pool.QueryRow(c.RequestCtx(), `
@@ -631,7 +701,12 @@ func (h *ServiceKeyHandler) GetRevocationHistory(c fiber.Ctx) error {
 		})
 	}
 
-	pool := getTenantPool(c, h.db)
+	pool, err := h.checkDB(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database connection not initialized",
+		})
+	}
 
 	var key ServiceKey
 	err = pool.QueryRow(c.RequestCtx(), `

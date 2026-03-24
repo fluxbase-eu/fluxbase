@@ -12,19 +12,19 @@ import (
 // CreateBucket handles bucket creation
 // POST /api/v1/storage/buckets/:bucket
 func (h *StorageHandler) CreateBucket(c fiber.Ctx) error {
-	// Get tenant-specific storage service
-	svc, err := h.getService(c)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to get storage service",
-		})
-	}
-
 	bucket := c.Params("bucket")
 
 	if bucket == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "bucket name is required",
+		})
+	}
+
+	// Get tenant-specific storage service
+	svc, err := h.getService(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to get storage service",
 		})
 	}
 
@@ -253,19 +253,19 @@ func (h *StorageHandler) UpdateBucketSettings(c fiber.Ctx) error {
 // DeleteBucket handles bucket deletion
 // DELETE /api/v1/storage/buckets/:bucket
 func (h *StorageHandler) DeleteBucket(c fiber.Ctx) error {
-	// Get tenant-specific storage service
-	svc, err := h.getService(c)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to get storage service",
-		})
-	}
-
 	bucket := c.Params("bucket")
 
 	if bucket == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "bucket name is required",
+		})
+	}
+
+	// Get tenant-specific storage service
+	svc, err := h.getService(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to get storage service",
 		})
 	}
 

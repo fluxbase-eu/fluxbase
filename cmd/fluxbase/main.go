@@ -21,7 +21,9 @@ import (
 	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/database"
+	"github.com/nimbleflux/fluxbase/internal/database/bootstrap"
 	"github.com/nimbleflux/fluxbase/internal/keys"
+	"github.com/nimbleflux/fluxbase/internal/migrations"
 	"github.com/nimbleflux/fluxbase/internal/storage"
 )
 
@@ -157,17 +159,84 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Run migrations
-	log.Info().Msg("Running database migrations...")
-	if err := db.Migrate(); err != nil {
+	// Run bootstrap (extensions, schemas, roles, default privileges)
+	// This handles operations that pgschema cannot manage
+	log.Info().Msg("Running database bootstrap...")
+	bootstrapConfig := bootstrap.Config{
+		Host:          cfg.Database.Host,
+		Port:          cfg.Database.Port,
+		Database:      cfg.Database.Database,
+		User:          cfg.Database.User,
+		Password:      cfg.Database.Password,
+		AdminUser:     cfg.Database.AdminUser,
+		AdminPassword: cfg.Database.AdminPassword,
+	}
+	bootstrapSvc := bootstrap.NewServiceWithConfig(db.Pool(), bootstrapConfig)
+	if err := bootstrapSvc.EnsureBootstrap(context.Background()); err != nil {
 		if cleanupVips != nil {
 			cleanupVips()
 		}
-		db.Close() // Explicitly close since defer won't run with os.Exit
-		log.Error().Err(err).Msg("Failed to run migrations")
-		os.Exit(1) //nolint:gocritic // cleanup handled explicitly above
+		db.Close()
+		log.Error().Err(err).Msg("Failed to run bootstrap")
+		os.Exit(1)
 	}
-	log.Info().Msg("Database migrations completed successfully")
+	log.Info().Msg("Database bootstrap completed successfully")
+
+	// Apply declarative schema (tables, indexes, functions, policies)
+	// This uses pgschema to apply the internal Fluxbase schema
+	log.Info().Msg("Applying declarative schema...")
+	declarativeConfig := migrations.DeclarativeConfig{
+		SchemaDir:        "internal/database/schema/schemas",
+		Schemas:          migrations.DefaultFluxbaseSchemas,
+		AllowDestructive: false,
+		LockTimeout:      30,
+	}
+	declarativeSvc := migrations.NewDeclarativeService(
+		"pgschema",
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.AdminUser,
+		cfg.Database.AdminPassword,
+		cfg.Database.Database,
+		declarativeConfig,
+	)
+	declarativeSvc.SetPool(db.Pool())
+
+	// Detect migration state for smooth transition from imperative to declarative
+	validator := migrations.NewValidator(declarativeSvc, db.Pool())
+	migrationState, err := validator.DetectMigrationState(context.Background())
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to detect migration state, continuing with startup")
+	}
+
+	// Determine source based on migration state
+	// - "fresh_install": New installation with no prior migrations
+	// - "transitioned": Existing installation with imperative migrations
+	// - "schema_apply": Default when state is unknown
+	source := "fresh_install"
+	if migrationState != nil && migrationState.HasImperativeMigrations && !migrationState.HasDeclarativeState {
+		// Existing installation detected - log and proceed with declarative
+		// Note: Dirty migrations are not blocking - declarative system compares
+		// actual DB state to desired state regardless of how it got there
+		log.Info().
+			Int64("last_migration_version", migrationState.LastAppliedVersion).
+			Bool("had_dirty_migrations", migrationState.HasDirtyMigrations).
+			Msg("Detected existing installation with imperative migrations - proceeding with declarative schema")
+		source = "transitioned"
+	} else if migrationState != nil && migrationState.HasDeclarativeState {
+		// Already using declarative system
+		source = "schema_apply"
+	}
+
+	if err := declarativeSvc.ApplyDeclarativeWithSource(context.Background(), source); err != nil {
+		if cleanupVips != nil {
+			cleanupVips()
+		}
+		db.Close()
+		log.Error().Err(err).Msg("Failed to apply declarative schema")
+		os.Exit(1)
+	}
+	log.Info().Str("source", source).Msg("Declarative schema applied successfully")
 
 	// Recreate the pool after migrations to clear any stale prepared statement cache
 	// Migrations can invalidate cached statement plans, causing panics in pgx

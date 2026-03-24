@@ -125,6 +125,9 @@ type Server struct {
 	customMCPHandler        *CustomMCPHandler
 	internalAIHandler       *InternalAIHandler
 
+	// Internal schema management (declarative)
+	internalSchemaHandler *InternalSchemaHandler
+
 	// Database branching components
 	branchManager   *branching.Manager
 	branchRouter    *branching.Router
@@ -713,6 +716,11 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			Msg("Internal AI handler initialized for MCP tools/functions/jobs")
 	}
 
+	// Create internal schema handler for declarative schema management
+	internalSchemaHandler := NewInternalSchemaHandler()
+	internalSchemaHandler.Initialize(cfg, db)
+	log.Info().Msg("Internal schema handler initialized")
+
 	// Create RPC components (only if RPC is enabled)
 	var rpcHandler *rpc.Handler
 	var rpcScheduler *rpc.Scheduler
@@ -848,6 +856,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		mcpHandler:              mcp.NewHandler(&cfg.MCP, db),
 		mcpOAuthHandler:         NewMCPOAuthHandler(db.Pool(), &cfg.MCP, authService, cfg.BaseURL, cfg.GetPublicBaseURL()),
 		internalAIHandler:       internalAIHandler,
+		internalSchemaHandler:   internalSchemaHandler,
 		metrics:                 observability.NewMetrics(),
 		startTime:               time.Now(),
 		// Server-owned dependencies

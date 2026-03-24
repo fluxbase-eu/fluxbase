@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
   Plus,
@@ -12,8 +12,8 @@ import {
   Lock,
   Globe,
   X,
-} from 'lucide-react'
-import { toast } from 'sonner'
+} from "lucide-react";
+import { toast } from "sonner";
 import {
   knowledgeBasesApi,
   userKnowledgeBasesApi,
@@ -25,7 +25,7 @@ import {
   type KBPermission,
   type EnrichedUser,
   type AIProvider,
-} from '@/lib/api'
+} from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,16 +35,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -53,102 +53,102 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
+} from "@/components/ui/tooltip";
 
-export const Route = createFileRoute('/_authenticated/knowledge-bases/')({
+export const Route = createFileRoute("/_authenticated/knowledge-bases/")({
   component: KnowledgeBasesPage,
-})
+});
 
 function KnowledgeBasesPage() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseSummary[]>(
-    []
-  )
-  const [loading, setLoading] = useState(true)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [users, setUsers] = useState<EnrichedUser[]>([])
-  const [usersLoading, setUsersLoading] = useState(false)
+    [],
+  );
+  const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [users, setUsers] = useState<EnrichedUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [newKB, setNewKB] = useState<CreateKnowledgeBaseRequest>({
-    name: '',
-    description: '',
-    visibility: 'private',
-    embedding_model: '',
+    name: "",
+    description: "",
+    visibility: "private",
+    embedding_model: "",
     chunk_size: 512,
     chunk_overlap: 50,
-    chunk_strategy: 'recursive',
+    chunk_strategy: "recursive",
     initial_permissions: [],
-  })
+  });
   const [newPermission, setNewPermission] = useState<{
-    user_id: string
-    permission: KBPermission
-  }>({ user_id: '', permission: 'viewer' })
-  const [providers, setProviders] = useState<AIProvider[]>([])
-  const [providersLoading, setProvidersLoading] = useState(false)
-  const usersLoadedRef = useRef(false)
+    user_id: string;
+    permission: KBPermission;
+  }>({ user_id: "", permission: "viewer" });
+  const [providers, setProviders] = useState<AIProvider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const usersLoadedRef = useRef(false);
 
   const fetchKnowledgeBases = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await knowledgeBasesApi.list()
-      setKnowledgeBases(data || [])
+      const data = await knowledgeBasesApi.list();
+      setKnowledgeBases(data || []);
     } catch {
-      toast.error('Failed to fetch knowledge bases')
+      toast.error("Failed to fetch knowledge bases");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchUsers = useCallback(async () => {
-    if (usersLoadedRef.current) return // Already loaded
-    setUsersLoading(true)
+    if (usersLoadedRef.current) return; // Already loaded
+    setUsersLoading(true);
     try {
-      const { users: data } = await userManagementApi.listUsers('app')
-      setUsers(data || [])
-      usersLoadedRef.current = true
+      const { users: data } = await userManagementApi.listUsers("app");
+      setUsers(data || []);
+      usersLoadedRef.current = true;
     } catch {
-      toast.error('Failed to fetch users')
+      toast.error("Failed to fetch users");
     } finally {
-      setUsersLoading(false)
+      setUsersLoading(false);
     }
-  }, [])
+  }, []);
 
   const fetchProviders = useCallback(async () => {
-    setProvidersLoading(true)
+    setProvidersLoading(true);
     try {
-      const data = await aiProvidersApi.list()
+      const data = await aiProvidersApi.list();
       // Filter to only enabled providers
-      const enabledProviders = (data || []).filter((p) => p.enabled)
-      setProviders(enabledProviders)
+      const enabledProviders = (data || []).filter((p) => p.enabled);
+      setProviders(enabledProviders);
     } catch {
-      toast.error('Failed to fetch AI providers')
+      toast.error("Failed to fetch AI providers");
     } finally {
-      setProvidersLoading(false)
+      setProvidersLoading(false);
     }
-  }, [])
+  }, []);
 
   const addPermission = () => {
     if (!newPermission.user_id) {
-      toast.error('Please select a user')
-      return
+      toast.error("Please select a user");
+      return;
     }
     if (
       newKB.initial_permissions?.some(
-        (p) => p.user_id === newPermission.user_id
+        (p) => p.user_id === newPermission.user_id,
       )
     ) {
-      toast.error('User already has permission')
-      return
+      toast.error("User already has permission");
+      return;
     }
     setNewKB({
       ...newKB,
@@ -159,142 +159,142 @@ function KnowledgeBasesPage() {
           permission: newPermission.permission,
         },
       ],
-    })
-    setNewPermission({ user_id: '', permission: 'viewer' })
-  }
+    });
+    setNewPermission({ user_id: "", permission: "viewer" });
+  };
 
   const removePermission = (userId: string) => {
     setNewKB({
       ...newKB,
       initial_permissions:
         newKB.initial_permissions?.filter((p) => p.user_id !== userId) || [],
-    })
-  }
+    });
+  };
 
   const handleCreate = async () => {
     if (!newKB.name.trim()) {
-      toast.error('Name is required')
-      return
+      toast.error("Name is required");
+      return;
     }
 
     try {
-      await userKnowledgeBasesApi.create(newKB)
-      toast.success('Knowledge base created')
-      setCreateDialogOpen(false)
+      await userKnowledgeBasesApi.create(newKB);
+      toast.success("Knowledge base created");
+      setCreateDialogOpen(false);
       setNewKB({
-        name: '',
-        description: '',
-        visibility: 'private',
-        embedding_model: '',
+        name: "",
+        description: "",
+        visibility: "private",
+        embedding_model: "",
         chunk_size: 512,
         chunk_overlap: 50,
-        chunk_strategy: 'recursive',
+        chunk_strategy: "recursive",
         initial_permissions: [],
-      })
-      setNewPermission({ user_id: '', permission: 'viewer' })
-      await fetchKnowledgeBases()
+      });
+      setNewPermission({ user_id: "", permission: "viewer" });
+      await fetchKnowledgeBases();
     } catch (error) {
       const message =
         (error as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || 'Failed to create knowledge base'
-      toast.error(message)
+          ?.error || "Failed to create knowledge base";
+      toast.error(message);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
     try {
-      await knowledgeBasesApi.delete(id)
-      toast.success('Knowledge base deleted')
-      await fetchKnowledgeBases()
+      await knowledgeBasesApi.delete(id);
+      toast.success("Knowledge base deleted");
+      await fetchKnowledgeBases();
     } catch {
-      toast.error('Failed to delete knowledge base')
+      toast.error("Failed to delete knowledge base");
     } finally {
-      setDeleteConfirm(null)
+      setDeleteConfirm(null);
     }
-  }
+  };
 
   const toggleEnabled = async (kb: KnowledgeBaseSummary) => {
     try {
-      await knowledgeBasesApi.update(kb.id, { enabled: !kb.enabled })
-      toast.success(`Knowledge base ${kb.enabled ? 'disabled' : 'enabled'}`)
-      await fetchKnowledgeBases()
+      await knowledgeBasesApi.update(kb.id, { enabled: !kb.enabled });
+      toast.success(`Knowledge base ${kb.enabled ? "disabled" : "enabled"}`);
+      await fetchKnowledgeBases();
     } catch {
-      toast.error('Failed to update knowledge base')
+      toast.error("Failed to update knowledge base");
     }
-  }
+  };
 
   useEffect(() => {
-    fetchKnowledgeBases()
-  }, [])
+    fetchKnowledgeBases();
+  }, []);
 
   useEffect(() => {
     if (createDialogOpen) {
-      fetchUsers()
-      fetchProviders()
+      fetchUsers();
+      fetchProviders();
     }
-  }, [createDialogOpen, fetchUsers, fetchProviders])
+  }, [createDialogOpen, fetchUsers, fetchProviders]);
 
   if (loading) {
     return (
-      <div className='flex h-96 items-center justify-center'>
-        <RefreshCw className='text-muted-foreground h-8 w-8 animate-spin' />
+      <div className="flex h-96 items-center justify-center">
+        <RefreshCw className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
-    <div className='flex h-full flex-col'>
+    <div className="flex h-full flex-col">
       {/* Header */}
-      <div className='bg-background flex items-center justify-between border-b px-6 py-4'>
-        <div className='flex items-center gap-3'>
-          <div className='bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg'>
-            <BookOpen className='text-primary h-5 w-5' />
+      <div className="bg-background flex items-center justify-between border-b px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+            <BookOpen className="text-primary h-5 w-5" />
           </div>
           <div>
-            <h1 className='text-xl font-semibold'>Knowledge Bases</h1>
-            <p className='text-muted-foreground text-sm'>
+            <h1 className="text-xl font-semibold">Knowledge Bases</h1>
+            <p className="text-muted-foreground text-sm">
               Manage knowledge bases for RAG-powered AI chatbots
             </p>
           </div>
         </div>
       </div>
 
-      <div className='flex-1 overflow-auto p-6'>
-        <div className='flex flex-col gap-6'>
-          <div className='flex items-center justify-between'>
-            <div className='flex gap-4 text-sm'>
-              <div className='flex items-center gap-1.5'>
-                <span className='text-muted-foreground'>Total:</span>
-                <Badge variant='secondary' className='h-5 px-2'>
+      <div className="flex-1 overflow-auto p-6">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4 text-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Total:</span>
+                <Badge variant="secondary" className="h-5 px-2">
                   {knowledgeBases.length}
                 </Badge>
               </div>
-              <div className='flex items-center gap-1.5'>
-                <span className='text-muted-foreground'>Active:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Active:</span>
                 <Badge
-                  variant='secondary'
-                  className='h-5 bg-green-500/10 px-2 text-green-600 dark:text-green-400'
+                  variant="secondary"
+                  className="h-5 bg-green-500/10 px-2 text-green-600 dark:text-green-400"
                 >
                   {knowledgeBases.filter((kb) => kb.enabled).length}
                 </Badge>
               </div>
-              <div className='flex items-center gap-1.5'>
-                <span className='text-muted-foreground'>Documents:</span>
-                <Badge variant='secondary' className='h-5 px-2'>
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Documents:</span>
+                <Badge variant="secondary" className="h-5 px-2">
                   {knowledgeBases.reduce(
                     (sum, kb) => sum + kb.document_count,
-                    0
+                    0,
                   )}
                 </Badge>
               </div>
             </div>
-            <div className='flex items-center gap-2'>
+            <div className="flex items-center gap-2">
               <Button
                 onClick={() => fetchKnowledgeBases()}
-                variant='outline'
-                size='sm'
+                variant="outline"
+                size="sm"
               >
-                <RefreshCw className='mr-2 h-4 w-4' />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
               <Dialog
@@ -302,8 +302,8 @@ function KnowledgeBasesPage() {
                 onOpenChange={setCreateDialogOpen}
               >
                 <DialogTrigger asChild>
-                  <Button size='sm'>
-                    <Plus className='mr-2 h-4 w-4' />
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
                     Create Knowledge Base
                   </Button>
                 </DialogTrigger>
@@ -315,33 +315,33 @@ function KnowledgeBasesPage() {
                       RAG-powered AI chatbots.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className='grid max-h-[60vh] gap-4 overflow-y-auto py-4'>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='name'>Name</Label>
+                  <div className="grid max-h-[60vh] gap-4 overflow-y-auto py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Name</Label>
                       <Input
-                        id='name'
+                        id="name"
                         value={newKB.name}
                         onChange={(e) =>
                           setNewKB({ ...newKB, name: e.target.value })
                         }
-                        placeholder='e.g., product-docs'
+                        placeholder="e.g., product-docs"
                       />
                     </div>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='description'>Description</Label>
+                    <div className="grid gap-2">
+                      <Label htmlFor="description">Description</Label>
                       <Textarea
-                        id='description'
-                        value={newKB.description || ''}
+                        id="description"
+                        value={newKB.description || ""}
                         onChange={(e) =>
                           setNewKB({ ...newKB, description: e.target.value })
                         }
-                        placeholder='What kind of documents will this knowledge base contain?'
+                        placeholder="What kind of documents will this knowledge base contain?"
                       />
                     </div>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='visibility'>Visibility</Label>
+                    <div className="grid gap-2">
+                      <Label htmlFor="visibility">Visibility</Label>
                       <select
-                        id='visibility'
+                        id="visibility"
                         value={newKB.visibility}
                         onChange={(e) =>
                           setNewKB({
@@ -349,32 +349,32 @@ function KnowledgeBasesPage() {
                             visibility: e.target.value as KBVisibility,
                           })
                         }
-                        className='border-input focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none'
+                        className="border-input focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
                       >
-                        <option value='private'>
+                        <option value="private">
                           Private - Only you can access
                         </option>
-                        <option value='shared'>
+                        <option value="shared">
                           Shared - Specific users you grant access
                         </option>
-                        <option value='public'>
+                        <option value="public">
                           Public - All authenticated users can contribute
                         </option>
                       </select>
-                      <p className='text-muted-foreground text-xs'>
-                        {newKB.visibility === 'private' &&
-                          'Only you will be able to access this knowledge base.'}
-                        {newKB.visibility === 'shared' &&
-                          'Grant access to specific users below.'}
-                        {newKB.visibility === 'public' &&
-                          'All authenticated users get read-only access. Grant explicit permissions for write access.'}
+                      <p className="text-muted-foreground text-xs">
+                        {newKB.visibility === "private" &&
+                          "Only you will be able to access this knowledge base."}
+                        {newKB.visibility === "shared" &&
+                          "Grant access to specific users below."}
+                        {newKB.visibility === "public" &&
+                          "All authenticated users get read-only access. Grant explicit permissions for write access."}
                       </p>
                     </div>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='embedding_model'>Embedding Model</Label>
+                    <div className="grid gap-2">
+                      <Label htmlFor="embedding_model">Embedding Model</Label>
                       <select
-                        id='embedding_model'
-                        value={newKB.embedding_model || ''}
+                        id="embedding_model"
+                        value={newKB.embedding_model || ""}
                         onChange={(e) =>
                           setNewKB({
                             ...newKB,
@@ -382,14 +382,14 @@ function KnowledgeBasesPage() {
                           })
                         }
                         disabled={providersLoading}
-                        className='border-input focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+                        className="border-input focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <option value=''>
+                        <option value="">
                           {providersLoading
-                            ? 'Loading providers...'
+                            ? "Loading providers..."
                             : providers.length === 0
-                              ? 'No AI providers configured'
-                              : 'Use default embedding model'}
+                              ? "No AI providers configured"
+                              : "Use default embedding model"}
                         </option>
                         {providers.map((p) => (
                           <option key={p.id} value={p.embedding_model || p.id}>
@@ -397,22 +397,22 @@ function KnowledgeBasesPage() {
                             {p.embedding_model
                               ? ` (${p.embedding_model})`
                               : p.use_for_embeddings
-                                ? ' (embedding provider)'
-                                : ''}
+                                ? " (embedding provider)"
+                                : ""}
                           </option>
                         ))}
                       </select>
-                      <p className='text-muted-foreground text-xs'>
+                      <p className="text-muted-foreground text-xs">
                         Select an AI provider to use for generating embeddings.
                         Configure providers in the AI Providers settings.
                       </p>
                     </div>
-                    <div className='grid grid-cols-2 gap-4'>
-                      <div className='grid gap-2'>
-                        <Label htmlFor='chunk_size'>Chunk Size</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="chunk_size">Chunk Size</Label>
                         <Input
-                          id='chunk_size'
-                          type='number'
+                          id="chunk_size"
+                          type="number"
                           value={newKB.chunk_size}
                           onChange={(e) =>
                             setNewKB({
@@ -421,15 +421,15 @@ function KnowledgeBasesPage() {
                             })
                           }
                         />
-                        <p className='text-muted-foreground text-xs'>
+                        <p className="text-muted-foreground text-xs">
                           Characters per chunk
                         </p>
                       </div>
-                      <div className='grid gap-2'>
-                        <Label htmlFor='chunk_overlap'>Chunk Overlap</Label>
+                      <div className="grid gap-2">
+                        <Label htmlFor="chunk_overlap">Chunk Overlap</Label>
                         <Input
-                          id='chunk_overlap'
-                          type='number'
+                          id="chunk_overlap"
+                          type="number"
                           value={newKB.chunk_overlap}
                           onChange={(e) =>
                             setNewKB({
@@ -438,20 +438,20 @@ function KnowledgeBasesPage() {
                             })
                           }
                         />
-                        <p className='text-muted-foreground text-xs'>
+                        <p className="text-muted-foreground text-xs">
                           Overlap between chunks
                         </p>
                       </div>
                     </div>
 
                     {/* Permissions Section */}
-                    {newKB.visibility === 'shared' && (
-                      <div className='grid gap-3 border-t pt-4'>
-                        <Label className='flex items-center gap-2'>
-                          <Users className='h-4 w-4' />
+                    {newKB.visibility === "shared" && (
+                      <div className="grid gap-3 border-t pt-4">
+                        <Label className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
                           Share with Users
                         </Label>
-                        <div className='flex gap-2'>
+                        <div className="flex gap-2">
                           <select
                             value={newPermission.user_id}
                             onChange={(e) =>
@@ -460,10 +460,10 @@ function KnowledgeBasesPage() {
                                 user_id: e.target.value,
                               })
                             }
-                            className='border-input focus-visible:ring-ring flex h-9 flex-1 rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none'
+                            className="border-input focus-visible:ring-ring flex h-9 flex-1 rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
                             disabled={usersLoading}
                           >
-                            <option value=''>Select a user...</option>
+                            <option value="">Select a user...</option>
                             {users.map((u) => (
                               <option key={u.id} value={u.id}>
                                 {u.email || u.id}
@@ -478,46 +478,46 @@ function KnowledgeBasesPage() {
                                 permission: e.target.value as KBPermission,
                               })
                             }
-                            className='border-input focus-visible:ring-ring flex h-9 w-32 rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none'
+                            className="border-input focus-visible:ring-ring flex h-9 w-32 rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
                           >
-                            <option value='viewer'>Viewer</option>
-                            <option value='editor'>Editor</option>
+                            <option value="viewer">Viewer</option>
+                            <option value="editor">Editor</option>
                           </select>
                           <Button
                             onClick={addPermission}
-                            size='sm'
-                            variant='outline'
+                            size="sm"
+                            variant="outline"
                           >
-                            <Plus className='h-4 w-4' />
+                            <Plus className="h-4 w-4" />
                           </Button>
                         </div>
                         {newKB.initial_permissions &&
                           newKB.initial_permissions.length > 0 && (
-                            <div className='flex flex-wrap gap-2'>
+                            <div className="flex flex-wrap gap-2">
                               {newKB.initial_permissions.map((perm) => {
                                 const user = users.find(
-                                  (u) => u.id === perm.user_id
-                                )
+                                  (u) => u.id === perm.user_id,
+                                );
                                 return (
                                   <Badge
                                     key={perm.user_id}
-                                    variant='secondary'
-                                    className='gap-1 pr-1'
+                                    variant="secondary"
+                                    className="gap-1 pr-1"
                                   >
                                     <span>{user?.email || perm.user_id}</span>
-                                    <span className='text-muted-foreground'>
+                                    <span className="text-muted-foreground">
                                       ({perm.permission})
                                     </span>
                                     <button
                                       onClick={() =>
                                         removePermission(perm.user_id)
                                       }
-                                      className='hover:text-destructive ml-1'
+                                      className="hover:text-destructive ml-1"
                                     >
-                                      <X className='h-3 w-3' />
+                                      <X className="h-3 w-3" />
                                     </button>
                                   </Badge>
-                                )
+                                );
                               })}
                             </div>
                           )}
@@ -526,7 +526,7 @@ function KnowledgeBasesPage() {
                   </div>
                   <DialogFooter>
                     <Button
-                      variant='outline'
+                      variant="outline"
                       onClick={() => setCreateDialogOpen(false)}
                     >
                       Cancel
@@ -538,35 +538,35 @@ function KnowledgeBasesPage() {
             </div>
           </div>
 
-          <ScrollArea className='h-[calc(100vh-16rem)]'>
+          <ScrollArea className="h-[calc(100vh-16rem)]">
             {knowledgeBases.length === 0 ? (
               <Card>
-                <CardContent className='p-12 text-center'>
-                  <BookOpen className='text-muted-foreground mx-auto mb-4 h-12 w-12' />
-                  <p className='mb-2 text-lg font-medium'>
+                <CardContent className="p-12 text-center">
+                  <BookOpen className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                  <p className="mb-2 text-lg font-medium">
                     No knowledge bases yet
                   </p>
-                  <p className='text-muted-foreground mb-4 text-sm'>
+                  <p className="text-muted-foreground mb-4 text-sm">
                     Create a knowledge base to store documents for RAG-powered
                     AI chatbots
                   </p>
                   <Button onClick={() => setCreateDialogOpen(true)}>
-                    <Plus className='mr-2 h-4 w-4' />
+                    <Plus className="mr-2 h-4 w-4" />
                     Create Knowledge Base
                   </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {knowledgeBases.map((kb) => (
-                  <Card key={kb.id} className='relative'>
-                    <CardHeader className='pb-2'>
-                      <div className='flex items-start justify-between'>
-                        <div className='flex items-center gap-2'>
-                          <BookOpen className='h-5 w-5' />
-                          <CardTitle className='text-lg'>{kb.name}</CardTitle>
+                  <Card key={kb.id} className="relative">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-5 w-5" />
+                          <CardTitle className="text-lg">{kb.name}</CardTitle>
                         </div>
-                        <div className='flex items-center gap-1'>
+                        <div className="flex items-center gap-1">
                           <Switch
                             checked={kb.enabled}
                             onCheckedChange={() => toggleEnabled(kb)}
@@ -574,9 +574,9 @@ function KnowledgeBasesPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 w-8 p-0'
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
                                 onClick={() =>
                                   navigate({
                                     to: `/knowledge-bases/$id`,
@@ -584,7 +584,7 @@ function KnowledgeBasesPage() {
                                   })
                                 }
                               >
-                                <FileText className='h-4 w-4' />
+                                <FileText className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>View Documents</TooltipContent>
@@ -592,9 +592,9 @@ function KnowledgeBasesPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 w-8 p-0'
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
                                 onClick={() =>
                                   navigate({
                                     to: `/knowledge-bases/$id/search`,
@@ -602,7 +602,7 @@ function KnowledgeBasesPage() {
                                   })
                                 }
                               >
-                                <Search className='h-4 w-4' />
+                                <Search className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Search</TooltipContent>
@@ -610,9 +610,9 @@ function KnowledgeBasesPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 w-8 p-0'
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
                                 onClick={() =>
                                   navigate({
                                     to: `/knowledge-bases/$id/settings`,
@@ -620,7 +620,7 @@ function KnowledgeBasesPage() {
                                   })
                                 }
                               >
-                                <Settings className='h-4 w-4' />
+                                <Settings className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Settings</TooltipContent>
@@ -628,61 +628,61 @@ function KnowledgeBasesPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='text-destructive hover:text-destructive h-8 w-8 p-0'
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive h-8 w-8 p-0"
                                 onClick={() => setDeleteConfirm(kb.id)}
                               >
-                                <Trash2 className='h-4 w-4' />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Delete</TooltipContent>
                           </Tooltip>
                         </div>
                       </div>
-                      {kb.namespace !== 'default' && (
-                        <Badge variant='outline' className='w-fit text-[10px]'>
+                      {kb.namespace !== "default" && (
+                        <Badge variant="outline" className="w-fit text-[10px]">
                           {kb.namespace}
                         </Badge>
                       )}
                       <Badge
-                        variant='outline'
+                        variant="outline"
                         className={`flex w-fit items-center gap-1 text-[10px] ${
-                          kb.visibility === 'private'
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            : kb.visibility === 'public'
-                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                              : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                          kb.visibility === "private"
+                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            : kb.visibility === "public"
+                              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                              : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
                         }`}
                       >
-                        {kb.visibility === 'private' && (
-                          <Lock className='h-3 w-3' />
+                        {kb.visibility === "private" && (
+                          <Lock className="h-3 w-3" />
                         )}
-                        {kb.visibility === 'public' && (
-                          <Globe className='h-3 w-3' />
+                        {kb.visibility === "public" && (
+                          <Globe className="h-3 w-3" />
                         )}
-                        {kb.visibility === 'shared' && (
-                          <Users className='h-3 w-3' />
+                        {kb.visibility === "shared" && (
+                          <Users className="h-3 w-3" />
                         )}
-                        {kb.visibility || 'private'}
+                        {kb.visibility || "private"}
                       </Badge>
                     </CardHeader>
                     <CardContent>
                       {kb.description && (
-                        <CardDescription className='mb-3 line-clamp-2'>
+                        <CardDescription className="mb-3 line-clamp-2">
                           {kb.description}
                         </CardDescription>
                       )}
-                      <div className='flex flex-wrap gap-2 text-xs'>
-                        <Badge variant='secondary'>
-                          {kb.document_count}{' '}
-                          {kb.document_count === 1 ? 'document' : 'documents'}
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <Badge variant="secondary">
+                          {kb.document_count}{" "}
+                          {kb.document_count === 1 ? "document" : "documents"}
                         </Badge>
-                        <Badge variant='secondary'>
+                        <Badge variant="secondary">
                           {kb.total_chunks} chunks
                         </Badge>
                         {kb.embedding_model && (
-                          <Badge variant='outline' className='text-[10px]'>
+                          <Badge variant="outline" className="text-[10px]">
                             {kb.embedding_model}
                           </Badge>
                         )}
@@ -712,7 +712,7 @@ function KnowledgeBasesPage() {
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-                  className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   Delete
                 </AlertDialogAction>
@@ -722,5 +722,5 @@ function KnowledgeBasesPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

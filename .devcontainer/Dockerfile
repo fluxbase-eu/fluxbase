@@ -79,7 +79,19 @@ RUN ARCH=$(dpkg --print-architecture) \
     && deno --version
 
 # =============================================================================
-# LAYER 6: Create user (rarely changes)
+# LAYER 6: pgschema - Declarative schema migration tool
+# =============================================================================
+ARG PGSCHEMA_VERSION=1.7.4
+RUN ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "amd64" ]; then PGSCHEMA_ARCH="linux-amd64"; \
+    elif [ "$ARCH" = "arm64" ]; then PGSCHEMA_ARCH="linux-arm64"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi \
+    && curl -fsSL "https://github.com/pgplex/pgschema/releases/download/v${PGSCHEMA_VERSION}/pgschema-${PGSCHEMA_VERSION}-${PGSCHEMA_ARCH}" -o /usr/local/bin/pgschema \
+    && chmod +x /usr/local/bin/pgschema \
+    && pgschema --help > /dev/null 2>&1 || echo "pgschema installed"
+
+# =============================================================================
+# LAYER 7: Create user (rarely changes)
 # =============================================================================
 ARG USERNAME=vscode
 ARG USER_UID=1000
@@ -119,7 +131,7 @@ USER root
 # Go tools with pinned versions
 RUN go install -v golang.org/x/tools/gopls@latest \
     && go install -v github.com/go-delve/delve/cmd/dlv@latest \
-    && go install -v github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.0 \
+    && go install -v github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest \
     && go install -v github.com/air-verse/air@latest \
     && go install -v -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
     && go install -v github.com/swaggo/swag/cmd/swag@latest \

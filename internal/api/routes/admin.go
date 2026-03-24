@@ -188,6 +188,14 @@ type AdminDeps struct {
 	DeletePolicy          fiber.Handler
 	GetPolicyTemplates    fiber.Handler
 	GetSecurityWarnings   fiber.Handler
+
+	// Internal Schema (Declarative)
+	DumpInternalSchema      fiber.Handler
+	PlanInternalSchema      fiber.Handler
+	ApplyInternalSchema     fiber.Handler
+	ValidateInternalSchema  fiber.Handler
+	GetInternalSchemaStatus fiber.Handler
+	MigrateInternalSchema   fiber.Handler
 }
 
 func BuildAdminRoutes(deps *AdminDeps) *RouteGroup {
@@ -415,6 +423,14 @@ func BuildAdminRoutes(deps *AdminDeps) *RouteGroup {
 		{Method: "DELETE", Path: "/policies/:schema/:table/:policy", Handler: deps.DeletePolicy, Summary: "Delete RLS policy", Auth: AuthRequired, Roles: []string{"admin", "instance_admin"}},
 		{Method: "GET", Path: "/policies/templates", Handler: deps.GetPolicyTemplates, Summary: "Get policy templates", Auth: AuthRequired, Roles: []string{"admin", "instance_admin", "tenant_admin"}},
 		{Method: "GET", Path: "/security/warnings", Handler: deps.GetSecurityWarnings, Summary: "Get security warnings", Auth: AuthRequired, Roles: []string{"admin", "instance_admin", "tenant_admin"}},
+
+		// Internal Schema (Declarative) - instance admin only
+		{Method: "POST", Path: "/internal-schema/dump", Handler: deps.DumpInternalSchema, Summary: "Dump internal schema to SQL", Auth: AuthRequired, Roles: []string{"admin", "instance_admin"}},
+		{Method: "POST", Path: "/internal-schema/plan", Handler: deps.PlanInternalSchema, Summary: "Plan schema changes", Auth: AuthRequired, Roles: []string{"admin", "instance_admin"}},
+		{Method: "POST", Path: "/internal-schema/apply", Handler: deps.ApplyInternalSchema, Summary: "Apply schema changes", Auth: AuthRequired, Roles: []string{"admin", "instance_admin"}},
+		{Method: "GET", Path: "/internal-schema/validate", Handler: deps.ValidateInternalSchema, Summary: "Validate schema for drift", Auth: AuthRequired, Roles: []string{"admin", "instance_admin"}},
+		{Method: "GET", Path: "/internal-schema/status", Handler: deps.GetInternalSchemaStatus, Summary: "Get schema status", Auth: AuthRequired, Roles: []string{"admin", "instance_admin"}},
+		{Method: "POST", Path: "/internal-schema/migrate", Handler: deps.MigrateInternalSchema, Summary: "Migrate from imperative to declarative", Auth: AuthRequired, Roles: []string{"admin", "instance_admin"}},
 	}
 
 	return &RouteGroup{

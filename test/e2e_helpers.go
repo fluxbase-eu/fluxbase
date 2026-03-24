@@ -2114,9 +2114,9 @@ func (tc *TestContext) EnsureAuthSchema() {
 }
 
 // EnsureStorageSchema ensures storage schema and tables exist
-// This schema must match internal/database/migrations/010_tables_storage.up.sql
-// Note: In most cases, migrations will have already created these tables. This function
-// only creates them if they don't exist (for isolated test environments without migrations).
+// This schema must match internal/database/schema/schemas/storage.sql
+// Note: In most cases, bootstrap + declarative schema will have already created these tables.
+// This function only creates them if they don't exist (for isolated test environments).
 func (tc *TestContext) EnsureStorageSchema() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()

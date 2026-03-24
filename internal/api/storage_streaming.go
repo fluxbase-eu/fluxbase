@@ -26,20 +26,20 @@ import (
 //   - X-Storage-Metadata: Optional. JSON object with custom metadata.
 //   - X-Storage-Upsert: Optional. "true" to overwrite existing files.
 func (h *StorageHandler) StreamUpload(c fiber.Ctx) error {
-	// Get tenant-specific storage service
-	svc, err := h.getService(c)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to get storage service",
-		})
-	}
-
 	bucket := c.Params("bucket")
 	key := c.Params("*") // Capture the rest of the path
 
 	if bucket == "" || key == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "bucket and key are required",
+		})
+	}
+
+	// Get tenant-specific storage service
+	svc, err := h.getService(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to get storage service",
 		})
 	}
 
