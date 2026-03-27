@@ -16,11 +16,11 @@ func (s *Server) buildHealthRouteDeps() *routes.HealthDeps {
 
 func (s *Server) buildRealtimeRouteDeps() *routes.RealtimeDeps {
 	return &routes.RealtimeDeps{
-		RequireRealtimeEnabled: middleware.RequireRealtimeEnabled(s.authHandler.authService.GetSettingsCache()),
-		OptionalAuth:           middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		RequireAuth:            middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireRealtimeEnabled: middleware.RequireRealtimeEnabled(s.Auth.Handler.authService.GetSettingsCache()),
+		OptionalAuth:           middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		RequireAuth:            middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope:           middleware.RequireScope,
-		HandleWebSocket:        s.realtimeHandler.HandleWebSocket,
+		HandleWebSocket:        s.Realtime.Handler.HandleWebSocket,
 		HandleStats:            s.handleRealtimeStats,
 		HandleBroadcast:        s.handleRealtimeBroadcast,
 	}
@@ -28,37 +28,37 @@ func (s *Server) buildRealtimeRouteDeps() *routes.RealtimeDeps {
 
 func (s *Server) buildStorageRouteDeps() *routes.StorageDeps {
 	return &routes.StorageDeps{
-		RequireAuth:            middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		OptionalAuth:           middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireAuth:            middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		OptionalAuth:           middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope:           middleware.RequireScope,
-		DownloadSignedObject:   s.storageHandler.DownloadSignedObject,
-		GetTransformConfig:     s.storageHandler.GetTransformConfig,
-		ListBuckets:            s.storageHandler.ListBuckets,
-		CreateBucket:           s.storageHandler.CreateBucket,
-		UpdateBucketSettings:   s.storageHandler.UpdateBucketSettings,
-		DeleteBucket:           s.storageHandler.DeleteBucket,
-		ListFiles:              s.storageHandler.ListFiles,
-		MultipartUpload:        s.storageHandler.MultipartUpload,
-		ShareObject:            s.storageHandler.ShareObject,
-		RevokeShare:            s.storageHandler.RevokeShare,
-		ListShares:             s.storageHandler.ListShares,
-		GenerateSignedURL:      s.storageHandler.GenerateSignedURL,
-		StreamUpload:           s.storageHandler.StreamUpload,
+		DownloadSignedObject:   s.Storage.Handler.DownloadSignedObject,
+		GetTransformConfig:     s.Storage.Handler.GetTransformConfig,
+		ListBuckets:            s.Storage.Handler.ListBuckets,
+		CreateBucket:           s.Storage.Handler.CreateBucket,
+		UpdateBucketSettings:   s.Storage.Handler.UpdateBucketSettings,
+		DeleteBucket:           s.Storage.Handler.DeleteBucket,
+		ListFiles:              s.Storage.Handler.ListFiles,
+		MultipartUpload:        s.Storage.Handler.MultipartUpload,
+		ShareObject:            s.Storage.Handler.ShareObject,
+		RevokeShare:            s.Storage.Handler.RevokeShare,
+		ListShares:             s.Storage.Handler.ListShares,
+		GenerateSignedURL:      s.Storage.Handler.GenerateSignedURL,
+		StreamUpload:           s.Storage.Handler.StreamUpload,
 		StorageUploadLimiter:   middleware.StorageUploadLimiter(s.sharedMiddlewareStorage),
-		InitChunkedUpload:      s.storageHandler.InitChunkedUpload,
-		UploadChunk:            s.storageHandler.UploadChunk,
-		CompleteChunkedUpload:  s.storageHandler.CompleteChunkedUpload,
-		GetChunkedUploadStatus: s.storageHandler.GetChunkedUploadStatus,
-		AbortChunkedUpload:     s.storageHandler.AbortChunkedUpload,
-		UploadFile:             s.storageHandler.UploadFile,
-		DownloadFile:           s.storageHandler.DownloadFile,
-		DeleteFile:             s.storageHandler.DeleteFile,
+		InitChunkedUpload:      s.Storage.Handler.InitChunkedUpload,
+		UploadChunk:            s.Storage.Handler.UploadChunk,
+		CompleteChunkedUpload:  s.Storage.Handler.CompleteChunkedUpload,
+		GetChunkedUploadStatus: s.Storage.Handler.GetChunkedUploadStatus,
+		AbortChunkedUpload:     s.Storage.Handler.AbortChunkedUpload,
+		UploadFile:             s.Storage.Handler.UploadFile,
+		DownloadFile:           s.Storage.Handler.DownloadFile,
+		DeleteFile:             s.Storage.Handler.DeleteFile,
 	}
 }
 
 func (s *Server) buildRESTRouteDeps() *routes.RESTDeps {
 	return &routes.RESTDeps{
-		RequireAuth:  middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager),
+		RequireAuth:  middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.DB(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope: middleware.RequireScope,
 		HandleTables: s.rest.HandleDynamicTable,
 		HandleQuery:  s.rest.HandleDynamicQuery,
@@ -67,84 +67,84 @@ func (s *Server) buildRESTRouteDeps() *routes.RESTDeps {
 }
 
 func (s *Server) buildGraphQLRouteDeps() *routes.GraphQLDeps {
-	if s.graphqlHandler == nil {
+	if s.GraphQL.Handler == nil {
 		return nil
 	}
 	return &routes.GraphQLDeps{
-		OptionalAuth:     middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager),
-		HandleGraphQL:    s.graphqlHandler.HandleGraphQL,
-		HandleIntrospect: s.graphqlHandler.HandleIntrospection,
+		OptionalAuth:     middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.DB(), s.Auth.DashboardHandler.jwtManager),
+		HandleGraphQL:    s.GraphQL.Handler.HandleGraphQL,
+		HandleIntrospect: s.GraphQL.Handler.HandleIntrospection,
 	}
 }
 
 func (s *Server) buildVectorRouteDeps() *routes.VectorDeps {
-	if s.vectorHandler == nil {
+	if s.AI.VectorHandler == nil {
 		return nil
 	}
 	return &routes.VectorDeps{
-		RequireAuth:        middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		HandleCapabilities: s.vectorHandler.HandleGetCapabilities,
-		HandleEmbed:        s.vectorHandler.HandleEmbed,
-		HandleSearch:       s.vectorHandler.HandleSearch,
+		RequireAuth:        middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		HandleCapabilities: s.AI.VectorHandler.HandleGetCapabilities,
+		HandleEmbed:        s.AI.VectorHandler.HandleEmbed,
+		HandleSearch:       s.AI.VectorHandler.HandleSearch,
 	}
 }
 
 func (s *Server) buildRPCRouteDeps() *routes.RPCDeps {
-	if s.rpcHandler == nil {
+	if s.RPC.Handler == nil {
 		return nil
 	}
 	return &routes.RPCDeps{
-		RequireRPCEnabled: middleware.RequireRPCEnabled(s.authHandler.authService.GetSettingsCache()),
-		OptionalAuth:      middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireRPCEnabled: middleware.RequireRPCEnabled(s.Auth.Handler.authService.GetSettingsCache()),
+		OptionalAuth:      middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope:      middleware.RequireScope,
-		ListProcedures:    s.rpcHandler.ListPublicProcedures,
-		Invoke:            s.rpcHandler.Invoke,
-		GetExecution:      s.rpcHandler.GetPublicExecution,
-		GetExecutionLogs:  s.rpcHandler.GetPublicExecutionLogs,
+		ListProcedures:    s.RPC.Handler.ListPublicProcedures,
+		Invoke:            s.RPC.Handler.Invoke,
+		GetExecution:      s.RPC.Handler.GetPublicExecution,
+		GetExecutionLogs:  s.RPC.Handler.GetPublicExecutionLogs,
 	}
 }
 
 func (s *Server) buildAIRouteDeps() *routes.AIDeps {
-	if s.aiChatHandler == nil || s.aiHandler == nil {
+	if s.AI.Chat == nil || s.AI.Handler == nil {
 		return nil
 	}
 	return &routes.AIDeps{
-		RequireAIEnabled:       middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
-		OptionalAuth:           middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		RequireAuth:            middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		HandleWebSocket:        s.aiChatHandler.HandleWebSocket,
-		ListPublicChatbots:     s.aiHandler.ListPublicChatbots,
-		LookupChatbotByName:    s.aiHandler.LookupChatbotByName,
-		GetPublicChatbot:       s.aiHandler.GetPublicChatbot,
-		ListUserConversations:  s.aiHandler.ListUserConversations,
-		GetUserConversation:    s.aiHandler.GetUserConversation,
-		DeleteUserConversation: s.aiHandler.DeleteUserConversation,
-		UpdateUserConversation: s.aiHandler.UpdateUserConversation,
+		RequireAIEnabled:       middleware.RequireAIEnabled(s.Auth.Handler.authService.GetSettingsCache()),
+		OptionalAuth:           middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		RequireAuth:            middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		HandleWebSocket:        s.AI.Chat.HandleWebSocket,
+		ListPublicChatbots:     s.AI.Handler.ListPublicChatbots,
+		LookupChatbotByName:    s.AI.Handler.LookupChatbotByName,
+		GetPublicChatbot:       s.AI.Handler.GetPublicChatbot,
+		ListUserConversations:  s.AI.Handler.ListUserConversations,
+		GetUserConversation:    s.AI.Handler.GetUserConversation,
+		DeleteUserConversation: s.AI.Handler.DeleteUserConversation,
+		UpdateUserConversation: s.AI.Handler.UpdateUserConversation,
 	}
 }
 
 func (s *Server) buildSettingsRouteDeps() *routes.SettingsDeps {
 	return &routes.SettingsDeps{
-		OptionalAuth: middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool()),
-		GetSetting:   s.settingsHandler.GetSetting,
-		GetSettings:  s.settingsHandler.GetSettings,
+		OptionalAuth: middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool()),
+		GetSetting:   s.Settings.Handler.GetSetting,
+		GetSettings:  s.Settings.Handler.GetSettings,
 	}
 }
 
 func (s *Server) buildUserSettingsRouteDeps() *routes.UserSettingsDeps {
 	return &routes.UserSettingsDeps{
-		RequireAuth:       middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		ListSettings:      s.userSettingsHandler.ListSettings,
-		GetUserOwnSetting: s.userSettingsHandler.GetUserOwnSetting,
-		GetSystemSetting:  s.userSettingsHandler.GetSystemSettingPublic,
-		GetSetting:        s.userSettingsHandler.GetSetting,
-		SetSetting:        s.userSettingsHandler.SetSetting,
-		DeleteSetting:     s.userSettingsHandler.DeleteSetting,
-		CreateSecret:      s.userSettingsHandler.CreateSecret,
-		ListSecrets:       s.userSettingsHandler.ListSecrets,
-		GetSecret:         s.userSettingsHandler.GetSecret,
-		UpdateSecret:      s.userSettingsHandler.UpdateSecret,
-		DeleteSecret:      s.userSettingsHandler.DeleteSecret,
+		RequireAuth:       middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		ListSettings:      s.Settings.User.ListSettings,
+		GetUserOwnSetting: s.Settings.User.GetUserOwnSetting,
+		GetSystemSetting:  s.Settings.User.GetSystemSettingPublic,
+		GetSetting:        s.Settings.User.GetSetting,
+		SetSetting:        s.Settings.User.SetSetting,
+		DeleteSetting:     s.Settings.User.DeleteSetting,
+		CreateSecret:      s.Settings.User.CreateSecret,
+		ListSecrets:       s.Settings.User.ListSecrets,
+		GetSecret:         s.Settings.User.GetSecret,
+		UpdateSecret:      s.Settings.User.UpdateSecret,
+		DeleteSecret:      s.Settings.User.DeleteSecret,
 	}
 }
 
@@ -152,19 +152,19 @@ func (s *Server) buildDashboardAuthRouteDeps() *routes.DashboardAuthDeps {
 	return &routes.DashboardAuthDeps{
 		SetupLimiter:    middleware.AdminSetupLimiterWithConfig(s.config.Security.AdminSetupRateLimit, s.config.Security.AdminSetupRateWindow, s.sharedMiddlewareStorage),
 		LoginLimiter:    middleware.AdminLoginLimiterWithConfig(s.config.Security.AdminLoginRateLimit, s.config.Security.AdminLoginRateWindow, s.sharedMiddlewareStorage),
-		GetSetupStatus:  s.adminAuthHandler.GetSetupStatus,
-		InitialSetup:    s.adminAuthHandler.InitialSetup,
-		AdminLogin:      s.adminAuthHandler.AdminLogin,
-		RefreshToken:    s.adminAuthHandler.AdminRefreshToken,
-		UnifiedAuth:     UnifiedAuthMiddleware(s.authHandler.authService, s.dashboardAuthHandler.jwtManager, s.db.Pool()),
-		AdminLogout:     s.adminAuthHandler.AdminLogout,
-		GetCurrentAdmin: s.adminAuthHandler.GetCurrentAdmin,
+		GetSetupStatus:  s.Auth.AdminHandler.GetSetupStatus,
+		InitialSetup:    s.Auth.AdminHandler.InitialSetup,
+		AdminLogin:      s.Auth.AdminHandler.AdminLogin,
+		RefreshToken:    s.Auth.AdminHandler.AdminRefreshToken,
+		UnifiedAuth:     UnifiedAuthMiddleware(s.Auth.Handler.authService, s.Auth.DashboardHandler.jwtManager, s.db.Pool()),
+		AdminLogout:     s.Auth.AdminHandler.AdminLogout,
+		GetCurrentAdmin: s.Auth.AdminHandler.GetCurrentAdmin,
 	}
 }
 
 func (s *Server) buildOpenAPIRouteDeps() *routes.OpenAPIDeps {
 	return &routes.OpenAPIDeps{
-		OptionalAuth:   middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		OptionalAuth:   middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		GetOpenAPISpec: NewOpenAPIHandler(s.db).GetOpenAPISpec,
 	}
 }
@@ -181,236 +181,237 @@ func (s *Server) buildAuthRouteDeps() *routes.AuthDeps {
 	}
 
 	return &routes.AuthDeps{
-		AuthMiddleware:            AuthMiddleware(s.authHandler.authService),
+		AuthMiddleware:            AuthMiddleware(s.Auth.Handler.authService),
 		RequireScope:              middleware.RequireScope,
 		RateLimiters:              rateLimiters,
-		GetCSRFToken:              s.authHandler.GetCSRFToken,
-		GetCaptchaConfig:          s.authHandler.GetCaptchaConfig,
-		CheckCaptcha:              s.authHandler.CheckCaptcha,
-		GetAuthConfig:             s.authHandler.GetAuthConfig,
-		SignUp:                    s.authHandler.SignUp,
-		SignIn:                    s.authHandler.SignIn,
-		RefreshToken:              s.authHandler.RefreshToken,
-		SendMagicLink:             s.authHandler.SendMagicLink,
-		VerifyMagicLink:           s.authHandler.VerifyMagicLink,
-		RequestPasswordReset:      s.authHandler.RequestPasswordReset,
-		ResetPassword:             s.authHandler.ResetPassword,
-		VerifyPasswordReset:       s.authHandler.VerifyPasswordResetToken,
-		VerifyEmail:               s.authHandler.VerifyEmail,
-		ResendVerification:        s.authHandler.ResendVerificationEmail,
-		VerifyTOTP:                s.authHandler.VerifyTOTP,
-		SendOTP:                   s.authHandler.SendOTP,
-		VerifyOTP:                 s.authHandler.VerifyOTP,
-		ResendOTP:                 s.authHandler.ResendOTP,
-		SignInWithIDToken:         s.authHandler.SignInWithIDToken,
-		SignOut:                   s.authHandler.SignOut,
-		GetUser:                   s.authHandler.GetUser,
-		UpdateUser:                s.authHandler.UpdateUser,
-		StartImpersonation:        s.authHandler.StartImpersonation,
-		StartAnonImpersonation:    s.authHandler.StartAnonImpersonation,
-		StopImpersonation:         s.authHandler.StopImpersonation,
-		GetActiveImpersonation:    s.authHandler.GetActiveImpersonation,
-		ListImpersonationSessions: s.authHandler.ListImpersonationSessions,
-		SetupTOTP:                 s.authHandler.SetupTOTP,
-		EnableTOTP:                s.authHandler.EnableTOTP,
-		DisableTOTP:               s.authHandler.DisableTOTP,
-		GetTOTPStatus:             s.authHandler.GetTOTPStatus,
-		GetUserIdentities:         s.authHandler.GetUserIdentities,
-		LinkIdentity:              s.authHandler.LinkIdentity,
-		UnlinkIdentity:            s.authHandler.UnlinkIdentity,
-		Reauthenticate:            s.authHandler.Reauthenticate,
-		ListOAuthProviders:        s.oauthHandler.ListEnabledProviders,
-		OAuthAuthorize:            s.oauthHandler.Authorize,
-		OAuthCallback:             s.oauthHandler.Callback,
-		GetSPMetadata:             s.samlProviderHandler.GetSPMetadata,
+		GetCSRFToken:              s.Auth.Handler.GetCSRFToken,
+		GetCaptchaConfig:          s.Auth.Handler.GetCaptchaConfig,
+		CheckCaptcha:              s.Auth.Handler.CheckCaptcha,
+		GetAuthConfig:             s.Auth.Handler.GetAuthConfig,
+		SignUp:                    s.Auth.Handler.SignUp,
+		SignIn:                    s.Auth.Handler.SignIn,
+		RefreshToken:              s.Auth.Handler.RefreshToken,
+		SendMagicLink:             s.Auth.Handler.SendMagicLink,
+		VerifyMagicLink:           s.Auth.Handler.VerifyMagicLink,
+		RequestPasswordReset:      s.Auth.Handler.RequestPasswordReset,
+		ResetPassword:             s.Auth.Handler.ResetPassword,
+		VerifyPasswordReset:       s.Auth.Handler.VerifyPasswordResetToken,
+		VerifyEmail:               s.Auth.Handler.VerifyEmail,
+		ResendVerification:        s.Auth.Handler.ResendVerificationEmail,
+		VerifyTOTP:                s.Auth.Handler.VerifyTOTP,
+		SendOTP:                   s.Auth.Handler.SendOTP,
+		VerifyOTP:                 s.Auth.Handler.VerifyOTP,
+		ResendOTP:                 s.Auth.Handler.ResendOTP,
+		SignInWithIDToken:         s.Auth.Handler.SignInWithIDToken,
+		SignOut:                   s.Auth.Handler.SignOut,
+		GetUser:                   s.Auth.Handler.GetUser,
+		UpdateUser:                s.Auth.Handler.UpdateUser,
+		StartImpersonation:        s.Auth.Handler.StartImpersonation,
+		StartAnonImpersonation:    s.Auth.Handler.StartAnonImpersonation,
+		StopImpersonation:         s.Auth.Handler.StopImpersonation,
+		GetActiveImpersonation:    s.Auth.Handler.GetActiveImpersonation,
+		ListImpersonationSessions: s.Auth.Handler.ListImpersonationSessions,
+		SetupTOTP:                 s.Auth.Handler.SetupTOTP,
+		EnableTOTP:                s.Auth.Handler.EnableTOTP,
+		DisableTOTP:               s.Auth.Handler.DisableTOTP,
+		GetTOTPStatus:             s.Auth.Handler.GetTOTPStatus,
+		GetUserIdentities:         s.Auth.Handler.GetUserIdentities,
+		LinkIdentity:              s.Auth.Handler.LinkIdentity,
+		UnlinkIdentity:            s.Auth.Handler.UnlinkIdentity,
+		Reauthenticate:            s.Auth.Handler.Reauthenticate,
+		ListOAuthProviders:        s.Auth.OAuth.ListEnabledProviders,
+		OAuthAuthorize:            s.Auth.OAuth.Authorize,
+		OAuthCallback:             s.Auth.OAuth.Callback,
+		GetSPMetadata:             s.Auth.SAMLProvider.GetSPMetadata,
 	}
 }
 
 func (s *Server) buildInternalAIRouteDeps() *routes.InternalAIDeps {
-	if s.internalAIHandler == nil {
+	if s.AI.Internal == nil {
 		return nil
 	}
 	return &routes.InternalAIDeps{
 		RequireInternal:     middleware.RequireInternal(),
-		RequireAuth:         middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.DB(), s.dashboardAuthHandler.jwtManager),
-		HandleChat:          s.internalAIHandler.HandleChat,
-		HandleEmbed:         s.internalAIHandler.HandleEmbed,
-		HandleListProviders: s.internalAIHandler.HandleListProviders,
+		RequireAuth:         middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.DB(), s.Auth.DashboardHandler.jwtManager),
+		HandleChat:          s.AI.Internal.HandleChat,
+		HandleEmbed:         s.AI.Internal.HandleEmbed,
+		HandleListProviders: s.AI.Internal.HandleListProviders,
 	}
 }
 
 func (s *Server) buildGitHubWebhookRouteDeps() *routes.GitHubWebhookDeps {
-	if s.githubWebhook == nil {
+	if s.Branching.GitHub == nil {
 		return nil
 	}
 	return &routes.GitHubWebhookDeps{
 		GitHubWebhookLimiter: middleware.GitHubWebhookLimiter(s.sharedMiddlewareStorage),
-		HandleWebhook:        s.githubWebhook.HandleWebhook,
+		HandleWebhook:        s.Branching.GitHub.HandleWebhook,
 	}
 }
 
 func (s *Server) buildInvitationRouteDeps() *routes.InvitationDeps {
 	return &routes.InvitationDeps{
-		ValidateInvitation: s.invitationHandler.ValidateInvitation,
-		AcceptInvitation:   s.invitationHandler.AcceptInvitation,
+		ValidateInvitation: s.Auth.Invitation.ValidateInvitation,
+		AcceptInvitation:   s.Auth.Invitation.AcceptInvitation,
 	}
 }
 
 func (s *Server) buildWebhookRouteDeps() *routes.WebhookDeps {
 	return &routes.WebhookDeps{
-		RequireAuth:    middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireAuth:    middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope:   middleware.RequireScope,
-		ListWebhooks:   s.webhookHandler.ListWebhooks,
-		GetWebhook:     s.webhookHandler.GetWebhook,
-		ListDeliveries: s.webhookHandler.ListDeliveries,
-		CreateWebhook:  s.webhookHandler.CreateWebhook,
-		UpdateWebhook:  s.webhookHandler.UpdateWebhook,
-		DeleteWebhook:  s.webhookHandler.DeleteWebhook,
-		TestWebhook:    s.webhookHandler.TestWebhook,
+		ListWebhooks:   s.Webhook.Handler.ListWebhooks,
+		GetWebhook:     s.Webhook.Handler.GetWebhook,
+		ListDeliveries: s.Webhook.Handler.ListDeliveries,
+		CreateWebhook:  s.Webhook.Handler.CreateWebhook,
+		UpdateWebhook:  s.Webhook.Handler.UpdateWebhook,
+		DeleteWebhook:  s.Webhook.Handler.DeleteWebhook,
+		TestWebhook:    s.Webhook.Handler.TestWebhook,
 	}
 }
 
 func (s *Server) buildMonitoringRouteDeps() *routes.MonitoringDeps {
 	return &routes.MonitoringDeps{
-		RequireAuth:  middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireAuth:  middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope: middleware.RequireScope,
-		GetMetrics:   s.monitoringHandler.GetMetrics,
-		GetHealth:    s.monitoringHandler.GetHealth,
-		GetLogs:      s.monitoringHandler.GetLogs,
+		GetMetrics:   s.Monitoring.Handler.GetMetrics,
+		GetHealth:    s.Monitoring.Handler.GetHealth,
+		GetLogs:      s.Monitoring.Handler.GetLogs,
 	}
 }
 
 func (s *Server) buildFunctionsRouteDeps() *routes.FunctionsDeps {
-	if s.functionsHandler == nil {
+	if s.Functions.Handler == nil {
 		return nil
 	}
 	return &routes.FunctionsDeps{
-		RequireFunctionsEnabled: middleware.RequireFunctionsEnabled(s.authHandler.authService.GetSettingsCache()),
-		RequireAuth:             middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		OptionalAuth:            middleware.OptionalAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireFunctionsEnabled: middleware.RequireFunctionsEnabled(s.Auth.Handler.authService.GetSettingsCache()),
+		RequireAuth:             middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		OptionalAuth:            middleware.OptionalAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope:            middleware.RequireScope,
-		ListFunctions:           s.functionsHandler.ListFunctions,
-		GetFunction:             s.functionsHandler.GetFunction,
-		CreateFunction:          s.functionsHandler.CreateFunction,
-		UpdateFunction:          s.functionsHandler.UpdateFunction,
-		DeleteFunction:          s.functionsHandler.DeleteFunction,
-		InvokeFunction:          s.functionsHandler.InvokeFunction,
-		GetExecutions:           s.functionsHandler.GetExecutions,
-		ListSharedModules:       s.functionsHandler.ListSharedModules,
-		GetSharedModule:         s.functionsHandler.GetSharedModule,
-		CreateSharedModule:      s.functionsHandler.CreateSharedModule,
-		UpdateSharedModule:      s.functionsHandler.UpdateSharedModule,
-		DeleteSharedModule:      s.functionsHandler.DeleteSharedModule,
+		ListFunctions:           s.Functions.Handler.ListFunctions,
+		GetFunction:             s.Functions.Handler.GetFunction,
+		CreateFunction:          s.Functions.Handler.CreateFunction,
+		UpdateFunction:          s.Functions.Handler.UpdateFunction,
+		DeleteFunction:          s.Functions.Handler.DeleteFunction,
+		InvokeFunction:          s.Functions.Handler.InvokeFunction,
+		GetExecutions:           s.Functions.Handler.GetExecutions,
+		ListSharedModules:       s.Functions.Handler.ListSharedModules,
+		GetSharedModule:         s.Functions.Handler.GetSharedModule,
+		CreateSharedModule:      s.Functions.Handler.CreateSharedModule,
+		UpdateSharedModule:      s.Functions.Handler.UpdateSharedModule,
+		DeleteSharedModule:      s.Functions.Handler.DeleteSharedModule,
 	}
 }
 
 func (s *Server) buildJobsRouteDeps() *routes.JobsDeps {
-	if s.jobsHandler == nil {
+	if s.Jobs.Handler == nil {
 		return nil
 	}
 	return &routes.JobsDeps{
-		RequireJobsEnabled: middleware.RequireJobsEnabled(s.authHandler.authService.GetSettingsCache()),
-		RequireAuth:        middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		SubmitJob:          s.jobsHandler.SubmitJob,
-		GetJob:             s.jobsHandler.GetJob,
-		ListJobs:           s.jobsHandler.ListJobs,
-		CancelJob:          s.jobsHandler.CancelJob,
-		RetryJob:           s.jobsHandler.RetryJob,
-		GetJobLogsUser:     s.jobsHandler.GetJobLogsUser,
+		RequireJobsEnabled: middleware.RequireJobsEnabled(s.Auth.Handler.authService.GetSettingsCache()),
+		RequireAuth:        middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		SubmitJob:          s.Jobs.Handler.SubmitJob,
+		GetJob:             s.Jobs.Handler.GetJob,
+		ListJobs:           s.Jobs.Handler.ListJobs,
+		CancelJob:          s.Jobs.Handler.CancelJob,
+		RetryJob:           s.Jobs.Handler.RetryJob,
+		GetJobLogsUser:     s.Jobs.Handler.GetJobLogsUser,
 	}
 }
 
 func (s *Server) buildBranchRouteDeps() *routes.BranchDeps {
-	if s.branchHandler == nil || !s.config.Branching.Enabled {
+	if s.Branching.Handler == nil || !s.config.Branching.Enabled {
 		return nil
 	}
+
 	return &routes.BranchDeps{
-		GetActiveBranch:    s.branchHandler.GetActiveBranch,
-		SetActiveBranch:    s.branchHandler.SetActiveBranch,
-		ResetActiveBranch:  s.branchHandler.ResetActiveBranch,
-		GetPoolStats:       s.branchHandler.GetPoolStats,
-		CreateBranch:       s.branchHandler.CreateBranch,
-		ListBranches:       s.branchHandler.ListBranches,
-		GetBranch:          s.branchHandler.GetBranch,
-		DeleteBranch:       s.branchHandler.DeleteBranch,
-		ResetBranch:        s.branchHandler.ResetBranch,
-		GetBranchActivity:  s.branchHandler.GetBranchActivity,
-		ListBranchAccess:   s.branchHandler.ListBranchAccess,
-		GrantBranchAccess:  s.branchHandler.GrantBranchAccess,
-		RevokeBranchAccess: s.branchHandler.RevokeBranchAccess,
-		ListGitHubConfigs:  s.branchHandler.ListGitHubConfigs,
-		UpsertGitHubConfig: s.branchHandler.UpsertGitHubConfig,
-		DeleteGitHubConfig: s.branchHandler.DeleteGitHubConfig,
+		GetActiveBranch:    s.Branching.Handler.GetActiveBranch,
+		SetActiveBranch:    s.Branching.Handler.SetActiveBranch,
+		ResetActiveBranch:  s.Branching.Handler.ResetActiveBranch,
+		GetPoolStats:       s.Branching.Handler.GetPoolStats,
+		CreateBranch:       s.Branching.Handler.CreateBranch,
+		ListBranches:       s.Branching.Handler.ListBranches,
+		GetBranch:          s.Branching.Handler.GetBranch,
+		DeleteBranch:       s.Branching.Handler.DeleteBranch,
+		ResetBranch:        s.Branching.Handler.ResetBranch,
+		GetBranchActivity:  s.Branching.Handler.GetBranchActivity,
+		ListBranchAccess:   s.Branching.Handler.ListBranchAccess,
+		GrantBranchAccess:  s.Branching.Handler.GrantBranchAccess,
+		RevokeBranchAccess: s.Branching.Handler.RevokeBranchAccess,
+		ListGitHubConfigs:  s.Branching.Handler.ListGitHubConfigs,
+		UpsertGitHubConfig: s.Branching.Handler.UpsertGitHubConfig,
+		DeleteGitHubConfig: s.Branching.Handler.DeleteGitHubConfig,
 	}
 }
 
 func (s *Server) buildClientKeysRouteDeps() *routes.ClientKeysDeps {
 	return &routes.ClientKeysDeps{
-		RequireAuth:                      middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
-		RequireAdminIfClientKeysDisabled: middleware.RequireAdminIfClientKeysDisabled(s.authHandler.authService.GetSettingsCache()),
+		RequireAuth:                      middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
+		RequireAdminIfClientKeysDisabled: middleware.RequireAdminIfClientKeysDisabled(s.Auth.Handler.authService.GetSettingsCache()),
 		RequireScope:                     middleware.RequireScope,
-		ListClientKeys:                   s.clientKeyHandler.ListClientKeys,
-		GetClientKey:                     s.clientKeyHandler.GetClientKey,
-		CreateClientKey:                  s.clientKeyHandler.CreateClientKey,
-		UpdateClientKey:                  s.clientKeyHandler.UpdateClientKey,
-		DeleteClientKey:                  s.clientKeyHandler.DeleteClientKey,
-		RevokeClientKey:                  s.clientKeyHandler.RevokeClientKey,
+		ListClientKeys:                   s.Auth.ClientKeyHandler.ListClientKeys,
+		GetClientKey:                     s.Auth.ClientKeyHandler.GetClientKey,
+		CreateClientKey:                  s.Auth.ClientKeyHandler.CreateClientKey,
+		UpdateClientKey:                  s.Auth.ClientKeyHandler.UpdateClientKey,
+		DeleteClientKey:                  s.Auth.ClientKeyHandler.DeleteClientKey,
+		RevokeClientKey:                  s.Auth.ClientKeyHandler.RevokeClientKey,
 	}
 }
 
 func (s *Server) buildSecretsRouteDeps() *routes.SecretsDeps {
-	if s.secretsHandler == nil {
+	if s.Secrets.Handler == nil {
 		return nil
 	}
 	return &routes.SecretsDeps{
-		RequireAuth:        middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireAuth:        middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireScope:       middleware.RequireScope,
-		ListSecrets:        s.secretsHandler.ListSecrets,
-		GetStats:           s.secretsHandler.GetStats,
-		GetSecretByName:    s.secretsHandler.GetSecretByName,
-		GetVersionsByName:  s.secretsHandler.GetVersionsByName,
-		UpdateSecretByName: s.secretsHandler.UpdateSecretByName,
-		DeleteSecretByName: s.secretsHandler.DeleteSecretByName,
-		RollbackByName:     s.secretsHandler.RollbackByName,
-		GetSecret:          s.secretsHandler.GetSecret,
-		GetVersions:        s.secretsHandler.GetVersions,
-		CreateSecret:       s.secretsHandler.CreateSecret,
-		UpdateSecret:       s.secretsHandler.UpdateSecret,
-		DeleteSecret:       s.secretsHandler.DeleteSecret,
-		RollbackToVersion:  s.secretsHandler.RollbackToVersion,
+		ListSecrets:        s.Secrets.Handler.ListSecrets,
+		GetStats:           s.Secrets.Handler.GetStats,
+		GetSecretByName:    s.Secrets.Handler.GetSecretByName,
+		GetVersionsByName:  s.Secrets.Handler.GetVersionsByName,
+		UpdateSecretByName: s.Secrets.Handler.UpdateSecretByName,
+		DeleteSecretByName: s.Secrets.Handler.DeleteSecretByName,
+		RollbackByName:     s.Secrets.Handler.RollbackByName,
+		GetSecret:          s.Secrets.Handler.GetSecret,
+		GetVersions:        s.Secrets.Handler.GetVersions,
+		CreateSecret:       s.Secrets.Handler.CreateSecret,
+		UpdateSecret:       s.Secrets.Handler.UpdateSecret,
+		DeleteSecret:       s.Secrets.Handler.DeleteSecret,
+		RollbackToVersion:  s.Secrets.Handler.RollbackToVersion,
 	}
 }
 
 func (s *Server) buildSyncRouteDeps() *routes.SyncDeps {
 	deps := &routes.SyncDeps{
-		RequireSyncAuth: UnifiedAuthMiddleware(s.authHandler.authService, s.dashboardAuthHandler.jwtManager, s.db.Pool()),
+		RequireSyncAuth: UnifiedAuthMiddleware(s.Auth.Handler.authService, s.Auth.DashboardHandler.jwtManager, s.db.Pool()),
 		RequireRole:     RequireRole("admin", "instance_admin", "service_role"),
 	}
 
 	// Functions sync
-	if s.functionsHandler != nil {
+	if s.Functions.Handler != nil {
 		deps.RequireFunctionsSyncIPAllowlist = middleware.RequireSyncIPAllowlist(s.config.Functions.SyncAllowedIPRanges, "functions", &s.config.Server)
-		deps.SyncFunctions = s.functionsHandler.SyncFunctions
+		deps.SyncFunctions = s.Functions.Handler.SyncFunctions
 	}
 
 	// Jobs sync
-	if s.jobsHandler != nil {
+	if s.Jobs.Handler != nil {
 		deps.RequireJobsSyncIPAllowlist = middleware.RequireSyncIPAllowlist(s.config.Jobs.SyncAllowedIPRanges, "jobs", &s.config.Server)
-		deps.SyncJobs = s.jobsHandler.SyncJobs
+		deps.SyncJobs = s.Jobs.Handler.SyncJobs
 	}
 
 	// AI sync
-	if s.aiHandler != nil {
-		deps.RequireAIEnabled = middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache())
+	if s.AI.Handler != nil {
+		deps.RequireAIEnabled = middleware.RequireAIEnabled(s.Auth.Handler.authService.GetSettingsCache())
 		deps.RequireAISyncIPAllowlist = middleware.RequireSyncIPAllowlist(s.config.AI.SyncAllowedIPRanges, "ai", &s.config.Server)
-		deps.SyncChatbots = s.aiHandler.SyncChatbots
+		deps.SyncChatbots = s.AI.Handler.SyncChatbots
 	}
 
 	// RPC sync
-	if s.rpcHandler != nil {
-		deps.RequireRPCEnabled = middleware.RequireRPCEnabled(s.authHandler.authService.GetSettingsCache())
+	if s.RPC.Handler != nil {
+		deps.RequireRPCEnabled = middleware.RequireRPCEnabled(s.Auth.Handler.authService.GetSettingsCache())
 		deps.RequireRPCSyncIPAllowlist = middleware.RequireSyncIPAllowlist(s.config.RPC.SyncAllowedIPRanges, "rpc", &s.config.Server)
-		deps.SyncProcedures = s.rpcHandler.SyncProcedures
+		deps.SyncProcedures = s.RPC.Handler.SyncProcedures
 	}
 
 	return deps
@@ -418,91 +419,91 @@ func (s *Server) buildSyncRouteDeps() *routes.SyncDeps {
 
 func (s *Server) buildDashboardUserAuthRouteDeps() *routes.DashboardUserAuthDeps {
 	return &routes.DashboardUserAuthDeps{
-		RequireDashboardAuth:     s.dashboardAuthHandler.RequireDashboardAuth,
-		Signup:                   s.dashboardAuthHandler.Signup,
-		Login:                    s.dashboardAuthHandler.Login,
-		RefreshToken:             s.dashboardAuthHandler.RefreshToken,
-		VerifyTOTP:               s.dashboardAuthHandler.VerifyTOTP,
-		RequestPasswordReset:     s.dashboardAuthHandler.RequestPasswordReset,
-		VerifyPasswordResetToken: s.dashboardAuthHandler.VerifyPasswordResetToken,
-		ConfirmPasswordReset:     s.dashboardAuthHandler.ConfirmPasswordReset,
-		GetSSOProviders:          s.dashboardAuthHandler.GetSSOProviders,
-		InitiateOAuthLogin:       s.dashboardAuthHandler.InitiateOAuthLogin,
-		OAuthCallback:            s.dashboardAuthHandler.OAuthCallback,
-		InitiateSAMLLogin:        s.dashboardAuthHandler.InitiateSAMLLogin,
-		SAMLACSCallback:          s.dashboardAuthHandler.SAMLACSCallback,
-		GetCurrentUser:           s.dashboardAuthHandler.GetCurrentUser,
-		UpdateProfile:            s.dashboardAuthHandler.UpdateProfile,
-		ChangePassword:           s.dashboardAuthHandler.ChangePassword,
-		DeleteAccount:            s.dashboardAuthHandler.DeleteAccount,
-		SetupTOTP:                s.dashboardAuthHandler.SetupTOTP,
-		EnableTOTP:               s.dashboardAuthHandler.EnableTOTP,
-		DisableTOTP:              s.dashboardAuthHandler.DisableTOTP,
+		RequireDashboardAuth:     s.Auth.DashboardHandler.RequireDashboardAuth,
+		Signup:                   s.Auth.DashboardHandler.Signup,
+		Login:                    s.Auth.DashboardHandler.Login,
+		RefreshToken:             s.Auth.DashboardHandler.RefreshToken,
+		VerifyTOTP:               s.Auth.DashboardHandler.VerifyTOTP,
+		RequestPasswordReset:     s.Auth.DashboardHandler.RequestPasswordReset,
+		VerifyPasswordResetToken: s.Auth.DashboardHandler.VerifyPasswordResetToken,
+		ConfirmPasswordReset:     s.Auth.DashboardHandler.ConfirmPasswordReset,
+		GetSSOProviders:          s.Auth.DashboardHandler.GetSSOProviders,
+		InitiateOAuthLogin:       s.Auth.DashboardHandler.InitiateOAuthLogin,
+		OAuthCallback:            s.Auth.DashboardHandler.OAuthCallback,
+		InitiateSAMLLogin:        s.Auth.DashboardHandler.InitiateSAMLLogin,
+		SAMLACSCallback:          s.Auth.DashboardHandler.SAMLACSCallback,
+		GetCurrentUser:           s.Auth.DashboardHandler.GetCurrentUser,
+		UpdateProfile:            s.Auth.DashboardHandler.UpdateProfile,
+		ChangePassword:           s.Auth.DashboardHandler.ChangePassword,
+		DeleteAccount:            s.Auth.DashboardHandler.DeleteAccount,
+		SetupTOTP:                s.Auth.DashboardHandler.SetupTOTP,
+		EnableTOTP:               s.Auth.DashboardHandler.EnableTOTP,
+		DisableTOTP:              s.Auth.DashboardHandler.DisableTOTP,
 	}
 }
 
 func (s *Server) buildCustomMCPRouteDeps() *routes.CustomMCPDeps {
-	if s.customMCPHandler == nil {
+	if s.MCP.CustomHandler == nil {
 		return nil
 	}
 	return &routes.CustomMCPDeps{
-		RequireAuth:    middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireAuth:    middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 		RequireAdmin:   middleware.RequireAdmin(),
-		GetConfig:      s.customMCPHandler.GetConfig,
-		ListTools:      s.customMCPHandler.ListTools,
-		CreateTool:     s.customMCPHandler.CreateTool,
-		SyncTool:       s.customMCPHandler.SyncTool,
-		GetTool:        s.customMCPHandler.GetTool,
-		UpdateTool:     s.customMCPHandler.UpdateTool,
-		DeleteTool:     s.customMCPHandler.DeleteTool,
-		TestTool:       s.customMCPHandler.TestTool,
-		ListResources:  s.customMCPHandler.ListResources,
-		CreateResource: s.customMCPHandler.CreateResource,
-		SyncResource:   s.customMCPHandler.SyncResource,
-		GetResource:    s.customMCPHandler.GetResource,
-		UpdateResource: s.customMCPHandler.UpdateResource,
-		DeleteResource: s.customMCPHandler.DeleteResource,
-		TestResource:   s.customMCPHandler.TestResource,
+		GetConfig:      s.MCP.CustomHandler.GetConfig,
+		ListTools:      s.MCP.CustomHandler.ListTools,
+		CreateTool:     s.MCP.CustomHandler.CreateTool,
+		SyncTool:       s.MCP.CustomHandler.SyncTool,
+		GetTool:        s.MCP.CustomHandler.GetTool,
+		UpdateTool:     s.MCP.CustomHandler.UpdateTool,
+		DeleteTool:     s.MCP.CustomHandler.DeleteTool,
+		TestTool:       s.MCP.CustomHandler.TestTool,
+		ListResources:  s.MCP.CustomHandler.ListResources,
+		CreateResource: s.MCP.CustomHandler.CreateResource,
+		SyncResource:   s.MCP.CustomHandler.SyncResource,
+		GetResource:    s.MCP.CustomHandler.GetResource,
+		UpdateResource: s.MCP.CustomHandler.UpdateResource,
+		DeleteResource: s.MCP.CustomHandler.DeleteResource,
+		TestResource:   s.MCP.CustomHandler.TestResource,
 	}
 }
 
 func (s *Server) buildMCPRouteDeps() *routes.MCPDeps {
-	if s.mcpHandler == nil {
+	if s.MCP.Handler == nil {
 		return nil
 	}
 	return &routes.MCPDeps{
 		BasePath:     s.config.MCP.BasePath,
 		MCPAuth:      s.createMCPAuthMiddleware(),
-		HandlePost:   s.mcpHandler.HandlePost,
-		HandleGet:    s.mcpHandler.HandleGet,
-		HandleHealth: s.mcpHandler.HandleHealth,
+		HandlePost:   s.MCP.Handler.HandlePost,
+		HandleGet:    s.MCP.Handler.HandleGet,
+		HandleHealth: s.MCP.Handler.HandleHealth,
 	}
 }
 
 func (s *Server) buildMCPOAuthRouteDeps() *routes.MCPOAuthDeps {
-	if s.mcpOAuthHandler == nil {
+	if s.MCP.OAuth == nil {
 		return nil
 	}
 	return &routes.MCPOAuthDeps{
 		BasePath:                          s.config.MCP.BasePath,
-		HandleAuthorizationServerMetadata: s.mcpOAuthHandler.HandleAuthorizationServerMetadata,
-		HandleProtectedResourceMetadata:   s.mcpOAuthHandler.HandleProtectedResourceMetadata,
-		HandleClientRegistration:          s.mcpOAuthHandler.HandleClientRegistration,
-		HandleAuthorize:                   s.mcpOAuthHandler.HandleAuthorize,
-		HandleAuthorizeConsent:            s.mcpOAuthHandler.HandleAuthorizeConsent,
-		HandleToken:                       s.mcpOAuthHandler.HandleToken,
-		HandleRevoke:                      s.mcpOAuthHandler.HandleRevoke,
+		HandleAuthorizationServerMetadata: s.MCP.OAuth.HandleAuthorizationServerMetadata,
+		HandleProtectedResourceMetadata:   s.MCP.OAuth.HandleProtectedResourceMetadata,
+		HandleClientRegistration:          s.MCP.OAuth.HandleClientRegistration,
+		HandleAuthorize:                   s.MCP.OAuth.HandleAuthorize,
+		HandleAuthorizeConsent:            s.MCP.OAuth.HandleAuthorizeConsent,
+		HandleToken:                       s.MCP.OAuth.HandleToken,
+		HandleRevoke:                      s.MCP.OAuth.HandleRevoke,
 	}
 }
 
 func (s *Server) buildMigrationsRouteDeps() *routes.MigrationsDeps {
-	if s.migrationsHandler == nil || !s.config.Migrations.Enabled {
+	if s.Schema.Migrations == nil || !s.config.Migrations.Enabled {
 		return nil
 	}
 
 	var tenantPoolProvider middleware.MigrationsTenantPoolProvider
-	if s.tenantManager != nil && s.tenantManager.GetRouter() != nil {
-		tenantPoolProvider = s.tenantManager.GetRouter()
+	if s.Tenancy.Manager != nil && s.Tenancy.Manager.GetRouter() != nil {
+		tenantPoolProvider = s.Tenancy.Manager.GetRouter()
 	}
 
 	return &routes.MigrationsDeps{
@@ -510,23 +511,23 @@ func (s *Server) buildMigrationsRouteDeps() *routes.MigrationsDeps {
 			&s.config.Migrations,
 			&s.config.Server,
 			s.db.Pool(),
-			s.authHandler.authService,
+			s.Auth.Handler.authService,
 			s.config.Security.ServiceRoleRateLimit,
 			s.config.Security.ServiceRoleRateWindow,
 			s.sharedMiddlewareStorage,
 			tenantPoolProvider,
 		),
 		RequireRole:       RequireRole,
-		CreateMigration:   s.migrationsHandler.CreateMigration,
-		ListMigrations:    s.migrationsHandler.ListMigrations,
-		GetMigration:      s.migrationsHandler.GetMigration,
-		UpdateMigration:   s.migrationsHandler.UpdateMigration,
-		DeleteMigration:   s.migrationsHandler.DeleteMigration,
-		ApplyMigration:    s.migrationsHandler.ApplyMigration,
-		RollbackMigration: s.migrationsHandler.RollbackMigration,
-		ApplyPending:      s.migrationsHandler.ApplyPending,
-		SyncMigrations:    s.migrationsHandler.SyncMigrations,
-		GetExecutions:     s.migrationsHandler.GetExecutions,
+		CreateMigration:   s.Schema.Migrations.CreateMigration,
+		ListMigrations:    s.Schema.Migrations.ListMigrations,
+		GetMigration:      s.Schema.Migrations.GetMigration,
+		UpdateMigration:   s.Schema.Migrations.UpdateMigration,
+		DeleteMigration:   s.Schema.Migrations.DeleteMigration,
+		ApplyMigration:    s.Schema.Migrations.ApplyMigration,
+		RollbackMigration: s.Schema.Migrations.RollbackMigration,
+		ApplyPending:      s.Schema.Migrations.ApplyPending,
+		SyncMigrations:    s.Schema.Migrations.SyncMigrations,
+		GetExecutions:     s.Schema.Migrations.GetExecutions,
 	}
 }
 
@@ -539,13 +540,13 @@ func knowledgeBaseDisabledHandler(c fiber.Ctx) error {
 
 func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 	deps := &routes.KnowledgeBaseDeps{
-		RequireAIEnabled: middleware.RequireAIEnabled(s.authHandler.authService.GetSettingsCache()),
-		RequireAuth:      middleware.RequireAuthOrServiceKey(s.authHandler.authService, s.clientKeyService, s.db.Pool(), s.dashboardAuthHandler.jwtManager),
+		RequireAIEnabled: middleware.RequireAIEnabled(s.Auth.Handler.authService.GetSettingsCache()),
+		RequireAuth:      middleware.RequireAuthOrServiceKey(s.Auth.Handler.authService, s.Auth.ClientKeyService, s.db.Pool(), s.Auth.DashboardHandler.jwtManager),
 	}
 
 	// If AI/knowledge base storage is not available, use stub handlers
 	// This ensures routes return a proper error instead of 404
-	if s.kbStorage == nil {
+	if s.AI.KBStorage == nil {
 		deps.ListKBs = knowledgeBaseDisabledHandler
 		deps.CreateKB = knowledgeBaseDisabledHandler
 		deps.GetKB = knowledgeBaseDisabledHandler
@@ -561,9 +562,9 @@ func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 		return deps
 	}
 
-	handler := ai.NewUserKnowledgeBaseHandler(s.kbStorage)
-	if s.docProcessor != nil {
-		handler = ai.NewUserKnowledgeBaseHandlerWithProcessor(s.kbStorage, s.docProcessor)
+	handler := ai.NewUserKnowledgeBaseHandler(s.AI.KBStorage)
+	if s.AI.DocProcessor != nil {
+		handler = ai.NewUserKnowledgeBaseHandlerWithProcessor(s.AI.KBStorage, s.AI.DocProcessor)
 	}
 
 	deps.ListKBs = handler.ListMyKnowledgeBases
@@ -573,7 +574,7 @@ func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 	deps.ListPermissions = handler.ListPermissions
 	deps.RevokePermission = handler.RevokePermission
 
-	if s.docProcessor != nil {
+	if s.AI.DocProcessor != nil {
 		deps.ListDocuments = handler.ListMyDocuments
 		deps.GetDocument = handler.GetMyDocument
 		deps.AddDocument = handler.AddMyDocument
@@ -586,7 +587,7 @@ func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 }
 
 func (s *Server) buildAdminRouteDeps() *routes.AdminDeps {
-	unifiedAuth := UnifiedAuthMiddleware(s.authHandler.authService, s.dashboardAuthHandler.jwtManager, s.db.Pool())
+	unifiedAuth := UnifiedAuthMiddleware(s.Auth.Handler.authService, s.Auth.DashboardHandler.jwtManager, s.db.Pool())
 	return &routes.AdminDeps{
 		UnifiedAuth: unifiedAuth,
 		RequireRole: RequireRole,
@@ -598,21 +599,21 @@ func (s *Server) buildAdminRouteDeps() *routes.AdminDeps {
 			GetTableSchema:          s.handleGetTableSchema,
 			GetSchemas:              s.handleGetSchemas,
 			ExecuteQuery:            s.handleExecuteQuery,
-			ListSchemasDDL:          s.ddlHandler.ListSchemas,
-			CreateSchemaDDL:         s.ddlHandler.CreateSchema,
-			ListTablesDDL:           s.ddlHandler.ListTables,
-			CreateTableDDL:          s.ddlHandler.CreateTable,
-			DeleteTableDDL:          s.ddlHandler.DeleteTable,
-			RenameTableDDL:          s.ddlHandler.RenameTable,
-			AddColumnDDL:            s.ddlHandler.AddColumn,
-			DropColumnDDL:           s.ddlHandler.DropColumn,
-			EnableRealtime:          s.realtimeAdminHandler.HandleEnableRealtime,
-			ListRealtimeTables:      s.realtimeAdminHandler.HandleListRealtimeTables,
-			GetRealtimeStatus:       s.realtimeAdminHandler.HandleGetRealtimeStatus,
-			UpdateRealtimeConfig:    s.realtimeAdminHandler.HandleUpdateRealtimeConfig,
-			DisableRealtime:         s.realtimeAdminHandler.HandleDisableRealtime,
+			ListSchemasDDL:          s.Schema.DDL.ListSchemas,
+			CreateSchemaDDL:         s.Schema.DDL.CreateSchema,
+			ListTablesDDL:           s.Schema.DDL.ListTables,
+			CreateTableDDL:          s.Schema.DDL.CreateTable,
+			DeleteTableDDL:          s.Schema.DDL.DeleteTable,
+			RenameTableDDL:          s.Schema.DDL.RenameTable,
+			AddColumnDDL:            s.Schema.DDL.AddColumn,
+			DropColumnDDL:           s.Schema.DDL.DropColumn,
+			EnableRealtime:          s.Realtime.Admin.HandleEnableRealtime,
+			ListRealtimeTables:      s.Realtime.Admin.HandleListRealtimeTables,
+			GetRealtimeStatus:       s.Realtime.Admin.HandleGetRealtimeStatus,
+			UpdateRealtimeConfig:    s.Realtime.Admin.HandleUpdateRealtimeConfig,
+			DisableRealtime:         s.Realtime.Admin.HandleDisableRealtime,
 			ExecuteSQL:              s.sqlHandler.ExecuteSQL,
-			ExportTypeScript:        s.schemaExportHandler.HandleExportTypeScript,
+			ExportTypeScript:        s.Schema.Export.HandleExportTypeScript,
 			RefreshSchema:           s.handleRefreshSchema,
 			GetSchemaGraph:          s.GetSchemaGraph,
 			GetTableRelationships:   s.GetTableRelationships,
@@ -625,182 +626,182 @@ func (s *Server) buildAdminRouteDeps() *routes.AdminDeps {
 			DeletePolicy:            s.DeletePolicy,
 			GetPolicyTemplates:      s.GetPolicyTemplates,
 			GetSecurityWarnings:     s.GetSecurityWarnings,
-			DumpInternalSchema:      s.internalSchemaHandler.DumpSchema,
-			PlanInternalSchema:      s.internalSchemaHandler.PlanSchema,
-			ApplyInternalSchema:     s.internalSchemaHandler.ApplySchema,
-			ValidateInternalSchema:  s.internalSchemaHandler.ValidateSchema,
-			GetInternalSchemaStatus: s.internalSchemaHandler.GetSchemaStatus,
-			MigrateInternalSchema:   s.internalSchemaHandler.MigrateSchema,
+			DumpInternalSchema:      s.Schema.InternalSchema.DumpSchema,
+			PlanInternalSchema:      s.Schema.InternalSchema.PlanSchema,
+			ApplyInternalSchema:     s.Schema.InternalSchema.ApplySchema,
+			ValidateInternalSchema:  s.Schema.InternalSchema.ValidateSchema,
+			GetInternalSchemaStatus: s.Schema.InternalSchema.GetSchemaStatus,
+			MigrateInternalSchema:   s.Schema.InternalSchema.MigrateSchema,
 		},
 		AuthProviders: &routes.AuthProvidersAdminDeps{
-			ListOAuthProviders:  s.oauthProviderHandler.ListOAuthProviders,
-			GetOAuthProvider:    s.oauthProviderHandler.GetOAuthProvider,
-			CreateOAuthProvider: s.oauthProviderHandler.CreateOAuthProvider,
-			UpdateOAuthProvider: s.oauthProviderHandler.UpdateOAuthProvider,
-			DeleteOAuthProvider: s.oauthProviderHandler.DeleteOAuthProvider,
-			ListSAMLProviders:   s.samlProviderHandler.ListSAMLProviders,
-			GetSAMLProvider:     s.samlProviderHandler.GetSAMLProvider,
-			CreateSAMLProvider:  s.samlProviderHandler.CreateSAMLProvider,
-			UpdateSAMLProvider:  s.samlProviderHandler.UpdateSAMLProvider,
-			DeleteSAMLProvider:  s.samlProviderHandler.DeleteSAMLProvider,
-			ValidateSAML:        s.samlProviderHandler.ValidateMetadata,
-			UploadSAMLMetadata:  s.samlProviderHandler.UploadMetadata,
-			GetAuthSettings:     s.oauthProviderHandler.GetAuthSettings,
-			UpdateAuthSettings:  s.oauthProviderHandler.UpdateAuthSettings,
-			ListSessions:        s.adminSessionHandler.ListSessions,
-			RevokeSession:       s.adminSessionHandler.RevokeSession,
-			RevokeUserSessions:  s.adminSessionHandler.RevokeUserSessions,
+			ListOAuthProviders:  s.Auth.OAuthProvider.ListOAuthProviders,
+			GetOAuthProvider:    s.Auth.OAuthProvider.GetOAuthProvider,
+			CreateOAuthProvider: s.Auth.OAuthProvider.CreateOAuthProvider,
+			UpdateOAuthProvider: s.Auth.OAuthProvider.UpdateOAuthProvider,
+			DeleteOAuthProvider: s.Auth.OAuthProvider.DeleteOAuthProvider,
+			ListSAMLProviders:   s.Auth.SAMLProvider.ListSAMLProviders,
+			GetSAMLProvider:     s.Auth.SAMLProvider.GetSAMLProvider,
+			CreateSAMLProvider:  s.Auth.SAMLProvider.CreateSAMLProvider,
+			UpdateSAMLProvider:  s.Auth.SAMLProvider.UpdateSAMLProvider,
+			DeleteSAMLProvider:  s.Auth.SAMLProvider.DeleteSAMLProvider,
+			ValidateSAML:        s.Auth.SAMLProvider.ValidateMetadata,
+			UploadSAMLMetadata:  s.Auth.SAMLProvider.UploadMetadata,
+			GetAuthSettings:     s.Auth.OAuthProvider.GetAuthSettings,
+			UpdateAuthSettings:  s.Auth.OAuthProvider.UpdateAuthSettings,
+			ListSessions:        s.Auth.AdminSession.ListSessions,
+			RevokeSession:       s.Auth.AdminSession.RevokeSession,
+			RevokeUserSessions:  s.Auth.AdminSession.RevokeUserSessions,
 		},
 		Users: &routes.UsersAdminDeps{
-			ListUsers:           s.userManagementHandler.ListUsers,
-			InviteUser:          s.userManagementHandler.InviteUser,
-			DeleteUser:          s.userManagementHandler.DeleteUser,
-			UpdateUser:          s.userManagementHandler.UpdateUser,
-			UpdateUserRole:      s.userManagementHandler.UpdateUserRole,
-			ResetUserPassword:   s.userManagementHandler.ResetUserPassword,
-			ListUsersWithQuotas: s.quotaHandler.ListUsersWithQuotas,
-			GetUserQuota:        s.quotaHandler.GetUserQuota,
-			SetUserQuota:        s.quotaHandler.SetUserQuota,
-			CreateInvitation:    s.invitationHandler.CreateInvitation,
-			ListInvitations:     s.invitationHandler.ListInvitations,
-			RevokeInvitation:    s.invitationHandler.RevokeInvitation,
+			ListUsers:           s.Auth.UserManagement.ListUsers,
+			InviteUser:          s.Auth.UserManagement.InviteUser,
+			DeleteUser:          s.Auth.UserManagement.DeleteUser,
+			UpdateUser:          s.Auth.UserManagement.UpdateUser,
+			UpdateUserRole:      s.Auth.UserManagement.UpdateUserRole,
+			ResetUserPassword:   s.Auth.UserManagement.ResetUserPassword,
+			ListUsersWithQuotas: s.Quota.Handler.ListUsersWithQuotas,
+			GetUserQuota:        s.Quota.Handler.GetUserQuota,
+			SetUserQuota:        s.Quota.Handler.SetUserQuota,
+			CreateInvitation:    s.Auth.Invitation.CreateInvitation,
+			ListInvitations:     s.Auth.Invitation.ListInvitations,
+			RevokeInvitation:    s.Auth.Invitation.RevokeInvitation,
 		},
 		Tenants: &routes.TenantsAdminDeps{
-			ListMyTenants:             s.tenantHandler.ListMyTenants,
-			ListTenants:               s.tenantHandler.ListTenants,
-			CreateTenant:              s.tenantHandler.CreateTenant,
-			GetTenant:                 s.tenantHandler.GetTenant,
-			UpdateTenant:              s.tenantHandler.UpdateTenant,
-			DeleteTenant:              s.tenantHandler.DeleteTenant,
-			MigrateTenant:             s.tenantHandler.MigrateTenant,
-			ListAdmins:                s.tenantHandler.ListAdmins,
-			AssignAdmin:               s.tenantHandler.AssignAdmin,
-			RemoveAdmin:               s.tenantHandler.RemoveAdmin,
-			GetTenantSettings:         s.tenantSettingsHandler.GetTenantSettings,
-			UpdateTenantSettings:      s.tenantSettingsHandler.UpdateTenantSettings,
-			DeleteTenantSetting:       s.tenantSettingsHandler.DeleteTenantSetting,
-			GetTenantSetting:          s.tenantSettingsHandler.GetTenantSetting,
-			GetTenantSchemaStatus:     s.tenantHandler.GetTenantSchemaStatus,
-			ApplyTenantSchema:         s.tenantHandler.ApplyTenantSchema,
-			GetStoredSchema:           s.tenantHandler.GetStoredSchema,
-			UploadTenantSchema:        s.tenantHandler.UploadTenantSchema,
-			ApplyUploadedTenantSchema: s.tenantHandler.ApplyUploadedTenantSchema,
-			DeleteStoredSchema:        s.tenantHandler.DeleteStoredSchema,
+			ListMyTenants:             s.Tenancy.Tenant.ListMyTenants,
+			ListTenants:               s.Tenancy.Tenant.ListTenants,
+			CreateTenant:              s.Tenancy.Tenant.CreateTenant,
+			GetTenant:                 s.Tenancy.Tenant.GetTenant,
+			UpdateTenant:              s.Tenancy.Tenant.UpdateTenant,
+			DeleteTenant:              s.Tenancy.Tenant.DeleteTenant,
+			MigrateTenant:             s.Tenancy.Tenant.MigrateTenant,
+			ListAdmins:                s.Tenancy.Tenant.ListAdmins,
+			AssignAdmin:               s.Tenancy.Tenant.AssignAdmin,
+			RemoveAdmin:               s.Tenancy.Tenant.RemoveAdmin,
+			GetTenantSettings:         s.Settings.Tenant.GetTenantSettings,
+			UpdateTenantSettings:      s.Settings.Tenant.UpdateTenantSettings,
+			DeleteTenantSetting:       s.Settings.Tenant.DeleteTenantSetting,
+			GetTenantSetting:          s.Settings.Tenant.GetTenantSetting,
+			GetTenantSchemaStatus:     s.Tenancy.Tenant.GetTenantSchemaStatus,
+			ApplyTenantSchema:         s.Tenancy.Tenant.ApplyTenantSchema,
+			GetStoredSchema:           s.Tenancy.Tenant.GetStoredSchema,
+			UploadTenantSchema:        s.Tenancy.Tenant.UploadTenantSchema,
+			ApplyUploadedTenantSchema: s.Tenancy.Tenant.ApplyUploadedTenantSchema,
+			DeleteStoredSchema:        s.Tenancy.Tenant.DeleteStoredSchema,
 		},
 		ServiceKeys: &routes.ServiceKeysAdminDeps{
-			ListServiceKeys:      s.serviceKeyHandler.ListServiceKeys,
-			GetServiceKey:        s.serviceKeyHandler.GetServiceKey,
-			CreateServiceKey:     s.serviceKeyHandler.CreateServiceKey,
-			UpdateServiceKey:     s.serviceKeyHandler.UpdateServiceKey,
-			DeleteServiceKey:     s.serviceKeyHandler.DeleteServiceKey,
-			DisableServiceKey:    s.serviceKeyHandler.DisableServiceKey,
-			EnableServiceKey:     s.serviceKeyHandler.EnableServiceKey,
-			RevokeServiceKey:     s.serviceKeyHandler.RevokeServiceKey,
-			DeprecateServiceKey:  s.serviceKeyHandler.DeprecateServiceKey,
-			RotateServiceKey:     s.serviceKeyHandler.RotateServiceKey,
-			GetRevocationHistory: s.serviceKeyHandler.GetRevocationHistory,
+			ListServiceKeys:      s.Tenancy.ServiceKey.ListServiceKeys,
+			GetServiceKey:        s.Tenancy.ServiceKey.GetServiceKey,
+			CreateServiceKey:     s.Tenancy.ServiceKey.CreateServiceKey,
+			UpdateServiceKey:     s.Tenancy.ServiceKey.UpdateServiceKey,
+			DeleteServiceKey:     s.Tenancy.ServiceKey.DeleteServiceKey,
+			DisableServiceKey:    s.Tenancy.ServiceKey.DisableServiceKey,
+			EnableServiceKey:     s.Tenancy.ServiceKey.EnableServiceKey,
+			RevokeServiceKey:     s.Tenancy.ServiceKey.RevokeServiceKey,
+			DeprecateServiceKey:  s.Tenancy.ServiceKey.DeprecateServiceKey,
+			RotateServiceKey:     s.Tenancy.ServiceKey.RotateServiceKey,
+			GetRevocationHistory: s.Tenancy.ServiceKey.GetRevocationHistory,
 		},
 		Functions: &routes.FunctionsAdminDeps{
-			ReloadFunctions:        s.functionsHandler.ReloadFunctions,
-			ListFunctionNamespaces: s.functionsHandler.ListNamespaces,
-			ListAllExecutions:      s.functionsHandler.ListAllExecutions,
-			GetExecutionLogs:       s.functionsHandler.GetExecutionLogs,
-			SyncFunctions:          s.functionsHandler.SyncFunctions,
+			ReloadFunctions:        s.Functions.Handler.ReloadFunctions,
+			ListFunctionNamespaces: s.Functions.Handler.ListNamespaces,
+			ListAllExecutions:      s.Functions.Handler.ListAllExecutions,
+			GetExecutionLogs:       s.Functions.Handler.GetExecutionLogs,
+			SyncFunctions:          s.Functions.Handler.SyncFunctions,
 		},
 		Jobs: &routes.JobsAdminDeps{
-			ListJobNamespaces: s.jobsHandler.ListNamespaces,
-			ListJobFunctions:  s.jobsHandler.ListJobFunctions,
-			GetJobFunction:    s.jobsHandler.GetJobFunction,
-			DeleteJobFunction: s.jobsHandler.DeleteJobFunction,
-			GetJobStats:       s.jobsHandler.GetJobStats,
-			ListWorkers:       s.jobsHandler.ListWorkers,
-			ListAllJobs:       s.jobsHandler.ListAllJobs,
-			GetJobAdmin:       s.jobsHandler.GetJobAdmin,
-			TerminateJob:      s.jobsHandler.TerminateJob,
-			CancelJobAdmin:    s.jobsHandler.CancelJobAdmin,
-			RetryJobAdmin:     s.jobsHandler.RetryJobAdmin,
-			ResubmitJobAdmin:  s.jobsHandler.ResubmitJobAdmin,
-			SyncJobs:          s.jobsHandler.SyncJobs,
+			ListJobNamespaces: s.Jobs.Handler.ListNamespaces,
+			ListJobFunctions:  s.Jobs.Handler.ListJobFunctions,
+			GetJobFunction:    s.Jobs.Handler.GetJobFunction,
+			DeleteJobFunction: s.Jobs.Handler.DeleteJobFunction,
+			GetJobStats:       s.Jobs.Handler.GetJobStats,
+			ListWorkers:       s.Jobs.Handler.ListWorkers,
+			ListAllJobs:       s.Jobs.Handler.ListAllJobs,
+			GetJobAdmin:       s.Jobs.Handler.GetJobAdmin,
+			TerminateJob:      s.Jobs.Handler.TerminateJob,
+			CancelJobAdmin:    s.Jobs.Handler.CancelJobAdmin,
+			RetryJobAdmin:     s.Jobs.Handler.RetryJobAdmin,
+			ResubmitJobAdmin:  s.Jobs.Handler.ResubmitJobAdmin,
+			SyncJobs:          s.Jobs.Handler.SyncJobs,
 		},
 		AI: &routes.AIAdminDeps{
-			ListChatbots:               s.aiHandler.ListChatbots,
-			GetChatbot:                 s.aiHandler.GetChatbot,
-			ToggleChatbot:              s.aiHandler.ToggleChatbot,
-			UpdateChatbot:              s.aiHandler.UpdateChatbot,
-			DeleteChatbot:              s.aiHandler.DeleteChatbot,
-			SyncChatbots:               s.aiHandler.SyncChatbots,
-			GetAIMetrics:               s.aiHandler.GetAIMetrics,
-			ListAIProviders:            s.aiHandler.ListProviders,
-			ListAIConversations:        s.aiHandler.GetConversations,
-			GetAIConversationMessages:  s.aiHandler.GetConversationMessages,
-			GetAIAuditLog:              s.aiHandler.GetAuditLog,
-			ListExportableTables:       s.knowledgeBaseHandler.ListExportableTables,
-			GetExportableTableDetails:  s.knowledgeBaseHandler.GetTableDetails,
-			ExportTableToKnowledgeBase: s.knowledgeBaseHandler.ExportTableToKnowledgeBase,
-			ListChatbotKnowledgeBases:  s.knowledgeBaseHandler.ListChatbotKnowledgeBases,
-			LinkKnowledgeBase:          s.knowledgeBaseHandler.LinkKnowledgeBase,
-			UpdateChatbotKnowledgeBase: s.knowledgeBaseHandler.UpdateChatbotKnowledgeBase,
-			UnlinkKnowledgeBase:        s.knowledgeBaseHandler.UnlinkKnowledgeBase,
+			ListChatbots:               s.AI.Handler.ListChatbots,
+			GetChatbot:                 s.AI.Handler.GetChatbot,
+			ToggleChatbot:              s.AI.Handler.ToggleChatbot,
+			UpdateChatbot:              s.AI.Handler.UpdateChatbot,
+			DeleteChatbot:              s.AI.Handler.DeleteChatbot,
+			SyncChatbots:               s.AI.Handler.SyncChatbots,
+			GetAIMetrics:               s.AI.Handler.GetAIMetrics,
+			ListAIProviders:            s.AI.Handler.ListProviders,
+			ListAIConversations:        s.AI.Handler.GetConversations,
+			GetAIConversationMessages:  s.AI.Handler.GetConversationMessages,
+			GetAIAuditLog:              s.AI.Handler.GetAuditLog,
+			ListExportableTables:       s.AI.KnowledgeBase.ListExportableTables,
+			GetExportableTableDetails:  s.AI.KnowledgeBase.GetTableDetails,
+			ExportTableToKnowledgeBase: s.AI.KnowledgeBase.ExportTableToKnowledgeBase,
+			ListChatbotKnowledgeBases:  s.AI.KnowledgeBase.ListChatbotKnowledgeBases,
+			LinkKnowledgeBase:          s.AI.KnowledgeBase.LinkKnowledgeBase,
+			UpdateChatbotKnowledgeBase: s.AI.KnowledgeBase.UpdateChatbotKnowledgeBase,
+			UnlinkKnowledgeBase:        s.AI.KnowledgeBase.UnlinkKnowledgeBase,
 		},
 		RPC: &routes.RPCAdminDeps{
-			ListRPCNamespaces:   s.rpcHandler.ListNamespaces,
-			ListProcedures:      s.rpcHandler.ListProcedures,
-			GetProcedure:        s.rpcHandler.GetProcedure,
-			UpdateProcedure:     s.rpcHandler.UpdateProcedure,
-			DeleteProcedure:     s.rpcHandler.DeleteProcedure,
-			SyncProcedures:      s.rpcHandler.SyncProcedures,
-			ListRPCExecutions:   s.rpcHandler.ListExecutions,
-			GetRPCExecution:     s.rpcHandler.GetExecution,
-			GetRPCExecutionLogs: s.rpcHandler.GetExecutionLogs,
-			CancelRPCExecution:  s.rpcHandler.CancelExecution,
+			ListRPCNamespaces:   s.RPC.Handler.ListNamespaces,
+			ListProcedures:      s.RPC.Handler.ListProcedures,
+			GetProcedure:        s.RPC.Handler.GetProcedure,
+			UpdateProcedure:     s.RPC.Handler.UpdateProcedure,
+			DeleteProcedure:     s.RPC.Handler.DeleteProcedure,
+			SyncProcedures:      s.RPC.Handler.SyncProcedures,
+			ListRPCExecutions:   s.RPC.Handler.ListExecutions,
+			GetRPCExecution:     s.RPC.Handler.GetExecution,
+			GetRPCExecutionLogs: s.RPC.Handler.GetExecutionLogs,
+			CancelRPCExecution:  s.RPC.Handler.CancelExecution,
 		},
 		Logs: &routes.LogsAdminDeps{
-			ListLogs:              s.loggingHandler.QueryLogs,
-			GetLogStats:           s.loggingHandler.GetLogStats,
-			GetExecutionLogsAdmin: s.loggingHandler.GetExecutionLogs,
-			FlushLogs:             s.loggingHandler.FlushLogs,
-			GenerateTestLogs:      s.loggingHandler.GenerateTestLogs,
+			ListLogs:              s.Logging.Handler.QueryLogs,
+			GetLogStats:           s.Logging.Handler.GetLogStats,
+			GetExecutionLogsAdmin: s.Logging.Handler.GetExecutionLogs,
+			FlushLogs:             s.Logging.Handler.FlushLogs,
+			GenerateTestLogs:      s.Logging.Handler.GenerateTestLogs,
 		},
 		Settings: &routes.SettingsAdminDeps{
-			ListSystemSettings:        s.systemSettingsHandler.ListSettings,
-			GetSystemSetting:          s.systemSettingsHandler.GetSetting,
-			UpdateSystemSetting:       s.systemSettingsHandler.UpdateSetting,
-			DeleteSystemSetting:       s.systemSettingsHandler.DeleteSetting,
-			CreateCustomSetting:       s.customSettingsHandler.CreateSetting,
-			ListCustomSettings:        s.customSettingsHandler.ListSettings,
-			CreateSecretSetting:       s.customSettingsHandler.CreateSecretSetting,
-			ListSecretSettings:        s.customSettingsHandler.ListSecretSettings,
-			GetSecretSetting:          s.customSettingsHandler.GetSecretSetting,
-			UpdateSecretSetting:       s.customSettingsHandler.UpdateSecretSetting,
-			DeleteSecretSetting:       s.customSettingsHandler.DeleteSecretSetting,
-			GetUserSecretValue:        s.userSettingsHandler.GetUserSecretValue,
-			GetCustomSetting:          s.customSettingsHandler.GetSetting,
-			UpdateCustomSetting:       s.customSettingsHandler.UpdateSetting,
-			DeleteCustomSetting:       s.customSettingsHandler.DeleteSetting,
-			GetAppSettings:            s.appSettingsHandler.GetAppSettings,
-			UpdateAppSettings:         s.appSettingsHandler.UpdateAppSettings,
-			ListEmailSettings:         s.emailSettingsHandler.GetSettings,
-			GetEmailSetting:           s.emailSettingsHandler.GetSettings,
-			UpdateEmailSetting:        s.emailSettingsHandler.UpdateSettings,
-			TestEmailSettings:         s.emailSettingsHandler.TestSettings,
-			ListEmailTemplates:        s.emailTemplateHandler.ListTemplates,
-			GetEmailTemplate:          s.emailTemplateHandler.GetTemplate,
-			UpdateEmailTemplate:       s.emailTemplateHandler.UpdateTemplate,
-			TestEmailTemplate:         s.emailTemplateHandler.TestTemplate,
-			ResetEmailTemplate:        s.emailTemplateHandler.ResetTemplate,
-			GetCaptchaSettings:        s.captchaSettingsHandler.GetSettings,
-			UpdateCaptchaSettings:     s.captchaSettingsHandler.UpdateSettings,
-			GetInstanceSettings:       s.instanceSettingsHandler.GetInstanceSettings,
-			UpdateInstanceSettings:    s.instanceSettingsHandler.UpdateInstanceSettings,
-			GetOverridableSettings:    s.instanceSettingsHandler.GetOverridableSettings,
-			UpdateOverridableSettings: s.instanceSettingsHandler.UpdateOverridableSettings,
+			ListSystemSettings:        s.Settings.System.ListSettings,
+			GetSystemSetting:          s.Settings.System.GetSetting,
+			UpdateSystemSetting:       s.Settings.System.UpdateSetting,
+			DeleteSystemSetting:       s.Settings.System.DeleteSetting,
+			CreateCustomSetting:       s.Settings.Custom.CreateSetting,
+			ListCustomSettings:        s.Settings.Custom.ListSettings,
+			CreateSecretSetting:       s.Settings.Custom.CreateSecretSetting,
+			ListSecretSettings:        s.Settings.Custom.ListSecretSettings,
+			GetSecretSetting:          s.Settings.Custom.GetSecretSetting,
+			UpdateSecretSetting:       s.Settings.Custom.UpdateSecretSetting,
+			DeleteSecretSetting:       s.Settings.Custom.DeleteSecretSetting,
+			GetUserSecretValue:        s.Settings.User.GetUserSecretValue,
+			GetCustomSetting:          s.Settings.Custom.GetSetting,
+			UpdateCustomSetting:       s.Settings.Custom.UpdateSetting,
+			DeleteCustomSetting:       s.Settings.Custom.DeleteSetting,
+			GetAppSettings:            s.Settings.App.GetAppSettings,
+			UpdateAppSettings:         s.Settings.App.UpdateAppSettings,
+			ListEmailSettings:         s.Email.Settings.GetSettings,
+			GetEmailSetting:           s.Email.Settings.GetSettings,
+			UpdateEmailSetting:        s.Email.Settings.UpdateSettings,
+			TestEmailSettings:         s.Email.Settings.TestSettings,
+			ListEmailTemplates:        s.Email.Template.ListTemplates,
+			GetEmailTemplate:          s.Email.Template.GetTemplate,
+			UpdateEmailTemplate:       s.Email.Template.UpdateTemplate,
+			TestEmailTemplate:         s.Email.Template.TestTemplate,
+			ResetEmailTemplate:        s.Email.Template.ResetTemplate,
+			GetCaptchaSettings:        s.Captcha.Settings.GetSettings,
+			UpdateCaptchaSettings:     s.Captcha.Settings.UpdateSettings,
+			GetInstanceSettings:       s.Settings.Instance.GetInstanceSettings,
+			UpdateInstanceSettings:    s.Settings.Instance.UpdateInstanceSettings,
+			GetOverridableSettings:    s.Settings.Instance.GetOverridableSettings,
+			UpdateOverridableSettings: s.Settings.Instance.UpdateOverridableSettings,
 		},
 		Extensions: &routes.ExtensionsAdminDeps{
-			ListExtensions:   s.extensionsHandler.ListExtensions,
-			GetExtension:     s.extensionsHandler.GetExtensionStatus,
-			EnableExtension:  s.extensionsHandler.EnableExtension,
-			DisableExtension: s.extensionsHandler.DisableExtension,
-			SyncExtensions:   s.extensionsHandler.SyncExtensions,
+			ListExtensions:   s.Extensions.Handler.ListExtensions,
+			GetExtension:     s.Extensions.Handler.GetExtensionStatus,
+			EnableExtension:  s.Extensions.Handler.EnableExtension,
+			DisableExtension: s.Extensions.Handler.DisableExtension,
+			SyncExtensions:   s.Extensions.Handler.SyncExtensions,
 		},
 	}
 }

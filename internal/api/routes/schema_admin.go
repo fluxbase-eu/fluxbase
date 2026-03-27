@@ -48,6 +48,10 @@ type SchemaAdminDeps struct {
 	ValidateInternalSchema  fiber.Handler
 	GetInternalSchemaStatus fiber.Handler
 	MigrateInternalSchema   fiber.Handler
+
+	// Middleware for tenant and branch context
+	TenantMiddleware fiber.Handler
+	BranchMiddleware fiber.Handler
 }
 
 // BuildSchemaAdminRoutes creates the schema admin route group.
@@ -56,10 +60,26 @@ func BuildSchemaAdminRoutes(deps *SchemaAdminDeps) *RouteGroup {
 		return nil
 	}
 
+	// Build middlewares for tenant and branch context
+	var middlewares []Middleware
+	if deps.TenantMiddleware != nil {
+		middlewares = append(middlewares, Middleware{
+			Name:    "TenantContext",
+			Handler: deps.TenantMiddleware,
+		})
+	}
+	if deps.BranchMiddleware != nil {
+		middlewares = append(middlewares, Middleware{
+			Name:    "BranchContext",
+			Handler: deps.BranchMiddleware,
+		})
+	}
+
 	return &RouteGroup{
 		Name:         "schema_admin",
 		DefaultAuth:  AuthRequired,
 		DefaultRoles: []string{"admin", "instance_admin", "tenant_admin"},
+		Middlewares:  middlewares,
 		Routes: []Route{
 			// Tables (uses default roles)
 			{Method: "GET", Path: "/tables", Handler: deps.GetTables, Summary: "List all tables"},
@@ -88,7 +108,7 @@ func BuildSchemaAdminRoutes(deps *SchemaAdminDeps) *RouteGroup {
 			{Method: "DELETE", Path: "/realtime/tables/:schema/:table", Handler: deps.DisableRealtime, Summary: "Disable realtime for table"},
 
 			// SQL & Schema Export (uses default roles)
-			{Method: "POST", Path: "/sql", Handler: deps.ExecuteSQL, Summary: "Execute SQL"},
+			{Method: "POST", Path: "/sql/execute", Handler: deps.ExecuteSQL, Summary: "Execute SQL"},
 			{Method: "GET", Path: "/schema/export/typescript", Handler: deps.ExportTypeScript, Summary: "Export TypeScript types"},
 			{Method: "POST", Path: "/schema/refresh", Handler: deps.RefreshSchema, Summary: "Refresh schema cache"},
 

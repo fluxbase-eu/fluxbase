@@ -393,45 +393,45 @@ func TestServer_App(t *testing.T) {
 
 func TestServer_GetStorageService(t *testing.T) {
 	t.Run("returns nil when storage handler is nil", func(t *testing.T) {
-		s := &Server{storageHandler: nil}
+		s := &Server{Storage: &StorageHandlers{Handler: nil}}
 		assert.Nil(t, s.GetStorageService())
 	})
 
 	t.Run("returns nil when storage handler has nil service", func(t *testing.T) {
-		s := &Server{storageHandler: &StorageHandler{storageManager: nil}}
+		s := &Server{Storage: &StorageHandlers{Handler: &StorageHandler{storageManager: nil}}}
 		assert.Nil(t, s.GetStorageService())
 	})
 }
 
 func TestServer_GetWebhookTriggerService(t *testing.T) {
 	t.Run("returns nil when webhook trigger service is nil", func(t *testing.T) {
-		s := &Server{webhookTriggerService: nil}
+		s := &Server{Webhook: &WebhookHandlers{Trigger: nil}}
 		assert.Nil(t, s.GetWebhookTriggerService())
 	})
 }
 
 func TestServer_GetAuthService(t *testing.T) {
 	t.Run("returns nil when auth handler is nil", func(t *testing.T) {
-		s := &Server{authHandler: nil}
+		s := &Server{Auth: &AuthHandlers{Handler: nil}}
 		assert.Nil(t, s.GetAuthService())
 	})
 
 	t.Run("returns nil when auth handler has nil service", func(t *testing.T) {
-		s := &Server{authHandler: &AuthHandler{authService: nil}}
+		s := &Server{Auth: &AuthHandlers{Handler: &AuthHandler{authService: nil}}}
 		assert.Nil(t, s.GetAuthService())
 	})
 }
 
 func TestServer_GetLoggingService(t *testing.T) {
 	t.Run("returns nil when logging service is nil", func(t *testing.T) {
-		s := &Server{loggingService: nil}
+		s := &Server{Logging: &LoggingHandlers{Service: nil}}
 		assert.Nil(t, s.GetLoggingService())
 	})
 }
 
 func TestServer_LoadFunctionsFromFilesystem(t *testing.T) {
 	t.Run("returns error when functions handler is nil", func(t *testing.T) {
-		s := &Server{functionsHandler: nil}
+		s := &Server{Functions: &FunctionsHandlers{Handler: nil}}
 		err := s.LoadFunctionsFromFilesystem(context.TODO())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "functions handler not initialized")
@@ -440,7 +440,7 @@ func TestServer_LoadFunctionsFromFilesystem(t *testing.T) {
 
 func TestServer_LoadJobsFromFilesystem(t *testing.T) {
 	t.Run("returns error when jobs handler is nil", func(t *testing.T) {
-		s := &Server{jobsHandler: nil}
+		s := &Server{Jobs: &JobsHandlers{Handler: nil}}
 		err := s.LoadJobsFromFilesystem(context.TODO())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "jobs handler not initialized")
@@ -449,7 +449,7 @@ func TestServer_LoadJobsFromFilesystem(t *testing.T) {
 
 func TestServer_LoadAIChatbotsFromFilesystem(t *testing.T) {
 	t.Run("returns error when ai handler is nil", func(t *testing.T) {
-		s := &Server{aiHandler: nil}
+		s := &Server{AI: &AIHandlers{Handler: nil}}
 		err := s.LoadAIChatbotsFromFilesystem(context.TODO())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "AI handler not initialized")

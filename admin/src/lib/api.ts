@@ -4810,6 +4810,18 @@ export interface CreateTenantRequest {
   slug: string;
   name: string;
   metadata?: Record<string, unknown>;
+  auto_generate_keys?: boolean;
+  admin_email?: string;
+  admin_user_id?: string;
+  send_keys_to_email?: boolean;
+}
+
+export interface CreateTenantResponse {
+  tenant: Tenant;
+  anon_key?: string;
+  service_key?: string;
+  invitation_sent: boolean;
+  invitation_email?: string;
 }
 
 export interface UpdateTenantRequest {
@@ -4845,8 +4857,11 @@ export const tenantsApi = {
     return response.data;
   },
 
-  create: async (data: CreateTenantRequest): Promise<Tenant> => {
-    const response = await api.post<Tenant>("/api/v1/admin/tenants", data);
+  create: async (data: CreateTenantRequest): Promise<CreateTenantResponse> => {
+    const response = await api.post<CreateTenantResponse>(
+      "/api/v1/admin/tenants",
+      data,
+    );
     return response.data;
   },
 

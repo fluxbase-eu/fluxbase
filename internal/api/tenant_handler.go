@@ -1,22 +1,33 @@
 package api
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
 
+	"github.com/nimbleflux/fluxbase/internal/auth"
+	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/database"
+	"github.com/nimbleflux/fluxbase/internal/email"
 	"github.com/nimbleflux/fluxbase/internal/tenantdb"
 )
 
 type TenantHandler struct {
-	DB      *database.Connection
-	Manager *tenantdb.Manager
-	Storage *tenantdb.Storage
+	DB                *database.Connection
+	Manager           *tenantdb.Manager
+	Storage           *tenantdb.Storage
+	InvitationService *auth.InvitationService
+	EmailService      email.Service
+	Config            *config.Config
 }
 
 type TenantResponse struct {
@@ -40,9 +51,29 @@ type TenantAdminAssignment struct {
 }
 
 type CreateTenantRequest struct {
+	// Basic info
 	Slug     string                 `json:"slug" validate:"required,slug"`
 	Name     string                 `json:"name" validate:"required,min=1,max=255"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+
+	// Key generation
+	AutoGenerateKeys bool `json:"auto_generate_keys"` // default: true
+
+	// Admin assignment
+	AdminEmail  *string `json:"admin_email,omitempty"`
+	AdminUserID *string `json:"admin_user_id,omitempty"`
+
+	// Key delivery
+	SendKeysToEmail bool `json:"send_keys_to_email"`
+}
+
+// CreateTenantResponse represents the response for tenant creation
+type CreateTenantResponse struct {
+	Tenant          TenantResponse `json:"tenant"`
+	AnonKey         *string        `json:"anon_key,omitempty"`
+	ServiceKey      *string        `json:"service_key,omitempty"`
+	InvitationSent  bool           `json:"invitation_sent"`
+	InvitationEmail *string        `json:"invitation_email,omitempty"`
 }
 
 type UpdateTenantRequest struct {
@@ -54,11 +85,14 @@ type AssignAdminRequest struct {
 	UserID string `json:"user_id" validate:"required,uuid"`
 }
 
-func NewTenantHandler(db *database.Connection, manager *tenantdb.Manager, storage *tenantdb.Storage) *TenantHandler {
+func NewTenantHandler(db *database.Connection, manager *tenantdb.Manager, storage *tenantdb.Storage, invitationService *auth.InvitationService, emailService email.Service, cfg *config.Config) *TenantHandler {
 	return &TenantHandler{
-		DB:      db,
-		Manager: manager,
-		Storage: storage,
+		DB:                db,
+		Manager:           manager,
+		Storage:           storage,
+		InvitationService: invitationService,
+		EmailService:      emailService,
+		Config:            cfg,
 	}
 }
 
@@ -171,6 +205,7 @@ func (h *TenantHandler) CreateTenant(c fiber.Ctx) error {
 		metadata = req.Metadata
 	}
 
+	// Create the tenant database
 	t, err := h.Manager.CreateTenantDatabase(ctx, tenantdb.CreateTenantRequest{
 		Slug:     req.Slug,
 		Name:     req.Name,
@@ -186,7 +221,49 @@ func (h *TenantHandler) CreateTenant(c fiber.Ctx) error {
 
 	log.Info().Str("tenant_id", t.ID).Str("slug", t.Slug).Msg("Tenant created")
 
-	return c.Status(fiber.StatusCreated).JSON(tenantToResponse(t))
+	// Get the user ID for audit trail
+	userIDStr, _ := c.Locals("user_id").(string)
+	var createdBy *uuid.UUID
+	if userIDStr != "" {
+		uid, err := uuid.Parse(userIDStr)
+		if err == nil {
+			createdBy = &uid
+		}
+	}
+
+	// Generate keys if requested (default: true)
+	var anonKey, serviceKey *string
+	if req.AutoGenerateKeys {
+		anonKey, serviceKey, err = h.generateDefaultKeys(ctx, t.ID, createdBy)
+		if err != nil {
+			log.Warn().Err(err).Str("tenant_id", t.ID).Msg("Failed to generate default keys for tenant")
+			// Don't fail the request - tenant was created successfully
+		} else {
+			log.Info().Str("tenant_id", t.ID).Msg("Auto-generated default keys for tenant")
+		}
+	}
+
+	// Assign or invite admin if specified
+	var invitationSent bool
+	var invitationEmail *string
+	if req.AdminUserID != nil || req.AdminEmail != nil {
+		invitationSent, invitationEmail, err = h.assignOrInviteAdmin(ctx, t.ID, req, anonKey, serviceKey, createdBy)
+		if err != nil {
+			log.Warn().Err(err).Str("tenant_id", t.ID).Msg("Failed to assign/invite admin for tenant")
+			// Don't fail the request - tenant was created successfully
+		}
+	}
+
+	// Build response
+	response := CreateTenantResponse{
+		Tenant:          tenantToResponse(t),
+		AnonKey:         anonKey,
+		ServiceKey:      serviceKey,
+		InvitationSent:  invitationSent,
+		InvitationEmail: invitationEmail,
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(response)
 }
 
 func (h *TenantHandler) UpdateTenant(c fiber.Ctx) error {
@@ -413,6 +490,193 @@ func (h *TenantHandler) RemoveAdmin(c fiber.Ctx) error {
 		Msg("Admin removed from tenant")
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// generateDefaultKeys creates anon and service keys for a new tenant
+func (h *TenantHandler) generateDefaultKeys(ctx context.Context, tenantID string, createdBy *uuid.UUID) (anonKey, serviceKey *string, err error) {
+	tenantUUID, err := uuid.Parse(tenantID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid tenant ID: %w", err)
+	}
+
+	// Generate anon key (publishable, limited scopes)
+	anon, err := h.createServiceKey(ctx, CreateServiceKeyInternalRequest{
+		TenantID:    &tenantUUID,
+		KeyType:     "anon",
+		Name:        "Default Anon Key",
+		Description: "Auto-generated anonymous key for client-side access",
+		Scopes:      []string{"read:*", "write:own"},
+		CreatedBy:   createdBy,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create anon key: %w", err)
+	}
+
+	// Create tenant_service key (secret, full scopes)
+	service, err := h.createServiceKey(ctx, CreateServiceKeyInternalRequest{
+		TenantID:    &tenantUUID,
+		KeyType:     "tenant_service",
+		Name:        "Default Service Key",
+		Description: "Auto-generated service key for server-side operations",
+		Scopes:      []string{"*"},
+		CreatedBy:   createdBy,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create service key: %w", err)
+	}
+
+	return &anon, &service, nil
+}
+
+// CreateServiceKeyInternalRequest represents an internal request to create a service key
+type CreateServiceKeyInternalRequest struct {
+	Name              string
+	Description       string
+	KeyType           string
+	TenantID          *uuid.UUID
+	Scopes            []string
+	AllowedNamespaces []string
+	RateLimitPerMin   *int
+	CreatedBy         *uuid.UUID
+}
+
+// createServiceKey creates a service key programmatically (internal use)
+func (h *TenantHandler) createServiceKey(ctx context.Context, req CreateServiceKeyInternalRequest) (string, error) {
+	// Generate key bytes
+	keyBytes := make([]byte, 32)
+	if _, err := rand.Read(keyBytes); err != nil {
+		return "", fmt.Errorf("failed to generate key: %w", err)
+	}
+
+	// Determine prefix based on key type
+	prefix := "sk_live_"
+	switch req.KeyType {
+	case "anon":
+		prefix = "pk_anon_"
+	case "publishable":
+		prefix = "pk_live_"
+	case "global_service":
+		prefix = "sk_global_"
+	case "tenant_service":
+		prefix = "sk_tenant_"
+	}
+
+	fullKey := prefix + base64.URLEncoding.EncodeToString(keyBytes)
+	keyPrefix := fullKey[:16]
+
+	// Hash the key
+	keyHash, err := bcrypt.GenerateFromPassword([]byte(fullKey), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("failed to hash key: %w", err)
+	}
+
+	// Set default scopes if not provided
+	scopes := req.Scopes
+	if scopes == nil {
+		switch req.KeyType {
+		case "anon":
+			scopes = []string{"read"}
+		case "publishable":
+			scopes = []string{"read", "write"}
+		default:
+			scopes = []string{"*"}
+		}
+	}
+
+	// Insert into database
+	var keyID uuid.UUID
+	err = h.DB.Pool().QueryRow(ctx, `
+		INSERT INTO platform.service_keys (name, description, key_hash, key_prefix, key_type, tenant_id, scopes, allowed_namespaces, is_active, rate_limit_per_minute, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10)
+		RETURNING id
+	`, req.Name, req.Description, string(keyHash), keyPrefix, req.KeyType, req.TenantID, scopes, req.AllowedNamespaces, req.RateLimitPerMin, req.CreatedBy).Scan(&keyID)
+	if err != nil {
+		return "", fmt.Errorf("failed to insert key: %w", err)
+	}
+
+	log.Info().Str("key_id", keyID.String()).Str("key_type", req.KeyType).Str("tenant_id", fmt.Sprintf("%v", req.TenantID)).Msg("Auto-generated service key")
+
+	return fullKey, nil
+}
+
+// assignOrInviteAdmin assigns an existing user or sends an invitation email
+func (h *TenantHandler) assignOrInviteAdmin(
+	ctx context.Context,
+	tenantID string,
+	req CreateTenantRequest,
+	anonKey, serviceKey *string,
+	invitedBy *uuid.UUID,
+) (bool, *string, error) {
+	// Option 1: Assign existing user directly
+	if req.AdminUserID != nil {
+		err := h.Storage.AssignUserToTenant(ctx, *req.AdminUserID, tenantID)
+		if err != nil {
+			return false, nil, fmt.Errorf("failed to assign admin: %w", err)
+		}
+		log.Info().Str("tenant_id", tenantID).Str("user_id", *req.AdminUserID).Msg("Admin assigned to tenant")
+		return false, nil, nil
+	}
+
+	// Option 2: Invite by email
+	if req.AdminEmail != nil && h.InvitationService != nil {
+		// Parse tenant ID for invitation
+		tenantUUID, err := uuid.Parse(tenantID)
+		if err != nil {
+			return false, nil, fmt.Errorf("invalid tenant ID: %w", err)
+		}
+
+		// Create invitation token with tenant context (role: tenant_admin)
+		invitation, err := h.InvitationService.CreateInvitationWithTenant(ctx, *req.AdminEmail, "tenant_admin", &tenantUUID, invitedBy, 7*24*time.Hour)
+		if err != nil {
+			return false, nil, fmt.Errorf("failed to create invitation: %w", err)
+		}
+
+		// Build invitation link
+		baseURL := h.Config.GetPublicBaseURL()
+		if baseURL == "" {
+			baseURL = "http://localhost:8080"
+		}
+		inviteLink := fmt.Sprintf("%s/admin/accept-invitation?token=%s&tenant=%s", baseURL, invitation.Token, tenantID)
+
+		// Include keys in email if requested
+		var keyInfo string
+		if req.SendKeysToEmail && anonKey != nil && serviceKey != nil {
+			keyInfo = fmt.Sprintf(`
+
+Your API Keys:
+- Anon Key: %s
+- Service Key: %s
+
+⚠️ Save these keys securely - they won't be shown again.`, *anonKey, *serviceKey)
+		}
+
+		// Get tenant name for email
+		tenant, err := h.Storage.GetTenant(ctx, tenantID)
+		tenantName := tenantID
+		if err == nil && tenant != nil {
+			tenantName = tenant.Name
+		}
+
+		// Send invitation email
+		if h.EmailService != nil {
+			err = h.EmailService.Send(ctx, *req.AdminEmail,
+				fmt.Sprintf("You've been invited to manage %s", tenantName),
+				fmt.Sprintf(`You have been invited as an administrator for %s on Fluxbase.
+
+Click here to accept: %s
+%s`, tenantName, inviteLink, keyInfo))
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to send invitation email")
+				// Still return success since the invitation was created
+			} else {
+				log.Info().Str("email", *req.AdminEmail).Str("tenant_id", tenantID).Msg("Invitation email sent")
+			}
+		}
+
+		return true, req.AdminEmail, nil
+	}
+
+	return false, nil, nil
 }
 
 func isValidSlug(s string) bool {

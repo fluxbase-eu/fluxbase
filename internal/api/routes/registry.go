@@ -384,125 +384,10 @@ type HealthDeps struct {
 	Handler fiber.Handler
 }
 
+// RegisterAllRoutes registers all routes and applies them to the Fiber app.
 func RegisterAllRoutes(app *fiber.App, deps *AllDeps) error {
 	registry := NewRegistry(WithStrictValidation())
-
-	if deps.Health != nil {
-		registry.MustRegister(BuildHealthRoutes(deps.Health.Handler))
-	}
-	if deps.Realtime != nil {
-		registry.MustRegister(BuildRealtimeRoutes(deps.Realtime))
-	}
-	if deps.Storage != nil {
-		registry.MustRegister(BuildStorageRoutes(deps.Storage))
-	}
-	if deps.REST != nil {
-		registry.MustRegister(BuildRESTRoutes(deps.REST))
-	}
-	if deps.GraphQL != nil {
-		registry.MustRegister(BuildGraphQLRoutes(deps.GraphQL))
-	}
-	if deps.Vector != nil {
-		registry.MustRegister(BuildVectorRoutes(deps.Vector))
-	}
-	if deps.RPC != nil {
-		registry.MustRegister(BuildRPCRoutes(deps.RPC))
-	}
-	if deps.AI != nil {
-		registry.MustRegister(BuildAIRoutes(deps.AI))
-	}
-	if deps.Settings != nil {
-		registry.MustRegister(BuildSettingsRoutes(deps.Settings))
-	}
-	if deps.UserSettings != nil {
-		registry.MustRegister(BuildUserSettingsRoutes(deps.UserSettings))
-		registry.MustRegister(BuildUserSecretsRoutes(deps.UserSettings))
-	}
-	if deps.Dashboard != nil {
-		registry.MustRegister(BuildDashboardAuthRoutes(deps.Dashboard))
-	}
-	if deps.OpenAPI != nil {
-		registry.MustRegister(BuildOpenAPIRoutes(deps.OpenAPI))
-	}
-	if deps.Auth != nil {
-		registry.MustRegister(BuildAuthRoutes(deps.Auth))
-	}
-	if deps.InternalAI != nil {
-		registry.MustRegister(BuildInternalAIRoutes(deps.InternalAI))
-	}
-	if deps.GitHubWebhook != nil {
-		registry.MustRegister(BuildGitHubWebhookRoutes(deps.GitHubWebhook))
-	}
-	if deps.Invitation != nil {
-		registry.MustRegister(BuildInvitationRoutes(deps.Invitation))
-	}
-	if deps.Webhook != nil {
-		registry.MustRegister(BuildWebhookRoutes(deps.Webhook))
-	}
-	if deps.Monitoring != nil {
-		registry.MustRegister(BuildMonitoringRoutes(deps.Monitoring))
-	}
-	if deps.Functions != nil {
-		registry.MustRegister(BuildFunctionsRoutes(deps.Functions))
-	}
-	if deps.Jobs != nil {
-		registry.MustRegister(BuildJobsRoutes(deps.Jobs))
-	}
-	if deps.ClientKeys != nil {
-		registry.MustRegister(BuildClientKeysRoutes(deps.ClientKeys))
-	}
-	if deps.Secrets != nil {
-		registry.MustRegister(BuildSecretsRoutes(deps.Secrets))
-	}
-	if deps.Sync != nil {
-		if routes := BuildSyncRoutes(deps.Sync); routes != nil {
-			registry.MustRegister(routes)
-		}
-	}
-
-	// Admin routes
-	if deps.Admin != nil {
-		registry.MustRegister(BuildAdminRoutes(deps.Admin))
-	}
-
-	// Dashboard user auth routes
-	if deps.DashboardUserAuth != nil {
-		registry.MustRegister(BuildDashboardUserAuthRoutes(deps.DashboardUserAuth))
-	}
-
-	// MCP routes
-	if deps.CustomMCP != nil {
-		registry.MustRegister(BuildCustomMCPRoutes(deps.CustomMCP))
-	}
-	if deps.MCP != nil {
-		registry.MustRegister(BuildMCPRoutes(deps.MCP))
-	}
-	if deps.MCPOAuth != nil {
-		registry.MustRegister(BuildMCPOAuthRoutes(deps.MCPOAuth))
-	}
-
-	// Migrations routes
-	if deps.Migrations != nil {
-		registry.MustRegister(BuildMigrationsRoutes(deps.Migrations))
-	}
-
-	// Knowledge base routes
-	if deps.KnowledgeBase != nil {
-		if routes := BuildKnowledgeBaseRoutes(deps.KnowledgeBase); routes != nil {
-			registry.MustRegister(routes)
-		}
-	}
-
-	// Root route
-	if deps.Root != nil {
-		registry.MustRegister(&RouteGroup{
-			Name:   "root",
-			Prefix: "/",
-			Routes: []Route{
-				{Method: "GET", Path: "/", Handler: deps.Root, Summary: "Root health check", Auth: AuthNone, Public: true},
-			},
-		})
-	}
+	registerAllGroups(registry, deps)
 
 	if err := registry.Apply(app); err != nil {
 		return err
@@ -518,9 +403,17 @@ func RegisterAllRoutes(app *fiber.App, deps *AllDeps) error {
 	return nil
 }
 
+// AuditRoutes returns audit entries for all routes without applying them.
+// Useful for security reviews and documentation generation.
 func AuditRoutes(deps *AllDeps) []RouteAuditEntry {
 	registry := NewRegistry()
+	registerAllGroups(registry, deps)
+	return registry.Audit()
+}
 
+// registerAllGroups registers all route groups to the given registry.
+// This is the single source of truth for which route groups exist.
+func registerAllGroups(registry *Registry, deps *AllDeps) {
 	if deps.Health != nil {
 		registry.MustRegister(BuildHealthRoutes(deps.Health.Handler))
 	}
@@ -637,6 +530,4 @@ func AuditRoutes(deps *AllDeps) []RouteAuditEntry {
 			},
 		})
 	}
-
-	return registry.Audit()
 }

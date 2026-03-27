@@ -3,12 +3,43 @@ package migrations
 import "time"
 
 // Plan represents a migration plan from pgschema
+// pgschema outputs groups containing steps, not a flat changes array
 type Plan struct {
-	Changes     []Change      `json:"changes"`
-	DDL         string        `json:"ddl"`
-	Transaction bool          `json:"transaction"`
-	Summary     *PlanSummary  `json:"summary,omitempty"`
-	Duration    time.Duration `json:"-"`
+	Version           string             `json:"version"`
+	PgschemaVersion   string             `json:"pgschema_version"`
+	CreatedAt         string             `json:"created_at"`
+	SourceFingerprint *SourceFingerprint `json:"source_fingerprint,omitempty"`
+	Groups            []PlanGroup        `json:"groups"`
+	Changes           []Change           `json:"changes,omitempty"` // Legacy field, populated from Groups
+	DDL               string             `json:"ddl"`
+	Transaction       bool               `json:"transaction"`
+	Summary           *PlanSummary       `json:"summary,omitempty"`
+	Duration          time.Duration      `json:"-"`
+}
+
+// SourceFingerprint represents the source fingerprint in pgschema output
+type SourceFingerprint struct {
+	Hash string `json:"hash"`
+}
+
+// PlanGroup represents a group of steps in the plan
+type PlanGroup struct {
+	Steps []PlanStep `json:"steps"`
+}
+
+// PlanStep represents a single step in the plan
+type PlanStep struct {
+	SQL       string         `json:"sql"`
+	Type      string         `json:"type"`
+	Operation string         `json:"operation"` // "create", "drop", "alter"
+	Path      string         `json:"path"`
+	Directive *PlanDirective `json:"directive,omitempty"`
+}
+
+// PlanDirective represents a directive in a plan step (e.g., wait for index creation)
+type PlanDirective struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
 }
 
 // PlanSummary provides a summary of the plan
@@ -20,7 +51,7 @@ type PlanSummary struct {
 	DestructiveCount int `json:"destructive_count"`
 }
 
-// Change represents a single schema change
+// Change represents a single schema change (derived from PlanStep)
 type Change struct {
 	Type        ChangeType `json:"type"`
 	ObjectType  string     `json:"object_type"`

@@ -113,8 +113,55 @@ func (s *DeclarativeService) PlanForSchema(ctx context.Context, schema string) (
 		return nil, fmt.Errorf("failed to parse plan for schema %s: %w", schema, err)
 	}
 
+	// Extract changes from groups/steps structure
+	plan.Changes = extractChangesFromGroups(&plan)
+
 	plan.Duration = time.Since(start)
 	return &plan, nil
+}
+
+// extractChangesFromGroups converts pgschema's groups/steps structure to a flat Changes slice
+func extractChangesFromGroups(plan *Plan) []Change {
+	var changes []Change
+	for _, group := range plan.Groups {
+		for _, step := range group.Steps {
+			// Skip directive-only steps (like wait for index)
+			if step.SQL == "" {
+				continue
+			}
+
+			change := Change{
+				SQL: step.SQL,
+			}
+
+			// Parse path to extract schema, object type, and name
+			// Path format: "schema.object_type.name" or "schema.object_type.constraint_name"
+			parts := strings.Split(step.Path, ".")
+			if len(parts) >= 1 {
+				change.Schema = parts[0]
+			}
+			if len(parts) >= 2 {
+				change.ObjectType = parts[1]
+			}
+			if len(parts) >= 3 {
+				change.Name = strings.Join(parts[2:], ".")
+			}
+
+			// Convert operation to ChangeType
+			switch step.Operation {
+			case "create":
+				change.Type = ChangeCreate
+			case "drop":
+				change.Type = ChangeDrop
+				change.Destructive = true
+			case "alter":
+				change.Type = ChangeAlter
+			}
+
+			changes = append(changes, change)
+		}
+	}
+	return changes
 }
 
 // Plan generates a combined migration plan for all schemas
@@ -384,9 +431,7 @@ func (s *DeclarativeService) ApplyDeclarative(ctx context.Context) error {
 }
 
 // ApplyDeclarativeWithSource applies the declarative schema on startup with specified source.
-// It uses a two-phase approach:
-// Phase 1: Apply each schema directly (pgschema validation incompatible with our schema structure)
-// Phase 2: Apply cross-schema FKs from post-schema-fks.sql
+// It uses pgschema for proper schema diffing and evolution.
 // The source parameter indicates the origin: 'fresh_install', 'transitioned', or 'schema_apply'.
 func (s *DeclarativeService) ApplyDeclarativeWithSource(ctx context.Context, source string) error {
 	log.Info().Str("schema_dir", s.config.SchemaDir).Msg("Checking declarative schema...")
@@ -396,11 +441,11 @@ func (s *DeclarativeService) ApplyDeclarativeWithSource(ctx context.Context, sou
 		return fmt.Errorf("schema directory not found: %s", s.config.SchemaDir)
 	}
 
-	// Phase 1: Apply each schema directly
-	// Note: pgschema validates in a temporary schema which fails for:
-	// - Self-referential FKs (tables referencing other tables in same file)
-	// - Function references (triggers calling functions from other schemas)
-	// We use direct application with idempotent SQL transforms instead.
+	// Phase 1: Apply each schema using pgschema for proper diffing
+	// pgschema handles schema evolution correctly by:
+	// - Detecting existing tables and only adding new columns
+	// - Generating proper ALTER TABLE statements
+	// - Handling index and constraint changes
 	for _, schema := range s.config.Schemas {
 		schemaFile := filepath.Join(s.config.SchemaDir, schema+".sql")
 
@@ -410,8 +455,36 @@ func (s *DeclarativeService) ApplyDeclarativeWithSource(ctx context.Context, sou
 			continue
 		}
 
-		if err := s.applySchemaDirectFallback(ctx, schema); err != nil {
-			return fmt.Errorf("failed to apply schema %s: %w", schema, err)
+		// Generate plan first to see if there are any changes
+		plan, err := s.PlanForSchema(ctx, schema)
+		if err != nil {
+			// If plan fails (e.g., due to cross-schema FK validation in temporary schema),
+			// fall back to direct schema application with idempotent transforms
+			log.Warn().Err(err).Str("schema", schema).Msg("pgschema plan failed, using direct fallback")
+			if err := s.applySchemaDirectFallback(ctx, schema); err != nil {
+				return fmt.Errorf("failed to apply schema %s: %w", schema, err)
+			}
+			log.Info().Str("schema", schema).Msg("Schema applied via direct fallback")
+			continue
+		}
+
+		if len(plan.Changes) == 0 {
+			log.Debug().Str("schema", schema).Msg("No schema changes needed")
+			continue
+		}
+
+		// Try pgschema apply first
+		result, err := s.ApplyForSchema(ctx, schema, true) // auto-approve
+		if err != nil {
+			// If pgschema apply fails (e.g., due to cross-schema FK validation),
+			// execute the plan SQL directly - we already have the plan with correct ALTER statements
+			log.Warn().Err(err).Str("schema", schema).Msg("pgschema apply failed, executing plan SQL directly")
+			if err := s.applyPlanDirectly(ctx, schema, plan); err != nil {
+				return fmt.Errorf("failed to apply schema %s: %w", schema, err)
+			}
+			log.Info().Str("schema", schema).Int("changes", len(plan.Changes)).Msg("Schema changes applied via plan execution")
+		} else if len(result.Applied) > 0 {
+			log.Info().Str("schema", schema).Int("changes", len(result.Applied)).Msg("Schema changes applied via pgschema")
 		}
 	}
 
@@ -468,6 +541,62 @@ func (s *DeclarativeService) applySchemaDirectFallback(ctx context.Context, sche
 	}
 
 	log.Info().Str("schema", schema).Msg("Schema applied directly")
+	return nil
+}
+
+// applyPlanDirectly executes the SQL statements from a plan directly
+// This is used when pgschema apply fails due to validation issues but the plan is valid
+func (s *DeclarativeService) applyPlanDirectly(ctx context.Context, schema string, plan *Plan) error {
+	if len(plan.Changes) == 0 {
+		return nil
+	}
+
+	// Create connection
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		s.dbUser, s.dbPassword, s.dbHost, s.dbPort, s.dbName)
+	pool, err := pgxpool.New(ctx, connStr)
+	if err != nil {
+		return fmt.Errorf("failed to create connection pool: %w", err)
+	}
+	defer pool.Close()
+
+	// Set search_path to include all schemas for cross-schema references
+	// The target schema comes first, then all other schemas for FK references
+	allSchemas := strings.Join(s.config.Schemas, ", ")
+	searchPath := fmt.Sprintf("%s, %s, public", schema, allSchemas)
+	_, err = pool.Exec(ctx, fmt.Sprintf("SET search_path TO %s", searchPath))
+	if err != nil {
+		return fmt.Errorf("failed to set search_path: %w", err)
+	}
+
+	// Execute each change's SQL statement
+	for i, change := range plan.Changes {
+		if change.SQL == "" {
+			continue
+		}
+
+		// Log the change being applied
+		log.Debug().
+			Str("schema", schema).
+			Int("change_num", i+1).
+			Int("total_changes", len(plan.Changes)).
+			Str("type", string(change.Type)).
+			Str("object", change.Name).
+			Msg("Applying schema change")
+
+		_, err := pool.Exec(ctx, change.SQL)
+		if err != nil {
+			// Log the error with context
+			log.Error().
+				Err(err).
+				Str("schema", schema).
+				Str("sql", change.SQL).
+				Msg("Failed to execute plan SQL")
+			return fmt.Errorf("failed to execute plan SQL for schema %s (change %d/%d): %w", schema, i+1, len(plan.Changes), err)
+		}
+	}
+
+	log.Info().Str("schema", schema).Int("changes", len(plan.Changes)).Msg("Plan SQL executed successfully")
 	return nil
 }
 

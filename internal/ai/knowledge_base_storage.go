@@ -415,6 +415,38 @@ func (s *KnowledgeBaseStorage) UpdateDocumentMetadata(ctx context.Context, id st
 	return &doc, nil
 }
 
+// UpdateDocument updates a document entity in the database
+func (s *KnowledgeBaseStorage) UpdateDocument(ctx context.Context, doc *Document) error {
+	query := `
+		UPDATE ai.documents SET
+			title = COALESCE($2, title),
+			metadata = COALESCE($3, metadata),
+			tags = COALESCE($4, tags),
+			updated_at = NOW()
+		WHERE id = $1
+	`
+
+	var metadataJSON []byte
+	var err error
+	if doc.Metadata != nil {
+		metadataJSON, err = json.Marshal(doc.Metadata)
+		if err != nil {
+			return fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+	}
+
+	result, err := s.db.Exec(ctx, query, doc.ID, doc.Title, metadataJSON, doc.Tags)
+	if err != nil {
+		return fmt.Errorf("failed to update document: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("document not found")
+	}
+
+	return nil
+}
+
 // FindDocumentByMetadata finds a document by knowledge base ID and metadata fields
 // This is used for idempotent operations like table exports where we want to find
 // an existing document for a specific schema.table combination.

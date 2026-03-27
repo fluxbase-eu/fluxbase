@@ -872,6 +872,7 @@ CREATE TABLE IF NOT EXISTS invitation_tokens (
     email text NOT NULL,
     token text NOT NULL,
     role text DEFAULT 'dashboard_user' NOT NULL,
+    tenant_id uuid,
     invited_by uuid,
     expires_at timestamptz NOT NULL,
     accepted boolean DEFAULT false,
@@ -879,6 +880,7 @@ CREATE TABLE IF NOT EXISTS invitation_tokens (
     created_at timestamptz DEFAULT now(),
     CONSTRAINT invitation_tokens_pkey PRIMARY KEY (id),
     CONSTRAINT invitation_tokens_token_key UNIQUE (token),
+    CONSTRAINT invitation_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants (id) ON DELETE CASCADE,
     CONSTRAINT invitation_tokens_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES users (id) ON DELETE SET NULL
 );
 
@@ -905,6 +907,12 @@ CREATE INDEX IF NOT EXISTS idx_dashboard_invitation_tokens_expires_at ON invitat
 --
 
 CREATE INDEX IF NOT EXISTS idx_dashboard_invitation_tokens_token ON invitation_tokens (token);
+
+--
+-- Name: idx_dashboard_invitation_tokens_tenant_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_dashboard_invitation_tokens_tenant_id ON invitation_tokens (tenant_id);
 
 --
 -- Name: invitation_tokens; Type: RLS; Schema: -; Owner: -

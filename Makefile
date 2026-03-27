@@ -220,25 +220,25 @@ test-fast: ## Run all tests without race detector (faster, excludes e2e)
 	@FLUXBASE_LOG_LEVEL=info ./scripts/test-runner.sh go test -timeout 1m -v -short -cover $(shell go list ./... | grep -v '/test/e2e')
 
 test-full: ## Run ALL tests including e2e with race detector (may take 5-10 minutes)
-	@./scripts/test-runner.sh go test -timeout 15m -v -race -cover ./...
+	@./scripts/test-runner.sh go test -timeout 15m -v -race -cover -tags=integration ./...
 
 test-e2e: ## Run e2e tests only (requires postgres, mailhog, minio services). Use RUN= to filter tests.
-	@./scripts/test-runner.sh go test -v -race -parallel=1 -timeout=5m ./test/e2e/... $(if $(RUN),-run $(RUN),)
+	@./scripts/test-runner.sh go test -v -race -parallel=1 -timeout=5m -tags=integration ./test/e2e/... $(if $(RUN),-run $(RUN),)
 
 test-e2e-fast: ## Run e2e tests without race detector (faster for dev iteration). Use RUN= to filter tests.
-	@./scripts/test-runner.sh go test -v -parallel=1 -timeout=3m ./test/e2e/... $(if $(RUN),-run $(RUN),)
+	@./scripts/test-runner.sh go test -v -parallel=1 -timeout=3m -tags=integration ./test/e2e/... $(if $(RUN),-run $(RUN),)
 
 test-auth: ## Run authentication tests only
-	@./scripts/test-runner.sh go test -v -race -timeout=5m ./test/e2e/ -run TestAuth
+	@./scripts/test-runner.sh go test -v -race -timeout=5m -tags=integration ./test/e2e/ -run TestAuth
 
 test-rls: ## Run RLS security tests only
-	@./scripts/test-runner.sh go test -v -race -timeout=5m ./test/e2e/ -run TestRLS
+	@./scripts/test-runner.sh go test -v -race -timeout=5m -tags=integration ./test/e2e/ -run TestRLS
 
 test-rest: ## Run REST API tests only
-	@./scripts/test-runner.sh go test -v -race -timeout=5m ./test/e2e/ -run TestREST
+	@./scripts/test-runner.sh go test -v -race -timeout=5m -tags=integration ./test/e2e/ -run TestREST
 
 test-storage: ## Run storage tests only
-	@./scripts/test-runner.sh go test -v -race -timeout=5m ./test/e2e/ -run TestStorage
+	@./scripts/test-runner.sh go test -v -race -timeout=5m -tags=integration ./test/e2e/ -run TestStorage
 
 test-sdk: ## Run SDK tests (TypeScript)
 	@echo "${YELLOW}Running SDK tests...${NC}"

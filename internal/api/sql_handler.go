@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/nimbleflux/fluxbase/internal/auth"
+	"github.com/nimbleflux/fluxbase/internal/middleware"
 )
 
 // SQLHandler handles SQL query execution for the admin SQL editor
@@ -85,13 +86,6 @@ func (h *SQLHandler) ExecuteSQL(c fiber.Ctx) error {
 		})
 	}
 
-	// Check if database connection is available
-	if h.db == nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database connection not initialized",
-		})
-	}
-
 	// Get user information for audit logging
 	userID, _ := GetUserID(c)
 	userEmail, _ := GetUserEmail(c)
@@ -99,30 +93,35 @@ func (h *SQLHandler) ExecuteSQL(c fiber.Ctx) error {
 	// Split query into statements (basic split by semicolon)
 	statements := splitSQLStatements(req.Query)
 
+	// Get tenant context from middleware
+	tenantID := middleware.GetTenantIDFromContext(c)
+	tenantRole := middleware.GetTenantRoleFromContext(c)
+	isInstanceAdmin := middleware.IsInstanceAdminFromContext(c)
+	tenantSource := middleware.GetTenantSourceFromContext(c)
+
+	// Determine if acting as tenant admin (explicit tenant context via header or JWT)
+	actingAsTenantAdmin := tenantID != "" && (tenantSource == "header" || tenantSource == "jwt")
+
 	// Check for impersonation token in custom header
 	// This allows the admin to stay authenticated while executing queries as another user
 	impersonationToken := c.Get("X-Impersonation-Token")
 
-	// Log whether impersonation header was received (INFO level for visibility)
+	// Log execution attempt with context
 	log.Info().
 		Str("user_id", userID).
+		Str("user_email", userEmail).
+		Bool("is_instance_admin", isInstanceAdmin).
+		Bool("acting_as_tenant_admin", actingAsTenantAdmin).
+		Str("tenant_id", tenantID).
+		Str("tenant_role", tenantRole).
+		Str("tenant_source", tenantSource).
 		Bool("has_impersonation_token", impersonationToken != "").
-		Int("token_length", len(impersonationToken)).
-		Msg("SQL query execution - checking impersonation")
+		Str("query_preview", truncateString(req.Query, 100)).
+		Msg("SQL query execution attempt")
 
 	if impersonationToken != "" {
 		// Trim any whitespace
 		impersonationToken = strings.TrimSpace(impersonationToken)
-
-		// Debug: Log token preview
-		tokenPreview := impersonationToken
-		if len(tokenPreview) > 30 {
-			tokenPreview = tokenPreview[:30] + "..."
-		}
-		log.Debug().
-			Str("token_preview", tokenPreview).
-			Bool("starts_with_ey", strings.HasPrefix(impersonationToken, "ey")).
-			Msg("Validating SQL impersonation token")
 
 		// Validate the impersonation token
 		impersonationClaims, err := h.authService.ValidateToken(impersonationToken)
@@ -130,7 +129,6 @@ func (h *SQLHandler) ExecuteSQL(c fiber.Ctx) error {
 			log.Warn().
 				Err(err).
 				Str("user_id", userID).
-				Str("token_preview", tokenPreview).
 				Msg("Invalid impersonation token in SQL query")
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Invalid impersonation token",
@@ -139,46 +137,140 @@ func (h *SQLHandler) ExecuteSQL(c fiber.Ctx) error {
 
 		log.Info().
 			Str("audit_user_id", userID).
-			Str("audit_user_email", userEmail).
 			Str("impersonated_user_id", impersonationClaims.UserID).
 			Str("impersonated_role", impersonationClaims.Role).
-			Str("query_preview", truncateString(req.Query, 100)).
 			Msg("SQL query execution with impersonation token")
 
-		// Use impersonation claims for RLS context
-		return h.executeWithRLSContext(c, req.Query, statements, impersonationClaims, userID)
+		// Get pool for impersonated context
+		pool := h.getPoolForQuery(c, req.Query)
+		return h.executeWithRLSContext(c, pool, statements, impersonationClaims, tenantID, userID)
 	}
 
-	// No impersonation - check if JWT claims indicate a known database role
-	claims, hasClaims := c.Locals("jwt_claims").(*auth.TokenClaims)
-
-	// Log query execution attempt
-	log.Info().
-		Str("user_id", userID).
-		Str("user_email", userEmail).
-		Bool("has_claims", hasClaims).
-		Str("query_preview", truncateString(req.Query, 100)).
-		Msg("SQL query execution attempt")
-
-	// Only use RLS context for known database roles (direct token, not impersonation)
-	// Instance admins (role like "instance_admin") get service_role access
-	if hasClaims && claims != nil && isKnownDatabaseRole(claims.Role) {
-		return h.executeWithRLSContext(c, req.Query, statements, claims, userID)
+	// Instance admin WITHOUT tenant context → full access (service_role)
+	if isInstanceAdmin && !actingAsTenantAdmin {
+		pool := h.getPoolForQuery(c, req.Query)
+		return h.executeAsInstanceAdmin(c, pool, statements, userID)
 	}
 
-	// Admin mode: execute with service_role for full access
-	return h.executeAsServiceRole(c, req.Query, statements, userID)
+	// All other cases → RLS enforced with tenant context
+	// - Instance admin WITH tenant context
+	// - Tenant admin
+	// - Regular user
+	pool := h.getPoolForQuery(c, req.Query)
+
+	// Get user claims from JWT
+	var claims *auth.TokenClaims
+	if c.Locals("claims") != nil {
+		if jwtClaims, ok := c.Locals("claims").(*auth.TokenClaims); ok {
+			claims = jwtClaims
+		}
+	}
+
+	// If no claims, create minimal claims from context
+	if claims == nil {
+		claims = &auth.TokenClaims{
+			UserID: userID,
+			Role:   "authenticated",
+		}
+		if tenantRole != "" {
+			claims.Role = tenantRole
+		}
+	}
+
+	return h.executeWithTenantRLS(c, pool, statements, claims, tenantID, userID, isInstanceAdmin)
+}
+
+// getPoolForQuery determines the appropriate database pool for a query
+// Priority: Branch > Tenant (for public schema) > Main
+func (h *SQLHandler) getPoolForQuery(c fiber.Ctx, query string) *pgxpool.Pool {
+	// 1. Check for branch pool (highest priority)
+	if pool := middleware.GetBranchPool(c); pool != nil {
+		log.Debug().Msg("Using branch pool for SQL execution")
+		return pool
+	}
+
+	// 2. Check for tenant pool (for public schema queries)
+	queryLower := strings.ToLower(query)
+	isPublicSchemaQuery := isQueryForPublicSchema(queryLower)
+
+	if isPublicSchemaQuery {
+		if tenantPool := middleware.GetTenantPool(c); tenantPool != nil {
+			log.Debug().
+				Bool("is_public_schema", isPublicSchemaQuery).
+				Msg("Using tenant pool for public schema query")
+			return tenantPool
+		}
+	}
+
+	// 3. Fall back to main database (for non-public schemas with RLS)
+	log.Debug().
+		Bool("is_public_schema", isPublicSchemaQuery).
+		Msg("Using main pool for SQL execution")
+	return h.db
+}
+
+// isQueryForPublicSchema determines if a query targets the public schema
+func isQueryForPublicSchema(queryLower string) bool {
+	// Check for explicit public schema references
+	if strings.Contains(queryLower, "public.") {
+		return true
+	}
+
+	// Check for CREATE TABLE/INDEX/etc without schema prefix (defaults to public)
+	createPatterns := []string{
+		"create table ", "create index ", "create unique index ",
+		"create sequence ", "create view ", "create materialized view ",
+	}
+	for _, pattern := range createPatterns {
+		if strings.Contains(queryLower, pattern) {
+			// If it has a schema prefix that's not "public", it's not for public schema
+			if strings.Contains(queryLower, " auth.") ||
+				strings.Contains(queryLower, " storage.") ||
+				strings.Contains(queryLower, " ai.") ||
+				strings.Contains(queryLower, " platform.") ||
+				strings.Contains(queryLower, " branching.") ||
+				strings.Contains(queryLower, " jobs.") ||
+				strings.Contains(queryLower, " functions.") ||
+				strings.Contains(queryLower, " logging.") {
+				return false
+			}
+			return true // No explicit schema, defaults to public
+		}
+	}
+
+	// For SELECT/INSERT/UPDATE/DELETE, check if tables are qualified
+	// Unqualified table names default to public schema
+	dmlPatterns := []string{"select ", "insert ", "update ", "delete from ", "from "}
+	for _, pattern := range dmlPatterns {
+		if strings.Contains(queryLower, pattern) {
+			// Check if there's an explicit non-public schema qualifier
+			if strings.Contains(queryLower, " auth.") ||
+				strings.Contains(queryLower, " storage.") ||
+				strings.Contains(queryLower, " ai.") ||
+				strings.Contains(queryLower, " platform.") ||
+				strings.Contains(queryLower, " branching.") ||
+				strings.Contains(queryLower, " jobs.") ||
+				strings.Contains(queryLower, " functions.") ||
+				strings.Contains(queryLower, " logging.") {
+				return false
+			}
+			// No explicit schema qualifier - could be public schema
+			return true
+		}
+	}
+
+	return false
 }
 
 // executeWithRLSContext executes SQL statements with Row Level Security context
-// This is used when impersonating a user to test RLS policies
-func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statements []string, claims *auth.TokenClaims, auditUserID string) error {
+// This is used for impersonation mode to test RLS policies
+func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, pool *pgxpool.Pool, statements []string, claims *auth.TokenClaims, tenantID string, auditUserID string) error {
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 
 	// Acquire a dedicated connection for setting session variables
-	conn, err := h.db.Acquire(ctx)
+	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to acquire database connection: %v", err),
@@ -187,7 +279,6 @@ func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statem
 	defer conn.Release()
 
 	// Build JWT claims JSON for request.jwt.claims setting
-	// This mirrors what Supabase/PostgREST does
 	claimsMap := map[string]any{
 		"sub":          claims.UserID,
 		"role":         claims.Role,
@@ -203,6 +294,10 @@ func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statem
 	if claims.AppMetadata != nil {
 		claimsMap["app_metadata"] = claims.AppMetadata
 	}
+	// Add tenant context for RLS
+	if tenantID != "" {
+		claimsMap["tenant_id"] = tenantID
+	}
 
 	claimsJSON, err := json.Marshal(claimsMap)
 	if err != nil {
@@ -211,35 +306,18 @@ func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statem
 		})
 	}
 
-	// Determine the database role to use
-	// Map application roles to PostgreSQL database roles
-	// Valid database roles: authenticated, anon, service_role
-	// Any other role (like "admin") maps to "authenticated" since they're authenticated users
-	dbRole := claims.Role
-	if !isKnownDatabaseRole(dbRole) {
-		log.Debug().
-			Str("app_role", claims.Role).
-			Str("db_role", "authenticated").
-			Msg("Mapping application role to database role")
-		dbRole = "authenticated"
+	// Determine the database role to use - always enforce RLS in impersonation mode
+	dbRole := "authenticated"
+	if claims.Role == "anon" {
+		dbRole = "anon"
 	}
-	if dbRole == "" {
-		dbRole = "authenticated"
-	}
-
-	// Log the exact claims being set (INFO level for visibility)
-	log.Info().
-		Str("claims_json", string(claimsJSON)).
-		Str("db_role", dbRole).
-		Str("user_id", claims.UserID).
-		Msg("Setting RLS context for SQL execution")
 
 	log.Info().
 		Str("audit_user_id", auditUserID).
 		Str("impersonated_user_id", claims.UserID).
 		Str("impersonated_role", dbRole).
-		Str("query_preview", truncateString(fullQuery, 100)).
-		Msg("SQL query execution with RLS context")
+		Str("tenant_id", tenantID).
+		Msg("SQL query execution with RLS context (impersonation)")
 
 	// Execute all statements within a transaction to maintain RLS context
 	results := make([]SQLResult, 0, len(statements))
@@ -260,8 +338,17 @@ func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statem
 		})
 	}
 
+	// Set tenant context for RLS policies
+	if tenantID != "" {
+		_, err = tx.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fmt.Sprintf("Failed to set tenant context: %v", err),
+			})
+		}
+	}
+
 	// Set the role (use SET LOCAL to limit to current transaction)
-	// Note: We quote the role identifier to prevent SQL injection
 	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL ROLE %q", dbRole))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -279,28 +366,24 @@ func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statem
 		result := h.executeStatementInTx(ctx, tx, stmt)
 		results = append(results, result)
 
-		// Log each query execution
 		if result.Error != nil {
 			log.Warn().
 				Str("audit_user_id", auditUserID).
-				Str("impersonated_user_id", claims.UserID).
 				Str("statement", truncateString(stmt, 100)).
 				Str("error", *result.Error).
-				Msg("SQL query execution failed (RLS context)")
+				Msg("SQL query execution failed (impersonation RLS)")
 		} else {
 			log.Info().
 				Str("audit_user_id", auditUserID).
-				Str("impersonated_user_id", claims.UserID).
 				Str("statement", truncateString(stmt, 100)).
 				Int("row_count", result.RowCount).
-				Float64("execution_time_ms", result.ExecutionTimeMS).
-				Msg("SQL query executed successfully (RLS context)")
+				Msg("SQL query executed successfully (impersonation RLS)")
 		}
 	}
 
-	// Commit the transaction (for read-only queries, this is just cleanup)
+	// Commit the transaction
 	if err := tx.Commit(ctx); err != nil {
-		log.Warn().Err(err).Msg("Failed to commit RLS transaction (may be read-only)")
+		log.Warn().Err(err).Msg("Failed to commit RLS transaction")
 	}
 
 	return c.JSON(ExecuteSQLResponse{
@@ -308,24 +391,13 @@ func (h *SQLHandler) executeWithRLSContext(c fiber.Ctx, fullQuery string, statem
 	})
 }
 
-// isKnownDatabaseRole checks if a role is a PostgreSQL database role
-// that can be used with SET ROLE for RLS policies
-func isKnownDatabaseRole(role string) bool {
-	switch role {
-	case "authenticated", "anon", "service_role":
-		return true
-	default:
-		return false
-	}
-}
-
-// executeAsServiceRole executes SQL with service_role (full admin access)
-// This is used for dashboard admins who are not impersonating anyone
-func (h *SQLHandler) executeAsServiceRole(c fiber.Ctx, fullQuery string, statements []string, auditUserID string) error {
+// executeAsInstanceAdmin executes SQL with service_role (full admin access)
+// This is ONLY for instance admins WITHOUT tenant context
+func (h *SQLHandler) executeAsInstanceAdmin(c fiber.Ctx, pool *pgxpool.Pool, statements []string, auditUserID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 
-	conn, err := h.db.Acquire(ctx)
+	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to acquire database connection: %v", err),
@@ -336,8 +408,7 @@ func (h *SQLHandler) executeAsServiceRole(c fiber.Ctx, fullQuery string, stateme
 	log.Info().
 		Str("audit_user_id", auditUserID).
 		Str("role", "service_role").
-		Str("query_preview", truncateString(fullQuery, 100)).
-		Msg("SQL query execution with service_role")
+		Msg("SQL query execution as instance admin (full access)")
 
 	results := make([]SQLResult, 0, len(statements))
 
@@ -367,25 +438,149 @@ func (h *SQLHandler) executeAsServiceRole(c fiber.Ctx, fullQuery string, stateme
 		result := h.executeStatementInTx(ctx, tx, stmt)
 		results = append(results, result)
 
-		// Log each query execution
 		if result.Error != nil {
 			log.Warn().
 				Str("audit_user_id", auditUserID).
 				Str("statement", truncateString(stmt, 100)).
 				Str("error", *result.Error).
-				Msg("SQL query execution failed (service_role)")
+				Msg("SQL query execution failed (instance admin)")
 		} else {
 			log.Info().
 				Str("audit_user_id", auditUserID).
 				Str("statement", truncateString(stmt, 100)).
 				Int("row_count", result.RowCount).
-				Float64("execution_time_ms", result.ExecutionTimeMS).
-				Msg("SQL query executed successfully (service_role)")
+				Msg("SQL query executed successfully (instance admin)")
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		log.Warn().Err(err).Msg("Failed to commit service_role transaction")
+		log.Warn().Err(err).Msg("Failed to commit instance admin transaction")
+	}
+
+	return c.JSON(ExecuteSQLResponse{Results: results})
+}
+
+// executeWithTenantRLS executes SQL with tenant-scoped RLS context
+// This enforces RLS policies with tenant isolation
+func (h *SQLHandler) executeWithTenantRLS(c fiber.Ctx, pool *pgxpool.Pool, statements []string, claims *auth.TokenClaims, tenantID string, auditUserID string, isInstanceAdmin bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
+	defer cancel()
+
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to acquire database connection: %v", err),
+		})
+	}
+	defer conn.Release()
+
+	// Build JWT claims with tenant context
+	claimsMap := map[string]any{
+		"sub":  claims.UserID,
+		"role": claims.Role,
+	}
+	if claims.Email != "" {
+		claimsMap["email"] = claims.Email
+	}
+	if claims.SessionID != "" {
+		claimsMap["session_id"] = claims.SessionID
+	}
+	if claims.UserMetadata != nil {
+		claimsMap["user_metadata"] = claims.UserMetadata
+	}
+	if claims.AppMetadata != nil {
+		claimsMap["app_metadata"] = claims.AppMetadata
+	}
+	if tenantID != "" {
+		claimsMap["tenant_id"] = tenantID
+	}
+
+	claimsJSON, err := json.Marshal(claimsMap)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to serialize JWT claims: %v", err),
+		})
+	}
+
+	// Always use authenticated role (enforces RLS)
+	// Even instance admins acting as tenant admins get RLS enforced
+	dbRole := "authenticated"
+	if claims.Role == "anon" {
+		dbRole = "anon"
+	}
+
+	log.Info().
+		Str("audit_user_id", auditUserID).
+		Str("db_role", dbRole).
+		Str("tenant_id", tenantID).
+		Bool("is_instance_admin", isInstanceAdmin).
+		Msg("SQL query execution with tenant RLS enforcement")
+
+	results := make([]SQLResult, 0, len(statements))
+
+	tx, err := conn.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to begin transaction: %v", err),
+		})
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// Set RLS session variables
+	_, err = tx.Exec(ctx, "SELECT set_config('request.jwt.claims', $1, true)", string(claimsJSON))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to set JWT claims: %v", err),
+		})
+	}
+
+	// Set tenant context for RLS policies (KEY for tenant isolation)
+	if tenantID != "" {
+		_, err = tx.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fmt.Sprintf("Failed to set tenant context: %v", err),
+			})
+		}
+	}
+
+	// Set the role (enforces RLS)
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL ROLE %q", dbRole))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to set role '%s': %v", dbRole, err),
+		})
+	}
+
+	// Execute each statement
+	for _, stmt := range statements {
+		stmt = strings.TrimSpace(stmt)
+		if stmt == "" {
+			continue
+		}
+
+		result := h.executeStatementInTx(ctx, tx, stmt)
+		results = append(results, result)
+
+		if result.Error != nil {
+			log.Warn().
+				Str("audit_user_id", auditUserID).
+				Str("tenant_id", tenantID).
+				Str("statement", truncateString(stmt, 100)).
+				Str("error", *result.Error).
+				Msg("SQL query execution failed (tenant RLS)")
+		} else {
+			log.Info().
+				Str("audit_user_id", auditUserID).
+				Str("tenant_id", tenantID).
+				Str("statement", truncateString(stmt, 100)).
+				Int("row_count", result.RowCount).
+				Msg("SQL query executed successfully (tenant RLS)")
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Warn().Err(err).Msg("Failed to commit tenant RLS transaction")
 	}
 
 	return c.JSON(ExecuteSQLResponse{Results: results})

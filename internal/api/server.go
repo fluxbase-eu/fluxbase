@@ -50,108 +50,41 @@ import (
 
 // Server represents the HTTP server
 type Server struct {
-	app                     *fiber.App
-	config                  *config.Config
-	db                      *database.Connection
-	tracer                  *observability.Tracer
-	rest                    *RESTHandler
-	authHandler             *AuthHandler
-	adminAuthHandler        *AdminAuthHandler
-	dashboardAuthHandler    *DashboardAuthHandler
-	clientKeyService        *auth.ClientKeyService // Added for service-wide access
-	clientKeyHandler        *ClientKeyHandler
-	storageHandler          *StorageHandler
-	webhookHandler          *WebhookHandler
-	monitoringHandler       *MonitoringHandler
-	userManagementHandler   *UserManagementHandler
-	quotaHandler            *QuotaHandler
-	invitationHandler       *InvitationHandler
-	ddlHandler              *DDLHandler
-	oauthProviderHandler    *OAuthProviderHandler
-	oauthHandler            *OAuthHandler
-	samlProviderHandler     *SAMLProviderHandler
-	samlService             *auth.SAMLService
-	adminSessionHandler     *AdminSessionHandler
-	systemSettingsHandler   *SystemSettingsHandler
-	customSettingsHandler   *CustomSettingsHandler
-	userSettingsHandler     *UserSettingsHandler
-	appSettingsHandler      *AppSettingsHandler
-	settingsHandler         *SettingsHandler
-	secretsService          *settings.SecretsService
-	emailTemplateHandler    *EmailTemplateHandler
-	emailSettingsHandler    *EmailSettingsHandler
-	captchaSettingsHandler  *CaptchaSettingsHandler
-	sqlHandler              *SQLHandler
-	functionsHandler        *functions.Handler
-	functionsScheduler      *functions.Scheduler
-	jobsHandler             *jobs.Handler
-	jobsManager             *jobs.Manager
-	jobsScheduler           *jobs.Scheduler
-	migrationsHandler       *migrations.Handler
-	realtimeManager         *realtime.Manager
-	realtimeHandler         *realtime.RealtimeHandler
-	realtimeListener        realtime.RealtimeListener
-	realtimeAdminHandler    *RealtimeAdminHandler
-	webhookTriggerService   *webhook.TriggerService
-	aiHandler               *ai.Handler
-	aiChatHandler           *ai.ChatHandler
-	aiConversations         *ai.ConversationManager
-	aiMetrics               *observability.Metrics
-	knowledgeBaseHandler    *ai.KnowledgeBaseHandler
-	kbStorage               *ai.KnowledgeBaseStorage
-	docProcessor            *ai.DocumentProcessor
-	tableExportSyncService  *ai.TableExportSyncService
-	rpcHandler              *rpc.Handler
-	rpcScheduler            *rpc.Scheduler
-	graphqlHandler          *GraphQLHandler
-	extensionsHandler       *extensions.Handler
-	vectorManager           *VectorManager
-	vectorHandler           *VectorHandler
-	loggingService          *logging.Service
-	loggingHandler          *LoggingHandler
-	retentionService        *logging.RetentionService
-	schemaCache             *database.SchemaCache
-	secretsHandler          *secrets.Handler
-	secretsStorage          *secrets.Storage
-	serviceKeyHandler       *ServiceKeyHandler
-	tenantHandler           *TenantHandler
-	instanceSettingsHandler *InstanceSettingsHandler
-	tenantSettingsHandler   *TenantSettingsHandler
-	unifiedSettingsService  *settings.UnifiedService
-	schemaExportHandler     *SchemaExportHandler
-	mcpHandler              *mcp.Handler
-	mcpOAuthHandler         *MCPOAuthHandler
-	customMCPManager        *custom.Manager
-	customMCPHandler        *CustomMCPHandler
-	internalAIHandler       *InternalAIHandler
+	// Core infrastructure
+	app    *fiber.App
+	config *config.Config
+	db     *database.Connection
+	tracer *observability.Tracer
+	rest   *RESTHandler
 
-	// Internal schema management (declarative)
-	internalSchemaHandler *InternalSchemaHandler
+	// Handler groups (organized by domain)
+	Auth       *AuthHandlers
+	Storage    *StorageHandlers
+	AI         *AIHandlers
+	Functions  *FunctionsHandlers
+	Jobs       *JobsHandlers
+	Realtime   *RealtimeHandlers
+	MCP        *MCPHandlers
+	Tenancy    *TenancyHandlers
+	Branching  *BranchingHandlers
+	Settings   *SettingsHandlers
+	Webhook    *WebhookHandlers
+	Logging    *LoggingHandlers
+	Schema     *SchemaHandlers
+	RPC        *RPCHandlers
+	GraphQL    *GraphQLHandlers
+	Extensions *ExtensionsHandlers
+	Secrets    *SecretsHandlers
+	Scaling    *ScalingHandlers
+	Metrics    *MetricsComponents
+	Email      *EmailHandlers
+	Captcha    *CaptchaHandlers
+	Monitoring *MonitoringHandlers
+	Quota      *QuotaHandlers
+	Middleware *MiddlewareComponents
 
-	// Database branching components
-	branchManager   *branching.Manager
-	branchRouter    *branching.Router
-	branchHandler   *BranchHandler
-	githubWebhook   *GitHubWebhookHandler
-	branchScheduler *branching.CleanupScheduler
-
-	// Multi-tenancy components
-	tenantManager *tenantdb.Manager
-	tenantStorage *tenantdb.Storage
-
-	// Leader election for schedulers (used in multi-instance deployments)
-	jobsSchedulerLeader      *scaling.LeaderElector
-	functionsSchedulerLeader *scaling.LeaderElector
-	rpcSchedulerLeader       *scaling.LeaderElector
-
-	// Metrics components
-	metrics         *observability.Metrics
-	metricsServer   *observability.MetricsServer
-	startTime       time.Time
-	metricsStopChan chan struct{}
-
-	// Idempotency middleware for cleanup on shutdown
-	idempotencyMiddleware *middleware.IdempotencyMiddleware
+	// SQL handler (standalone, used by SQL editor)
+	sqlHandler *SQLHandler
 
 	// Server-owned dependencies (instead of global singletons)
 	rateLimiter ratelimit.Store
@@ -435,7 +368,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			}
 		}
 	}
-	tenantHandler := NewTenantHandler(db, tenantManager, tenantStorage)
+	tenantHandler := NewTenantHandler(db, tenantManager, tenantStorage, invitationService, emailService, cfg)
 
 	// Initialize unified settings service and handlers
 	unifiedSettingsService := settings.NewUnifiedService(db, cfg, cfg.EncryptionKey)
@@ -822,82 +755,180 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		monitoringHandler.SetLoggingService(loggingService)
 	}
 
-	// Create server instance
+	// Create server instance with handler groups
 	server := &Server{
-		app:                     app,
-		config:                  cfg,
-		db:                      db,
-		tracer:                  tracer,
-		rest:                    NewRESTHandler(db, NewQueryParser(cfg), schemaCache, cfg),
-		authHandler:             authHandler,
-		adminAuthHandler:        adminAuthHandler,
-		dashboardAuthHandler:    dashboardAuthHandler,
-		clientKeyService:        clientKeyService, // Added for service-wide access
-		clientKeyHandler:        clientKeyHandler,
-		storageHandler:          storageHandler,
-		webhookHandler:          webhookHandler,
-		monitoringHandler:       monitoringHandler,
-		userManagementHandler:   userMgmtHandler,
-		quotaHandler:            quotaHandler,
-		invitationHandler:       invitationHandler,
-		ddlHandler:              ddlHandler,
-		realtimeAdminHandler:    realtimeAdminHandler,
-		oauthProviderHandler:    oauthProviderHandler,
-		oauthHandler:            oauthHandler,
-		samlProviderHandler:     samlProviderHandler,
-		samlService:             samlService,
-		adminSessionHandler:     adminSessionHandler,
-		systemSettingsHandler:   systemSettingsHandler,
-		customSettingsHandler:   customSettingsHandler,
-		userSettingsHandler:     userSettingsHandler,
-		appSettingsHandler:      appSettingsHandler,
-		settingsHandler:         settingsHandler,
-		secretsService:          secretsService,
-		emailTemplateHandler:    emailTemplateHandler,
-		emailSettingsHandler:    emailSettingsHandler,
-		captchaSettingsHandler:  captchaSettingsHandler,
-		sqlHandler:              sqlHandler,
-		functionsHandler:        functionsHandler,
-		functionsScheduler:      functionsScheduler,
-		jobsHandler:             jobsHandler,
-		jobsManager:             jobsManager,
-		jobsScheduler:           jobsScheduler,
-		migrationsHandler:       migrationsHandler,
-		realtimeManager:         realtimeManager,
-		realtimeHandler:         realtimeHandler,
-		realtimeListener:        realtimeListener,
-		webhookTriggerService:   webhookTriggerService,
-		aiHandler:               aiHandler,
-		aiChatHandler:           aiChatHandler,
-		aiConversations:         aiConversations,
-		aiMetrics:               aiMetrics,
-		knowledgeBaseHandler:    knowledgeBaseHandler,
-		kbStorage:               kbStorage,
-		docProcessor:            docProcessor,
-		tableExportSyncService:  tableExportSyncService,
-		rpcHandler:              rpcHandler,
-		rpcScheduler:            rpcScheduler,
-		extensionsHandler:       extensions.NewHandler(extensions.NewService(db)),
-		vectorManager:           vectorManager,
-		vectorHandler:           vectorHandler,
-		loggingService:          loggingService,
-		loggingHandler:          loggingHandler,
-		retentionService:        retentionService,
-		schemaCache:             schemaCache,
-		secretsHandler:          secretsHandler,
-		secretsStorage:          secretsStorage,
-		serviceKeyHandler:       serviceKeyHandler,
-		tenantHandler:           tenantHandler,
-		instanceSettingsHandler: instanceSettingsHandler,
-		tenantSettingsHandler:   tenantSettingsHandler,
-		unifiedSettingsService:  unifiedSettingsService,
-		schemaExportHandler:     schemaExportHandler,
-		mcpHandler:              mcp.NewHandler(&cfg.MCP, db),
-		mcpOAuthHandler:         NewMCPOAuthHandler(db.Pool(), &cfg.MCP, authService, cfg.BaseURL, cfg.GetPublicBaseURL()),
-		internalAIHandler:       internalAIHandler,
-		internalSchemaHandler:   internalSchemaHandler,
-		metrics:                 observability.NewMetrics(),
-		startTime:               time.Now(),
+		app:        app,
+		config:     cfg,
+		db:         db,
+		tracer:     tracer,
+		rest:       NewRESTHandler(db, NewQueryParser(cfg), schemaCache, cfg),
+		sqlHandler: sqlHandler,
+
+		// Auth handlers group
+		Auth: &AuthHandlers{
+			Handler:          authHandler,
+			AdminHandler:     adminAuthHandler,
+			DashboardHandler: dashboardAuthHandler,
+			ClientKeyHandler: clientKeyHandler,
+			ClientKeyService: clientKeyService,
+			OAuthProvider:    oauthProviderHandler,
+			OAuth:            oauthHandler,
+			SAMLProvider:     samlProviderHandler,
+			SAMLService:      samlService,
+			AdminSession:     adminSessionHandler,
+			UserManagement:   userMgmtHandler,
+			Invitation:       invitationHandler,
+		},
+
+		// Storage handlers group
+		Storage: &StorageHandlers{
+			Handler: storageHandler,
+		},
+
+		// AI handlers group
+		AI: &AIHandlers{
+			Handler:         aiHandler,
+			Chat:            aiChatHandler,
+			Conversations:   aiConversations,
+			Metrics:         aiMetrics,
+			KnowledgeBase:   knowledgeBaseHandler,
+			KBStorage:       kbStorage,
+			DocProcessor:    docProcessor,
+			TableExportSync: tableExportSyncService,
+			VectorManager:   vectorManager,
+			VectorHandler:   vectorHandler,
+			Internal:        internalAIHandler,
+		},
+
+		// Functions handlers group
+		Functions: &FunctionsHandlers{
+			Handler:   functionsHandler,
+			Scheduler: functionsScheduler,
+		},
+
+		// Jobs handlers group
+		Jobs: &JobsHandlers{
+			Handler:   jobsHandler,
+			Manager:   jobsManager,
+			Scheduler: jobsScheduler,
+		},
+
+		// Realtime handlers group
+		Realtime: &RealtimeHandlers{
+			Manager:  realtimeManager,
+			Handler:  realtimeHandler,
+			Listener: realtimeListener,
+			Admin:    realtimeAdminHandler,
+		},
+
+		// MCP handlers group
+		MCP: &MCPHandlers{
+			Handler:       mcp.NewHandler(&cfg.MCP, db),
+			OAuth:         NewMCPOAuthHandler(db.Pool(), &cfg.MCP, authService, cfg.BaseURL, cfg.GetPublicBaseURL()),
+			CustomManager: nil, // Initialized later in setupMCPServer
+			CustomHandler: nil, // Initialized later in setupMCPServer
+		},
+
+		// Tenancy handlers group
+		Tenancy: &TenancyHandlers{
+			ServiceKey: serviceKeyHandler,
+			Tenant:     tenantHandler,
+			Manager:    tenantManager,
+			Storage:    tenantStorage,
+		},
+
+		// Branching handlers group (initialized later if enabled)
+		Branching: &BranchingHandlers{},
+
+		// Settings handlers group
+		Settings: &SettingsHandlers{
+			System:   systemSettingsHandler,
+			Custom:   customSettingsHandler,
+			User:     userSettingsHandler,
+			App:      appSettingsHandler,
+			Handler:  settingsHandler,
+			Service:  secretsService,
+			Instance: instanceSettingsHandler,
+			Tenant:   tenantSettingsHandler,
+			Unified:  unifiedSettingsService,
+		},
+
+		// Webhook handlers group
+		Webhook: &WebhookHandlers{
+			Handler: webhookHandler,
+			Trigger: webhookTriggerService,
+		},
+
+		// Logging handlers group
+		Logging: &LoggingHandlers{
+			Service:   loggingService,
+			Handler:   loggingHandler,
+			Retention: retentionService,
+		},
+
+		// Schema handlers group
+		Schema: &SchemaHandlers{
+			DDL:            ddlHandler,
+			Migrations:     migrationsHandler,
+			Cache:          schemaCache,
+			Export:         schemaExportHandler,
+			InternalSchema: internalSchemaHandler,
+		},
+
+		// RPC handlers group
+		RPC: &RPCHandlers{
+			Handler:   rpcHandler,
+			Scheduler: rpcScheduler,
+		},
+
+		// GraphQL handlers group (initialized later if enabled)
+		GraphQL: &GraphQLHandlers{},
+
+		// Extensions handlers group
+		Extensions: &ExtensionsHandlers{
+			Handler: extensions.NewHandler(extensions.NewService(db)),
+		},
+
+		// Secrets handlers group
+		Secrets: &SecretsHandlers{
+			Handler: secretsHandler,
+			Storage: secretsStorage,
+		},
+
+		// Scaling handlers group (initialized later if enabled)
+		Scaling: &ScalingHandlers{},
+
+		// Metrics components
+		Metrics: &MetricsComponents{
+			Metrics:   observability.NewMetrics(),
+			StartTime: time.Now(),
+			StopChan:  nil, // Initialized later
+		},
+
+		// Email handlers group
+		Email: &EmailHandlers{
+			Template: emailTemplateHandler,
+			Settings: emailSettingsHandler,
+		},
+
+		// Captcha handlers group
+		Captcha: &CaptchaHandlers{
+			Settings: captchaSettingsHandler,
+		},
+
+		// Monitoring handlers group
+		Monitoring: &MonitoringHandlers{
+			Handler: monitoringHandler,
+		},
+
+		// Quota handlers group
+		Quota: &QuotaHandlers{
+			Handler: quotaHandler,
+		},
+
+		// Middleware components (initialized later)
+		Middleware: &MiddlewareComponents{},
+
 		// Server-owned dependencies
 		rateLimiter:             rateLimitStore,
 		pubSub:                  ps,
@@ -926,10 +957,10 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		}
 		branchRouter := branching.NewRouter(branchStorage, cfg.Branching, db.Pool(), dbURL)
 
-		server.branchManager = branchManager
-		server.branchRouter = branchRouter
-		server.branchHandler = NewBranchHandler(branchManager, branchRouter, cfg.Branching)
-		server.githubWebhook = NewGitHubWebhookHandler(branchManager, branchRouter, cfg.Branching)
+		server.Branching.Manager = branchManager
+		server.Branching.Router = branchRouter
+		server.Branching.Handler = NewBranchHandler(branchManager, branchRouter, cfg.Branching)
+		server.Branching.GitHub = NewGitHubWebhookHandler(branchManager, branchRouter, cfg.Branching)
 
 		// Initialize cleanup scheduler if auto_delete_after is set
 		if cfg.Branching.AutoDeleteAfter > 0 {
@@ -938,7 +969,7 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			if cleanupInterval < time.Hour {
 				cleanupInterval = time.Hour
 			}
-			server.branchScheduler = branching.NewCleanupScheduler(branchManager, branchRouter, cleanupInterval)
+			server.Branching.Scheduler = branching.NewCleanupScheduler(branchManager, branchRouter, cleanupInterval)
 			log.Info().
 				Dur("interval", cleanupInterval).
 				Dur("auto_delete_after", cfg.Branching.AutoDeleteAfter).
@@ -952,12 +983,12 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	}
 
 	// Store tenant components in server (initialized earlier)
-	server.tenantManager = tenantManager
-	server.tenantStorage = tenantStorage
+	server.Tenancy.Manager = tenantManager
+	server.Tenancy.Storage = tenantStorage
 
 	// Create GraphQL handler (if enabled)
 	if cfg.GraphQL.Enabled {
-		server.graphqlHandler = NewGraphQLHandler(db, schemaCache, &cfg.GraphQL, cfg)
+		server.GraphQL.Handler = NewGraphQLHandler(db, schemaCache, &cfg.GraphQL, cfg)
 		log.Info().
 			Int("max_depth", cfg.GraphQL.MaxDepth).
 			Int("max_complexity", cfg.GraphQL.MaxComplexity).
@@ -981,12 +1012,12 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	if !cfg.Scaling.DisableScheduler && !cfg.Scaling.WorkerOnly {
 		if cfg.Scaling.EnableSchedulerLeaderElection {
 			// Use leader election - only the leader will run the scheduler
-			server.functionsSchedulerLeader = scaling.NewLeaderElector(
+			server.Scaling.FunctionsLeader = scaling.NewLeaderElector(
 				db.Pool(),
 				scaling.FunctionsSchedulerLockID,
 				"functions-scheduler",
 			)
-			server.functionsSchedulerLeader.Start(
+			server.Scaling.FunctionsLeader.Start(
 				func() {
 					// Became leader - start the scheduler
 					log.Info().Msg("This instance is now the functions scheduler leader")
@@ -1032,12 +1063,12 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 			if !cfg.Scaling.DisableScheduler && !cfg.Scaling.WorkerOnly {
 				if cfg.Scaling.EnableSchedulerLeaderElection {
 					// Use leader election - only the leader will run the scheduler
-					server.jobsSchedulerLeader = scaling.NewLeaderElector(
+					server.Scaling.JobsLeader = scaling.NewLeaderElector(
 						db.Pool(),
 						scaling.JobsSchedulerLockID,
 						"jobs-scheduler",
 					)
-					server.jobsSchedulerLeader.Start(
+					server.Scaling.JobsLeader.Start(
 						func() {
 							// Became leader - start the scheduler
 							log.Info().Msg("This instance is now the jobs scheduler leader")
@@ -1071,12 +1102,12 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 		if !cfg.Scaling.DisableScheduler && !cfg.Scaling.WorkerOnly {
 			if cfg.Scaling.EnableSchedulerLeaderElection {
 				// Use leader election - only the leader will run the scheduler
-				server.rpcSchedulerLeader = scaling.NewLeaderElector(
+				server.Scaling.RPCLeader = scaling.NewLeaderElector(
 					db.Pool(),
 					scaling.RPCSchedulerLockID,
 					"rpc-scheduler",
 				)
-				server.rpcSchedulerLeader.Start(
+				server.Scaling.RPCLeader.Start(
 					func() {
 						// Became leader - start the scheduler
 						log.Info().Msg("This instance is now the RPC scheduler leader")
@@ -1118,46 +1149,46 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	}
 
 	// Start branch cleanup scheduler
-	if server.branchScheduler != nil {
-		server.branchScheduler.Start()
+	if server.Branching.Scheduler != nil {
+		server.Branching.Scheduler.Start()
 	}
 
 	// Start Prometheus metrics server if enabled
 	if cfg.Metrics.Enabled {
-		server.metricsServer = observability.NewMetricsServer(cfg.Metrics.Port, cfg.Metrics.Path)
-		if err := server.metricsServer.Start(); err != nil {
+		server.Metrics.Server = observability.NewMetricsServer(cfg.Metrics.Port, cfg.Metrics.Path)
+		if err := server.Metrics.Server.Start(); err != nil {
 			log.Error().Err(err).Msg("Failed to start metrics server")
 		}
 
 		// Wire up database metrics
-		db.SetMetrics(server.metrics)
+		db.SetMetrics(server.Metrics.Metrics)
 
 		// Wire up storage metrics
 		if storageService != nil {
-			storageService.SetMetrics(server.metrics)
+			storageService.SetMetrics(server.Metrics.Metrics)
 		}
 
 		// Wire up auth metrics
-		authService.SetMetrics(server.metrics)
+		authService.SetMetrics(server.Metrics.Metrics)
 
 		// Wire up realtime metrics
 		if realtimeManager != nil {
-			realtimeManager.SetMetrics(server.metrics)
+			realtimeManager.SetMetrics(server.Metrics.Metrics)
 		}
 
 		// Wire up rate limiter metrics
-		middleware.SetRateLimiterMetrics(server.metrics)
+		middleware.SetRateLimiterMetrics(server.Metrics.Metrics)
 
 		// Start uptime tracking goroutine
-		server.metricsStopChan = make(chan struct{})
+		server.Metrics.StopChan = make(chan struct{})
 		go func() {
 			ticker := time.NewTicker(15 * time.Second)
 			defer ticker.Stop()
 			for {
 				select {
 				case <-ticker.C:
-					server.metrics.UpdateUptime(server.startTime)
-				case <-server.metricsStopChan:
+					server.Metrics.Metrics.UpdateUptime(server.Metrics.StartTime)
+				case <-server.Metrics.StopChan:
 					return
 				}
 			}
@@ -1174,8 +1205,8 @@ func NewServer(cfg *config.Config, db *database.Connection, version string) *Ser
 	}
 
 	// Auto-load custom MCP tools if enabled
-	if cfg.MCP.Enabled && cfg.MCP.AutoLoadOnBoot && server.customMCPManager != nil {
-		if err := server.customMCPManager.AutoLoadFromDir(context.Background(), cfg.MCP.ToolsDir); err != nil {
+	if cfg.MCP.Enabled && cfg.MCP.AutoLoadOnBoot && server.MCP.CustomManager != nil {
+		if err := server.MCP.CustomManager.AutoLoadFromDir(context.Background(), cfg.MCP.ToolsDir); err != nil {
 			log.Error().Err(err).Msg("Failed to auto-load custom MCP tools")
 		} else {
 			log.Info().Msg("Custom MCP tools auto-loaded successfully")
@@ -1240,8 +1271,8 @@ func (s *Server) createMCPAuthMiddleware() fiber.Handler {
 			token := strings.TrimPrefix(authHeader, "Bearer ")
 
 			// Validate MCP OAuth token
-			if s.mcpOAuthHandler != nil {
-				clientID, userID, scopes, err := s.mcpOAuthHandler.ValidateAccessToken(c, token)
+			if s.MCP.OAuth != nil {
+				clientID, userID, scopes, err := s.MCP.OAuth.ValidateAccessToken(c, token)
 				if err == nil {
 					// Valid MCP OAuth token
 					c.Locals("auth_type", "mcp_oauth")
@@ -1257,17 +1288,17 @@ func (s *Server) createMCPAuthMiddleware() fiber.Handler {
 
 		// Fall back to standard auth middleware
 		return middleware.RequireAuthOrServiceKey(
-			s.authHandler.authService,
-			s.clientKeyService,
+			s.Auth.Handler.authService,
+			s.Auth.ClientKeyService,
 			s.DB(),
-			s.dashboardAuthHandler.jwtManager,
+			s.Auth.DashboardHandler.jwtManager,
 		)(c)
 	}
 }
 
 // setupMCPServer initializes the MCP server with tools and resources
 func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageService *storage.Service, functionsHandler *functions.Handler, rpcHandler *rpc.Handler, vectorHandler *VectorHandler) {
-	mcpServer := s.mcpHandler.Server()
+	mcpServer := s.MCP.Handler.Server()
 
 	// Register MCP Tools
 	toolRegistry := mcpServer.ToolRegistry()
@@ -1315,15 +1346,15 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 	}
 
 	// Jobs tools
-	if s.jobsManager != nil && s.config.Jobs.Enabled {
+	if s.Jobs.Manager != nil && s.config.Jobs.Enabled {
 		jobsStorage := jobs.NewStorage(s.db)
 		toolRegistry.Register(mcptools.NewSubmitJobTool(jobsStorage))
 		toolRegistry.Register(mcptools.NewGetJobStatusTool(jobsStorage))
 	}
 
 	// Vector search tools
-	if s.aiChatHandler != nil {
-		if ragService := s.aiChatHandler.GetRAGService(); ragService != nil {
+	if s.AI.Chat != nil {
+		if ragService := s.AI.Chat.GetRAGService(); ragService != nil {
 			toolRegistry.Register(mcptools.NewSearchVectorsTool(ragService))
 			log.Debug().Msg("MCP: Registered search_vectors tool")
 		} else {
@@ -1332,8 +1363,8 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 	}
 
 	// Knowledge graph tools
-	if s.kbStorage != nil {
-		knowledgeGraph := ai.NewKnowledgeGraph(s.kbStorage)
+	if s.AI.KBStorage != nil {
+		knowledgeGraph := ai.NewKnowledgeGraph(s.AI.KBStorage)
 		toolRegistry.Register(mcptools.NewQueryKnowledgeGraphTool(knowledgeGraph))
 		toolRegistry.Register(mcptools.NewFindRelatedEntitiesTool(knowledgeGraph))
 		toolRegistry.Register(mcptools.NewBrowseKnowledgeGraphTool(knowledgeGraph))
@@ -1380,17 +1411,17 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 	}
 
 	// Database branching tools
-	if s.branchManager != nil && s.config.Branching.Enabled {
+	if s.Branching.Manager != nil && s.config.Branching.Enabled {
 		branchStorage := branching.NewStorage(s.db.Pool(), s.config.EncryptionKey)
 		toolRegistry.Register(mcptools.NewListBranchesTool(branchStorage))
 		toolRegistry.Register(mcptools.NewGetBranchTool(branchStorage))
-		toolRegistry.Register(mcptools.NewCreateBranchTool(s.branchManager))
-		toolRegistry.Register(mcptools.NewDeleteBranchTool(s.branchManager, branchStorage))
-		toolRegistry.Register(mcptools.NewResetBranchTool(s.branchManager, branchStorage))
+		toolRegistry.Register(mcptools.NewCreateBranchTool(s.Branching.Manager))
+		toolRegistry.Register(mcptools.NewDeleteBranchTool(s.Branching.Manager, branchStorage))
+		toolRegistry.Register(mcptools.NewResetBranchTool(s.Branching.Manager, branchStorage))
 		toolRegistry.Register(mcptools.NewGrantBranchAccessTool(branchStorage))
 		toolRegistry.Register(mcptools.NewRevokeBranchAccessTool(branchStorage))
-		toolRegistry.Register(mcptools.NewGetActiveBranchTool(s.branchRouter))
-		toolRegistry.Register(mcptools.NewSetActiveBranchTool(s.branchRouter, branchStorage))
+		toolRegistry.Register(mcptools.NewGetActiveBranchTool(s.Branching.Router))
+		toolRegistry.Register(mcptools.NewSetActiveBranchTool(s.Branching.Router, branchStorage))
 	}
 
 	// Register MCP Resources
@@ -1414,9 +1445,9 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 	resourceRegistry.Register(mcpresources.NewBucketsResource(s.db))
 
 	// Wire MCP registries to AI chat handler for MCP-enabled chatbots
-	if s.aiChatHandler != nil {
-		s.aiChatHandler.SetMCPToolRegistry(toolRegistry)
-		s.aiChatHandler.SetMCPResources(resourceRegistry)
+	if s.AI.Chat != nil {
+		s.AI.Chat.SetMCPToolRegistry(toolRegistry)
+		s.AI.Chat.SetMCPResources(resourceRegistry)
 		log.Debug().Msg("MCP registries wired to AI chat handler")
 	}
 
@@ -1428,13 +1459,13 @@ func (s *Server) setupMCPServer(schemaCache *database.SchemaCache, storageServic
 		mcpInternalURL = "http://localhost" + s.config.Server.Address
 	}
 	customExecutor := custom.NewExecutor(s.config.Auth.JWTSecret, mcpInternalURL, nil)
-	s.customMCPManager = custom.NewManager(customStorage, customExecutor, toolRegistry, resourceRegistry)
-	s.customMCPHandler = NewCustomMCPHandler(customStorage, s.customMCPManager, &s.config.MCP)
+	s.MCP.CustomManager = custom.NewManager(customStorage, customExecutor, toolRegistry, resourceRegistry)
+	s.MCP.CustomHandler = NewCustomMCPHandler(customStorage, s.MCP.CustomManager, &s.config.MCP)
 
 	// Load custom tools and resources from database
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := s.customMCPManager.LoadAndRegisterAll(ctx); err != nil {
+	if err := s.MCP.CustomManager.LoadAndRegisterAll(ctx); err != nil {
 		log.Warn().Err(err).Msg("Failed to load some custom MCP tools/resources")
 	}
 
@@ -1463,9 +1494,9 @@ func (s *Server) setupMiddlewares() {
 	}
 
 	// Prometheus metrics middleware - collects HTTP metrics
-	if s.config.Metrics.Enabled && s.metrics != nil {
+	if s.config.Metrics.Enabled && s.Metrics.Metrics != nil {
 		log.Debug().Msg("Adding Prometheus metrics middleware")
-		s.app.Use(s.metrics.MetricsMiddleware())
+		s.app.Use(s.Metrics.Metrics.MetricsMiddleware())
 	}
 
 	// Security headers middleware - protect against common attacks
@@ -1573,7 +1604,7 @@ func (s *Server) setupMiddlewares() {
 	// Uses dynamic limiter that checks settings cache on each request
 	// This allows toggling rate limiting via admin UI without server restart
 	// Pass shared storage to prevent multiple GC goroutines
-	s.app.Use(middleware.DynamicGlobalAPILimiter(s.authHandler.authService.GetSettingsCache(), s.sharedMiddlewareStorage))
+	s.app.Use(middleware.DynamicGlobalAPILimiter(s.Auth.Handler.authService.GetSettingsCache(), s.sharedMiddlewareStorage))
 
 	// Per-endpoint body size limits and JSON depth protection
 	if s.config.Server.BodyLimits.Enabled {
@@ -1600,8 +1631,8 @@ func (s *Server) setupMiddlewares() {
 	// Stores responses in database to return cached results for duplicate POST/PUT/DELETE/PATCH requests
 	idempotencyConfig := middleware.DefaultIdempotencyConfig()
 	idempotencyConfig.DB = s.DB()
-	s.idempotencyMiddleware = middleware.NewIdempotencyMiddleware(idempotencyConfig)
-	s.app.Use(s.idempotencyMiddleware.Middleware())
+	s.Middleware.Idempotency = middleware.NewIdempotencyMiddleware(idempotencyConfig)
+	s.app.Use(s.Middleware.Idempotency.Middleware())
 	log.Info().
 		Str("header", idempotencyConfig.HeaderName).
 		Dur("ttl", idempotencyConfig.TTL).
@@ -1871,97 +1902,97 @@ func (s *Server) Start() error {
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown(ctx context.Context) error {
 	// Stop leader electors first (releases advisory locks)
-	if s.functionsSchedulerLeader != nil {
+	if s.Scaling.FunctionsLeader != nil {
 		log.Info().Msg("Stopping functions scheduler leader election")
-		s.functionsSchedulerLeader.Stop()
+		s.Scaling.FunctionsLeader.Stop()
 	}
-	if s.jobsSchedulerLeader != nil {
+	if s.Scaling.JobsLeader != nil {
 		log.Info().Msg("Stopping jobs scheduler leader election")
-		s.jobsSchedulerLeader.Stop()
+		s.Scaling.JobsLeader.Stop()
 	}
-	if s.rpcSchedulerLeader != nil {
+	if s.Scaling.RPCLeader != nil {
 		log.Info().Msg("Stopping RPC scheduler leader election")
-		s.rpcSchedulerLeader.Stop()
+		s.Scaling.RPCLeader.Stop()
 	}
 
 	// Stop realtime listener (PostgreSQL LISTEN/NOTIFY)
-	if s.realtimeListener != nil {
+	if s.Realtime.Listener != nil {
 		log.Info().Msg("Stopping realtime listener")
-		s.realtimeListener.Stop()
+		s.Realtime.Listener.Stop()
 	}
 
 	// Shutdown realtime manager (close all WebSocket connections)
-	if s.realtimeManager != nil {
+	if s.Realtime.Manager != nil {
 		log.Info().Msg("Closing WebSocket connections")
-		s.realtimeManager.Shutdown()
+		s.Realtime.Manager.Shutdown()
 	}
 
 	// Stop edge functions scheduler
-	if s.functionsScheduler != nil {
-		s.functionsScheduler.Stop()
+	if s.Functions.Scheduler != nil {
+		s.Functions.Scheduler.Stop()
 	}
 
 	// Stop jobs scheduler and manager
-	if s.jobsScheduler != nil {
-		s.jobsScheduler.Stop()
+	if s.Jobs.Scheduler != nil {
+		s.Jobs.Scheduler.Stop()
 	}
-	if s.jobsManager != nil {
-		s.jobsManager.Stop()
+	if s.Jobs.Manager != nil {
+		s.Jobs.Manager.Stop()
 	}
 
 	// Stop RPC scheduler
-	if s.rpcScheduler != nil {
-		s.rpcScheduler.Stop()
+	if s.RPC.Scheduler != nil {
+		s.RPC.Scheduler.Stop()
 	}
 
 	// Stop RPC executor (cancels async executions)
-	if s.rpcHandler != nil {
-		s.rpcHandler.GetExecutor().Stop()
+	if s.RPC.Handler != nil {
+		s.RPC.Handler.GetExecutor().Stop()
 	}
 
 	// Stop webhook trigger service
-	if s.webhookTriggerService != nil {
-		s.webhookTriggerService.Stop()
+	if s.Webhook.Trigger != nil {
+		s.Webhook.Trigger.Stop()
 	}
 
 	// Close AI conversation manager
-	if s.aiConversations != nil {
-		s.aiConversations.Close()
+	if s.AI.Conversations != nil {
+		s.AI.Conversations.Close()
 	}
 
 	// Stop idempotency middleware cleanup goroutine
-	if s.idempotencyMiddleware != nil {
-		s.idempotencyMiddleware.Stop()
+	if s.Middleware.Idempotency != nil {
+		s.Middleware.Idempotency.Stop()
 	}
 
 	// Stop OAuth handler cleanup goroutines
-	if s.oauthHandler != nil {
-		s.oauthHandler.Stop()
+	if s.Auth.OAuth != nil {
+		s.Auth.OAuth.Stop()
 	}
 
 	// Stop branch cleanup scheduler
-	if s.branchScheduler != nil {
-		s.branchScheduler.Stop()
+	if s.Branching.Scheduler != nil {
+		s.Branching.Scheduler.Stop()
 	}
 
 	// Close database branching components
-	if s.branchRouter != nil {
+	if s.Branching.Router != nil {
 		log.Info().Msg("Closing branch connection pools")
-		s.branchRouter.CloseAllPools()
+		s.Branching.Router.CloseAllPools()
 	}
-	if s.branchManager != nil {
+	if s.Branching.Manager != nil {
 		log.Info().Msg("Closing branch manager")
-		s.branchManager.Close()
+		s.Branching.Manager.Close()
 	}
 
 	// Stop metrics uptime goroutine
-	if s.metricsStopChan != nil {
-		close(s.metricsStopChan)
+	if s.Metrics.StopChan != nil {
+		close(s.Metrics.StopChan)
 	}
 
 	// Shutdown metrics server
-	if s.metricsServer != nil {
-		if err := s.metricsServer.Shutdown(ctx); err != nil {
+	if s.Metrics.Server != nil {
+		if err := s.Metrics.Server.Shutdown(ctx); err != nil {
 			log.Warn().Err(err).Msg("Failed to shutdown metrics server")
 		}
 	}
@@ -1974,22 +2005,22 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 
 	// Stop retention cleanup service
-	if s.retentionService != nil {
+	if s.Logging.Retention != nil {
 		log.Info().Msg("Stopping log retention cleanup service")
-		s.retentionService.Stop()
+		s.Logging.Retention.Stop()
 	}
 
 	// Close central logging service (flush remaining log entries)
-	if s.loggingService != nil {
+	if s.Logging.Service != nil {
 		log.Info().Msg("Closing central logging service")
-		if err := s.loggingService.Close(); err != nil {
+		if err := s.Logging.Service.Close(); err != nil {
 			log.Warn().Err(err).Msg("Failed to close logging service")
 		}
 	}
 
 	// Close schema cache (stops invalidation listener)
-	if s.schemaCache != nil {
-		s.schemaCache.Close()
+	if s.Schema.Cache != nil {
+		s.Schema.Cache.Close()
 	}
 
 	// Close server-owned pub/sub (releases PostgreSQL LISTEN connection)
@@ -2020,28 +2051,28 @@ func (s *Server) App() *fiber.App {
 // GetStorageService returns the base storage service from the storage handler
 // Note: For tenant-specific storage, use GetStorageConfig with storage.Manager
 func (s *Server) GetStorageService() *storage.Service {
-	if s.storageHandler == nil || s.storageHandler.storageManager == nil {
+	if s.Storage.Handler == nil || s.Storage.Handler.storageManager == nil {
 		return nil
 	}
-	return s.storageHandler.storageManager.GetBaseService()
+	return s.Storage.Handler.storageManager.GetBaseService()
 }
 
 // GetWebhookTriggerService returns the webhook trigger service for testing
 func (s *Server) GetWebhookTriggerService() *webhook.TriggerService {
-	return s.webhookTriggerService
+	return s.Webhook.Trigger
 }
 
 // GetAuthService returns the auth service from the auth handler
 func (s *Server) GetAuthService() *auth.Service {
-	if s.authHandler == nil {
+	if s.Auth.Handler == nil {
 		return nil
 	}
-	return s.authHandler.authService
+	return s.Auth.Handler.authService
 }
 
 // GetLoggingService returns the central logging service
 func (s *Server) GetLoggingService() *logging.Service {
-	return s.loggingService
+	return s.Logging.Service
 }
 
 // SetTenantConfigLoader sets the tenant configuration loader
@@ -2058,35 +2089,35 @@ func (s *Server) GetTenantConfigLoader() *config.TenantConfigLoader {
 // SchemaCache returns the REST API schema cache
 // This is exposed for testing purposes to refresh the cache after creating tables
 func (s *Server) SchemaCache() *database.SchemaCache {
-	return s.schemaCache
+	return s.Schema.Cache
 }
 
 // LoadFunctionsFromFilesystem loads edge functions from the filesystem
 // This is called at boot time if auto_load_on_boot is enabled
 func (s *Server) LoadFunctionsFromFilesystem(ctx context.Context) error {
-	if s.functionsHandler == nil {
+	if s.Functions.Handler == nil {
 		return fmt.Errorf("functions handler not initialized")
 	}
-	return s.functionsHandler.LoadFromFilesystem(ctx)
+	return s.Functions.Handler.LoadFromFilesystem(ctx)
 }
 
 // LoadJobsFromFilesystem loads job functions from the filesystem
 // This is called at boot time if auto_load_on_boot is enabled
 func (s *Server) LoadJobsFromFilesystem(ctx context.Context) error {
-	if s.jobsHandler == nil {
+	if s.Jobs.Handler == nil {
 		return fmt.Errorf("jobs handler not initialized")
 	}
 	// Use "default" as the namespace for jobs loaded at boot
-	return s.jobsHandler.LoadFromFilesystem(ctx, "default")
+	return s.Jobs.Handler.LoadFromFilesystem(ctx, "default")
 }
 
 // LoadAIChatbotsFromFilesystem loads AI chatbots from the filesystem
 // This is called at boot time if auto_load_on_boot is enabled
 func (s *Server) LoadAIChatbotsFromFilesystem(ctx context.Context) error {
-	if s.aiHandler == nil {
+	if s.AI.Handler == nil {
 		return fmt.Errorf("AI handler not initialized")
 	}
-	return s.aiHandler.AutoLoadChatbots(ctx)
+	return s.AI.Handler.AutoLoadChatbots(ctx)
 }
 
 // customErrorHandler handles errors globally
@@ -2135,7 +2166,7 @@ func (s *Server) handleRealtimeStats(c fiber.Ctx) error {
 	limit, offset = NormalizePaginationParams(limit, offset, defaultLimit, maxLimit)
 
 	// Get all connections from the manager
-	manager := s.realtimeHandler.GetManager()
+	manager := s.Realtime.Handler.GetManager()
 	allConnections := manager.GetConnectionsForStats()
 
 	// Build a map of user IDs to emails by querying the database
@@ -2242,13 +2273,13 @@ func (s *Server) handleRealtimeBroadcast(c fiber.Ctx) error {
 	}
 
 	// Get the realtime manager and broadcast to the channel
-	if s.realtimeHandler == nil {
+	if s.Realtime.Handler == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"error": "Realtime service not available",
 		})
 	}
 
-	manager := s.realtimeHandler.GetManager()
+	manager := s.Realtime.Handler.GetManager()
 	recipientCount := manager.BroadcastToChannel(req.Channel, realtime.ServerMessage{
 		Type:    realtime.MessageTypeBroadcast,
 		Channel: req.Channel,

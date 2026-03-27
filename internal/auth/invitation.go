@@ -28,6 +28,7 @@ type InvitationToken struct {
 	Email      string     `json:"email"`
 	Token      string     `json:"token"`
 	Role       string     `json:"role"`
+	TenantID   *uuid.UUID `json:"tenant_id,omitempty"`
 	InvitedBy  *uuid.UUID `json:"invited_by,omitempty"`
 	ExpiresAt  time.Time  `json:"expires_at"`
 	Accepted   bool       `json:"accepted"`
@@ -59,6 +60,11 @@ func (s *InvitationService) GenerateToken() (string, error) {
 
 // CreateInvitation creates a new invitation token
 func (s *InvitationService) CreateInvitation(ctx context.Context, email, role string, invitedBy *uuid.UUID, expiryDuration time.Duration) (*InvitationToken, error) {
+	return s.CreateInvitationWithTenant(ctx, email, role, nil, invitedBy, expiryDuration)
+}
+
+// CreateInvitationWithTenant creates a new invitation token with an optional tenant context
+func (s *InvitationService) CreateInvitationWithTenant(ctx context.Context, email, role string, tenantID *uuid.UUID, invitedBy *uuid.UUID, expiryDuration time.Duration) (*InvitationToken, error) {
 	// Generate secure token
 	token, err := s.GenerateToken()
 	if err != nil {
@@ -77,6 +83,7 @@ func (s *InvitationService) CreateInvitation(ctx context.Context, email, role st
 		Email:     email,
 		Token:     token,
 		Role:      role,
+		TenantID:  tenantID,
 		InvitedBy: invitedBy,
 		ExpiresAt: expiresAt,
 		Accepted:  false,
@@ -84,14 +91,15 @@ func (s *InvitationService) CreateInvitation(ctx context.Context, email, role st
 	}
 
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO platform.invitation_tokens (id, email, token, role, invited_by, expires_at, accepted, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, email, token, role, invited_by, expires_at, accepted, created_at
+		INSERT INTO platform.invitation_tokens (id, email, token, role, tenant_id, invited_by, expires_at, accepted, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, email, token, role, tenant_id, invited_by, expires_at, accepted, created_at
 	`,
 		invitation.ID,
 		invitation.Email,
 		invitation.Token,
 		invitation.Role,
+		invitation.TenantID,
 		invitation.InvitedBy,
 		invitation.ExpiresAt,
 		invitation.Accepted,
@@ -101,6 +109,7 @@ func (s *InvitationService) CreateInvitation(ctx context.Context, email, role st
 		&invitation.Email,
 		&invitation.Token,
 		&invitation.Role,
+		&invitation.TenantID,
 		&invitation.InvitedBy,
 		&invitation.ExpiresAt,
 		&invitation.Accepted,
@@ -118,7 +127,7 @@ func (s *InvitationService) ValidateToken(ctx context.Context, token string) (*I
 	invitation := &InvitationToken{}
 
 	err := s.db.QueryRow(ctx, `
-		SELECT id, email, token, role, invited_by, expires_at, accepted, accepted_at, created_at
+		SELECT id, email, token, role, tenant_id, invited_by, expires_at, accepted, accepted_at, created_at
 		FROM platform.invitation_tokens
 		WHERE token = $1
 	`, token).Scan(
@@ -126,6 +135,7 @@ func (s *InvitationService) ValidateToken(ctx context.Context, token string) (*I
 		&invitation.Email,
 		&invitation.Token,
 		&invitation.Role,
+		&invitation.TenantID,
 		&invitation.InvitedBy,
 		&invitation.ExpiresAt,
 		&invitation.Accepted,
@@ -194,7 +204,7 @@ func (s *InvitationService) RevokeInvitation(ctx context.Context, token string) 
 // GetInvitationByEmail retrieves pending invitations for an email
 func (s *InvitationService) GetInvitationByEmail(ctx context.Context, email string) ([]InvitationToken, error) {
 	rows, err := s.db.Query(ctx, `
-		SELECT id, email, token, role, invited_by, expires_at, accepted, accepted_at, created_at
+		SELECT id, email, token, role, tenant_id, invited_by, expires_at, accepted, accepted_at, created_at
 		FROM platform.invitation_tokens
 		WHERE email = $1 AND accepted = false AND expires_at > NOW()
 		ORDER BY created_at DESC
@@ -212,6 +222,7 @@ func (s *InvitationService) GetInvitationByEmail(ctx context.Context, email stri
 			&inv.Email,
 			&inv.Token,
 			&inv.Role,
+			&inv.TenantID,
 			&inv.InvitedBy,
 			&inv.ExpiresAt,
 			&inv.Accepted,
@@ -230,7 +241,7 @@ func (s *InvitationService) GetInvitationByEmail(ctx context.Context, email stri
 // ListInvitations retrieves all invitations (for admin panel)
 func (s *InvitationService) ListInvitations(ctx context.Context, includeAccepted, includeExpired bool) ([]InvitationToken, error) {
 	query := `
-		SELECT id, email, token, role, invited_by, expires_at, accepted, accepted_at, created_at
+		SELECT id, email, token, role, tenant_id, invited_by, expires_at, accepted, accepted_at, created_at
 		FROM platform.invitation_tokens
 		WHERE 1=1
 	`
@@ -261,6 +272,7 @@ func (s *InvitationService) ListInvitations(ctx context.Context, includeAccepted
 			&inv.Email,
 			&inv.Token,
 			&inv.Role,
+			&inv.TenantID,
 			&inv.InvitedBy,
 			&inv.ExpiresAt,
 			&inv.Accepted,
