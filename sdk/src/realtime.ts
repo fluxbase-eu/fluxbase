@@ -6,6 +6,10 @@ import type {
   RealtimeCallback,
   RealtimePostgresChangesPayload,
   RealtimeMessage,
+  RealtimeServerMessage,
+  RealtimeAckPayload,
+  RealtimeChangeEvent,
+  RealtimeBroadcastData,
   PostgresChangesConfig,
   RealtimeChannelConfig,
   PresenceState,
@@ -578,6 +582,13 @@ export class RealtimeChannel {
    * Internal: Connect to WebSocket
    */
   private connect() {
+    // Reconnect timers are scheduled before an unsubscribe can happen; check
+    // again at fire time so a pending reconnect after an intentional
+    // disconnect is a no-op instead of opening a stray socket.
+    if (!this.shouldReconnect) {
+      return;
+    }
+
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       return;
     }
@@ -670,10 +681,13 @@ export class RealtimeChannel {
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
-      let message: RealtimeMessage;
+      // Parse the incoming frame exactly once into the typed union
+      let message: RealtimeServerMessage;
       try {
         message =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+          typeof event.data === "string"
+            ? (JSON.parse(event.data) as RealtimeServerMessage)
+            : (event.data as RealtimeServerMessage);
       } catch (err) {
         console.error("[Fluxbase Realtime] Failed to parse message:", err);
         return;
@@ -725,131 +739,101 @@ export class RealtimeChannel {
   /**
    * Internal: Handle incoming message
    */
-  private handleMessage(message: RealtimeMessage) {
+  private handleMessage(message: RealtimeServerMessage) {
     switch (message.type) {
       case "heartbeat":
         // Server heartbeat received - no echo needed
         // Client sends its own heartbeats on interval
         break;
 
-      case "broadcast":
+      case "broadcast": {
         // Server sends: { type: "broadcast", payload: { broadcast: {...} } }
         // Client interface also supports: { type: "broadcast", broadcast: {...} }
-        const broadcastData =
-          message.broadcast ||
-          (message.payload &&
-          typeof message.payload === "object" &&
-          "broadcast" in message.payload
-            ? (message.payload as { broadcast: unknown }).broadcast
-            : null);
+        const legacy = message as unknown as {
+          broadcast?: RealtimeBroadcastData;
+        };
+        const broadcastData: RealtimeBroadcastData | null | undefined =
+          message.payload?.broadcast ?? legacy.broadcast;
+
         if (broadcastData) {
           this.handleBroadcastMessage(broadcastData);
         } else if (message.payload) {
           // Legacy postgres_changes format for backwards compatibility
-          this.handlePostgresChanges(message.payload);
+          this.handlePostgresChanges(message.payload as RealtimeChangeEvent);
         }
         break;
+      }
 
-      case "presence":
+      case "presence": {
         // Server sends: { type: "presence", payload: { presence: {...} } }
         // Client interface also supports: { type: "presence", presence: {...} }
-        const presenceData =
-          message.presence ||
-          (message.payload &&
-          typeof message.payload === "object" &&
-          "presence" in message.payload
-            ? (message.payload as { presence: unknown }).presence
-            : null);
+        const legacy = message as unknown as {
+          presence?: RealtimePresencePayload;
+        };
+        const presenceData: RealtimePresencePayload | null | undefined =
+          message.payload?.presence ?? legacy.presence;
+
         if (presenceData) {
           this.handlePresenceMessage(presenceData);
         }
         break;
+      }
 
-      case "ack":
-        // Handle broadcast acknowledgment
-        if (message.messageId && this.pendingAcks.has(message.messageId)) {
-          const ackHandler = this.pendingAcks.get(message.messageId);
+      case "ack": {
+        // The Go server nests ALL ack fields inside payload
+        // (internal/realtime/handler.go): broadcast acks arrive as
+        // { type: "ack", payload: { messageId, status } }. Legacy frames
+        // may carry messageId/status at the top level.
+        const payload: RealtimeAckPayload =
+          (message.payload as RealtimeAckPayload | undefined) ?? {};
+        const legacy = message as unknown as {
+          messageId?: string;
+          status?: string;
+        };
+
+        const messageId = payload.messageId ?? legacy.messageId;
+        const status = payload.status ?? legacy.status;
+
+        // Broadcast acknowledgment
+        if (messageId && this.pendingAcks.has(messageId)) {
+          const ackHandler = this.pendingAcks.get(messageId);
           if (ackHandler) {
-            ackHandler.resolve(message.status || "ok");
+            ackHandler.resolve(status || "ok");
           }
         } else if (
-          message.payload &&
-          typeof message.payload === "object" &&
-          "type" in message.payload
+          payload.type === "access_token" &&
+          this.pendingAcks.has("access_token")
         ) {
-          const payload = message.payload as {
-            type: string;
-            updated?: boolean;
-            subscription_id?: string;
-            schema?: string;
-            table?: string;
-          };
-
           // Handle access_token acknowledgment
-          if (
-            payload.type === "access_token" &&
-            this.pendingAcks.has("access_token")
-          ) {
-            const ackHandler = this.pendingAcks.get("access_token");
-            if (ackHandler) {
-              ackHandler.resolve("ok");
-              this.pendingAcks.delete("access_token");
-            }
-            console.log("[Fluxbase Realtime] Token updated successfully");
-          } else if (payload.subscription_id) {
-            // Store subscription_id keyed by schema.table for unsubscribe support
-            const schema = payload.schema || "public";
-            const table = payload.table || "";
-            if (table) {
-              this.subscriptionIds.set(
-                `${schema}.${table}`,
-                payload.subscription_id
-              );
-              console.log(
-                "[Fluxbase Realtime] Subscription ID received for",
-                `${schema}.${table}:`,
-                payload.subscription_id
-              );
-            } else {
-              console.log(
-                "[Fluxbase Realtime] Subscription ID received:",
-                payload.subscription_id
-              );
-            }
+          const ackHandler = this.pendingAcks.get("access_token");
+          if (ackHandler) {
+            ackHandler.resolve("ok");
+            this.pendingAcks.delete("access_token");
           }
-        } else {
-          // Store subscription_id from subscription acknowledgment (legacy format)
-          if (
-            message.payload &&
-            typeof message.payload === "object" &&
-            "subscription_id" in message.payload
-          ) {
-            const payload = message.payload as {
-              subscription_id: string;
-              schema?: string;
-              table?: string;
-            };
-            const schema = payload.schema || "public";
-            const table = payload.table || "";
-            if (table) {
-              this.subscriptionIds.set(
-                `${schema}.${table}`,
-                payload.subscription_id
-              );
-              console.log(
-                "[Fluxbase Realtime] Subscription ID received for",
-                `${schema}.${table}:`,
-                payload.subscription_id
-              );
-            } else {
-              console.log(
-                "[Fluxbase Realtime] Subscription ID received:",
-                payload.subscription_id
-              );
-            }
+          console.log("[Fluxbase Realtime] Token updated successfully");
+        } else if (payload.subscription_id) {
+          // Store subscription_id keyed by schema.table for unsubscribe support
+          const schema = payload.schema || "public";
+          const table = payload.table || "";
+          if (table) {
+            this.subscriptionIds.set(
+              `${schema}.${table}`,
+              payload.subscription_id
+            );
+            console.log(
+              "[Fluxbase Realtime] Subscription ID received for",
+              `${schema}.${table}:`,
+              payload.subscription_id
+            );
+          } else {
+            console.log(
+              "[Fluxbase Realtime] Subscription ID received:",
+              payload.subscription_id
+            );
           }
         }
         break;
+      }
 
       case "error":
         console.error("[Fluxbase Realtime] Error:", message.error);
@@ -872,10 +856,11 @@ export class RealtimeChannel {
         }
         break;
 
-      case "execution_log" as any:
-        // Handle execution log events
+      case "execution_log":
+      case "log_entry":
+        // Handle execution log events (log_entry is the all-categories variant)
         if (message.payload) {
-          this.handleExecutionLog(message.payload as ExecutionLogEvent);
+          this.handleExecutionLog(message.payload);
         }
         break;
     }
@@ -901,7 +886,7 @@ export class RealtimeChannel {
   /**
    * Internal: Handle broadcast message
    */
-  private handleBroadcastMessage(message: any) {
+  private handleBroadcastMessage(message: RealtimeBroadcastData) {
     const event = message.event;
     const payload: RealtimeBroadcastPayload = {
       event,
@@ -929,8 +914,8 @@ export class RealtimeChannel {
   /**
    * Internal: Handle presence message
    */
-  private handlePresenceMessage(message: any) {
-    const event = message.event as "sync" | "join" | "leave";
+  private handlePresenceMessage(message: RealtimePresencePayload) {
+    const event = message.event;
     const payload: RealtimePresencePayload = {
       event,
       key: message.key,
@@ -954,19 +939,25 @@ export class RealtimeChannel {
   /**
    * Internal: Handle postgres_changes message
    */
-  private handlePostgresChanges(payload: any) {
+  private handlePostgresChanges(payload: RealtimeChangeEvent) {
     // Convert to Supabase-compatible format
+    const eventType = (payload.type || payload.eventType || "*") as
+      | "INSERT"
+      | "UPDATE"
+      | "DELETE"
+      | "*";
+
     const supabasePayload: RealtimePostgresChangesPayload = {
-      eventType: payload.type || payload.eventType,
-      schema: payload.schema,
-      table: payload.table,
+      eventType,
+      schema: payload.schema ?? "",
+      table: payload.table ?? "",
       commit_timestamp:
         payload.timestamp ||
         payload.commit_timestamp ||
         new Date().toISOString(),
       new: payload.new_record || payload.new || payload.record || {},
       old: payload.old_record || payload.old || {},
-      errors: payload.errors || null,
+      errors: (payload.errors as string | null) || null,
     };
 
     // Route to subscription-specific callbacks based on matching config
@@ -1108,7 +1099,12 @@ export class RealtimeChannel {
     }
 
     this.reconnectAttempts++;
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+    // Exponential backoff with jitter: base * 2^(n-1) * (1 + random) spreads
+    // reconnect storms across clients instead of sync-ing them.
+    const delay =
+      this.reconnectDelay *
+      Math.pow(2, this.reconnectAttempts - 1) *
+      (1 + Math.random());
 
     console.log(
       `[Fluxbase Realtime] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`

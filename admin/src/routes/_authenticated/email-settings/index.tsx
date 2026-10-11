@@ -157,8 +157,10 @@ function EmailSettingsPage() {
     EmailTemplate[]
   >({
     queryKey: ["email-templates"],
-    queryFn: async () => {
-      const response = await apiClient.get("/api/v1/admin/email/templates");
+    queryFn: async ({ signal }) => {
+      const response = await apiClient.get("/api/v1/admin/email/templates", {
+        signal,
+      });
       return response.data;
     },
   });

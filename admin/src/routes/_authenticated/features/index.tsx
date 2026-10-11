@@ -58,29 +58,36 @@ function FeaturesPage() {
 
   const { data: features, isLoading } = useQuery<FeatureSettings>({
     queryKey: ['feature-settings'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const [realtime, storage, functions, ai, rpc, jobs, email] =
         await Promise.all([
           apiClient.get<SystemSetting>(
-            '/api/v1/admin/system/settings/app.realtime.enabled'
+            '/api/v1/admin/system/settings/app.realtime.enabled',
+            { signal }
           ),
           apiClient.get<SystemSetting>(
-            '/api/v1/admin/system/settings/app.storage.enabled'
+            '/api/v1/admin/system/settings/app.storage.enabled',
+            { signal }
           ),
           apiClient.get<SystemSetting>(
-            '/api/v1/admin/system/settings/app.functions.enabled'
+            '/api/v1/admin/system/settings/app.functions.enabled',
+            { signal }
           ),
           apiClient.get<SystemSetting>(
-            '/api/v1/admin/system/settings/app.ai.enabled'
+            '/api/v1/admin/system/settings/app.ai.enabled',
+            { signal }
           ),
           apiClient.get<SystemSetting>(
-            '/api/v1/admin/system/settings/app.rpc.enabled'
+            '/api/v1/admin/system/settings/app.rpc.enabled',
+            { signal }
           ),
           apiClient.get<SystemSetting>(
-            '/api/v1/admin/system/settings/app.jobs.enabled'
+            '/api/v1/admin/system/settings/app.jobs.enabled',
+            { signal }
           ),
           apiClient.get<SystemSetting>(
-            '/api/v1/admin/system/settings/app.email.enabled'
+            '/api/v1/admin/system/settings/app.email.enabled',
+            { signal }
           ),
         ])
       return {

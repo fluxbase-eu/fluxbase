@@ -5,6 +5,7 @@
 import type { FluxbaseFetch } from "./fetch";
 import type {
   FileObject,
+  FileUploadResponse,
   UploadOptions,
   UploadProgress,
   StreamUploadOptions,
@@ -51,35 +52,34 @@ export class StorageBucket {
       const formData = new FormData();
 
       // Convert to Blob if ArrayBuffer or ArrayBufferView (Uint8Array, etc.)
+      // The server derives content_type from the file part's Content-Type header
+      // (storage_files.go UploadFile), so the blob must carry the desired type.
       let blob: Blob | File;
       if (file instanceof ArrayBuffer) {
         blob = new Blob([file], { type: options?.contentType });
       } else if (ArrayBuffer.isView(file)) {
         // Cast needed because TypeScript's ArrayBufferView includes SharedArrayBuffer views
         blob = new Blob([file as BlobPart], { type: options?.contentType });
+      } else if (options?.contentType && file.type !== options.contentType) {
+        blob = new Blob([file], { type: options.contentType });
       } else {
         blob = file;
       }
 
       formData.append("file", blob);
 
-      if (options?.contentType) {
-        formData.append("content_type", options.contentType);
-      }
-
+      // The server only reads form fields prefixed with "metadata_"
+      // (storage_utils.go parseMetadata); a JSON "metadata" field is ignored.
       if (options?.metadata) {
-        formData.append("metadata", JSON.stringify(options.metadata));
+        for (const [key, value] of Object.entries(options.metadata)) {
+          formData.append(`metadata_${key}`, value);
+        }
       }
 
-      if (options?.cacheControl) {
-        formData.append("cache_control", options.cacheControl);
-      }
+      // Note: cacheControl and upsert have no server-side counterpart in the
+      // upload handler and are intentionally not sent.
 
-      if (options?.upsert !== undefined) {
-        formData.append("upsert", String(options.upsert));
-      }
-
-      let response: any;
+      let response: FileUploadResponse;
 
       // Use XMLHttpRequest for progress tracking if callback is provided
       if (options?.onUploadProgress) {
@@ -90,7 +90,7 @@ export class StorageBucket {
         );
       } else {
         // Use standard fetch for uploads without progress tracking
-        response = await this.fetch.request<any>(
+        response = await this.fetch.request<FileUploadResponse>(
           `/api/v1/storage/${this.bucketName}/${path}`,
           {
             method: "POST",
@@ -100,10 +100,11 @@ export class StorageBucket {
         );
       }
 
-      // Return Supabase-compatible response format
+      // Return Supabase-compatible response format. The server response has no
+      // object id — use the stored key (falling back to the requested path).
       return {
         data: {
-          id: response.id || response.key || path,
+          id: response?.key || path,
           path: path,
           fullPath: `${this.bucketName}/${path}`,
         },
@@ -122,7 +123,7 @@ export class StorageBucket {
     path: string,
     formData: FormData,
     onProgress: (progress: UploadProgress) => void,
-  ): Promise<any> {
+  ): Promise<FileUploadResponse> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       const url = `${this.fetch.getBaseUrl()}/api/v1/storage/${this.bucketName}/${path}`;
@@ -146,7 +147,7 @@ export class StorageBucket {
             const response = JSON.parse(xhr.responseText);
             resolve(response);
           } catch (e) {
-            resolve(xhr.responseText);
+            reject(new Error("Invalid JSON response from upload"));
           }
         } else {
           try {
@@ -730,7 +731,6 @@ export class StorageBucket {
         return { data: null, error: new Error("Upload aborted") };
       }
 
-      const baseUrl = this.fetch.getBaseUrl();
       const headers = this.fetch.getDefaultHeaders();
 
       // 1. Initialize or resume session
@@ -740,12 +740,11 @@ export class StorageBucket {
 
       if (!sessionId) {
         // Initialize new session
-        const initResponse = await fetch(
-          `${baseUrl}/api/v1/storage/${this.bucketName}/chunked/init`,
+        const initResponse = await this.fetch.fetchWithAuthRefresh(
+          `/api/v1/storage/${this.bucketName}/chunked/init`,
           {
             method: "POST",
             headers: {
-              ...headers,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -760,14 +759,6 @@ export class StorageBucket {
             signal: options?.signal,
           },
         );
-
-        if (!initResponse.ok) {
-          const errorData = await initResponse.json().catch(() => ({}));
-          throw new Error(
-            errorData.error ||
-              `Failed to initialize upload: ${initResponse.statusText}`,
-          );
-        }
 
         const initData = await initResponse.json();
         session = {
@@ -785,22 +776,13 @@ export class StorageBucket {
         sessionId = session.sessionId;
       } else {
         // Resume existing session - get status
-        const statusResponse = await fetch(
-          `${baseUrl}/api/v1/storage/${this.bucketName}/chunked/${sessionId}/status`,
+        const statusResponse = await this.fetch.fetchWithAuthRefresh(
+          `/api/v1/storage/${this.bucketName}/chunked/${sessionId}/status`,
           {
             method: "GET",
-            headers,
             signal: options?.signal,
           },
         );
-
-        if (!statusResponse.ok) {
-          const errorData = await statusResponse.json().catch(() => ({}));
-          throw new Error(
-            errorData.error ||
-              `Failed to get session status: ${statusResponse.statusText}`,
-          );
-        }
 
         const statusData = await statusResponse.json();
         session = statusData.session;
@@ -818,6 +800,16 @@ export class StorageBucket {
       let lastProgressTime = Date.now();
       let lastProgressBytes = uploadedBytes;
 
+      // Forward external abort to whichever chunk request is currently in
+      // flight. Registered ONCE per upload (not per retry attempt) to avoid
+      // accumulating listeners on the caller's signal.
+      let activeChunkController: AbortController | null = null;
+      const forwardExternalAbort = () => activeChunkController?.abort();
+      if (options?.signal) {
+        options.signal.addEventListener("abort", forwardExternalAbort);
+      }
+
+      try {
       // 2. Upload each chunk with retry logic
       for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
         // Check if aborted
@@ -845,24 +837,18 @@ export class StorageBucket {
               return { data: null, error: new Error("Upload aborted") };
             }
 
-            // Create per-chunk timeout controller
+            // Create per-attempt timeout controller
             const chunkController = new AbortController();
+            activeChunkController = chunkController;
             const timeoutId = setTimeout(
               () => chunkController.abort(),
               chunkTimeout,
             );
 
-            // Forward external signal to chunk controller
-            if (options?.signal) {
-              options.signal.addEventListener(
-                "abort",
-                () => chunkController.abort(),
-                { once: true },
-              );
-            }
-
-            const chunkResponse = await fetch(
-              `${baseUrl}/api/v1/storage/${this.bucketName}/chunked/${sessionId}/${chunkIndex}`,
+            // Throws a normalized FluxbaseError on failure (including
+            // 401 auto-refresh retry) — no manual !ok check needed.
+            await this.fetch.fetchWithAuthRefresh(
+              `/api/v1/storage/${this.bucketName}/chunked/${sessionId}/${chunkIndex}`,
               {
                 method: "PUT",
                 headers: {
@@ -876,17 +862,12 @@ export class StorageBucket {
             );
 
             clearTimeout(timeoutId);
-
-            if (!chunkResponse.ok) {
-              const errorData = await chunkResponse.json().catch(() => ({}));
-              throw new Error(
-                errorData.error ||
-                  `Chunk upload failed: ${chunkResponse.statusText}`,
-              );
-            }
+            activeChunkController = null;
 
             chunkUploaded = true;
           } catch (err) {
+            activeChunkController = null;
+
             // Check if it was user abort
             if (options?.signal?.aborted) {
               return { data: null, error: new Error("Upload aborted") };
@@ -928,24 +909,20 @@ export class StorageBucket {
           });
         }
       }
+      } finally {
+        if (options?.signal) {
+          options.signal.removeEventListener("abort", forwardExternalAbort);
+        }
+      }
 
       // 3. Complete the upload
-      const completeResponse = await fetch(
-        `${baseUrl}/api/v1/storage/${this.bucketName}/chunked/${sessionId}/complete`,
+      const completeResponse = await this.fetch.fetchWithAuthRefresh(
+        `/api/v1/storage/${this.bucketName}/chunked/${sessionId}/complete`,
         {
           method: "POST",
-          headers,
           signal: options?.signal,
         },
       );
-
-      if (!completeResponse.ok) {
-        const errorData = await completeResponse.json().catch(() => ({}));
-        throw new Error(
-          errorData.error ||
-            `Failed to complete upload: ${completeResponse.statusText}`,
-        );
-      }
 
       const result = await completeResponse.json();
 
@@ -970,23 +947,12 @@ export class StorageBucket {
     sessionId: string,
   ): Promise<{ error: Error | null }> {
     try {
-      const baseUrl = this.fetch.getBaseUrl();
-      const headers = this.fetch.getDefaultHeaders();
-
-      const response = await fetch(
-        `${baseUrl}/api/v1/storage/${this.bucketName}/chunked/${sessionId}`,
+      await this.fetch.fetchWithAuthRefresh(
+        `/api/v1/storage/${this.bucketName}/chunked/${sessionId}`,
         {
           method: "DELETE",
-          headers,
         },
       );
-
-      if (!response.ok && response.status !== 204) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `Failed to abort upload: ${response.statusText}`,
-        );
-      }
 
       return { error: null };
     } catch (error) {
@@ -1002,24 +968,12 @@ export class StorageBucket {
     sessionId: string,
   ): Promise<{ data: ChunkedUploadSession | null; error: Error | null }> {
     try {
-      const baseUrl = this.fetch.getBaseUrl();
-      const headers = this.fetch.getDefaultHeaders();
-
-      const response = await fetch(
-        `${baseUrl}/api/v1/storage/${this.bucketName}/chunked/${sessionId}/status`,
+      const response = await this.fetch.fetchWithAuthRefresh(
+        `/api/v1/storage/${this.bucketName}/chunked/${sessionId}/status`,
         {
           method: "GET",
-          headers,
         },
       );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error ||
-            `Failed to get upload status: ${response.statusText}`,
-        );
-      }
 
       const data = await response.json();
       return {
@@ -1073,17 +1027,39 @@ export class StorageBucket {
       const queryString = params.toString();
       const path = `/api/v1/storage/${this.bucketName}${queryString ? `?${queryString}` : ""}`;
 
-      const response = await this.fetch.get<{ files: any[] }>(path);
+      // Server response envelope (storage_files.go ListFiles):
+      // { bucket, objects: [...], count } (+ prefix/prefixes when delimiter used).
+      // Each object: { id, bucket, path, mime_type?, size, metadata,
+      // owner_id?, created_at, updated_at }.
+      const response = await this.fetch.get<{
+        bucket: string;
+        objects: Array<{
+          id: string;
+          bucket: string;
+          path: string;
+          mime_type?: string | null;
+          size: number;
+          metadata: Record<string, unknown> | null;
+          owner_id?: string | null;
+          created_at: string;
+          updated_at: string;
+        }>;
+        count: number;
+      }>(path);
 
       // Convert to FileObject format
-      const files: FileObject[] = (response.files || []).map((file: any) => ({
-        name: file.key || file.name,
-        id: file.id,
-        bucket_id: file.bucket || this.bucketName,
-        created_at: file.last_modified || file.created_at,
-        updated_at: file.updated_at,
-        last_accessed_at: file.last_accessed_at,
-        metadata: file.metadata,
+      const files: FileObject[] = (response?.objects ?? []).map((obj) => ({
+        name: obj.path,
+        id: obj.id,
+        bucket_id: obj.bucket || this.bucketName,
+        owner: obj.owner_id ?? undefined,
+        created_at: obj.created_at,
+        updated_at: obj.updated_at,
+        metadata: {
+          ...(obj.metadata ?? {}),
+          size: obj.size,
+          ...(obj.mime_type ? { mimetype: obj.mime_type } : {}),
+        },
       }));
 
       return { data: files, error: null };

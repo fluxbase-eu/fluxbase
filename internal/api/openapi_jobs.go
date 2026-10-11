@@ -78,12 +78,20 @@ func (h *OpenAPIHandler) addJobsEndpoints(spec *OpenAPISpec) {
 			},
 			Responses: map[string]OpenAPIResponse{
 				"200": {
-					Description: "List of jobs",
+					Description: "Paginated list of jobs",
 					Content: map[string]OpenAPIMedia{
 						"application/json": {
 							Schema: map[string]interface{}{
-								"type":  "array",
-								"items": map[string]string{"$ref": "#/components/schemas/Job"},
+								"type": "object",
+								"properties": map[string]interface{}{
+									"jobs": map[string]interface{}{
+										"type":  "array",
+										"items": map[string]string{"$ref": "#/components/schemas/Job"},
+									},
+									"limit":  map[string]string{"type": "integer"},
+									"offset": map[string]string{"type": "integer"},
+								},
+								"required": []string{"jobs", "limit", "offset"},
 							},
 						},
 					},

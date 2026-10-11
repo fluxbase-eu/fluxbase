@@ -534,6 +534,8 @@ describe('FluxbaseFetch', () => {
       })
 
       mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
         headers: responseHeaders,
       })
 
@@ -541,9 +543,72 @@ describe('FluxbaseFetch', () => {
 
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:8080/api/resource',
-        expect.objectContaining({ method: 'HEAD' })
+        expect.objectContaining({
+          method: 'HEAD',
+          signal: expect.any(AbortSignal),
+        })
       )
       expect(headers.get('content-length')).toBe('1234')
+    })
+
+    it('should throw FluxbaseError with status on non-ok response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        headers: new Headers(),
+      })
+
+      await expect(fluxFetch.head('/api/missing')).rejects.toMatchObject({
+        message: 'Not Found',
+        status: 404,
+      })
+    })
+
+    it('should retry with refreshed token on 401', async () => {
+      fluxFetch.setAuthToken('expired-token')
+      const refreshCallback = vi.fn().mockResolvedValue(true)
+      fluxFetch.setRefreshTokenCallback(refreshCallback)
+
+      const responseHeaders = new Headers({ 'content-length': '5' })
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: responseHeaders,
+        })
+
+      const headers = await fluxFetch.head('/api/resource')
+
+      expect(refreshCallback).toHaveBeenCalled()
+      expect(headers.get('content-length')).toBe('5')
+
+      fluxFetch.setRefreshTokenCallback(null)
+    })
+
+    it('should apply custom timeout', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+      })
+
+      await fluxFetch.head('/api/resource', { timeout: 5000 })
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/api/resource',
+        expect.objectContaining({
+          method: 'HEAD',
+          signal: expect.any(AbortSignal),
+        })
+      )
     })
   })
 
@@ -570,10 +635,37 @@ describe('FluxbaseFetch', () => {
         ok: false,
         status: 404,
         statusText: 'Not Found',
+        json: async () => ({ error: 'File not found', code: 'NOT_FOUND' }),
       })
 
       await expect(fluxFetch.getBlob('/api/files/missing.txt'))
-        .rejects.toThrow('Not Found')
+        .rejects.toMatchObject({
+          message: 'File not found',
+          status: 404,
+          code: 'NOT_FOUND',
+          details: { error: 'File not found', code: 'NOT_FOUND' },
+        })
+    })
+
+    it('should fall back to statusText when error body is not JSON', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => {
+          throw new Error('not json')
+        },
+        text: async () => 'boom',
+      })
+
+      // Like the main request path: the raw text body lands in `details`
+      // while the message falls back to statusText.
+      await expect(fluxFetch.getBlob('/api/files/broken.txt'))
+        .rejects.toMatchObject({
+          message: 'Internal Server Error',
+          status: 500,
+          details: 'boom',
+        })
     })
 
     it('should log debug message when debug enabled', async () => {
@@ -788,6 +880,98 @@ describe('FluxbaseFetch', () => {
         expect(err.status).toBe(400)
         expect(err.details).toEqual({ error: 'Invalid input', details: { field: 'name' } })
       }
+    })
+  })
+
+  describe('fetchWithAuthRefresh', () => {
+    it('should return the raw Response on ok', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ session_id: 'sess-1' }),
+      })
+
+      const response = await fluxFetch.fetchWithAuthRefresh('/api/v1/storage/b/chunked/init', {
+        method: 'POST',
+        body: JSON.stringify({ path: 'f.txt' }),
+      })
+
+      expect(response.ok).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/api/v1/storage/b/chunked/init',
+        expect.objectContaining({ method: 'POST', body: JSON.stringify({ path: 'f.txt' }) })
+      )
+      await expect(response.json()).resolves.toEqual({ session_id: 'sess-1' })
+    })
+
+    it('should throw FluxbaseError with status/code/details on non-ok', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 413,
+        statusText: 'Payload Too Large',
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ error: 'File too large', code: 'FILE_TOO_LARGE' }),
+      })
+
+      await expect(
+        fluxFetch.fetchWithAuthRefresh('/api/v1/storage/b/chunked/init', { method: 'POST' })
+      ).rejects.toMatchObject({
+        message: 'File too large',
+        status: 413,
+        code: 'FILE_TOO_LARGE',
+        details: { error: 'File too large', code: 'FILE_TOO_LARGE' },
+      })
+    })
+
+    it('should retry once after successful token refresh on 401', async () => {
+      const refreshCallback: RefreshTokenCallback = vi.fn().mockResolvedValue(true)
+      fluxFetch.setRefreshTokenCallback(refreshCallback)
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({ error: 'Token expired' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({}),
+        })
+
+      const response = await fluxFetch.fetchWithAuthRefresh('/api/v1/storage/b/chunked/0', {
+        method: 'PUT',
+      })
+
+      expect(refreshCallback).toHaveBeenCalledTimes(1)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(response.ok).toBe(true)
+
+      fluxFetch.setRefreshTokenCallback(null)
+    })
+
+    it('should not retry when refresh fails and throw the 401 error', async () => {
+      const refreshCallback: RefreshTokenCallback = vi.fn().mockResolvedValue(false)
+      fluxFetch.setRefreshTokenCallback(refreshCallback)
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ error: 'Token expired' }),
+      })
+
+      await expect(
+        fluxFetch.fetchWithAuthRefresh('/api/v1/storage/b/chunked/0', { method: 'PUT' })
+      ).rejects.toMatchObject({ status: 401, message: 'Token expired' })
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+
+      fluxFetch.setRefreshTokenCallback(null)
     })
   })
 })

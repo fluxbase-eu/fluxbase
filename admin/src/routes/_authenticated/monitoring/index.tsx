@@ -49,21 +49,21 @@ function MonitoringPage() {
   // Fetch metrics
   const { data: metrics } = useQuery<SystemMetrics>({
     queryKey: ['monitoring-metrics'],
-    queryFn: monitoringApi.getMetrics,
+    queryFn: ({ signal }) => monitoringApi.getMetrics({ signal }),
     refetchInterval: autoRefresh ? 5000 : false,
   })
 
   // Fetch health
   const { data: health } = useQuery<SystemHealth>({
     queryKey: ['monitoring-health'],
-    queryFn: monitoringApi.getHealth,
+    queryFn: ({ signal }) => monitoringApi.getHealth({ signal }),
     refetchInterval: autoRefresh ? 10000 : false,
   })
 
   // Fetch AI metrics
   const { data: aiMetrics } = useQuery<AIMetrics>({
     queryKey: ['ai-metrics'],
-    queryFn: aiMetricsApi.getMetrics,
+    queryFn: ({ signal }) => aiMetricsApi.getMetrics({ signal }),
     refetchInterval: autoRefresh ? 10000 : false,
   })
 

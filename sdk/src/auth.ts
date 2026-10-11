@@ -7,9 +7,15 @@ import type {
   AuthResponse,
   AuthResponseData,
   AuthSession,
+  SignInBody,
   SignInCredentials,
+  SignUpBody,
   SignUpCredentials,
+  CaptchaCheckBody,
+  UpdateUserBody,
   UpdateUserAttributes,
+  PasswordResetBody,
+  MagicLinkBody,
   DeleteAccountRequest,
   User,
   TwoFactorSetupResponse,
@@ -303,7 +309,7 @@ export class FluxbaseAuth {
   ): Promise<FluxbaseResponse<AuthResponseData | SignInWith2FAResponse>> {
     return wrapAsync(async () => {
       // Build request body with proper field names for backend
-      const requestBody: any = {
+      const requestBody: SignInBody = {
         email: credentials.email,
         password: credentials.password,
       };
@@ -363,7 +369,7 @@ export class FluxbaseAuth {
   async signUp(credentials: SignUpCredentials): Promise<FluxbaseAuthResponse> {
     return wrapAsync(async () => {
       // Transform Supabase-style options.data to backend's user_metadata format
-      const requestBody: any = {
+      const requestBody: SignUpBody = {
         email: credentials.email,
         password: credentials.password,
       };
@@ -464,7 +470,7 @@ export class FluxbaseAuth {
   ): Promise<DataResponse<CaptchaCheckResponse>> {
     return wrapAsync(async () => {
       // Transform camelCase to snake_case for backend
-      const requestBody: any = {
+      const requestBody: CaptchaCheckBody = {
         endpoint: request.endpoint,
       };
 
@@ -631,7 +637,7 @@ export class FluxbaseAuth {
       }
 
       // Transform Supabase-style 'data' to backend's 'user_metadata' format
-      const requestBody: any = {};
+      const requestBody: UpdateUserBody = {};
 
       if (attributes.email) {
         requestBody.email = attributes.email;
@@ -824,7 +830,7 @@ export class FluxbaseAuth {
     options?: { redirectTo?: string; captchaToken?: string },
   ): Promise<DataResponse<PasswordResetResponse>> {
     return wrapAsync(async () => {
-      const requestBody: any = { email };
+      const requestBody: PasswordResetBody = { email };
 
       // Include redirect URL if provided
       if (options?.redirectTo) {
@@ -917,7 +923,7 @@ export class FluxbaseAuth {
     options?: MagicLinkOptions,
   ): Promise<DataResponse<MagicLinkResponse>> {
     return wrapAsync(async () => {
-      const requestBody: any = {
+      const requestBody: MagicLinkBody = {
         email,
         redirect_to: options?.redirect_to,
       };

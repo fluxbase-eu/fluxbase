@@ -185,6 +185,11 @@ func (h *DashboardAuthHandler) Login(c fiber.Ctx) error {
 		})
 	}
 
+	// Store the refresh token in the HttpOnly cookie so the SPA can restore
+	// its session without holding the token in JavaScript-readable storage.
+	// The JSON body keeps returning it for backward compatibility.
+	setAdminRefreshCookie(c, loginResp.RefreshToken)
+
 	return c.JSON(fiber.Map{
 		"access_token":  loginResp.AccessToken,
 		"refresh_token": loginResp.RefreshToken,
@@ -215,6 +220,11 @@ func (h *DashboardAuthHandler) RefreshToken(c fiber.Ctx) error {
 	if err != nil {
 		return SendUnauthorized(c, "Invalid or expired refresh token", ErrCodeInvalidToken)
 	}
+
+	// Keep the rotated refresh token in the HttpOnly cookie so the SPA never
+	// has to persist it in JavaScript-readable storage. The JSON body keeps
+	// returning it for backward compatibility.
+	setAdminRefreshCookie(c, loginResp.RefreshToken)
 
 	return c.JSON(fiber.Map{
 		"access_token":  loginResp.AccessToken,
@@ -267,6 +277,10 @@ func (h *DashboardAuthHandler) VerifyTOTP(c fiber.Ctx) error {
 	if err != nil {
 		return SendInternalError(c, "Failed to generate tokens")
 	}
+
+	// Same cookie contract as Login: the SPA relies on the HttpOnly refresh
+	// cookie for session restore.
+	setAdminRefreshCookie(c, refreshToken)
 
 	return c.JSON(fiber.Map{
 		"access_token":  accessToken,

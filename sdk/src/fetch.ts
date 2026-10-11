@@ -394,11 +394,101 @@ export class FluxbaseFetch {
   }
 
   /**
+   * Raw fetch with auth-refresh and error normalization for code paths that
+   * need the Response object directly (e.g. storage chunked uploads, blob
+   * downloads). On 401 it attempts a token refresh and retries once; on any
+   * non-ok response it throws a FluxbaseError carrying status/code/details.
+   */
+  async fetchWithAuthRefresh(
+    path: string,
+    init: {
+      method: HttpMethod;
+      headers?: Record<string, string>;
+      body?: BodyInit | null;
+      signal?: AbortSignal | null;
+      /** Skip automatic token refresh on 401 */
+      skipAutoRefresh?: boolean;
+    },
+    isRetry = false,
+  ): Promise<Response> {
+    const url = `${this.baseUrl}${path}`;
+    const headers = { ...this.defaultHeaders, ...init.headers };
+    if (this.beforeRequestCallback) {
+      this.beforeRequestCallback(headers);
+    }
+
+    const response = await fetch(url, {
+      method: init.method,
+      headers,
+      body: init.body ?? undefined,
+      signal: init.signal ?? undefined,
+    });
+
+    if (
+      response.status === 401 &&
+      !isRetry &&
+      !init.skipAutoRefresh &&
+      this.refreshTokenCallback
+    ) {
+      const refreshSuccess = await this.handleTokenRefresh();
+      if (refreshSuccess) {
+        return this.fetchWithAuthRefresh(path, init, true);
+      }
+    }
+
+    if (!response.ok) {
+      // Parse the error body (JSON or text) for status/code/details.
+      let data: unknown;
+      try {
+        data = await response.json();
+      } catch {
+        try {
+          data = await response.text();
+        } catch {
+          data = undefined;
+        }
+      }
+
+      const error = new Error(
+        typeof data === "object" && data && "error" in data
+          ? String((data as { error: unknown }).error)
+          : response.statusText || `${init.method} ${path} failed`,
+      ) as FluxbaseError;
+      error.status = response.status;
+      error.details = data;
+
+      const code =
+        typeof data === "object" && data && "code" in data
+          ? (data as { code?: unknown }).code
+          : undefined;
+      if (typeof code === "string") {
+        error.code = code;
+      }
+
+      throw error;
+    }
+
+    return response;
+  }
+
+  /**
    * HEAD request
    */
   async head(
     path: string,
     options: Omit<FetchOptions, "method"> = {},
+  ): Promise<Headers> {
+    return this.headInternal(path, options, false);
+  }
+
+  /**
+   * HEAD request implementation with timeout, error normalization and
+   * 401-refresh retry (mirrors requestFull).
+   */
+  private async headInternal(
+    path: string,
+    options: Omit<FetchOptions, "method">,
+    isRetry: boolean,
   ): Promise<Headers> {
     const url = `${this.baseUrl}${path}`;
     const headers = { ...this.defaultHeaders, ...options.headers };
@@ -406,12 +496,65 @@ export class FluxbaseFetch {
       this.beforeRequestCallback(headers);
     }
 
-    const response = await fetch(url, {
-      method: "HEAD",
-      headers,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      options.timeout ?? this.timeout,
+    );
 
-    return response.headers;
+    if (this.debug) {
+      console.log(`[Fluxbase SDK] HEAD ${url}`);
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "HEAD",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (this.debug) {
+        console.log(`[Fluxbase SDK] HEAD Response:`, response.status);
+      }
+
+      if (
+        response.status === 401 &&
+        !isRetry &&
+        !options.skipAutoRefresh &&
+        this.refreshTokenCallback
+      ) {
+        const refreshSuccess = await this.handleTokenRefresh();
+        if (refreshSuccess) {
+          return this.headInternal(path, options, true);
+        }
+      }
+
+      if (!response.ok) {
+        const error = new Error(
+          response.statusText || "HEAD request failed",
+        ) as FluxbaseError;
+        error.status = response.status;
+        throw error;
+      }
+
+      return response.headers;
+    } catch (err) {
+      clearTimeout(timeoutId);
+
+      if (err instanceof Error) {
+        if (err.name === "AbortError") {
+          const timeoutError = new Error("Request timeout") as FluxbaseError;
+          timeoutError.status = 408;
+          throw timeoutError;
+        }
+
+        throw err;
+      }
+
+      throw new Error(err instanceof Error ? err.message : String(err) || "Unknown error occurred");
+    }
   }
 
   /**
@@ -449,8 +592,36 @@ export class FluxbaseFetch {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const error = new Error(response.statusText) as FluxbaseError;
+        // Parse the error body (JSON or text) so callers get the server's
+        // error message, machine-readable code, and raw details — same as
+        // the main request path.
+        let data: unknown;
+        try {
+          data = await response.json();
+        } catch {
+          try {
+            data = await response.text();
+          } catch {
+            data = undefined;
+          }
+        }
+
+        const error = new Error(
+          typeof data === "object" && data && "error" in data
+            ? String((data as { error: unknown }).error)
+            : response.statusText,
+        ) as FluxbaseError;
         error.status = response.status;
+        error.details = data;
+
+        const code =
+          typeof data === "object" && data && "code" in data
+            ? (data as { code?: unknown }).code
+            : undefined;
+        if (typeof code === "string") {
+          error.code = code;
+        }
+
         throw error;
       }
 

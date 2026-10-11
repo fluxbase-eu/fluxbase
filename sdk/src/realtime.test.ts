@@ -910,6 +910,9 @@ describe("RealtimeChannel - Subscribe Status Callback", () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(statusCallback).toHaveBeenCalledWith("CHANNEL_ERROR", expect.any(Error));
+
+    // Stop the reconnect loop so no stray socket is created later
+    await channel.unsubscribe();
   });
 });
 
@@ -981,7 +984,8 @@ describe("RealtimeChannel - Broadcast with Acknowledgment", () => {
       payload: { text: "Hello" },
     });
 
-    // Simulate ack response
+    // Simulate ack response (recorded wire format: messageId/status nested
+    // INSIDE payload — internal/realtime/handler.go:655-661)
     await new Promise((resolve) => setTimeout(resolve, 10));
     const sentMsg = lastMockWebSocket!.sentMessages.find((msg) => {
       const parsed = JSON.parse(msg);
@@ -991,8 +995,10 @@ describe("RealtimeChannel - Broadcast with Acknowledgment", () => {
 
     lastMockWebSocket!.simulateMessage({
       type: "ack",
-      messageId: parsedSentMsg.messageId,
-      status: "ok",
+      payload: {
+        messageId: parsedSentMsg.messageId,
+        status: "ok",
+      },
     });
 
     const result = await sendPromise;
@@ -1563,5 +1569,206 @@ describe("FluxbaseRealtime - channel with config", () => {
     expect(channel1).not.toBe(channel2);
 
     realtime.removeAllChannels();
+  });
+});
+describe("RealtimeChannel - Server Frame Wire Format (recorded)", () => {
+  it("should resolve broadcast ack when messageId/status are nested in payload", async () => {
+    // Exact frame echoed by the Go server after a broadcast with messageId
+    // (internal/realtime/handler.go:655-661): no top-level messageId/status.
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "chat",
+      "test-token",
+      { broadcast: { ack: true, ackTimeout: 2000 } },
+    );
+    channel.subscribe();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const sendPromise = channel.send({
+      type: "broadcast",
+      event: "cursor",
+      payload: { x: 1 },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const sentMsg = JSON.parse(
+      lastMockWebSocket!.sentMessages.find((msg) => {
+        const parsed = JSON.parse(msg);
+        return parsed.type === "broadcast";
+      })!,
+    );
+
+    lastMockWebSocket!.simulateMessage({
+      type: "ack",
+      payload: { messageId: sentMsg.messageId, status: "ok" },
+    });
+
+    await expect(sendPromise).resolves.toBe("ok");
+    await channel.unsubscribe();
+  });
+
+  it("should not resolve broadcast ack when payload is missing the messageId", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "chat",
+      "test-token",
+      { broadcast: { ack: true, ackTimeout: 150 } },
+    );
+    channel.subscribe();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const sendPromise = channel.send({
+      type: "broadcast",
+      event: "cursor",
+      payload: { x: 1 },
+    });
+
+    // Ack for someone else's message — must not resolve ours
+    lastMockWebSocket!.simulateMessage({
+      type: "ack",
+      payload: { messageId: "msg_someone_else", status: "ok" },
+    });
+
+    // send() catches the ack-timeout rejection internally and resolves "error"
+    await expect(sendPromise).resolves.toBe("error");
+    await channel.unsubscribe();
+  });
+
+  it("should handle an ack frame without a payload at all", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "test",
+      "test-token",
+    );
+    channel.subscribe();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    expect(() =>
+      lastMockWebSocket!.simulateMessage({ type: "ack" }),
+    ).not.toThrow();
+
+    consoleSpy.mockRestore();
+    await channel.unsubscribe();
+  });
+
+  it("should store subscription_id from a recorded subscribe ack frame", async () => {
+    // Recorded frame from internal/realtime/handler.go:497-503
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "table:public.posts",
+      "test-token",
+    );
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    channel.on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => {});
+    channel.subscribe();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    lastMockWebSocket!.simulateMessage({
+      type: "ack",
+      payload: {
+        subscribed: true,
+        subscription_id: "sub-abc-123",
+        schema: "public",
+        table: "posts",
+        event: "*",
+      },
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Subscription ID received"),
+      "public.posts:",
+      "sub-abc-123",
+    );
+
+    consoleSpy.mockRestore();
+    await channel.unsubscribe();
+  });
+
+  it("should route log_entry frames to execution_log callbacks", async () => {
+    // log_entry is the all-categories variant sent by the Go server
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "logs",
+      "test-token",
+    );
+
+    const callback = vi.fn();
+    channel.on("execution_log", { execution_id: "e-1" }, callback);
+    channel.subscribe();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    lastMockWebSocket!.simulateMessage({
+      type: "log_entry",
+      payload: {
+        execution_id: "e-1",
+        level: "info",
+        message: "all-categories log",
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    expect(callback).toHaveBeenCalled();
+    expect(callback.mock.calls[0][0].message).toBe("all-categories log");
+
+    await channel.unsubscribe();
+  });
+
+  it("should route postgres_changes frames with the Go ChangeEvent shape", async () => {
+    // Go realtime.ChangeEvent wire shape: { type, table, schema, record, old_record }
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "table:public.posts",
+      "test-token",
+    );
+
+    const callback = vi.fn();
+    channel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, callback);
+    channel.subscribe();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    lastMockWebSocket!.simulateMessage({
+      type: "postgres_changes",
+      payload: {
+        type: "UPDATE",
+        schema: "public",
+        table: "posts",
+        record: { id: 1, title: "hello" },
+        old_record: { id: 1, title: "old" },
+      },
+    });
+
+    expect(callback).toHaveBeenCalled();
+    const payload = callback.mock.calls[0][0];
+    expect(payload.eventType).toBe("UPDATE");
+    expect(payload.schema).toBe("public");
+    expect(payload.table).toBe("posts");
+    expect(payload.new).toEqual({ id: 1, title: "hello" });
+    expect(payload.old).toEqual({ id: 1, title: "old" });
+
+    await channel.unsubscribe();
+  });
+
+  it("should handle heartbeat frames without error", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "test",
+      "test-token",
+    );
+    channel.subscribe();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(() =>
+      lastMockWebSocket!.simulateMessage({ type: "heartbeat" }),
+    ).not.toThrow();
+
+    consoleSpy.mockRestore();
+    await channel.unsubscribe();
   });
 });

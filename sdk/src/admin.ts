@@ -352,6 +352,7 @@ export class FluxbaseAdmin {
    *   exclude_admins: true,
    *   search: 'john',
    *   limit: 50,
+   *   offset: 100,
    *   type: 'app'
    * });
    * ```
@@ -370,6 +371,9 @@ export class FluxbaseAdmin {
       }
       if (options.limit !== undefined) {
         params.append("limit", String(options.limit));
+      }
+      if (options.offset !== undefined) {
+        params.append("offset", String(options.offset));
       }
       if (options.type) {
         params.append("type", options.type);
@@ -390,7 +394,7 @@ export class FluxbaseAdmin {
    * Fetch a single user's details by their user ID
    *
    * @param userId - User ID to fetch
-   * @param type - User type ('app' or 'dashboard')
+   * @param type - User type ('app' or 'platform')
    * @returns User details with metadata
    *
    * @example
@@ -398,15 +402,15 @@ export class FluxbaseAdmin {
    * // Get an app user
    * const user = await admin.getUserById('user-123');
    *
-   * // Get a dashboard user
-   * const dashboardUser = await admin.getUserById('admin-456', 'dashboard');
-   * console.log('User email:', dashboardUser.email);
-   * console.log('Last login:', dashboardUser.last_login_at);
+   * // Get a platform user
+   * const platformUser = await admin.getUserById('admin-456', 'platform');
+   * console.log('User email:', platformUser.email);
+   * console.log('Last sign in:', platformUser.last_sign_in);
    * ```
    */
   async getUserById(
     userId: string,
-    type: "app" | "dashboard" = "app",
+    type: "app" | "platform" = "app",
   ): Promise<DataResponse<EnrichedUser>> {
     return wrapAsync(async () => {
       const url = `/api/v1/admin/users/${userId}?type=${type}`;
@@ -420,7 +424,7 @@ export class FluxbaseAdmin {
    * Creates a new user and optionally sends an invitation email
    *
    * @param request - User invitation details
-   * @param type - User type ('app' or 'dashboard')
+   * @param type - User type ('app' or 'platform')
    * @returns Created user and invitation details
    *
    * @example
@@ -437,7 +441,7 @@ export class FluxbaseAdmin {
    */
   async inviteUser(
     request: InviteUserRequest,
-    type: "app" | "dashboard" = "app",
+    type: "app" | "platform" = "app",
   ): Promise<DataResponse<InviteUserResponse>> {
     return wrapAsync(async () => {
       const url = `/api/v1/admin/users/invite?type=${type}`;
@@ -451,7 +455,7 @@ export class FluxbaseAdmin {
    * Permanently deletes a user and all associated data
    *
    * @param userId - User ID to delete
-   * @param type - User type ('app' or 'dashboard')
+   * @param type - User type ('app' or 'platform')
    * @returns Deletion confirmation
    *
    * @example
@@ -462,7 +466,7 @@ export class FluxbaseAdmin {
    */
   async deleteUser(
     userId: string,
-    type: "app" | "dashboard" = "app",
+    type: "app" | "platform" = "app",
   ): Promise<DataResponse<DeleteUserResponse>> {
     return wrapAsync(async () => {
       const url = `/api/v1/admin/users/${userId}?type=${type}`;
@@ -477,7 +481,7 @@ export class FluxbaseAdmin {
    *
    * @param userId - User ID
    * @param role - New role
-   * @param type - User type ('app' or 'dashboard')
+   * @param type - User type ('app' or 'platform')
    * @returns Updated user
    *
    * @example
@@ -489,7 +493,7 @@ export class FluxbaseAdmin {
   async updateUserRole(
     userId: string,
     role: string,
-    type: "app" | "dashboard" = "app",
+    type: "app" | "platform" = "app",
   ): Promise<DataResponse<EnrichedUser>> {
     return wrapAsync(async () => {
       const url = `/api/v1/admin/users/${userId}/role?type=${type}`;
@@ -503,7 +507,7 @@ export class FluxbaseAdmin {
    * Generates a new password for the user and optionally sends it via email
    *
    * @param userId - User ID
-   * @param type - User type ('app' or 'dashboard')
+   * @param type - User type ('app' or 'platform')
    * @returns Reset confirmation message
    *
    * @example
@@ -514,7 +518,7 @@ export class FluxbaseAdmin {
    */
   async resetUserPassword(
     userId: string,
-    type: "app" | "dashboard" = "app",
+    type: "app" | "platform" = "app",
   ): Promise<DataResponse<ResetUserPasswordResponse>> {
     return wrapAsync(async () => {
       const url = `/api/v1/admin/users/${userId}/reset-password?type=${type}`;

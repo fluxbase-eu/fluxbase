@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface AIProvider {
   id: string;
@@ -23,9 +23,10 @@ export interface UpdateAIProviderRequest {
 }
 
 export const aiProvidersApi = {
-  list: async (): Promise<AIProvider[]> => {
+  list: async (options?: ApiRequestOptions): Promise<AIProvider[]> => {
     const response = await api.get<{ providers: AIProvider[] }>(
       "/api/v1/admin/ai/providers",
+      { signal: options?.signal },
     );
     return response.data.providers;
   },
@@ -64,18 +65,27 @@ export interface AIChatbot extends AIChatbotSummary {
 }
 
 export const chatbotsApi = {
-  list: async (namespace?: string): Promise<AIChatbotSummary[]> => {
+  list: async (
+    namespace?: string,
+    requestOptions?: ApiRequestOptions,
+  ): Promise<AIChatbotSummary[]> => {
     const params = namespace ? `?namespace=${namespace}` : "";
     const response = await api.get<{
       chatbots: AIChatbotSummary[];
       count: number;
-    }>(`/api/v1/admin/ai/chatbots${params}`);
+    }>(`/api/v1/admin/ai/chatbots${params}`, {
+      signal: requestOptions?.signal,
+    });
     return response.data.chatbots || [];
   },
 
-  get: async (id: string): Promise<AIChatbot> => {
+  get: async (
+    id: string,
+    requestOptions?: ApiRequestOptions,
+  ): Promise<AIChatbot> => {
     const response = await api.get<AIChatbot>(
       `/api/v1/admin/ai/chatbots/${id}`,
+      { signal: requestOptions?.signal },
     );
     return response.data;
   },
@@ -145,8 +155,10 @@ export interface AIMetrics {
 }
 
 export const aiMetricsApi = {
-  getMetrics: async (): Promise<AIMetrics> => {
-    const response = await api.get<AIMetrics>("/api/v1/admin/ai/metrics");
+  getMetrics: async (options?: ApiRequestOptions): Promise<AIMetrics> => {
+    const response = await api.get<AIMetrics>("/api/v1/admin/ai/metrics", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 };
@@ -528,11 +540,16 @@ export interface KnowledgeGraphData {
 }
 
 export const knowledgeBasesApi = {
-  list: async (): Promise<KnowledgeBaseSummary[]> => {
+  list: async (
+    options?: ApiRequestOptions,
+  ): Promise<KnowledgeBaseSummary[]> => {
     const response = await api.get<{
       knowledge_bases: KnowledgeBaseSummary[];
       count: number;
-    }>("/api/v1/admin/ai/knowledge-bases");
+    }>(
+      "/api/v1/admin/ai/knowledge-bases",
+      { signal: options?.signal },
+    );
     return response.data.knowledge_bases || [];
   },
 
@@ -690,11 +707,14 @@ export const knowledgeBasesApi = {
 
   listChatbotLinks: async (
     chatbotId: string,
+    requestOptions?: ApiRequestOptions,
   ): Promise<ChatbotKnowledgeBaseLink[]> => {
     const response = await api.get<{
       knowledge_bases: ChatbotKnowledgeBaseLink[];
       count: number;
-    }>(`/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases`);
+    }>(`/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases`, {
+      signal: requestOptions?.signal,
+    });
     return response.data.knowledge_bases || [];
   },
 

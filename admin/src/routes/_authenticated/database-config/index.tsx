@@ -37,7 +37,7 @@ const DatabaseConfigPage = () => {
 
   const { data: systemInfo } = useQuery({
     queryKey: ['system-info'],
-    queryFn: monitoringApi.getMetrics,
+    queryFn: ({ signal }) => monitoringApi.getMetrics({ signal }),
     refetchInterval: 30000,
   })
 

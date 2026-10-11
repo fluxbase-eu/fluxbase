@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface RPCProcedure {
   id: string;
@@ -90,12 +90,15 @@ export const rpcApi = {
     return response.data.namespaces || ["default"];
   },
 
-  listProcedures: async (namespace?: string): Promise<RPCProcedure[]> => {
+  listProcedures: async (
+    namespace?: string,
+    options?: ApiRequestOptions,
+  ): Promise<RPCProcedure[]> => {
     const params = namespace ? `?namespace=${namespace}` : "";
     const response = await api.get<{
       procedures: RPCProcedure[];
       count: number;
-    }>(`/api/v1/admin/rpc/procedures${params}`);
+    }>(`/api/v1/admin/rpc/procedures${params}`, { signal: options?.signal });
     return response.data.procedures || [];
   },
 
@@ -132,13 +135,16 @@ export const rpcApi = {
     return response.data;
   },
 
-  listExecutions: async (filters?: {
-    namespace?: string;
-    procedure?: string;
-    status?: RPCExecutionStatus;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ executions: RPCExecution[]; total: number }> => {
+  listExecutions: async (
+    filters?: {
+      namespace?: string;
+      procedure?: string;
+      status?: RPCExecutionStatus;
+      limit?: number;
+      offset?: number;
+    },
+    options?: ApiRequestOptions,
+  ): Promise<{ executions: RPCExecution[]; total: number }> => {
     const params = new URLSearchParams();
     if (filters?.namespace) params.set("namespace", filters.namespace);
     if (filters?.procedure) params.set("procedure", filters.procedure);
@@ -150,7 +156,9 @@ export const rpcApi = {
     const response = await api.get<{
       executions: RPCExecution[];
       count: number;
-    }>(`/api/v1/admin/rpc/executions${queryString ? `?${queryString}` : ""}`);
+    }>(`/api/v1/admin/rpc/executions${queryString ? `?${queryString}` : ""}`, {
+      signal: options?.signal,
+    });
     return {
       executions: response.data.executions || [],
       total: response.data.count || 0,

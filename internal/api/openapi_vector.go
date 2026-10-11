@@ -33,34 +33,51 @@ func (h *OpenAPIHandler) addVectorEndpoints(spec *OpenAPISpec) {
 		},
 	}
 
+	// Mirrors VectorSearchRequest (vector_handler.go): either query or vector
+	// must be provided to build the query embedding.
 	spec.Components.Schemas["VectorSearchRequest"] = map[string]interface{}{
 		"type":     "object",
 		"required": []string{"table", "column"},
 		"properties": map[string]interface{}{
-			"table":           map[string]string{"type": "string"},
-			"column":          map[string]string{"type": "string"},
-			"query":           map[string]string{"type": "string"},
-			"query_embedding": map[string]interface{}{"type": "array", "items": map[string]string{"type": "number"}},
-			"limit":           map[string]string{"type": "integer"},
-			"threshold":       map[string]string{"type": "number"},
-			"filter":          map[string]string{"type": "object"},
-		},
-	}
-
-	spec.Components.Schemas["VectorSearchResult"] = map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"results": map[string]interface{}{
-				"type": "array",
+			"table":           map[string]string{"type": "string", "description": "Table to search"},
+			"column":          map[string]string{"type": "string", "description": "Vector column to compare against"},
+			"query":           map[string]string{"type": "string", "description": "Natural-language query; embedded server-side (one of query/vector is required)"},
+			"vector":          map[string]interface{}{"type": "array", "items": map[string]string{"type": "number"}, "description": "Pre-computed query embedding (one of query/vector is required)"},
+			"metric":          map[string]interface{}{"type": "string", "enum": []string{"cosine", "l2", "inner_product"}, "default": "cosine"},
+			"match_threshold": map[string]string{"type": "number", "description": "Minimum similarity threshold"},
+			"match_count":     map[string]string{"type": "integer", "description": "Maximum number of matches to return"},
+			"select":          map[string]string{"type": "string", "description": "Comma-separated columns to return (default: *)"},
+			"filters": map[string]interface{}{
+				"type":        "array",
+				"description": "Row filters applied before the similarity search",
 				"items": map[string]interface{}{
-					"type": "object",
+					"type":     "object",
+					"required": []string{"column", "operator", "value"},
 					"properties": map[string]interface{}{
-						"id":         map[string]string{"type": "string"},
-						"similarity": map[string]string{"type": "number"},
-						"data":       map[string]string{"type": "object"},
+						"column":   map[string]string{"type": "string"},
+						"operator": map[string]string{"type": "string"},
+						"value":    map[string]interface{}{},
 					},
 				},
 			},
+		},
+	}
+
+	// Mirrors VectorSearchResponse (vector_handler.go)
+	spec.Components.Schemas["VectorSearchResult"] = map[string]interface{}{
+		"type":     "object",
+		"required": []string{"data"},
+		"properties": map[string]interface{}{
+			"data": map[string]interface{}{
+				"type":        "array",
+				"items":       map[string]string{"type": "object"},
+				"description": "Matched rows",
+			},
+			"distances": map[string]interface{}{
+				"type":  "array",
+				"items": map[string]string{"type": "number"},
+			},
+			"model": map[string]string{"type": "string", "description": "Embedding model used when the query was embedded server-side"},
 		},
 	}
 

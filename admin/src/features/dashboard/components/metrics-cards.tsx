@@ -96,7 +96,7 @@ export function MetricsCards() {
         const today = new Date();
         return (
           data?.users.filter((u) => {
-            const lastLogin = u.last_login_at;
+            const lastLogin = u.last_sign_in;
             if (!lastLogin) return false;
             const lastLoginDate = new Date(lastLogin);
             return (

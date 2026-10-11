@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface Secret {
   id: string;
@@ -45,13 +45,18 @@ export interface SecretsStats {
 }
 
 export const secretsApi = {
-  list: async (scope?: string, namespace?: string): Promise<Secret[]> => {
+  list: async (
+    scope?: string,
+    namespace?: string,
+    options?: ApiRequestOptions,
+  ): Promise<Secret[]> => {
     const params = new URLSearchParams();
     if (scope) params.set("scope", scope);
     if (namespace) params.set("namespace", namespace);
     const queryString = params.toString();
     const response = await api.get<Secret[]>(
       `/api/v1/secrets${queryString ? `?${queryString}` : ""}`,
+      { signal: options?.signal },
     );
     return response.data;
   },
@@ -78,9 +83,13 @@ export const secretsApi = {
     return response.data;
   },
 
-  getVersions: async (id: string): Promise<SecretVersion[]> => {
+  getVersions: async (
+    id: string,
+    options?: ApiRequestOptions,
+  ): Promise<SecretVersion[]> => {
     const response = await api.get<SecretVersion[]>(
       `/api/v1/secrets/${id}/versions`,
+      { signal: options?.signal },
     );
     return response.data;
   },
@@ -95,8 +104,10 @@ export const secretsApi = {
     return response.data;
   },
 
-  getStats: async (): Promise<SecretsStats> => {
-    const response = await api.get<SecretsStats>("/api/v1/secrets/stats");
+  getStats: async (options?: ApiRequestOptions): Promise<SecretsStats> => {
+    const response = await api.get<SecretsStats>("/api/v1/secrets/stats", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 };

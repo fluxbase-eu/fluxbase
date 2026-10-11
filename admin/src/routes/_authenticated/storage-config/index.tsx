@@ -47,7 +47,7 @@ function StorageConfigPage() {
 
   const { data: systemInfo } = useQuery({
     queryKey: ['system-info'],
-    queryFn: monitoringApi.getMetrics,
+    queryFn: ({ signal }) => monitoringApi.getMetrics({ signal }),
     refetchInterval: 30000,
   })
 
@@ -55,8 +55,10 @@ function StorageConfigPage() {
   const { data: transformConfig, isLoading: isLoadingTransform } =
     useQuery<TransformConfig>({
       queryKey: ['storage-transform-config'],
-      queryFn: async () => {
-        const response = await api.get('/api/v1/storage/config/transforms')
+      queryFn: async ({ signal }) => {
+        const response = await api.get('/api/v1/storage/config/transforms', {
+          signal,
+        })
         return response.data
       },
     })

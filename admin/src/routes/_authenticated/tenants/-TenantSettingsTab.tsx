@@ -46,7 +46,7 @@ export function TenantSettingsTab({ tenantId }: TenantSettingsTabProps) {
   // Fetch tenant settings
   const { data: settingsData, isLoading } = useQuery({
     queryKey: ["tenant-settings", tenantId],
-    queryFn: () => tenantSettingsApi.get(tenantId),
+    queryFn: ({ signal }) => tenantSettingsApi.get(tenantId, { signal }),
     enabled: !!tenantId,
   });
 

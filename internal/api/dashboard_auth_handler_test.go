@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -13,6 +14,58 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// =============================================================================
+// Refresh Cookie Contract Tests
+// =============================================================================
+
+// The dashboard Login/Refresh/VerifyTOTP handlers share setAdminRefreshCookie
+// with the admin auth handlers so the SPA can keep the refresh token out of
+// JavaScript-readable storage. These tests pin the cookie contract: HttpOnly,
+// SameSite=Strict, scoped to the admin API path, Secure on HTTPS requests.
+func TestSetAdminRefreshCookie(t *testing.T) {
+	t.Run("sets HttpOnly Strict cookie scoped to the admin API", func(t *testing.T) {
+		app := newTestApp(t)
+		app.Post("/dashboard/auth/login", func(c fiber.Ctx) error {
+			setAdminRefreshCookie(c, "test-refresh-token")
+			return c.JSON(fiber.Map{"ok": true})
+		})
+
+		req := httptest.NewRequest("POST", "/dashboard/auth/login", nil)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+
+		cookies := resp.Cookies()
+		require.Len(t, cookies, 1)
+
+		cookie := cookies[0]
+		assert.Equal(t, adminRefreshCookieName, cookie.Name)
+		assert.Equal(t, "test-refresh-token", cookie.Value)
+		assert.True(t, cookie.HttpOnly, "refresh cookie must be HttpOnly")
+		assert.Equal(t, http.SameSiteStrictMode, cookie.SameSite)
+		assert.Equal(t, "/api/v1/admin", cookie.Path)
+		assert.False(t, cookie.Secure, "plain-HTTP test request must not set Secure")
+	})
+
+	t.Run("marks cookie Secure when request arrived over HTTPS", func(t *testing.T) {
+		app := newTestApp(t)
+		app.Post("/dashboard/auth/login", func(c fiber.Ctx) error {
+			setAdminRefreshCookie(c, "test-refresh-token")
+			return c.JSON(fiber.Map{"ok": true})
+		})
+
+		req := httptest.NewRequest("POST", "/dashboard/auth/login", nil)
+		req.Header.Set("X-Forwarded-Proto", "https")
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+
+		cookies := resp.Cookies()
+		require.Len(t, cookies, 1)
+		assert.True(t, cookies[0].Secure, "HTTPS requests must get a Secure cookie")
+	})
+}
 
 // =============================================================================
 // Helper Function Tests
