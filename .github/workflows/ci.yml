@@ -671,7 +671,7 @@ jobs:
 
       - name: Check coverage thresholds
         run: |
-          go install github.com/vladopajic/go-test-coverage/v2@latest
+          go install github.com/vladopajic/go-test-coverage/v2@v2.19.0
 
           # On a selective (non-core, partial-e2e) run, coverage-e2e.out only
           # reflects the selected tests, so the merged coverage.out would
