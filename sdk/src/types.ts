@@ -103,8 +103,14 @@ export interface User {
   id: string;
   email: string;
   email_verified: boolean;
-  role: string;
+  /** @deprecated Server wire field is optional (omitempty) and admin-managed */
+  role?: string;
+  /** @deprecated Server sends `user_metadata` / `app_metadata`; kept for backwards compatibility */
   metadata?: Record<string, unknown> | null;
+  /** User-editable metadata (auth.users.user_metadata) */
+  user_metadata?: Record<string, unknown> | null;
+  /** Application/admin-only metadata (auth.users.app_metadata) */
+  app_metadata?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -136,6 +142,63 @@ export interface SignUpCredentials {
 }
 
 /**
+ * Wire body of POST /api/v1/auth/signin (Go auth.SignInRequest).
+ */
+export interface SignInBody {
+  email: string;
+  password: string;
+  captcha_token?: string;
+  challenge_id?: string;
+  device_fingerprint?: string;
+}
+
+/**
+ * Wire body of POST /api/v1/auth/signup (Go auth.SignUpRequest).
+ * app_metadata is intentionally absent — the server strips it on signup.
+ */
+export interface SignUpBody extends SignInBody {
+  user_metadata?: Record<string, unknown>;
+}
+
+/**
+ * Wire body of POST /api/v1/auth/captcha/check (adaptive trust pre-flight).
+ */
+export interface CaptchaCheckBody {
+  endpoint: string;
+  email?: string;
+  device_fingerprint?: string;
+  trust_token?: string;
+}
+
+/**
+ * Wire body of PATCH /api/v1/auth/user (self-service profile update).
+ */
+export interface UpdateUserBody {
+  email?: string;
+  password?: string;
+  user_metadata?: Record<string, unknown>;
+  nonce?: string;
+}
+
+/**
+ * Wire body of POST /api/v1/auth/password/reset.
+ */
+export interface PasswordResetBody {
+  email: string;
+  redirect_to?: string;
+  captcha_token?: string;
+}
+
+/**
+ * Wire body of POST /api/v1/auth/magiclink.
+ */
+export interface MagicLinkBody {
+  email: string;
+  redirect_to?: string | undefined;
+  captcha_token?: string;
+}
+
+/**
  * User attributes for updateUser (Supabase-compatible)
  */
 export interface UpdateUserAttributes {
@@ -154,6 +217,12 @@ export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
+  /** Signups requiring email verification return no tokens and this flag */
+  requires_email_verification?: boolean;
+  /** Issued after CAPTCHA verification for subsequent trust checks */
+  trust_token?: string;
+  /** Human-readable message (present on requires_email_verification responses) */
+  message?: string;
 }
 
 /**
@@ -410,6 +479,120 @@ export interface RealtimeMessage {
   token?: string; // JWT token for access_token message type
 }
 
+/**
+ * Payload of realtime `ack` messages. The Go server nests all ack fields
+ * INSIDE `payload` (e.g. `{ type: "ack", payload: { messageId, status } }`
+ * for broadcast acks, `{ subscribed, subscription_id, schema, table, event }`
+ * for subscribe acks, `{ type: "access_token", updated: true }` for token
+ * updates).
+ */
+export interface RealtimeAckPayload {
+  /** Broadcast ack: id of the acknowledged client message */
+  messageId?: string;
+  /** Broadcast ack: delivery status */
+  status?: string;
+  subscribed?: boolean;
+  unsubscribed?: boolean;
+  subscription_id?: string;
+  schema?: string;
+  table?: string;
+  event?: string;
+  filter?: string;
+  execution_id?: string;
+  /** "access_token" for token updates, "all_logs" for subscribe_all_logs acks */
+  type?: string;
+  updated?: boolean;
+  category?: string;
+  levels?: string[];
+}
+
+/**
+ * Broadcast event data carried inside broadcast messages
+ * (`{ type: "broadcast", payload: { broadcast: {...} } }`).
+ */
+export interface RealtimeBroadcastData {
+  event: string;
+  payload?: unknown;
+  /** Present on legacy frames: true when the sender is the current client */
+  self?: boolean;
+}
+
+/**
+ * Wire payload of realtime postgres change events
+ * (mirrors the Go `realtime.ChangeEvent` struct, plus legacy field aliases).
+ */
+export interface RealtimeChangeEvent {
+  /** Event type: INSERT, UPDATE, or DELETE */
+  type?: string;
+  /** @deprecated Legacy alias of `type` */
+  eventType?: string;
+  schema?: string;
+  table?: string;
+  /** New record data (Go sends `record`) */
+  record?: Record<string, unknown> | null;
+  /** @deprecated Legacy alias of `record` */
+  new_record?: Record<string, unknown> | null;
+  /** Old record data for UPDATE/DELETE (Go sends `old_record`) */
+  old_record?: Record<string, unknown> | null;
+  /** Legacy aliases */
+  timestamp?: string;
+  commit_timestamp?: string;
+  new?: Record<string, unknown> | null;
+  old?: Record<string, unknown> | null;
+  errors?: string[] | string | null;
+}
+
+/** Envelope of broadcast server-message payloads: `{ broadcast: ... }` */
+export interface RealtimeBroadcastEnvelope {
+  broadcast: RealtimeBroadcastData;
+}
+
+/** Envelope of presence server-message payloads: `{ presence: ... }` */
+export interface RealtimePresenceEnvelope {
+  presence: RealtimePresencePayload;
+}
+
+/**
+ * Discriminated union of every message type the realtime server sends to
+ * clients (mirrors the Go MessageType constants: subscribe, unsubscribe,
+ * heartbeat, broadcast, presence, error, ack, postgres_changes, access_token,
+ * subscribe_logs, execution_log, subscribe_all_logs, log_entry).
+ */
+export type RealtimeServerMessage =
+  | { type: "subscribe"; channel?: string; payload?: RealtimeAckPayload }
+  | { type: "unsubscribe"; channel?: string; payload?: RealtimeAckPayload }
+  | { type: "heartbeat"; channel?: string }
+  | {
+      type: "broadcast";
+      channel?: string;
+      payload?: RealtimeBroadcastEnvelope;
+    }
+  | {
+      type: "presence";
+      channel?: string;
+      payload?: RealtimePresenceEnvelope;
+    }
+  | { type: "error"; channel?: string; error?: string; payload?: unknown }
+  | { type: "ack"; channel?: string; payload?: RealtimeAckPayload }
+  | {
+      type: "postgres_changes";
+      channel?: string;
+      payload?: RealtimeChangeEvent;
+    }
+  | { type: "access_token"; channel?: string; payload?: RealtimeAckPayload }
+  | { type: "subscribe_logs"; channel?: string; payload?: RealtimeAckPayload }
+  | {
+      type: "execution_log";
+      channel?: string;
+      payload?: ExecutionLogEvent;
+    }
+  | {
+      type: "subscribe_all_logs";
+      channel?: string;
+      payload?: RealtimeAckPayload;
+    }
+  | { type: "log_entry"; channel?: string; payload?: ExecutionLogEvent };
+
 export interface PostgresChangesConfig {
   event: "INSERT" | "UPDATE" | "DELETE" | "*";
   schema: string;
@@ -551,11 +734,37 @@ export interface UploadProgress {
 
 export interface UploadOptions {
   contentType?: string;
+  /**
+   * Custom metadata to attach to the file.
+   * Sent as `metadata_<key>` form fields (the only form of metadata the
+   * server's upload handler reads).
+   */
   metadata?: Record<string, string>;
+  /**
+   * @deprecated Not read by the server's upload handler; accepted for
+   * backwards compatibility but not transmitted.
+   */
   cacheControl?: string;
+  /**
+   * @deprecated Not read by the server's upload handler; uploads always
+   * upsert (ON CONFLICT (bucket_id, path) DO UPDATE).
+   */
   upsert?: boolean;
   /** Optional callback to track upload progress */
   onUploadProgress?: (progress: UploadProgress) => void;
+}
+
+/**
+ * Wire response of the storage upload endpoint (POST /api/v1/storage/:bucket/:key).
+ * The server has no object id — clients derive one from `key`.
+ */
+export interface FileUploadResponse {
+  key: string;
+  bucket: string;
+  size: number;
+  content_type: string;
+  last_modified: string;
+  owner_id?: string;
 }
 
 /**
@@ -1171,29 +1380,52 @@ export interface AdminMeResponse {
 }
 
 // User Management Types
+
+/**
+ * A user's assignment to a tenant (platform admin view)
+ */
+export interface TenantAssignment {
+  tenant_id: string;
+  tenant_name: string;
+  tenant_slug: string;
+}
+
+/**
+ * User with enriched metadata as returned by the admin user management
+ * endpoints. Mirrors the Go `auth.EnrichedUser` struct.
+ */
 export interface EnrichedUser {
   id: string;
   email: string;
-  role?: string;
+  email_verified: boolean;
+  role: string;
+  /** "email", "invite_pending", or "magic_link" */
+  provider: string;
+  active_sessions: number;
+  /** Timestamp of the last sign-in, or null if the user never signed in */
+  last_sign_in: string | null;
+  is_locked: boolean;
+  user_metadata?: Record<string, unknown> | null;
+  app_metadata?: Record<string, unknown> | null;
   created_at: string;
-  updated_at?: string;
-  email_verified?: boolean;
-  last_login_at?: string;
-  session_count?: number;
-  is_anonymous?: boolean;
-  metadata?: Record<string, unknown>;
+  updated_at: string;
+  tenant_assignments?: TenantAssignment[];
 }
 
 export interface ListUsersResponse {
   users: EnrichedUser[];
   total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface ListUsersOptions {
   exclude_admins?: boolean;
   search?: string;
   limit?: number;
-  type?: "app" | "dashboard";
+  offset?: number;
+  /** Which user table to query. Only "platform" is recognized by the server; any other value defaults to "app". */
+  type?: "app" | "platform";
 }
 
 export interface InviteUserRequest {

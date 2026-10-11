@@ -60,6 +60,60 @@ class MockFetch {
     return this.mockResponse as T
   }
 
+  /**
+   * Mirrors FluxbaseFetch.fetchWithAuthRefresh: raw fetch with error
+   * normalization (FluxbaseError carrying status/details) so chunked upload
+   * code paths behave like production.
+   */
+  async fetchWithAuthRefresh(
+    path: string,
+    init: {
+      method: string
+      headers?: Record<string, string>
+      body?: BodyInit | null
+      signal?: AbortSignal | null
+    },
+    isRetry = false
+  ): Promise<Response> {
+    const response = await globalThis.fetch(`${this.baseUrl}${path}`, {
+      method: init.method,
+      headers: { ...this.defaultHeaders, ...init.headers },
+      body: init.body ?? undefined,
+      signal: init.signal ?? undefined,
+    }) as Response
+
+    if (response.ok) {
+      return response
+    }
+
+    let data: unknown
+    try {
+      data = await response.json()
+    } catch {
+      try {
+        data = await response.text()
+      } catch {
+        data = undefined
+      }
+    }
+
+    const error = new Error(
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: unknown }).error)
+        : response.statusText
+    ) as any
+    error.status = response.status
+    error.details = data
+    const code =
+      typeof data === 'object' && data && 'code' in data
+        ? (data as { code?: unknown }).code
+        : undefined
+    if (typeof code === 'string') {
+      error.code = code
+    }
+    throw error
+  }
+
   setAuthToken(token: string | null): void {
     if (token) {
       this.defaultHeaders['Authorization'] = `Bearer ${token}`
@@ -161,7 +215,15 @@ describe('StorageBucket - File Upload', () => {
 
   it('should upload a file', async () => {
     const file = new MockFile(['Hello World'], 'test.txt', { type: 'text/plain' })
-    fetch.mockResponse = { id: '123', key: 'test.txt' }
+    // Real wire response from POST /api/v1/storage/:bucket/:key (201)
+    fetch.mockResponse = {
+      key: 'test.txt',
+      bucket: 'uploads',
+      size: 11,
+      content_type: 'text/plain',
+      last_modified: '2024-01-01T00:00:00Z',
+      owner_id: 'user-1',
+    }
 
     const { data, error } = await bucket.upload('test.txt', file)
 
@@ -170,6 +232,29 @@ describe('StorageBucket - File Upload', () => {
     expect(error).toBeNull()
     expect(data).toBeDefined()
     expect(data?.path).toBe('test.txt')
+    // Server has no id — derived from the stored key
+    expect(data?.id).toBe('test.txt')
+    expect(data?.fullPath).toBe('uploads/test.txt')
+  })
+
+  it('should send metadata as metadata_<key> form fields and no unread fields', async () => {
+    const file = new MockFile(['Hello'], 'meta.txt', { type: 'text/plain' })
+    fetch.mockResponse = { key: 'meta.txt', bucket: 'uploads', size: 5, content_type: 'text/plain', last_modified: '2024-01-01T00:00:00Z' }
+
+    await bucket.upload('meta.txt', file, {
+      metadata: { custom: 'value', version: '2' },
+      contentType: 'text/plain',
+    })
+
+    const formData = fetch.lastBody as FormData
+    // Server reads only `metadata_<key>` form fields (parseMetadata)
+    expect(formData.get('metadata_custom')).toBe('value')
+    expect(formData.get('metadata_version')).toBe('2')
+    // The server ignores a JSON `metadata` field and never reads these
+    expect(formData.has('metadata')).toBe(false)
+    expect(formData.has('content_type')).toBe(false)
+    expect(formData.has('cache_control')).toBe(false)
+    expect(formData.has('upsert')).toBe(false)
   })
 
   it('should upload with custom path', async () => {
@@ -246,18 +331,55 @@ describe('StorageBucket - File List', () => {
     bucket = new StorageBucket(fetch as unknown as FluxbaseFetch, 'files')
   })
 
-  it('should list all files', async () => {
-    fetch.mockResponse = { files: [{ key: 'test.txt', id: '1' }] }
+  it('should list all files from the { bucket, objects, count } envelope', async () => {
+    fetch.mockResponse = {
+      bucket: 'files',
+      objects: [
+        {
+          id: '1',
+          bucket: 'files',
+          path: 'test.txt',
+          mime_type: 'text/plain',
+          size: 11,
+          metadata: { author: 'test' },
+          owner_id: 'user-1',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-02T00:00:00Z',
+        },
+      ],
+      count: 1,
+    }
 
     const { data, error } = await bucket.list()
 
     expect(fetch.lastMethod).toBe('GET')
     expect(fetch.lastUrl).toContain('/api/v1/storage/files')
     expect(error).toBeNull()
+    // Wire shape: objects are mapped faithfully from the Go handler fields
+    expect(data).toEqual([
+      {
+        name: 'test.txt',
+        id: '1',
+        bucket_id: 'files',
+        owner: 'user-1',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-02T00:00:00Z',
+        metadata: { author: 'test', size: 11, mimetype: 'text/plain' },
+      },
+    ])
+  })
+
+  it('should return an empty array when the bucket has no objects', async () => {
+    fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
+
+    const { data, error } = await bucket.list()
+
+    expect(error).toBeNull()
+    expect(data).toEqual([])
   })
 
   it('should list files with prefix', async () => {
-    fetch.mockResponse = { files: [] }
+    fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
 
     await bucket.list({ prefix: 'documents/' })
 
@@ -266,7 +388,7 @@ describe('StorageBucket - File List', () => {
   })
 
   it('should list files with limit', async () => {
-    fetch.mockResponse = { files: [] }
+    fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
 
     await bucket.list({ limit: 100 })
 
@@ -274,7 +396,7 @@ describe('StorageBucket - File List', () => {
   })
 
   it('should list files with offset', async () => {
-    fetch.mockResponse = { files: [] }
+    fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
 
     await bucket.list({ offset: 50 })
 
@@ -282,7 +404,7 @@ describe('StorageBucket - File List', () => {
   })
 
   it('should list files with pagination', async () => {
-    fetch.mockResponse = { files: [] }
+    fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
 
     await bucket.list({
       limit: 25,
@@ -294,7 +416,7 @@ describe('StorageBucket - File List', () => {
   })
 
   it('should support Supabase-style list(path, options)', async () => {
-    fetch.mockResponse = { files: [] }
+    fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
 
     await bucket.list('documents/', { limit: 10 })
 
@@ -1404,10 +1526,12 @@ describe('FluxbaseStorage - Empty Bucket', () => {
   it('should empty a bucket with files', async () => {
     // First call: list files
     fetch.get = vi.fn().mockResolvedValue({
-      files: [
-        { key: 'file1.txt' },
-        { key: 'file2.txt' },
-      ]
+      bucket: 'test-bucket',
+      objects: [
+        { id: '1', bucket: 'test-bucket', path: 'file1.txt', size: 1, metadata: null, created_at: '2024-01-01', updated_at: '2024-01-01' },
+        { id: '2', bucket: 'test-bucket', path: 'file2.txt', size: 1, metadata: null, created_at: '2024-01-01', updated_at: '2024-01-01' },
+      ],
+      count: 2,
     })
 
     // delete calls
@@ -1421,7 +1545,7 @@ describe('FluxbaseStorage - Empty Bucket', () => {
   })
 
   it('should handle empty bucket', async () => {
-    fetch.get = vi.fn().mockResolvedValue({ files: [] })
+    fetch.get = vi.fn().mockResolvedValue({ bucket: 'empty-bucket', objects: [], count: 0 })
 
     const { data, error } = await storage.emptyBucket('empty-bucket')
 
@@ -1440,7 +1564,11 @@ describe('FluxbaseStorage - Empty Bucket', () => {
 
   it('should handle remove error', async () => {
     fetch.get = vi.fn().mockResolvedValue({
-      files: [{ key: 'file.txt' }]
+      bucket: 'test-bucket',
+      objects: [
+        { id: '1', bucket: 'test-bucket', path: 'file.txt', size: 1, metadata: null, created_at: '2024-01-01', updated_at: '2024-01-01' },
+      ],
+      count: 1,
     })
     fetch.delete = vi.fn().mockRejectedValue(new Error('Delete failed'))
 
@@ -1464,7 +1592,7 @@ describe('StorageBucket - Upload Options', () => {
   })
 
   it('should upload with all options', async () => {
-    fetch.mockResponse = { id: '123', key: 'file.txt' }
+    fetch.mockResponse = { key: 'file.txt', bucket: 'uploads', size: 4, content_type: 'text/plain', last_modified: '2024-01-01T00:00:00Z' }
 
     const file = new Blob(['test'])
     await bucket.upload('file.txt', file, {
@@ -1476,10 +1604,13 @@ describe('StorageBucket - Upload Options', () => {
 
     const formData = fetch.lastBody as FormData
     expect(formData.has('file')).toBe(true)
-    expect(formData.get('content_type')).toBe('text/plain')
-    expect(formData.get('metadata')).toBe('{"custom":"value"}')
-    expect(formData.get('cache_control')).toBe('max-age=3600')
-    expect(formData.get('upsert')).toBe('true')
+    // contentType rides on the file part's Content-Type header, not a form field
+    const filePart = formData.get('file') as File
+    expect(filePart.type).toBe('text/plain')
+    // Server reads only metadata_<key> fields; cache_control/upsert are not sent
+    expect(formData.get('metadata_custom')).toBe('value')
+    expect(formData.has('cache_control')).toBe(false)
+    expect(formData.has('upsert')).toBe(false)
   })
 })
 

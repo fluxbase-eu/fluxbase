@@ -2,17 +2,37 @@ package api
 
 // addStorageEndpoints adds storage API endpoints to the spec
 func (h *OpenAPIHandler) addStorageEndpoints(spec *OpenAPISpec) {
-	// Storage object schema
+	// Storage object schema — mirrors the object items returned by
+	// ListFiles/GetFileInfo (storage_files.go).
 	spec.Components.Schemas["StorageObject"] = map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
+			"id":         map[string]string{"type": "string"},
+			"bucket":     map[string]string{"type": "string"},
+			"path":       map[string]string{"type": "string"},
+			"mime_type":  map[string]string{"type": "string"},
+			"size":       map[string]string{"type": "integer"},
+			"metadata":   map[string]interface{}{"type": "object", "additionalProperties": map[string]interface{}{}},
+			"owner_id":   map[string]string{"type": "string"},
+			"created_at": map[string]string{"type": "string", "format": "date-time"},
+			"updated_at": map[string]string{"type": "string", "format": "date-time"},
+		},
+		"required": []string{"id", "bucket", "path", "size", "created_at", "updated_at"},
+	}
+
+	// Upload response schema — mirrors the JSON returned by UploadFile
+	// (storage_files.go): the server has no object id/etag.
+	spec.Components.Schemas["UploadFileResponse"] = map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
 			"key":           map[string]string{"type": "string"},
+			"bucket":        map[string]string{"type": "string"},
 			"size":          map[string]string{"type": "integer"},
 			"content_type":  map[string]string{"type": "string"},
-			"etag":          map[string]string{"type": "string"},
 			"last_modified": map[string]string{"type": "string", "format": "date-time"},
-			"metadata":      map[string]interface{}{"type": "object", "additionalProperties": map[string]string{"type": "string"}},
+			"owner_id":      map[string]string{"type": "string"},
 		},
+		"required": []string{"key", "bucket", "size", "content_type", "last_modified"},
 	}
 
 	// Bucket schema
@@ -167,6 +187,13 @@ func (h *OpenAPIHandler) addStorageEndpoints(spec *OpenAPISpec) {
 					Required:    false,
 					Schema:      map[string]string{"type": "integer", "default": "1000"},
 				},
+				{
+					Name:        "offset",
+					In:          "query",
+					Description: "Number of files to skip",
+					Required:    false,
+					Schema:      map[string]string{"type": "integer", "default": "0"},
+				},
 			},
 			Responses: map[string]OpenAPIResponse{
 				"200": {
@@ -181,12 +208,18 @@ func (h *OpenAPIHandler) addStorageEndpoints(spec *OpenAPISpec) {
 										"type":  "array",
 										"items": map[string]string{"$ref": "#/components/schemas/StorageObject"},
 									},
-									"prefixes": map[string]interface{}{
-										"type":  "array",
-										"items": map[string]string{"type": "string"},
+									"count": map[string]string{"type": "integer"},
+									"prefix": map[string]interface{}{
+										"type":        "string",
+										"description": "Present when the delimiter query parameter is used",
 									},
-									"truncated": map[string]string{"type": "boolean"},
+									"prefixes": map[string]interface{}{
+										"type":        "array",
+										"items":       map[string]string{"type": "string"},
+										"description": "Present when the delimiter query parameter is used",
+									},
 								},
+								"required": []string{"bucket", "objects", "count"},
 							},
 						},
 					},
@@ -220,7 +253,7 @@ func (h *OpenAPIHandler) addStorageEndpoints(spec *OpenAPISpec) {
 			},
 			RequestBody: &OpenAPIRequestBody{
 				Required:    true,
-				Description: "File to upload",
+				Description: "File to upload. Custom metadata is sent as `metadata_<key>` form fields (the only metadata form the server reads).",
 				Content: map[string]OpenAPIMedia{
 					"multipart/form-data": {
 						Schema: map[string]interface{}{
@@ -229,6 +262,10 @@ func (h *OpenAPIHandler) addStorageEndpoints(spec *OpenAPISpec) {
 								"file": map[string]string{
 									"type":   "string",
 									"format": "binary",
+								},
+								"metadata_<key>": map[string]interface{}{
+									"type":        "string",
+									"description": "Custom metadata entry; every form field prefixed with metadata_ is stored as object metadata (key = field name without the prefix).",
 								},
 							},
 							"required": []string{"file"},
@@ -241,7 +278,7 @@ func (h *OpenAPIHandler) addStorageEndpoints(spec *OpenAPISpec) {
 					Description: "File uploaded",
 					Content: map[string]OpenAPIMedia{
 						"application/json": {
-							Schema: map[string]string{"$ref": "#/components/schemas/StorageObject"},
+							Schema: map[string]string{"$ref": "#/components/schemas/UploadFileResponse"},
 						},
 					},
 				},

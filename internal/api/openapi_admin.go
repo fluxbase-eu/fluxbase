@@ -14,6 +14,39 @@ func (h *OpenAPIHandler) addAdminEndpoints(spec *OpenAPISpec) {
 		},
 	}
 
+	// Enriched user schema — mirrors auth.EnrichedUser (user_management.go)
+	spec.Components.Schemas["EnrichedUser"] = map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id":              map[string]string{"type": "string", "format": "uuid"},
+			"email":           map[string]string{"type": "string", "format": "email"},
+			"email_verified":  map[string]string{"type": "boolean"},
+			"role":            map[string]string{"type": "string"},
+			"provider":        map[string]interface{}{"type": "string", "enum": []string{"email", "invite_pending", "magic_link"}, "description": "How the user authenticates"},
+			"active_sessions": map[string]string{"type": "integer", "description": "Number of non-expired sessions"},
+			"last_sign_in":    map[string]string{"type": "string", "format": "date-time", "nullable": "true"},
+			"is_locked":       map[string]string{"type": "boolean"},
+			"user_metadata":   map[string]interface{}{"type": "object", "additionalProperties": map[string]interface{}{}},
+			"app_metadata":    map[string]interface{}{"type": "object", "additionalProperties": map[string]interface{}{}},
+			"created_at":      map[string]string{"type": "string", "format": "date-time"},
+			"updated_at":      map[string]string{"type": "string", "format": "date-time"},
+			"tenant_assignments": map[string]interface{}{
+				"type":        "array",
+				"nullable":    "true",
+				"description": "Tenant memberships (app users) or tenant admin assignments (platform users)",
+				"items": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"tenant_id":   map[string]string{"type": "string"},
+						"tenant_name": map[string]string{"type": "string"},
+						"tenant_slug": map[string]string{"type": "string"},
+					},
+				},
+			},
+		},
+		"required": []string{"id", "email", "email_verified", "role", "provider", "active_sessions", "last_sign_in", "is_locked", "created_at", "updated_at"},
+	}
+
 	// OAuth Provider schema
 	spec.Components.Schemas["OAuthProvider"] = map[string]interface{}{
 		"type": "object",
@@ -80,26 +113,36 @@ func (h *OpenAPIHandler) addAdminEndpoints(spec *OpenAPISpec) {
 	spec.Paths["/api/v1/admin/users"] = OpenAPIPath{
 		"get": OpenAPIOperation{
 			Summary:     "List users",
-			Description: "Get all users (admin only)",
+			Description: "List users with enriched metadata (admin only)",
 			OperationID: "admin_users_list",
 			Tags:        []string{"Admin"},
 			Security: []map[string][]string{
 				{"bearerAuth": {}},
 			},
 			Parameters: []OpenAPIParameter{
-				{Name: "search", In: "query", Description: "Search by email", Schema: map[string]string{"type": "string"}},
-				{Name: "role", In: "query", Description: "Filter by role", Schema: map[string]string{"type": "string"}},
-				{Name: "limit", In: "query", Schema: map[string]string{"type": "integer"}},
-				{Name: "offset", In: "query", Schema: map[string]string{"type": "integer"}},
+				{Name: "search", In: "query", Description: "Search by email (case-insensitive substring)", Schema: map[string]string{"type": "string"}},
+				{Name: "exclude_admins", In: "query", Description: "Exclude users with the admin role", Schema: map[string]string{"type": "boolean", "default": "false"}},
+				{Name: "type", In: "query", Description: "Which user table to query; anything other than \"platform\" defaults to app users", Schema: map[string]interface{}{"type": "string", "enum": []string{"app", "platform"}, "default": "app"}},
+				{Name: "limit", In: "query", Schema: map[string]string{"type": "integer", "default": "100"}},
+				{Name: "offset", In: "query", Schema: map[string]string{"type": "integer", "default": "0"}},
 			},
 			Responses: map[string]OpenAPIResponse{
 				"200": {
-					Description: "List of users",
+					Description: "Paginated list of enriched users",
 					Content: map[string]OpenAPIMedia{
 						"application/json": {
 							Schema: map[string]interface{}{
-								"type":  "array",
-								"items": map[string]string{"$ref": "#/components/schemas/AdminUser"},
+								"type": "object",
+								"properties": map[string]interface{}{
+									"users": map[string]interface{}{
+										"type":  "array",
+										"items": map[string]string{"$ref": "#/components/schemas/EnrichedUser"},
+									},
+									"total":  map[string]string{"type": "integer", "description": "Total number of users after filtering, before pagination"},
+									"limit":  map[string]string{"type": "integer"},
+									"offset": map[string]string{"type": "integer"},
+								},
+								"required": []string{"users", "total", "limit", "offset"},
 							},
 						},
 					},
@@ -159,7 +202,7 @@ func (h *OpenAPIHandler) addAdminEndpoints(spec *OpenAPISpec) {
 					Description: "User role updated",
 					Content: map[string]OpenAPIMedia{
 						"application/json": {
-							Schema: map[string]string{"$ref": "#/components/schemas/AdminUser"},
+							Schema: map[string]string{"$ref": "#/components/schemas/EnrichedUser"},
 						},
 					},
 				},

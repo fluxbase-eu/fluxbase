@@ -160,7 +160,8 @@ describe('useTable', () => {
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(queryClient.getQueryData(['custom', 'key'])).toEqual(mockData);
+    // useFluxbaseQuery namespaces keys: ["fluxbase", tenantId ?? null, ...customKey]
+    expect(queryClient.getQueryData(["fluxbase", null, "custom", "key"])).toEqual(mockData);
   });
 });
 
@@ -186,7 +187,7 @@ describe('useInsert', () => {
 
     expect(fromMock).toHaveBeenCalledWith('products');
     expect(insertMock).toHaveBeenCalledWith({ name: 'New Item' });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', 'table', 'products'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', null, 'table', 'products'] });
   });
 
   it('should throw error on insert failure', async () => {
@@ -234,7 +235,7 @@ describe('useUpdate', () => {
 
     expect(fromMock).toHaveBeenCalledWith('products');
     expect(updateMock).toHaveBeenCalledWith({ name: 'Updated' });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', 'table', 'products'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', null, 'table', 'products'] });
   });
 
   it('should throw error on update failure', async () => {
@@ -281,7 +282,7 @@ describe('useUpsert', () => {
 
     expect(fromMock).toHaveBeenCalledWith('products');
     expect(upsertMock).toHaveBeenCalledWith({ id: 1, name: 'Upserted' });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', 'table', 'products'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', null, 'table', 'products'] });
   });
 
   it('should throw error on upsert failure', async () => {
@@ -325,7 +326,7 @@ describe('useDelete', () => {
 
     expect(fromMock).toHaveBeenCalledWith('products');
     expect(deleteMock).toHaveBeenCalled();
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', 'table', 'products'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['fluxbase', null, 'table', 'products'] });
   });
 
   it('should throw error on delete failure', async () => {

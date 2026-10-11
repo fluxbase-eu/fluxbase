@@ -209,6 +209,12 @@ export class FluxbaseAIChat {
 
         this.ws.onclose = (event) => {
           this.emitEvent({ type: "disconnected" });
+          // Reject a pending startChat so it does not hang until timeout
+          if (this.pendingStartReject) {
+            this.pendingStartReject(new Error("Not connected to AI chat"));
+            this.pendingStartResolve = null;
+            this.pendingStartReject = null;
+          }
           this.handleClose(event);
         };
 
@@ -302,7 +308,13 @@ export class FluxbaseAIChat {
         impersonate_user_id: impersonateUserId,
       };
 
-      this.ws!.send(JSON.stringify(message));
+      try {
+        this.sendOrThrow(message);
+      } catch (err) {
+        this.pendingStartResolve = null;
+        this.pendingStartReject = null;
+        reject(err);
+      }
     });
   }
 
@@ -338,7 +350,7 @@ export class FluxbaseAIChat {
       message.page_context = options.pageContext;
     }
 
-    this.ws!.send(JSON.stringify(message));
+    this.sendOrThrow(message);
   }
 
   /**
@@ -356,7 +368,19 @@ export class FluxbaseAIChat {
       conversation_id: conversationId,
     };
 
-    this.ws!.send(JSON.stringify(message));
+    this.sendOrThrow(message);
+  }
+
+  /**
+   * Send a message on the WebSocket, re-checking the connection state first.
+   * Guards against the socket closing between the isConnected() check and
+   * the send (TOCTOU), which would otherwise throw an opaque DOMException.
+   */
+  private sendOrThrow(message: AIChatClientMessage): void {
+    if (this.ws?.readyState !== WebSocket.OPEN) {
+      throw new Error("Not connected to AI chat");
+    }
+    this.ws.send(JSON.stringify(message));
   }
 
   /**

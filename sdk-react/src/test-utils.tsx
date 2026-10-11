@@ -42,6 +42,7 @@ export function createMockClient(
         .mockReturnValue("http://localhost/saml/metadata"),
       ...overrides.auth,
     },
+    getTenantId: vi.fn().mockReturnValue(undefined),
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
       insert: vi.fn().mockResolvedValue({ data: null, error: null }),
