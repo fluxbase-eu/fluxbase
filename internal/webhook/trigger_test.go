@@ -62,6 +62,46 @@ func TestTriggerService_Stop(t *testing.T) {
 	})
 }
 
+// TestWorker_PanicDoesNotStopLoop verifies that a panic inside a single
+// worker iteration (here caused by the nil webhook service) is recovered
+// per-iteration and the worker keeps draining the event channel instead of
+// permanently exiting the loop.
+func TestWorker_PanicDoesNotStopLoop(t *testing.T) {
+	svc := NewTriggerService(nil, nil, 1) // nil webhookSvc makes each iteration panic
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	svc.wg.Add(1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		svc.worker(ctx, 0)
+	}()
+
+	// Queue two events; each iteration must panic (nil webhook service) and
+	// be recovered so the worker drains the channel and stays alive.
+	svc.eventChan <- uuid.New()
+	svc.eventChan <- uuid.New()
+
+	deadline := time.After(5 * time.Second)
+	for len(svc.eventChan) > 0 {
+		select {
+		case <-deadline:
+			t.Fatal("worker did not drain the event channel; loop appears to have stopped")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
+	// The loop must still be running and exit cleanly on cancellation.
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("worker did not stop after context cancellation")
+	}
+}
+
 func TestWebhookEvent_Struct(t *testing.T) {
 	t.Run("creates webhook event with all fields", func(t *testing.T) {
 		webhookID := uuid.New()

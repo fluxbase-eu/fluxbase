@@ -13,6 +13,7 @@ import (
 
 	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/nimbleflux/fluxbase/internal/config"
+	"github.com/nimbleflux/fluxbase/internal/database"
 	apperrors "github.com/nimbleflux/fluxbase/internal/errors"
 	"github.com/nimbleflux/fluxbase/internal/middleware"
 )
@@ -223,7 +224,7 @@ func (h *AdminAuthHandler) InitialSetup(c fiber.Ctx) error {
 	// Create the first dashboard admin user
 	user, err := h.dashboardAuth.CreateUser(ctx, req.Email, req.Password, req.Name)
 	if err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to create admin user: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to create admin user: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	_, err = h.dashboardAuth.GetDB().Exec(ctx, `
@@ -286,7 +287,7 @@ func (h *AdminAuthHandler) AdminLogin(c fiber.Ctx) error {
 		if errors.Is(err, auth.ErrAccountLocked) {
 			return SendForbidden(c, "Account is locked due to too many failed login attempts", ErrCodeAccountLocked)
 		}
-		return SendInternalError(c, fmt.Sprintf("Authentication failed: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Authentication failed: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	// Query user's role from database (DashboardUser struct doesn't include role)

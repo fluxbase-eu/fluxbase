@@ -27,16 +27,22 @@ func isPrivateIP(ip net.IP) bool {
 		return true
 	}
 
-	// Check for private ranges (RFC 1918)
+	// Check for private ranges (RFC 1918 and other non-routable/reserved
+	// ranges that must not be reachable via webhooks)
 	privateBlocks := []string{
 		"10.0.0.0/8",
 		"172.16.0.0/12",
 		"192.168.0.0/16",
 		"169.254.0.0/16", // AWS metadata endpoint range
 		"127.0.0.0/8",    // Loopback
+		"0.0.0.0/8",      // "This network" (RFC 791), includes unspecified 0.0.0.0
+		"100.64.0.0/10",  // Carrier-grade NAT (RFC 6598)
+		"198.18.0.0/15",  // Network benchmarking (RFC 2544)
 		"::1/128",        // IPv6 loopback
+		"::/128",         // IPv6 unspecified
 		"fc00::/7",       // IPv6 unique local
 		"fe80::/10",      // IPv6 link local
+		"64:ff9b::/96",   // IPv4/IPv6 translation (NAT64, RFC 6052)
 	}
 
 	for _, block := range privateBlocks {

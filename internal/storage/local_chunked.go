@@ -495,31 +495,35 @@ func (ls *LocalStorage) CleanupExpiredChunkedUploads(ctx context.Context) (int, 
 // expired chunked upload sessions. Call this once when initializing the storage.
 func (ls *LocalStorage) StartChunkedUploadCleanup(ctx context.Context) {
 	go func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				log.Error().
-					Interface("panic", rec).
-					Str("goroutine", "local_chunked_upload_cleanup").
-					Msg("Panic in local storage chunked upload cleanup - recovered")
-			}
-		}()
-
 		// Run cleanup every hour
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 
+		// cleanupPass runs a single cleanup sweep, recovering from panics
+		// inside the pass so one panicking iteration cannot permanently kill
+		// the cleanup loop.
+		cleanupPass := func(failureMsg string) {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Error().
+						Interface("panic", rec).
+						Str("goroutine", "local_chunked_upload_cleanup").
+						Msg("Panic in local storage chunked upload cleanup - recovered")
+				}
+			}()
+			if _, err := ls.CleanupExpiredChunkedUploads(ctx); err != nil {
+				log.Error().Err(err).Msg(failureMsg)
+			}
+		}
+
 		// Also run once on startup after a short delay
 		time.Sleep(30 * time.Second)
-		if _, err := ls.CleanupExpiredChunkedUploads(ctx); err != nil {
-			log.Error().Err(err).Msg("Failed to cleanup expired chunked uploads on startup")
-		}
+		cleanupPass("Failed to cleanup expired chunked uploads on startup")
 
 		for {
 			select {
 			case <-ticker.C:
-				if _, err := ls.CleanupExpiredChunkedUploads(ctx); err != nil {
-					log.Error().Err(err).Msg("Failed to cleanup expired chunked uploads")
-				}
+				cleanupPass("Failed to cleanup expired chunked uploads")
 			case <-ctx.Done():
 				return
 			}

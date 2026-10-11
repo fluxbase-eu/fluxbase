@@ -232,7 +232,7 @@ func (h *InternalSchemaHandler) ApplySchema(c fiber.Ctx) error {
 	// handler config is never mutated (previously racy across requests).
 	result, err := h.declarative.ApplyFiltered(ctx, req.Schema, req.AllowDestructive)
 	if err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to apply schema: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to apply schema: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	return c.JSON(fiber.Map{

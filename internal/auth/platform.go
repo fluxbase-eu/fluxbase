@@ -235,7 +235,7 @@ func (s *DashboardAuthService) Login(ctx context.Context, email, password string
 	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
 	if err != nil {
 		// Increment failed login attempts and lock if threshold exceeded
-		_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+		if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `
 				UPDATE platform.users
 				SET failed_login_attempts = failed_login_attempts + 1,
@@ -244,7 +244,11 @@ func (s *DashboardAuthService) Login(ctx context.Context, email, password string
 				WHERE id = $1
 			`, user.ID)
 			return err
-		})
+		}); err != nil {
+			// The login is still rejected below, but lockout may not apply on
+			// repeated failures until this write succeeds again.
+			log.Warn().Err(err).Str("user_id", user.ID.String()).Msg("Failed to increment dashboard login attempts, account lockout may not apply")
+		}
 		// Log failed login due to wrong password
 		LogSecurityEvent(ctx, SecurityEvent{
 			Type:      SecurityEventLoginFailed,
@@ -409,13 +413,16 @@ func (s *DashboardAuthService) logActivity(ctx context.Context, userID uuid.UUID
 		userAgentPtr = &userAgent
 	}
 
-	_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+	if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO platform.activity_log (user_id, action, resource_type, resource_id, ip_address, user_agent, details)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 		`, userID, action, resourceTypePtr, resourceIDPtr, ipAddressStr, userAgentPtr, metadata)
 		return err
-	})
+	}); err != nil {
+		// Best-effort audit trail; the caller's operation already succeeded.
+		log.Warn().Err(err).Str("user_id", userID.String()).Str("action", action).Msg("Failed to write platform activity log entry")
+	}
 }
 
 // generateBackupCode generates a random 8-character backup code

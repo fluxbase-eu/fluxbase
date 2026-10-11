@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // GetUser retrieves the current user by access token
@@ -377,7 +379,7 @@ func (s *Service) CreateSAMLUser(ctx context.Context, email, name, provider, nam
 	// Link SAML identity using identity service
 	if err := s.LinkSAMLIdentity(ctx, user.ID, provider, nameID, attrs); err != nil {
 		// Log warning but don't fail - user was created successfully
-		_ = err // Ignore error, user is still valid
+		log.Warn().Err(err).Str("user_id", user.ID).Msg("Failed to link SAML identity after account creation")
 	}
 
 	// Refresh user to get updated data

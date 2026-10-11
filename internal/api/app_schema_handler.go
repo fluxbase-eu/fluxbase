@@ -102,7 +102,7 @@ func (h *AppSchemaHandler) SyncSchema(c fiber.Ctx) error {
 
 	fingerprint, changed, err := h.service.StoreSchemaContent(ctx, req.Namespace, req.Schema, req.Content, req.Ignore)
 	if err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to store schema: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to store schema: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	resp := fiber.Map{
@@ -118,7 +118,7 @@ func (h *AppSchemaHandler) SyncSchema(c fiber.Ctx) error {
 	if !req.NoApply && (req.Apply || changed) {
 		res, err := h.service.ApplyStoredOpts(ctx, req.Namespace, req.Schema, req.AllowDestructive)
 		if err != nil {
-			return SendInternalError(c, fmt.Sprintf("Failed to apply schema: %v", err))
+			return SendInternalError(c, fmt.Sprintf("Failed to apply schema: %v", database.SanitizeErrorMessage(err)))
 		}
 		// A blocked apply (destructive content with allow_destructive=false) is a
 		// semantic failure, not a success: report it as 422 instead of hiding it
@@ -168,7 +168,7 @@ func (h *AppSchemaHandler) ApplySchema(c fiber.Ctx) error {
 
 	res, err := h.service.ApplyStoredOpts(c.Context(), req.Namespace, req.Schema, req.AllowDestructive)
 	if err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to apply schema: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to apply schema: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	// A blocked apply (destructive content with allow_destructive=false) is a
@@ -211,7 +211,7 @@ func (h *AppSchemaHandler) PlanSchema(c fiber.Ctx) error {
 
 	plan, err := h.service.Plan(c.Context(), req.Namespace, req.Schema)
 	if err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to plan schema: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to plan schema: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	return c.JSON(fiber.Map{
@@ -244,14 +244,14 @@ func (h *AppSchemaHandler) GetStatus(c fiber.Ctx) error {
 	if ns != "" {
 		status, err := h.service.GetStatus(ctx, ns, schema)
 		if err != nil {
-			return SendInternalError(c, fmt.Sprintf("Failed to get status: %v", err))
+			return SendInternalError(c, fmt.Sprintf("Failed to get status: %v", database.SanitizeErrorMessage(err)))
 		}
 		return c.JSON(fiber.Map{"status": status, "enabled": h.enabled})
 	}
 
 	records, err := h.service.ListStoredSchemas(ctx, "")
 	if err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to list schemas: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to list schemas: %v", database.SanitizeErrorMessage(err)))
 	}
 	return c.JSON(fiber.Map{"schemas": records, "enabled": h.enabled})
 }
@@ -271,7 +271,7 @@ func (h *AppSchemaHandler) ValidateSchema(c fiber.Ctx) error {
 
 	plan, err := h.service.Plan(c.Context(), ns, schema)
 	if err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to validate schema: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to validate schema: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	return c.JSON(fiber.Map{
@@ -298,7 +298,7 @@ func (h *AppSchemaHandler) DeleteSchema(c fiber.Ctx) error {
 	}
 
 	if err := h.service.DeleteStoredSchema(c.Context(), ns, schema); err != nil {
-		return SendInternalError(c, fmt.Sprintf("Failed to delete schema: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to delete schema: %v", database.SanitizeErrorMessage(err)))
 	}
 	return c.JSON(fiber.Map{
 		"message":   "Schema content removed (database objects left intact)",

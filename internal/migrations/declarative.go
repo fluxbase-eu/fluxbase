@@ -25,6 +25,45 @@ import (
 	dbschema "github.com/nimbleflux/fluxbase/internal/database/schema"
 )
 
+// sensitiveEnvBlocklist lists process environment variables that must never
+// reach child processes. pgschema receives all connection details via flags
+// (plus an explicitly appended PGPASSWORD), so the parent's FluxBase secrets —
+// most importantly the bypass-privilege FLUXBASE_SERVICE_ROLE_KEY service
+// credential exported at startup — must be stripped (SEC-10).
+var sensitiveEnvBlocklist = []string{
+	"FLUXBASE_SERVICE_ROLE_KEY",
+	"FLUXBASE_ANON_KEY",
+	"FLUXBASE_AUTH_JWT_SECRET",
+	"FLUXBASE_DATABASE_PASSWORD",
+	"FLUXBASE_DATABASE_ADMIN_PASSWORD",
+	"FLUXBASE_DATABASE_URL",
+	"FLUXBASE_DATABASE_ADMIN_URL",
+	"FLUXBASE_ENCRYPTION_KEY",
+	"FLUXBASE_SECURITY_SETUP_TOKEN",
+	"FLUXBASE_STORAGE_S3_ACCESS_KEY",
+	"FLUXBASE_STORAGE_S3_SECRET_KEY",
+	"FLUXBASE_EMAIL_SMTP_PASSWORD",
+}
+
+// filteredChildEnv returns the process environment stripped of every variable
+// in sensitiveEnvBlocklist, for use as an explicit child process environment.
+func filteredChildEnv() []string {
+	filtered := make([]string, 0, len(os.Environ()))
+	for _, e := range os.Environ() {
+		skip := false
+		for _, name := range sensitiveEnvBlocklist {
+			if strings.HasPrefix(e, name+"=") {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
+}
+
 // Schema engine outcomes reported by GetSchemaStatus. "pgschema" means the last
 // plan/apply ran through the pgschema binary; "direct-fallback" means pgschema
 // planning failed and the idempotent direct-apply fallback was used instead.
@@ -194,7 +233,7 @@ func (s *DeclarativeService) planForSchemaWithOptions(ctx context.Context, schem
 	}
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	start := time.Now()
 	output, err := cmd.Output()
@@ -322,7 +361,7 @@ func (s *DeclarativeService) ApplyForSchema(ctx context.Context, schema string, 
 	}
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	start := time.Now()
 	output, err := cmd.Output()
@@ -457,7 +496,7 @@ func (s *DeclarativeService) DumpForSchema(ctx context.Context, schema string, o
 	}
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 	cmd.Stdout = f
 
 	if err := cmd.Run(); err != nil {

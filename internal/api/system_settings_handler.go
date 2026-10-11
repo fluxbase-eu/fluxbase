@@ -72,7 +72,7 @@ func (h *SystemSettingsHandler) GetSetting(c fiber.Ctx) error {
 	setting, err := h.settingsService.GetSetting(ctx, key)
 	if err != nil {
 		if errors.Is(err, auth.ErrSettingNotFound) {
-			if defaultSetting := h.getDefaultSetting(key); defaultSetting != nil {
+			if defaultSetting := h.getDefaultSetting(ctx, key); defaultSetting != nil {
 				if h.settingsCache != nil {
 					defaultSetting.IsOverridden = h.settingsCache.IsOverriddenByEnv(key)
 					if defaultSetting.IsOverridden {
@@ -212,15 +212,13 @@ func (h *SystemSettingsHandler) isValidSettingKey(key string) bool {
 	return exists
 }
 
-func (h *SystemSettingsHandler) getDefaultSetting(key string) *auth.SystemSetting {
+func (h *SystemSettingsHandler) getDefaultSetting(ctx context.Context, key string) *auth.SystemSetting {
 	defaultValue, exists := settingDefaults[key]
 	if !exists {
 		return nil
 	}
 
 	if h.settingsCache != nil {
-		ctx := context.Background()
-
 		if val, ok := defaultValue["value"].(bool); ok {
 			actualValue := h.settingsCache.GetBool(ctx, key, val)
 			return &auth.SystemSetting{

@@ -3,15 +3,155 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/rs/zerolog/log"
 )
 
-// namedParamPattern matches $param_name style placeholders used in RPC SQL
-var namedParamPattern = regexp.MustCompile(`\$([a-zA-Z_][a-zA-Z0-9_]*)`)
+// sqlParamToken is a named `$name` placeholder occurrence in SQL text.
+type sqlParamToken struct {
+	start int    // byte offset of the leading '$'
+	name  string // placeholder name without the leading '$'
+}
+
+// scanNamedParamTokens returns every `$name` placeholder token in sql in order
+// of appearance, skipping anything inside single-quoted strings (with doubled
+// quote escapes), double-quoted identifiers (with doubled quote escapes),
+// dollar-quoted blocks (`$tag$ ... $tag$`, including the empty-tag `$$` form),
+// `--` line comments and `/* */` block comments. Ordinal placeholders such as
+// `$1` are left alone and not reported.
+//
+// SECURITY (SEC-12): this context-aware scan is shared by the executor's
+// parameter rewriting and the validator's preprocessing so both agree on what
+// constitutes a parameter placeholder. A context-free regex would rewrite
+// `$name` tokens inside string literals or procedure bodies, corrupting the
+// SQL and shifting parameter indices.
+func scanNamedParamTokens(sql string) []sqlParamToken {
+	var tokens []sqlParamToken
+	i, n := 0, len(sql)
+	for i < n {
+		switch c := sql[i]; {
+		case c == '\'':
+			i = skipSingleQuoted(sql, i)
+		case c == '"':
+			i = skipDoubleQuoted(sql, i)
+		case c == '-' && i+1 < n && sql[i+1] == '-':
+			i = skipLineComment(sql, i)
+		case c == '/' && i+1 < n && sql[i+1] == '*':
+			i = skipBlockComment(sql, i)
+		case c == '$':
+			if end, ok := dollarQuoteEnd(sql, i); ok {
+				// Dollar-quoted block (`$$...$$`, `$tag$...$tag$`): skip to
+				// the matching closing tag. An unterminated block consumes
+				// the remainder of the input.
+				i = end
+				continue
+			}
+			// A named placeholder must start with a letter or underscore;
+			// `$1`-style ordinal placeholders stay untouched.
+			if i+1 < n && isParamIdentStart(sql[i+1]) {
+				j := i + 2
+				for j < n && isParamIdentChar(sql[j]) {
+					j++
+				}
+				tokens = append(tokens, sqlParamToken{start: i, name: sql[i+1 : j]})
+				i = j
+				continue
+			}
+			i++
+		default:
+			i++
+		}
+	}
+	return tokens
+}
+
+// dollarQuoteEnd reports whether a dollar-quoted block starts at sql[i] (which
+// must be '$'). The opening tag is '$' + optional identifier + '$'; the empty
+// identifier gives the `$$` form. If a block starts at i it returns the index
+// just past the matching closing tag; an unterminated block returns len(sql).
+// A trailing identifier not followed by '$' (e.g. a `$name` placeholder) is not
+// a tag, so ok is false.
+func dollarQuoteEnd(sql string, i int) (int, bool) {
+	j := i + 1
+	for j < len(sql) && isParamIdentChar(sql[j]) {
+		j++
+	}
+	if j >= len(sql) || sql[j] != '$' {
+		return 0, false
+	}
+	tag := sql[i : j+1] // "$tag$" or "$$"
+	if rest := strings.Index(sql[j+1:], tag); rest >= 0 {
+		return j + 1 + rest + len(tag), true
+	}
+	return len(sql), true
+}
+
+// skipSingleQuoted returns the index just past a single-quoted string starting
+// at sql[i] (which must hold the opening quote byte). A doubled quote inside is
+// an escaped quote; an unterminated string consumes the remainder of the input.
+func skipSingleQuoted(sql string, i int) int {
+	i++
+	for i < len(sql) {
+		if sql[i] == '\'' {
+			if i+1 < len(sql) && sql[i+1] == '\'' {
+				i += 2
+				continue
+			}
+			return i + 1
+		}
+		i++
+	}
+	return i
+}
+
+// skipDoubleQuoted returns the index just past a double-quoted identifier
+// starting at sql[i] (which must be '"'). A doubled "" is an escaped quote; an
+// unterminated identifier consumes the remainder of the input.
+func skipDoubleQuoted(sql string, i int) int {
+	i++
+	for i < len(sql) {
+		if sql[i] == '"' {
+			if i+1 < len(sql) && sql[i+1] == '"' {
+				i += 2
+				continue
+			}
+			return i + 1
+		}
+		i++
+	}
+	return i
+}
+
+// skipLineComment returns the index just past a `--` line comment starting at
+// sql[i], consuming the trailing newline if present.
+func skipLineComment(sql string, i int) int {
+	if nl := strings.IndexByte(sql[i:], '\n'); nl >= 0 {
+		return i + nl + 1
+	}
+	return len(sql)
+}
+
+// skipBlockComment returns the index just past a `/*` block comment starting at
+// sql[i]; an unterminated comment consumes the remainder of the input.
+func skipBlockComment(sql string, i int) int {
+	if end := strings.Index(sql[i+2:], "*/"); end >= 0 {
+		return i + 2 + end + 2
+	}
+	return len(sql)
+}
+
+// isParamIdentStart reports whether c may start a placeholder name.
+func isParamIdentStart(c byte) bool {
+	return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+// isParamIdentChar reports whether c may appear inside a placeholder name or a
+// dollar-quote tag.
+func isParamIdentChar(c byte) bool {
+	return isParamIdentStart(c) || (c >= '0' && c <= '9')
+}
 
 // Validator handles validation of RPC inputs and SQL queries
 type Validator struct{}
@@ -115,20 +255,25 @@ func (v *Validator) validateType(fieldName string, value interface{}, expectedTy
 
 // preprocessNamedParams replaces $param_name placeholders with dummy values
 // so pg_query can parse the SQL. Returns the preprocessed SQL and extracted param names.
+// Placeholders inside string literals, quoted identifiers, dollar-quoted blocks
+// and comments are left untouched (see scanNamedParamTokens).
 func (v *Validator) preprocessNamedParams(sql string) (string, []string) {
+	tokens := scanNamedParamTokens(sql)
+
 	var paramNames []string
-	paramIndex := 1
-
-	processed := namedParamPattern.ReplaceAllStringFunc(sql, func(match string) string {
-		paramName := strings.TrimPrefix(match, "$")
-		paramNames = append(paramNames, paramName)
+	var processed strings.Builder
+	processed.Grow(len(sql))
+	last := 0
+	for i, tok := range tokens {
+		processed.WriteString(sql[last:tok.start])
 		// Replace with PostgreSQL positional parameter ($1, $2, etc.)
-		placeholder := fmt.Sprintf("$%d", paramIndex)
-		paramIndex++
-		return placeholder
-	})
+		fmt.Fprintf(&processed, "$%d", i+1)
+		paramNames = append(paramNames, tok.name)
+		last = tok.start + 1 + len(tok.name)
+	}
+	processed.WriteString(sql[last:])
 
-	return processed, paramNames
+	return processed.String(), paramNames
 }
 
 // ValidateSQL validates a SQL query for safety and compliance

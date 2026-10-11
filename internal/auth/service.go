@@ -402,8 +402,8 @@ func (s *Service) SignIn(ctx context.Context, req SignInRequest) (*SignInRespons
 		if user.LockedUntil != nil && time.Now().After(*user.LockedUntil) {
 			// Lock expired, reset it
 			if err := s.userRepo.ResetFailedLoginAttempts(ctx, user.ID); err != nil {
-				// Log error but continue - worst case user stays locked
-				_ = err
+				// Worst case the user stays locked until the reset succeeds.
+				log.Warn().Err(err).Str("user_id", user.ID).Msg("Failed to reset login attempts for expired lock")
 			}
 			LogSecurityEvent(ctx, SecurityEvent{
 				Type:   SecurityEventAccountUnlocked,
@@ -432,8 +432,10 @@ func (s *Service) SignIn(ctx context.Context, req SignInRequest) (*SignInRespons
 	if err := s.passwordHasher.ComparePassword(user.PasswordHash, req.Password); err != nil {
 		// Increment failed login attempts
 		if incErr := s.userRepo.IncrementFailedLoginAttempts(ctx, user.ID); incErr != nil {
-			// Log error but return generic invalid credentials
-			_ = incErr
+			log.Error().Err(incErr).Str("user_id", user.ID).Msg("Failed to increment login attempts")
+			// No in-memory fallback counter exists in this package, so on a
+			// DB failure the attempt count is lost and lockout can fail open
+			// until the database recovers. The login response stays generic.
 		}
 
 		// Check if account is now locked (after 5 failed attempts)
@@ -466,8 +468,8 @@ func (s *Service) SignIn(ctx context.Context, req SignInRequest) (*SignInRespons
 	// Reset failed login attempts on successful login
 	if user.FailedLoginAttempts > 0 {
 		if err := s.userRepo.ResetFailedLoginAttempts(ctx, user.ID); err != nil {
-			// Log error but continue with login
-			_ = err
+			// Worst case the stale counter survives and locks the user early.
+			log.Warn().Err(err).Str("user_id", user.ID).Msg("Failed to reset login attempts after successful login")
 		}
 	}
 
@@ -540,7 +542,7 @@ func (s *Service) SignOut(ctx context.Context, accessToken string) error {
 	if err := s.tokenBlacklistService.RevokeToken(ctx, accessToken, "logout"); err != nil {
 		// Log error but continue with session deletion
 		// Revocation failure shouldn't block logout
-		_ = err // nolint:staticcheck // Intentionally ignored
+		log.Warn().Err(err).Msg("Failed to blacklist access token on logout")
 	}
 
 	// Get session by access token

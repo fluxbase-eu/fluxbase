@@ -252,15 +252,6 @@ func (c *SchemaCache) startInvalidationListener() {
 	c.mu.Unlock()
 
 	go func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				log.Error().
-					Interface("panic", rec).
-					Str("goroutine", "schema_cache_invalidation").
-					Msg("Panic in schema cache invalidation listener - recovered")
-			}
-		}()
-
 		msgCh, err := ps.Subscribe(ctx, pubsub.SchemaCacheChannel)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to subscribe to schema cache invalidation channel")
@@ -268,6 +259,22 @@ func (c *SchemaCache) startInvalidationListener() {
 		}
 
 		log.Info().Msg("Schema cache listening for cross-instance invalidation messages")
+
+		// handleInvalidation processes a single invalidation message,
+		// recovering from panics inside the handler so one panicking
+		// iteration cannot permanently kill the listener loop.
+		handleInvalidation := func(msg pubsub.Message) {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Error().
+						Interface("panic", rec).
+						Str("goroutine", "schema_cache_invalidation").
+						Msg("Panic in schema cache invalidation listener - recovered")
+				}
+			}()
+			log.Debug().Str("payload", string(msg.Payload)).Msg("Received schema cache invalidation from another instance")
+			c.Invalidate()
+		}
 
 		for {
 			select {
@@ -279,8 +286,7 @@ func (c *SchemaCache) startInvalidationListener() {
 					log.Debug().Msg("Schema cache invalidation channel closed")
 					return
 				}
-				log.Debug().Str("payload", string(msg.Payload)).Msg("Received schema cache invalidation from another instance")
-				c.Invalidate()
+				handleInvalidation(msg)
 			}
 		}
 	}()

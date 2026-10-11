@@ -305,7 +305,7 @@ func TestQueryParser_ParseCursor(t *testing.T) {
 	parser := NewQueryParser(testConfig())
 
 	t.Run("parses cursor parameter", func(t *testing.T) {
-		cursor := EncodeCursor("id", "abc123", false)
+		cursor := mustEncodeCursor(t, "id", "abc123", false)
 		values, _ := url.ParseQuery("cursor=" + cursor)
 		params, err := parser.Parse(values)
 
@@ -324,7 +324,7 @@ func TestQueryParser_ParseCursor(t *testing.T) {
 	})
 
 	t.Run("parses both cursor and cursor_column", func(t *testing.T) {
-		cursor := EncodeCursor("id", "abc123", false)
+		cursor := mustEncodeCursor(t, "id", "abc123", false)
 		values, _ := url.ParseQuery("cursor=" + cursor + "&cursor_column=updated_at")
 		params, err := parser.Parse(values)
 

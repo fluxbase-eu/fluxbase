@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -543,4 +544,100 @@ func TestValidator_CaseInsensitiveBlocking(t *testing.T) {
 			assert.False(t, result.Valid, "Should block: %s", sql)
 		}
 	})
+}
+
+// TestValidator_PreprocessNamedParams_LexicalContext (SEC-12) verifies that
+// preprocessing for pg_query parsing only rewrites placeholders outside string
+// literals, dollar-quoted blocks and comments — matching the executor's
+// rewriting so validation and execution agree on the parameter set.
+func TestValidator_PreprocessNamedParams_LexicalContext(t *testing.T) {
+	v := NewValidator()
+
+	tests := []struct {
+		name       string
+		sql        string
+		wantSQL    string
+		wantParams []string
+	}{
+		{
+			name:       "plain named params",
+			sql:        "SELECT * FROM users WHERE id = $user_id AND name = $name",
+			wantSQL:    "SELECT * FROM users WHERE id = $1 AND name = $2",
+			wantParams: []string{"user_id", "name"},
+		},
+		{
+			name:       "token inside single-quoted literal is untouched",
+			sql:        "SELECT * FROM t WHERE status = '$active' AND id = $user_id",
+			wantSQL:    "SELECT * FROM t WHERE status = '$active' AND id = $1",
+			wantParams: []string{"user_id"},
+		},
+		{
+			name:       "dollar-quoted block untouched including inner token",
+			sql:        "$fn$ SELECT '$x' $fn$",
+			wantSQL:    "$fn$ SELECT '$x' $fn$",
+			wantParams: nil,
+		},
+		{
+			name:       "adjacent $$ dollar-quoted blocks untouched",
+			sql:        "SELECT $$one$$, $$two$$, $val",
+			wantSQL:    "SELECT $$one$$, $$two$$, $1",
+			wantParams: []string{"val"},
+		},
+		{
+			name:       "tokens in comments untouched",
+			sql:        "SELECT $v /* $hidden */ -- $gone\nFROM t",
+			wantSQL:    "SELECT $1 /* $hidden */ -- $gone\nFROM t",
+			wantParams: []string{"v"},
+		},
+		{
+			name:       "ordinal placeholders untouched",
+			sql:        "SELECT * FROM t WHERE id = $1",
+			wantSQL:    "SELECT * FROM t WHERE id = $1",
+			wantParams: nil,
+		},
+		{
+			name:       "empty body",
+			sql:        "",
+			wantSQL:    "",
+			wantParams: nil,
+		},
+		{
+			name:       "double-quoted identifier untouched",
+			sql:        `SELECT "col$x" FROM t WHERE id = $id`,
+			wantSQL:    `SELECT "col$x" FROM t WHERE id = $1`,
+			wantParams: []string{"id"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			processed, params := v.preprocessNamedParams(tt.sql)
+			assert.Equal(t, tt.wantSQL, processed)
+			assert.Equal(t, tt.wantParams, params)
+		})
+	}
+}
+
+// TestValidator_ValidateSQL_DollarQuotedLiteral verifies SQL containing a
+// token-shaped string literal or dollar-quoted body passes validation with the
+// named param untouched (the executor must not rewrite it either).
+func TestValidator_ValidateSQL_DollarQuotedLiteral(t *testing.T) {
+	v := NewValidator()
+
+	result := v.ValidateSQL(
+		"SELECT * FROM public.events WHERE status = '$active' AND id = $event_id",
+		[]string{"events"},
+		[]string{"public"},
+	)
+	assert.True(t, result.Valid, "errors: %v", result.Errors)
+
+	// The preprocessed SQL must keep the literal and rewrite only the real param.
+	processed, params := v.preprocessNamedParams("SELECT * FROM public.events WHERE status = '$active' AND id = $event_id")
+	assert.Equal(t, "SELECT * FROM public.events WHERE status = '$active' AND id = $1", processed)
+	assert.Equal(t, []string{"event_id"}, params)
+
+	// The preprocessed SQL must still parse cleanly.
+	parsed, err := pg_query.Parse(processed)
+	require.NoError(t, err)
+	require.Len(t, parsed.Stmts, 1)
 }

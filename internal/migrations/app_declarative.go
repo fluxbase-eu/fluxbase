@@ -317,7 +317,7 @@ func (s *AppDeclarativeService) planFromContent(ctx context.Context, schemaName,
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
 	cmd.Dir = workDir
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	start := time.Now()
 	output, err := cmd.Output()

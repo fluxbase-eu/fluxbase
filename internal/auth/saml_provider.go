@@ -387,12 +387,12 @@ func (s *SAMLService) GetProvidersForAppWithTenant(ctx context.Context, tenantID
 
 	if tenantID != "" && s.db != nil {
 		query := `
-			SELECT id, name, enabled, entity_id, acs_url,
-				   COALESCE(allow_app_login, true) as allow_app_login
-			FROM auth.saml_providers
-			WHERE tenant_id = $1::uuid AND enabled = true AND COALESCE(allow_app_login, true) = true
-		`
-		_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+				SELECT id, name, enabled, entity_id, acs_url,
+					   COALESCE(allow_app_login, true) as allow_app_login
+				FROM auth.saml_providers
+				WHERE tenant_id = $1::uuid AND enabled = true AND COALESCE(allow_app_login, true) = true
+			`
+		if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 			rows, err := tx.Query(ctx, query, tenantID)
 			if err != nil {
 				return err
@@ -405,7 +405,10 @@ func (s *SAMLService) GetProvidersForAppWithTenant(ctx context.Context, tenantID
 				}
 			}
 			return nil
-		})
+		}); err != nil {
+			// Degrade to in-memory/config providers rather than failing the lookup.
+			log.Warn().Err(err).Str("tenant_id", tenantID).Msg("Failed to load SAML providers from database, using configured providers only")
+		}
 	}
 
 	s.mu.RLock()
@@ -433,12 +436,12 @@ func (s *SAMLService) GetProvidersForDashboardWithTenant(ctx context.Context, te
 
 	if tenantID != "" && s.db != nil {
 		query := `
-			SELECT id, name, enabled, entity_id, acs_url,
-				   COALESCE(allow_dashboard_login, false) as allow_dashboard_login
-			FROM auth.saml_providers
-			WHERE tenant_id = $1::uuid AND enabled = true AND COALESCE(allow_dashboard_login, false) = true
-		`
-		_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+				SELECT id, name, enabled, entity_id, acs_url,
+					   COALESCE(allow_dashboard_login, false) as allow_dashboard_login
+				FROM auth.saml_providers
+				WHERE tenant_id = $1::uuid AND enabled = true AND COALESCE(allow_dashboard_login, false) = true
+			`
+		if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 			rows, err := tx.Query(ctx, query, tenantID)
 			if err != nil {
 				return err
@@ -451,7 +454,10 @@ func (s *SAMLService) GetProvidersForDashboardWithTenant(ctx context.Context, te
 				}
 			}
 			return nil
-		})
+		}); err != nil {
+			// Degrade to in-memory/config providers rather than failing the lookup.
+			log.Warn().Err(err).Str("tenant_id", tenantID).Msg("Failed to load SAML providers from database, using configured providers only")
+		}
 	}
 
 	s.mu.RLock()

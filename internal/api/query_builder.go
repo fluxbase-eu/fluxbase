@@ -14,11 +14,16 @@ type CursorData struct {
 	Desc   bool        `json:"d"` // True if descending order
 }
 
-// EncodeCursor creates a base64-encoded cursor from the given data
-func EncodeCursor(column string, value interface{}, desc bool) string {
+// EncodeCursor creates a base64-encoded cursor from the given data.
+// Marshal failures (e.g. unsupported value types) are propagated to the caller
+// instead of silently producing a truncated cursor.
+func EncodeCursor(column string, value interface{}, desc bool) (string, error) {
 	data := CursorData{Column: column, Value: value, Desc: desc}
-	jsonBytes, _ := json.Marshal(data)
-	return base64.URLEncoding.EncodeToString(jsonBytes)
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode cursor: %w", err)
+	}
+	return base64.URLEncoding.EncodeToString(jsonBytes), nil
 }
 
 // DecodeCursor decodes a base64-encoded cursor
