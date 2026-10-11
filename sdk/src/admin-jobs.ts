@@ -237,10 +237,12 @@ export class FluxbaseAdminJobs {
       if (filters?.includeResult) params.append("include_result", "true");
 
       const queryString = params.toString();
-      const data = await this.fetch.get<Job[]>(
+      // Server returns a { jobs, limit, offset } envelope (handler_jobs.go),
+      // not a bare array. Extract the jobs array for consumers (#404).
+      const response = await this.fetch.get<{ jobs: Job[]; limit: number; offset: number }>(
         `/api/v1/admin/jobs/queue${queryString ? `?${queryString}` : ""}`,
       );
-      return { data, error: null };
+      return { data: response?.jobs ?? [], error: null };
     } catch (error) {
       return { data: null, error: error as Error };
     }
