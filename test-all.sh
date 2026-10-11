@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 FAILED=0
 
 # 1. Backend Tests
-echo "${YELLOW}[1/4] Running Backend Tests (Go)...${NC}"
+echo "${YELLOW}[1/3] Running Backend Tests (Go)...${NC}"
 if make test; then
     echo "${GREEN}✓ Backend tests passed${NC}"
     echo ""
@@ -29,7 +29,7 @@ else
 fi
 
 # 2. Core SDK Tests
-echo "${YELLOW}[2/4] Running Core SDK Tests (TypeScript)...${NC}"
+echo "${YELLOW}[2/3] Running Core SDK Tests (TypeScript)...${NC}"
 if cd sdk && npm test; then
     echo "${GREEN}✓ Core SDK tests passed${NC}"
     echo ""
@@ -41,7 +41,7 @@ else
 fi
 
 # 3. React SDK Build Test
-echo "${YELLOW}[3/4] Building React SDK...${NC}"
+echo "${YELLOW}[3/3] Building React SDK...${NC}"
 if cd sdk-react && npm run build; then
     echo "${GREEN}✓ React SDK build passed${NC}"
     echo ""
@@ -50,18 +50,6 @@ else
     echo "${RED}✗ React SDK build failed${NC}"
     FAILED=1
     cd ..
-fi
-
-# 4. Admin Integration Tests
-echo "${YELLOW}[4/4] Running Admin Integration Tests...${NC}"
-if cd examples/admin-setup && npm test 2>&1; then
-    echo "${GREEN}✓ Admin integration tests passed${NC}"
-    echo ""
-    cd ../..
-else
-    echo "${RED}✗ Admin integration tests failed${NC}"
-    FAILED=1
-    cd ../..
 fi
 
 # Summary

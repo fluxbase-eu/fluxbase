@@ -20,6 +20,15 @@
 #   STORAGE_TYPE    Storage type: local, s3 (default: local)
 #   S3_BUCKET       S3 bucket name (for s3 storage type)
 #   S3_ENDPOINT     S3 endpoint URL (for MinIO/Wasabi)
+#   AGE_RECIPIENT   Optional: age public key (age1...). When set and the `age`
+#                   binary is installed, every backup artifact (database dump,
+#                   cluster globals, storage tar) is encrypted with
+#                   `age -r` before being written, so no plaintext ever hits
+#                   the backup disk. Restore with scripts/restore.sh (it
+#                   decrypts automatically when the age identity is available,
+#                   set AGE_IDENTITY_FILE for a non-default identity file).
+#   AGE_IDENTITY_FILE Optional: path to the age identity file used by
+#                   --verify to decrypt encrypted dumps before pg_restore.
 #
 # Exit Codes:
 #   0 - Success
@@ -29,6 +38,9 @@
 #   4 - Verification failed
 
 set -euo pipefail
+
+# Backups contain credentials and user data — keep them private by default.
+umask 077
 
 # Colors for output
 RED='\033[0;31m'
@@ -65,6 +77,26 @@ S3_ENDPOINT="${S3_ENDPOINT:-}"
 # Timestamp for backup naming
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DATE_ONLY=$(date +%Y%m%d)
+
+# Encryption (optional): active when AGE_RECIPIENT is set and age is installed
+USE_AGE=false
+if [ -n "${AGE_RECIPIENT:-}" ]; then
+    if command -v age &> /dev/null; then
+        USE_AGE=true
+    else
+        warn "AGE_RECIPIENT is set but 'age' is not installed — writing UNENCRYPTED backups"
+    fi
+fi
+
+# Encrypt a file in place: writes <file>.age and removes the plaintext.
+# Prints the encrypted path on stdout so callers can capture it.
+encrypt_file() {
+    local plain_file="$1"
+    local encrypted_file="${plain_file}.age"
+    age -r "$AGE_RECIPIENT" -o "$encrypted_file" "$plain_file"
+    rm -f "$plain_file"
+    echo "$encrypted_file"
+}
 
 log() {
     # Diagnostics go to stderr so that command substitution in main() (e.g.
@@ -103,6 +135,8 @@ Options:
 Environment Variables:
   PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE
   STORAGE_PATH, STORAGE_TYPE, S3_BUCKET, S3_ENDPOINT
+  AGE_RECIPIENT        Encrypt all artifacts with `age -r` (needs the `age` binary)
+  AGE_IDENTITY_FILE    Age identity used by --verify to decrypt encrypted dumps
 
 Examples:
   # Full backup
@@ -233,7 +267,15 @@ backup_database() {
     # Exclude temporary/cache tables if they exist
     pg_args+=(--exclude-table-data='*.pg_stat_*')
 
-    if pg_dump "${pg_args[@]}" -f "$backup_file" 2>&1; then
+    # Dump to a temp path first so that, with encryption enabled, plaintext
+    # never exists under the final backup name.
+    local tmp_file="${backup_file}.tmp"
+    if pg_dump "${pg_args[@]}" -f "$tmp_file" 2>&1; then
+        if [ "$USE_AGE" = true ]; then
+            backup_file=$(encrypt_file "$tmp_file")
+        else
+            mv "$tmp_file" "$backup_file"
+        fi
         local size
         size=$(du -h "$backup_file" | cut -f1)
         log "Database backup completed: $size"
@@ -248,7 +290,15 @@ backup_database() {
         fi
 
         log "Dumping cluster globals (roles)..."
-        if [ "$COMPRESS" = true ]; then
+        if [ "$USE_AGE" = true ]; then
+            local globals_tmp="${globals_file}.tmp"
+            if [ "$COMPRESS" = true ]; then
+                pg_dumpall -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" --globals-only | gzip > "$globals_tmp"
+            else
+                pg_dumpall -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" --globals-only -f "$globals_tmp"
+            fi
+            globals_file=$(encrypt_file "$globals_tmp")
+        elif [ "$COMPRESS" = true ]; then
             if ! pg_dumpall -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" --globals-only | gzip > "$globals_file"; then
                 error "Cluster globals backup failed"
                 return 3
@@ -299,9 +349,17 @@ backup_storage_local() {
         tar_args+=(--gzip)
     fi
 
-    tar_args+=(--file "$backup_file" -C "$(dirname "$STORAGE_PATH")" "$(basename "$STORAGE_PATH")")
+    # Write to a temp path so encryption can replace it before the final
+    # artifact name exists (see encrypt_file).
+    local tmp_file="${backup_file}.tmp"
+    tar_args+=(--file "$tmp_file" -C "$(dirname "$STORAGE_PATH")" "$(basename "$STORAGE_PATH")")
 
     if tar "${tar_args[@]}" 2>&1; then
+        if [ "$USE_AGE" = true ]; then
+            backup_file=$(encrypt_file "$tmp_file")
+        else
+            mv "$tmp_file" "$backup_file"
+        fi
         local size
         size=$(du -h "$backup_file" | cut -f1)
         log "Storage backup completed: $size"
@@ -370,8 +428,30 @@ verify_database_backup() {
 
     log "Verifying database backup..."
 
+    # Encrypted dump: decrypt to a temp file first (needs the age identity —
+    # set AGE_IDENTITY_FILE or have a default identity configured).
+    local decrypted_tmp=""
+    if [[ "$1" == *.age ]]; then
+        if ! command -v age &> /dev/null; then
+            warn "Backup is age-encrypted but 'age' is not installed — skipping verification"
+            return 0
+        fi
+        local decrypt_args=()
+        if [ -n "${AGE_IDENTITY_FILE:-}" ]; then
+            decrypt_args+=(-i "$AGE_IDENTITY_FILE")
+        fi
+        decrypted_tmp="$(mktemp "${TMPDIR:-/tmp}/verify_dump.XXXXXX")"
+        if ! age -d "${decrypt_args[@]+"${decrypt_args[@]}"}" -o "$decrypted_tmp" "$1" 2>/dev/null; then
+            warn "Could not decrypt backup for verification (no age identity available) — skipping"
+            rm -f "$decrypted_tmp"
+            return 0
+        fi
+        backup_file="$decrypted_tmp"
+    fi
+
     # Create test database
     if ! createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$test_db" 2>/dev/null; then
+        [ -n "$decrypted_tmp" ] && rm -f "$decrypted_tmp"
         error "Failed to create verification database"
         return 4
     fi
@@ -380,6 +460,7 @@ verify_database_backup() {
     if ! pg_restore -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$test_db" \
         --no-owner --no-privileges "$backup_file" 2>/dev/null; then
         dropdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$test_db" 2>/dev/null || true
+        [ -n "$decrypted_tmp" ] && rm -f "$decrypted_tmp"
         error "Failed to restore backup for verification"
         return 4
     fi
@@ -391,6 +472,7 @@ verify_database_backup() {
 
     # Clean up
     dropdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$test_db" 2>/dev/null || true
+    [ -n "$decrypted_tmp" ] && rm -f "$decrypted_tmp"
 
     if [ -z "$user_count" ]; then
         warn "Could not verify auth.users table"
@@ -417,12 +499,32 @@ verify_storage_backup() {
             return 4
         fi
     else
+        # Encrypted archive: decrypt to a temp file, then check the plaintext.
+        local decrypted_tmp=""
+        if [[ "$backup_file" == *.age ]]; then
+            if ! command -v age &> /dev/null; then
+                warn "Backup is age-encrypted but 'age' is not installed — skipping verification"
+                return 0
+            fi
+            local decrypt_args=()
+            if [ -n "${AGE_IDENTITY_FILE:-}" ]; then
+                decrypt_args+=(-i "$AGE_IDENTITY_FILE")
+            fi
+            decrypted_tmp="$(mktemp "${TMPDIR:-/tmp}/verify_storage.XXXXXX")"
+            if ! age -d "${decrypt_args[@]+"${decrypt_args[@]}"}" -o "$decrypted_tmp" "$backup_file" 2>/dev/null; then
+                warn "Could not decrypt backup for verification (no age identity available) — skipping"
+                rm -f "$decrypted_tmp"
+                return 0
+            fi
+            backup_file="$decrypted_tmp"
+        fi
         # Local verification - check archive integrity
         if [[ "$backup_file" == *.gz ]]; then
             if gzip -t "$backup_file" 2>/dev/null; then
                 log "Storage backup verified (gzip integrity OK)"
             else
                 error "Storage backup verification failed (corrupt gzip)"
+                [ -n "$decrypted_tmp" ] && rm -f "$decrypted_tmp"
                 return 4
             fi
         else
@@ -430,9 +532,11 @@ verify_storage_backup() {
                 log "Storage backup verified (tar integrity OK)"
             else
                 error "Storage backup verification failed (corrupt tar)"
+                [ -n "$decrypted_tmp" ] && rm -f "$decrypted_tmp"
                 return 4
             fi
         fi
+        [ -n "$decrypted_tmp" ] && rm -f "$decrypted_tmp"
     fi
 
     return 0

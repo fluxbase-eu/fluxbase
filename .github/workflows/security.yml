@@ -9,6 +9,9 @@ on:
     # Run daily at 2 AM UTC
     - cron: "0 2 * * *"
 
+permissions:
+  contents: read
+
 jobs:
   trivy-scan:
     name: Trivy Vulnerability Scanner
@@ -113,3 +116,55 @@ jobs:
             exit 1
           fi
           cat govulncheck.out
+
+  codeql:
+    name: CodeQL Analysis (Go)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Create placeholder embed files
+        run: |
+          # CodeQL builds the Go tree; the embed directives reference
+          # build-generated artifacts a fresh checkout does not have.
+          mkdir -p internal/adminui/dist
+          echo "<!DOCTYPE html><html><body>placeholder</body></html>" > internal/adminui/dist/index.html
+          echo "// placeholder SDK" > internal/runtime/embedded_sdk.js
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          languages: go
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          category: "/language:go"
+
+  gitleaks:
+    name: Secret Scanning (gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so gitleaks scans every commit, not just the push
+          # shallow clone. NOTE: an audit verified the repo currently has no
+          # real secrets in history — the scan is purely preventive.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,6 +13,12 @@ on:
         default: "18"
         type: string
 
+# Least privilege: CI only reads source and uploads artifacts/coverage.
+# The Codecov steps authenticate with the CODECOV_TOKEN secret, not the
+# GITHUB_TOKEN, so no job needs anything beyond read.
+permissions:
+  contents: read
+
 jobs:
   changes:
     name: Detect Changes

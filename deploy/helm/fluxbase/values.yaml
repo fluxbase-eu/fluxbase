@@ -89,7 +89,7 @@ image:
 ## Complete Fluxbase application configuration.
 ## This mirrors the structure of fluxbase.yaml.example.
 ## All settings are passed as environment variables with FLUXBASE_ prefix.
-## Generate secrets with: scripts/generate-keys.sh
+## Generate secrets with: deploy/generate-keys.sh
 ## @descriptionEnd
 
 ## Fluxbase configuration
@@ -145,9 +145,9 @@ config:
   ## @param config.auth.oauth_providers OAuth/OIDC provider configurations
   ##
   auth:
-    jwt_secret: "" # Use existingSecret in production. Generate with: scripts/generate-keys.sh
-    anon_key: "" # Pre-signed JWT for client apps. Generate with: scripts/generate-keys.sh (option 3)
-    service_role_key: "" # Pre-signed JWT for backend services. Generate with: scripts/generate-keys.sh (option 3)
+    jwt_secret: "" # Use existingSecret in production. Generate with: deploy/generate-keys.sh
+    anon_key: "" # Pre-signed JWT for client apps. Generate with: deploy/generate-keys.sh (option 3)
+    service_role_key: "" # Pre-signed JWT for backend services. Generate with: deploy/generate-keys.sh (option 3)
     jwt_expiry: "1h"
     refresh_expiry: "2160h"
     magic_link_expiry: "15m"
@@ -1109,6 +1109,13 @@ containerSecurityContext:
   runAsGroup: 1000
   runAsNonRoot: true
   privileged: false
+  # DEVIATION from hardened defaults: readOnlyRootFilesystem is false because
+  # the app and its embedded runtimes still write to the container's own
+  # filesystem in places (temp scratch for ffmpeg/tesseract/image transforms,
+  # tsup/bundler temp dirs). The two big writable paths ARE volumes — the Deno
+  # cache (/.cache emptyDir) and local storage (PVC) — so if you do not use
+  # OCR/ffmpeg/transforms, setting this to true is worth trying and may work
+  # for your workload.
   readOnlyRootFilesystem: false
   allowPrivilegeEscalation: false
   capabilities:
@@ -1365,7 +1372,9 @@ ingress:
       - /ai/ws
   ## @param ingress.tls Enable TLS configuration for the host defined at `ingress.hostname` parameter
   ## TLS certificates will be retrieved from a TLS secret with name: `{{- printf "%s-tls" .Values.ingress.hostname }}`
-  ## You can:
+  ## RECOMMENDED: let cert-manager issue and renew certificates automatically by
+  ## adding `cert-manager.io/cluster-issuer: <issuer>` to ingress.annotations
+  ## (and keeping tls: true) instead of provisioning TLS secrets by hand. You can:
   ##   - Use the `ingress.secrets` parameter to create this TLS secret
   ##   - Rely on cert-manager to create it by setting the corresponding annotations
   ##   - Rely on Helm to create self-signed certificates by setting `ingress.selfSigned=true`
@@ -1685,6 +1694,38 @@ serviceAccount:
   name: ""
   automountServiceAccountToken: false
   annotations: {}
+
+## @section Network Policy Parameters
+
+## Network policy for the Fluxbase pods
+## Default-deny ingress AND egress with explicit allowances:
+##   ingress: app port (service.ports.http, default 8080) from any source
+##            (+ the metrics port when metrics.enabled, for Prometheus scraping)
+##   egress:  DNS (53 UDP/TCP), PostgreSQL (5432), Redis/Dragonfly (6379, when
+##            the scaling backend uses it)
+## NOTE: the egress allowlist is deliberately minimal. Fluxbase features that
+## call out to the internet — S3-compatible storage, SMTP/SendGrid email,
+## AI providers, edge functions downloading Deno/npm modules, OAuth providers —
+## need additional egress rules. Add them via networkPolicy.extraEgress, e.g.:
+##   networkPolicy:
+##     extraEgress:
+##       - to:
+##           - ipBlock:
+##               cidr: 0.0.0.0/0
+##         ports:
+##           - protocol: TCP
+##             port: 443
+##
+networkPolicy:
+  ## @param networkPolicy.enabled Enable the default-deny NetworkPolicy
+  ##
+  enabled: true
+  ## @param networkPolicy.extraIngress Extra ingress rules (appended to the allowlist)
+  ##
+  extraIngress: []
+  ## @param networkPolicy.extraEgress Extra egress rules (appended to the allowlist; use for S3/SMTP/AI/etc.)
+  ##
+  extraEgress: []
 
 ## @section Horizontal Scaling Parameters
 ## @descriptionStart

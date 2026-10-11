@@ -5,8 +5,17 @@
 #
 # Usage: ./backup.sh [local|s3]
 #
+# Optional encryption: set AGE_RECIPIENT to an age public key (age1...) and
+# have the `age` binary installed — every artifact (database dump, config and
+# storage tarballs) is then encrypted with `age -r` before it is written, so
+# no plaintext backup ever hits the backup disk. Restore the dump with:
+#   age -d -i <identity-file> db_<date>.dump.age > db_<date>.dump
+#
 
 set -euo pipefail
+
+# Backups contain credentials and user data — keep them private by default.
+umask 077
 
 # Configuration
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/fluxbase}"
@@ -42,6 +51,24 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Optional age encryption: active when AGE_RECIPIENT is set and age is installed.
+USE_AGE=false
+if [ -n "${AGE_RECIPIENT:-}" ]; then
+    if command -v age &> /dev/null; then
+        USE_AGE=true
+    else
+        log_warn "AGE_RECIPIENT is set but 'age' is not installed — writing UNENCRYPTED backups"
+    fi
+fi
+
+# Encrypt a file in place: writes <file>.age and removes the plaintext.
+encrypt_file() {
+    local plain_file="$1"
+    local encrypted_file="${plain_file}.age"
+    age -r "$AGE_RECIPIENT" -o "$encrypted_file" "$plain_file"
+    rm -f "$plain_file"
+}
+
 # Create backup directory
 mkdir -p "$BACKUP_DIR"
 
@@ -52,7 +79,15 @@ log_info "Backing up PostgreSQL database..."
 DB_BACKUP_FILE="$BACKUP_DIR/db_$DATE.dump"
 
 if command -v pg_dump &> /dev/null; then
-    pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -Fc "$PGDATABASE" > "$DB_BACKUP_FILE"
+    # Dump to a temp path so that, with encryption enabled, plaintext never
+    # exists under the final backup name.
+    pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -Fc "$PGDATABASE" > "$DB_BACKUP_FILE.tmp"
+    if [ "$USE_AGE" = true ]; then
+        encrypt_file "$DB_BACKUP_FILE.tmp"
+        DB_BACKUP_FILE="$DB_BACKUP_FILE.age"
+    else
+        mv "$DB_BACKUP_FILE.tmp" "$DB_BACKUP_FILE"
+    fi
     log_info "Database backup completed: $DB_BACKUP_FILE"
 else
     log_error "pg_dump not found. Install postgresql-client"
@@ -64,12 +99,18 @@ log_info "Backing up configuration..."
 CONFIG_BACKUP_FILE="$BACKUP_DIR/config_$DATE.tar.gz"
 
 if [ -d "/app/config" ]; then
-    tar -czf "$CONFIG_BACKUP_FILE" -C /app config/ 2>/dev/null || true
+    tar -czf "$CONFIG_BACKUP_FILE.tmp" -C /app config/ 2>/dev/null || true
 elif [ -d "/etc/fluxbase" ]; then
-    tar -czf "$CONFIG_BACKUP_FILE" /etc/fluxbase/ 2>/dev/null || true
+    tar -czf "$CONFIG_BACKUP_FILE.tmp" /etc/fluxbase/ 2>/dev/null || true
 fi
 
-if [ -f "$CONFIG_BACKUP_FILE" ]; then
+if [ -f "$CONFIG_BACKUP_FILE.tmp" ]; then
+    if [ "$USE_AGE" = true ]; then
+        encrypt_file "$CONFIG_BACKUP_FILE.tmp"
+        CONFIG_BACKUP_FILE="$CONFIG_BACKUP_FILE.age"
+    else
+        mv "$CONFIG_BACKUP_FILE.tmp" "$CONFIG_BACKUP_FILE"
+    fi
     log_info "Config backup completed: $CONFIG_BACKUP_FILE"
 fi
 
@@ -78,7 +119,13 @@ STORAGE_DIR="${FLUXBASE_STORAGE_LOCAL_PATH:-/app/storage}"
 if [ -d "$STORAGE_DIR" ] && [ "$(ls -A $STORAGE_DIR 2>/dev/null)" ]; then
     log_info "Backing up local storage..."
     STORAGE_BACKUP_FILE="$BACKUP_DIR/storage_$DATE.tar.gz"
-    tar -czf "$STORAGE_BACKUP_FILE" -C "$(dirname $STORAGE_DIR)" "$(basename $STORAGE_DIR)"
+    tar -czf "$STORAGE_BACKUP_FILE.tmp" -C "$(dirname $STORAGE_DIR)" "$(basename $STORAGE_DIR)"
+    if [ "$USE_AGE" = true ]; then
+        encrypt_file "$STORAGE_BACKUP_FILE.tmp"
+        STORAGE_BACKUP_FILE="$STORAGE_BACKUP_FILE.age"
+    else
+        mv "$STORAGE_BACKUP_FILE.tmp" "$STORAGE_BACKUP_FILE"
+    fi
     log_info "Storage backup completed: $STORAGE_BACKUP_FILE"
 fi
 
