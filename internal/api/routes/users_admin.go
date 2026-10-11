@@ -8,8 +8,11 @@ import (
 // Auth middleware is inherited from the parent admin route group.
 //
 // Role Access:
-//   - instance_admin: Full access to all users, can delete users
-//   - tenant_admin: Access to users within their tenant (RLS enforced), cannot delete users
+//   - instance_admin / admin: Full access to all users, can delete users
+//   - tenant_admin: Read-only access to users within their tenant (the list
+//     endpoint is tenant-filtered). Mutations run with elevated database
+//     privileges and no tenant predicate, so they are restricted to
+//     instance-level administrators.
 type UsersAdminDeps struct {
 	ListUsers           fiber.Handler
 	InviteUser          fiber.Handler
@@ -40,8 +43,11 @@ func BuildUsersAdminRoutes(deps *UsersAdminDeps) *RouteGroup {
 			{Method: "GET", Path: "/users", Handler: deps.ListUsers, Summary: "List users"},
 			{Method: "POST", Path: "/users/invite", Handler: deps.InviteUser, Summary: "Invite user"},
 			{Method: "GET", Path: "/users/:id", Handler: deps.ListUsers, Summary: "Get user by ID"},
-			{Method: "PATCH", Path: "/users/:id", Handler: deps.UpdateUser, Summary: "Update user"},
-			{Method: "POST", Path: "/users/:id/reset-password", Handler: deps.ResetUserPassword, Summary: "Reset user password"},
+			// Updates run with elevated privileges and no tenant predicate, so
+			// they are instance-level only (a tenant admin must not be able to
+			// modify accounts — or roles — outside their tenant, #401).
+			{Method: "PATCH", Path: "/users/:id", Handler: deps.UpdateUser, Summary: "Update user", Roles: []string{"admin", "instance_admin"}},
+			{Method: "POST", Path: "/users/:id/reset-password", Handler: deps.ResetUserPassword, Summary: "Reset user password", Roles: []string{"admin", "instance_admin"}},
 			// Delete and role update are instance_admin only (override roles)
 			{Method: "DELETE", Path: "/users/:id", Handler: deps.DeleteUser, Summary: "Delete user", Roles: []string{"admin", "instance_admin"}},
 			{Method: "PATCH", Path: "/users/:id/role", Handler: deps.UpdateUserRole, Summary: "Update user role", Roles: []string{"admin", "instance_admin"}},
