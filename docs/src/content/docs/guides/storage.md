@@ -388,8 +388,10 @@ storage:
   s3_secret_key: "minioadmin"
   s3_region: "us-east-1"
   s3_bucket: "fluxbase"
-  s3_use_ssl: false # for development
 ```
+
+> TLS is controlled by the `s3_endpoint` scheme: prefix the endpoint with
+> `http://` for plaintext (local development), otherwise HTTPS is used.
 
 Start MinIO with Docker:
 

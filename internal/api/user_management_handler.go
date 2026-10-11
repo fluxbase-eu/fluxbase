@@ -203,6 +203,19 @@ func (h *UserManagementHandler) UpdateUser(c fiber.Ctx) error {
 		return err
 	}
 
+	// Defense in depth (#401): role changes are a privilege-escalation vector.
+	// The underlying update runs with elevated privileges and no tenant
+	// predicate, so only instance-level administrators may pass a role here —
+	// the route configuration restricts this endpoint to the same roles, but
+	// the guard must not depend on route config staying put. Role changes for
+	// other principals go through PATCH /users/:id/role.
+	if req.Role != nil {
+		userRole, _ := c.Locals("user_role").(string)
+		if userRole != "admin" && userRole != "instance_admin" {
+			return SendForbidden(c, "Only instance-level administrators can change user roles", ErrCodeAccessDenied)
+		}
+	}
+
 	if err := h.requireService(c); err != nil {
 		return err
 	}

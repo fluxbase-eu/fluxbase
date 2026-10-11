@@ -592,17 +592,18 @@ Environment variables take precedence over `fluxbase.yaml` values, so you can ke
 
 **Docker Secrets:**
 
+Fluxbase only reads plain environment variable values — `*_FILE`-style indirection (e.g. `JWT_SECRET_FILE: /run/secrets/jwt_secret`) is not supported. Mount the secret and have your entrypoint export it as a plain `FLUXBASE_` variable:
+
 ```bash
 # Create secret
 echo "my-jwt-secret" | docker secret create jwt_secret -
 
-# Use in docker-compose.yml
+# Use in docker-compose.yml - mount the secret, then export it via your entrypoint
+# entrypoint: sh -c 'export FLUXBASE_AUTH_JWT_SECRET="$(cat /run/secrets/jwt_secret)" && exec ./fluxbase server'
 services:
   fluxbase:
     secrets:
       - jwt_secret
-    environment:
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
 ```
 
 **Kubernetes Secrets:**

@@ -260,7 +260,9 @@ describe("FluxbaseAdminJobs", () => {
 
   describe("listJobs()", () => {
     it("should list all jobs", async () => {
-      const response: Job[] = [
+      // Wire shape: the server returns a { jobs, limit, offset } envelope
+      // (internal/jobs/handler_jobs.go), not a bare array.
+      const mockJobs: Job[] = [
         {
           id: "exec-1",
           job_name: "process-data",
@@ -270,17 +272,30 @@ describe("FluxbaseAdminJobs", () => {
         },
       ];
 
-      vi.mocked(mockFetch.get).mockResolvedValue(response);
+      vi.mocked(mockFetch.get).mockResolvedValue({
+        jobs: mockJobs,
+        limit: 50,
+        offset: 0,
+      });
 
       const { data, error } = await jobs.listJobs();
 
       expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/jobs/queue");
       expect(error).toBeNull();
-      expect(data).toHaveLength(1);
+      expect(data).toEqual(mockJobs);
+    });
+
+    it("should return an empty array when the envelope has no jobs", async () => {
+      vi.mocked(mockFetch.get).mockResolvedValue({ jobs: [], limit: 50, offset: 0 });
+
+      const { data, error } = await jobs.listJobs();
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
     });
 
     it("should list jobs with filters", async () => {
-      vi.mocked(mockFetch.get).mockResolvedValue([]);
+      vi.mocked(mockFetch.get).mockResolvedValue({ jobs: [], limit: 50, offset: 10 });
 
       const { data, error } = await jobs.listJobs({
         status: "running",
