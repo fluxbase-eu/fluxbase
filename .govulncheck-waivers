@@ -1,5 +1,5 @@
 # Vulnerabilities accepted as known risks. Each entry needs a documented
 # reason and must be re-reviewed when a new upstream release is available.
-# GO-2026-6452: github.com/xuri/excelize/v2 — upstream has not published a
-# fix (Fixed in: N/A). Used by the AI text extractor for xlsx documents.
-GO-2026-6452
+# (Empty — GO-2026-6452 was retired: excelize v2.11.1-0.20261003 fixed it and
+# the related CVE-2026-1072xx set; the Go toolchain floor was raised to 1.26.9
+# for the stdlib GO-2026-66xx set.)
