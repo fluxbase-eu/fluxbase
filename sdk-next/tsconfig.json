@@ -13,6 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "ignoreDeprecations": "6.0",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node"]

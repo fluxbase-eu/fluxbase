@@ -259,9 +259,16 @@ lint: ## Run golangci-lint with all enabled linters
 
 lint-go: lint ## Alias for lint (Go golangci-lint)
 
-lint-typescript: ## Lint Admin UI TypeScript (same as the CI lint-typescript job)
-	@echo "${YELLOW}Linting Admin UI (TypeScript)...${NC}"
-	@cd admin && unset NODE_OPTIONS && bun run lint
+lint-typescript: ## Lint all TypeScript packages (admin + SDKs, same as CI)
+	@echo "${YELLOW}Linting TypeScript packages...${NC}"
+	@for pkg in sdk sdk-react sdk-vue sdk-svelte sdk-next admin; do \
+		if [ -f "$$pkg/package.json" ] && grep -q '"lint":' "$$pkg/package.json" 2>/dev/null; then \
+			echo "  ${BLUE}Linting $$pkg...${NC}"; \
+			(cd $$pkg && unset NODE_OPTIONS && bun run lint) || { echo "${RED}✗ $$pkg lint failed${NC}"; exit 1; }; \
+		else \
+			echo "  ${YELLOW}SKIPPED $$pkg (no lint script)${NC}"; \
+		fi; \
+	done
 	@echo "${GREEN}TypeScript linting complete!${NC}"
 
 test: ## Run all tests with race detector (short mode - skips slow tests, excludes e2e)
@@ -399,15 +406,9 @@ test-sdk-react: ## Build React SDK (includes type checking)
 	@cd sdk-react && unset NODE_OPTIONS && bun run build
 	@echo "${GREEN}React SDK build complete!${NC}"
 
-test-integration: ## Run admin integration tests (requires running server)
-	@echo "${YELLOW}Running admin integration tests...${NC}"
-	@if ! curl -s http://localhost:8080/health > /dev/null; then \
-		echo "${RED}Error: Fluxbase server not running on localhost:8080${NC}"; \
-		echo "${YELLOW}Start server with: make dev${NC}"; \
-		exit 1; \
-	fi
-	@cd examples/admin-setup && unset NODE_OPTIONS && bun test
-	@echo "${GREEN}Integration tests complete!${NC}"
+test-integration: ## Run admin integration tests (SKIPPED: examples/admin-setup was removed)
+	@echo "${YELLOW}SKIPPED: no admin integration suite (examples/admin-setup no longer exists)${NC}"
+	@echo "${YELLOW}Reintroduce this target when a replacement integration suite lands.${NC}"
 
 test-e2e-ui: ## Run Playwright E2E tests. Resets DB, starts server, runs all tests.
 	@echo "${YELLOW}Running Playwright E2E tests (clean database)...${NC}"
@@ -451,7 +452,7 @@ test-all: ## Run ALL tests (backend + SDK + React + integration)
 	@$(MAKE) test-sdk-react
 	@echo ""
 	@echo "${YELLOW}[4/4] Running Admin Integration Tests...${NC}"
-	@$(MAKE) test-integration || true
+	@$(MAKE) test-integration
 	@echo ""
 	@echo "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 	@echo "${BLUE}║                      TEST SUMMARY                          ║${NC}"

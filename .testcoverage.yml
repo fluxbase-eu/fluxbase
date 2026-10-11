@@ -55,14 +55,33 @@ override:
     threshold: 15
   - path: ^internal/branching/
     threshold: 25
+  # DB-backed packages whose logic mostly runs through the integration
+  # (non-short) suites, so -short unit coverage is structurally low. Floors
+  # are set to max(2, floor(current -short coverage - 2)) — a small ratchet
+  # that prevents regression to 0 without gating on coverage the short suite
+  # cannot produce. Measured 2026-10-11 via:
+  #   go test -short -cover ./internal/<pkg>/...
+  # TODO: re-measure and re-ratchet upward as the short-mode unit suites grow.
+  # NOTE: first matching entry wins - keep more-specific paths above their
+  # parent prefixes.
+  - path: ^internal/database/bootstrap
+    # Measured 9.2% (-short; observed in the 2026-10-11 gate run). Floor = 9 - 1.
+    threshold: 8
   - path: ^internal/database/
-    threshold: 1
+    # Measured 23.7% aggregate (root 22.1%; schema/ and connection.go excluded
+    # per the exclude rules above). Floor = 23 - 2 rounded down.
+    threshold: 20
   - path: ^internal/settings/
-    threshold: 1
+    # Measured 6.4% (-short). Floor = 6 - 2.
+    threshold: 4
   - path: ^internal/secrets/
+    # Measured 1.6% (-short): handler/storage tests are integration-gated.
+    # The ratchet formula would yield 2, which would fail the gate today —
+    # keep 1 until short-mode coverage reaches >= 4%, then raise to 2.
     threshold: 1
   - path: ^internal/extensions/
-    threshold: 1
+    # Measured 3.0% (-short). Floor = max(2, 3 - 2).
+    threshold: 2
   # Declarative migration engine: core planning/transform/diff helpers are now
   # unit-tested (extractChangesFromGroups, changePriority, table-name
   # extractors, column-def extraction, FK-name loading/filtering, fingerprint,

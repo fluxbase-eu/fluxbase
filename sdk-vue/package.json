@@ -22,6 +22,7 @@
     "dev": "tsup --watch",
     "docs": "typedoc",
     "type-check": "tsc --noEmit",
+    "lint": "eslint src",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "test": "vitest run",
@@ -47,11 +48,14 @@
     "vue": "^3.5.42"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@nimbleflux/fluxbase-sdk": "workspace:*",
     "@types/node": "^26.4.1",
+    "eslint": "^10.10.0",
     "prettier": "^3.9.6",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.69.0",
     "vitest": "^5.0.0"
   },
   "engines": {

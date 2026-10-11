@@ -17,12 +17,9 @@
     "forceConsistentCasingInFileNames": true,
     "ignoreDeprecations": "6.0",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "baseUrl": ".",
-    "paths": {
-      "@fluxbase/sdk": ["../sdk/dist/index.d.ts"]
-    }
+    "noEmit": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

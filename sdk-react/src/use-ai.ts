@@ -187,7 +187,10 @@ export function useAIChat(options: {
       chat.disconnect();
       chatRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // NOTE: intentional restricted dependency list. If eslint-plugin-react-hooks
+    // is ever added to this package, re-add:
+    //   // eslint-disable-next-line react-hooks/exhaustive-deps
+    // above this line.
   }, [options.chatbot, options.namespace]);
 
   // Internal event handler (not used directly since we set callbacks)
