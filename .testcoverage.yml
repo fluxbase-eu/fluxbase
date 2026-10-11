@@ -62,9 +62,14 @@ override:
   # cannot produce. Measured 2026-10-11 via:
   #   go test -short -cover ./internal/<pkg>/...
   # TODO: re-measure and re-ratchet upward as the short-mode unit suites grow.
+  # NOTE: first matching entry wins - keep more-specific paths above their
+  # parent prefixes.
+  - path: ^internal/database/bootstrap
+    # Measured 9.2% (-short; observed in the 2026-10-11 gate run). Floor = 9 - 1.
+    threshold: 8
   - path: ^internal/database/
-    # Measured 23.7% aggregate (root 22.1% + bootstrap 9.2%, schema/ and
-    # connection.go excluded per the exclude rules above). Floor = 23-2 rounded down.
+    # Measured 23.7% aggregate (root 22.1%; schema/ and connection.go excluded
+    # per the exclude rules above). Floor = 23 - 2 rounded down.
     threshold: 20
   - path: ^internal/settings/
     # Measured 6.4% (-short). Floor = 6 - 2.
