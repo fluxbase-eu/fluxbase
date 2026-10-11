@@ -80,13 +80,14 @@ export function TableViewer({ tableName, schema }: TableViewerProps) {
     }>;
   }>({
     queryKey: ["table-schema", schema, tableName],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       // Extract table name from the format "schema.table" or just use tableName
       const tableNameOnly = tableName.includes(".")
         ? tableName.split(".")[1]
         : tableName;
       const response = await apiClient.get(
         `/api/v1/admin/tables/${schema}/${tableNameOnly}`,
+        { signal },
       );
       return response.data;
     },

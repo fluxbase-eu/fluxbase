@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface Tenant {
   id: string;
@@ -63,20 +63,30 @@ export interface UpdateMemberRequest {
 }
 
 export const tenantsApi = {
-  list: async (): Promise<Tenant[]> => {
-    const response = await api.get<Tenant[]>("/api/v1/admin/tenants");
+  list: async (options?: ApiRequestOptions): Promise<Tenant[]> => {
+    const response = await api.get<Tenant[]>("/api/v1/admin/tenants", {
+      signal: options?.signal,
+    });
     return response.data || [];
   },
 
-  listMine: async (): Promise<TenantWithRole[]> => {
+  listMine: async (
+    options?: ApiRequestOptions,
+  ): Promise<TenantWithRole[]> => {
     const response = await api.get<TenantWithRole[]>(
       "/api/v1/admin/tenants/mine",
+      { signal: options?.signal },
     );
     return response.data || [];
   },
 
-  get: async (id: string): Promise<Tenant> => {
-    const response = await api.get<Tenant>(`/api/v1/admin/tenants/${id}`);
+  get: async (
+    id: string,
+    options?: ApiRequestOptions,
+  ): Promise<Tenant> => {
+    const response = await api.get<Tenant>(`/api/v1/admin/tenants/${id}`, {
+      signal: options?.signal,
+    });
     return response.data;
   },
 

@@ -18,8 +18,8 @@ export function useAuth() {
   // Fetch current user data from dashboard auth endpoint
   const { data: dashboardUser, isLoading: isLoadingUser } = useQuery({
     queryKey: ["auth", "user"],
-    queryFn: async () => {
-      return await dashboardAuthAPI.me();
+    queryFn: async ({ signal }) => {
+      return await dashboardAuthAPI.me({ signal });
     },
     enabled: !!auth.accessToken,
     retry: false,
@@ -93,7 +93,7 @@ export function useAuth() {
       auth.setUser({
         accountNo: user.id,
         email: user.email,
-        role: [user.role],
+        role: user.role ? [user.role] : [],
         exp: Date.now() + session.expires_in * 1000,
       });
 

@@ -100,7 +100,7 @@ function TenantsPage() {
 
   const { data: tenants, isLoading } = useQuery({
     queryKey: ["tenants"],
-    queryFn: tenantsApi.list,
+    queryFn: ({ signal }) => tenantsApi.list({ signal }),
   });
 
   const createMutation = useMutation({

@@ -96,24 +96,28 @@ function PoliciesPage() {
 
   const { data: tablesData, isLoading: tablesLoading } = useQuery({
     queryKey: ["tables-rls"],
-    queryFn: () => policyApi.getTablesWithRLS("public"),
+    queryFn: ({ signal }) => policyApi.getTablesWithRLS("public", { signal }),
   });
 
   const { data: warningsData, isLoading: warningsLoading } = useQuery({
     queryKey: ["security-warnings"],
-    queryFn: () => policyApi.getSecurityWarnings(),
+    queryFn: ({ signal }) => policyApi.getSecurityWarnings({ signal }),
   });
 
   const { data: templates } = useQuery({
     queryKey: ["policy-templates"],
-    queryFn: () => policyApi.getTemplates(),
+    queryFn: ({ signal }) => policyApi.getTemplates({ signal }),
   });
 
   const { data: tableDetails, isLoading: detailsLoading } = useQuery({
     queryKey: ["table-rls-status", policyModal],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       policyModal
-        ? policyApi.getTableRLSStatus(policyModal.schema, policyModal.table)
+        ? policyApi.getTableRLSStatus(
+            policyModal.schema,
+            policyModal.table,
+            { signal },
+          )
         : null,
     enabled: !!policyModal?.open,
   });

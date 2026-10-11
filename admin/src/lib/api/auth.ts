@@ -1,5 +1,5 @@
 import axios from "axios";
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 import { getAccessToken, type AdminUser } from "../auth";
 
 const API_BASE_URL =
@@ -16,8 +16,13 @@ const API_BASE_URL =
 const ADMIN_API_TIMEOUT = 5000;
 
 // Raw axios instance with the admin timeout pre-applied. Use this for any
-// call that would otherwise use the global `axios` directly.
-const adminAxios = axios.create({ timeout: ADMIN_API_TIMEOUT });
+// call that would otherwise use the global `axios` directly. withCredentials
+// lets the dashboard login/2FA responses set the HttpOnly refresh cookie even
+// when the API base URL differs from the dashboard origin.
+const adminAxios = axios.create({
+  timeout: ADMIN_API_TIMEOUT,
+  withCredentials: true,
+});
 
 export interface User {
   id: string;
@@ -310,9 +315,10 @@ export const dashboardAuthAPI = {
     return response.data;
   },
 
-  me: async (): Promise<DashboardUser> => {
+  me: async (options?: ApiRequestOptions): Promise<DashboardUser> => {
     const response = await adminAxios.get(`${API_BASE_URL}/dashboard/auth/me`, {
       headers: getDashboardAuthHeaders(),
+      signal: options?.signal,
     });
     return response.data;
   },
@@ -420,12 +426,15 @@ export const dashboardAuthAPI = {
     return response.data;
   },
 
-  getSSOProviders: async (): Promise<{
+  getSSOProviders: async (
+    options?: ApiRequestOptions,
+  ): Promise<{
     providers: SSOProvider[];
     password_login_disabled: boolean;
   }> => {
     const response = await adminAxios.get(
       `${API_BASE_URL}/dashboard/auth/sso/providers`,
+      { signal: options?.signal },
     );
     return response.data;
   },
@@ -511,9 +520,12 @@ export interface AuthSettings {
 }
 
 export const oauthProviderApi = {
-  list: async (): Promise<OAuthProviderConfig[]> => {
+  list: async (
+    options?: ApiRequestOptions,
+  ): Promise<OAuthProviderConfig[]> => {
     const response = await api.get<OAuthProviderConfig[]>(
       "/api/v1/admin/oauth/providers",
+      { signal: options?.signal },
     );
     return response.data;
   },
@@ -554,8 +566,10 @@ export const oauthProviderApi = {
 };
 
 export const authSettingsApi = {
-  get: async (): Promise<AuthSettings> => {
-    const response = await api.get<AuthSettings>("/api/v1/admin/auth/settings");
+  get: async (options?: ApiRequestOptions): Promise<AuthSettings> => {
+    const response = await api.get<AuthSettings>("/api/v1/admin/auth/settings", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 
@@ -642,9 +656,10 @@ export interface ValidateMetadataResponse {
 }
 
 export const samlProviderApi = {
-  list: async (): Promise<SAMLProviderConfig[]> => {
+  list: async (options?: ApiRequestOptions): Promise<SAMLProviderConfig[]> => {
     const response = await api.get<SAMLProviderConfig[]>(
       "/api/v1/admin/saml/providers",
+      { signal: options?.signal },
     );
     return response.data;
   },

@@ -29,12 +29,13 @@ export function ChatbotKBLinksSection({ chatbotId }: ChatbotKBLinksSectionProps)
 
   const { data: links = [], isLoading: linksLoading } = useQuery({
     queryKey: ["chatbot-kb-links", chatbotId],
-    queryFn: () => knowledgeBasesApi.listChatbotLinks(chatbotId),
+    queryFn: ({ signal }) =>
+      knowledgeBasesApi.listChatbotLinks(chatbotId, { signal }),
   });
 
   const { data: allKbs = [] } = useQuery({
     queryKey: ["knowledge-bases"],
-    queryFn: () => knowledgeBasesApi.list(),
+    queryFn: ({ signal }) => knowledgeBasesApi.list({ signal }),
   });
 
   const availableKbs = allKbs.filter(

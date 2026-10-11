@@ -33,7 +33,8 @@ export function BranchSelector() {
 
   const query = useQuery({
     queryKey: ["branches", { status: "ready" }],
-    queryFn: () => branchesApi.list({ status: "ready" }),
+    queryFn: ({ signal }) =>
+      branchesApi.list({ status: "ready" }, { signal }),
     retry: false,
     refetchOnWindowFocus: false,
   });

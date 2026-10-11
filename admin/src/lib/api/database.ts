@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface TableInfo {
   schema: string;
@@ -23,16 +23,23 @@ export interface TableInfo {
 }
 
 export const databaseApi = {
-  getSchemas: async (): Promise<string[]> => {
-    const response = await api.get<string[]>("/api/v1/admin/schemas");
+  getSchemas: async (options?: ApiRequestOptions): Promise<string[]> => {
+    const response = await api.get<string[]>("/api/v1/admin/schemas", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 
-  getTables: async (schema?: string): Promise<TableInfo[]> => {
+  getTables: async (
+    schema?: string,
+    options?: ApiRequestOptions,
+  ): Promise<TableInfo[]> => {
     const url = schema
       ? `/api/v1/admin/tables?schema=${encodeURIComponent(schema)}`
       : "/api/v1/admin/tables";
-    const response = await api.get<TableInfo[]>(url);
+    const response = await api.get<TableInfo[]>(url, {
+      signal: options?.signal,
+    });
     return response.data;
   },
 
@@ -278,10 +285,14 @@ export interface TableRelationshipsResponse {
 }
 
 export const schemaApi = {
-  getGraph: async (schemas?: string[]): Promise<SchemaGraphResponse> => {
+  getGraph: async (
+    schemas?: string[],
+    options?: ApiRequestOptions,
+  ): Promise<SchemaGraphResponse> => {
     const params = schemas?.length ? `?schemas=${schemas.join(",")}` : "";
     const response = await api.get<SchemaGraphResponse>(
       `/api/v1/admin/schema/graph${params}`,
+      { signal: options?.signal },
     );
     return response.data;
   },

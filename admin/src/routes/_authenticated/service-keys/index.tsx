@@ -136,7 +136,7 @@ function ServiceKeysPage() {
 
   const { data: serviceKeys, isLoading } = useQuery<ServiceKey[]>({
     queryKey: ['service-keys', currentTenantId],
-    queryFn: serviceKeysApi.list,
+    queryFn: ({ signal }) => serviceKeysApi.list({ signal }),
     enabled: !!currentTenantId,
   })
 

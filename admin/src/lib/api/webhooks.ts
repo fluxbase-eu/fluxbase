@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface EventConfig {
   table: string;
@@ -35,8 +35,10 @@ export interface WebhookDelivery {
   delivered_at?: string;
 }
 export const webhooksApi = {
-  list: async (): Promise<WebhookType[]> => {
-    const response = await api.get<WebhookType[]>("/api/v1/webhooks");
+  list: async (options?: ApiRequestOptions): Promise<WebhookType[]> => {
+    const response = await api.get<WebhookType[]>("/api/v1/webhooks", {
+      signal: options?.signal,
+    });
     return response.data;
   },
   get: async (id: string): Promise<WebhookType> => {
@@ -46,9 +48,11 @@ export const webhooksApi = {
   getDeliveries: async (
     webhookId: string,
     limit = 50,
+    options?: ApiRequestOptions,
   ): Promise<WebhookDelivery[]> => {
     const response = await api.get<WebhookDelivery[]>(
       `/api/v1/webhooks/${webhookId}/deliveries?limit=${limit}`,
+      { signal: options?.signal },
     );
     return response.data;
   },

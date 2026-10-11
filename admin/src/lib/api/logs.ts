@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface LogEntryAPI {
   id: string;
@@ -51,7 +51,9 @@ export interface LogStatsAPI {
 }
 
 export const logsApi = {
-  query: async (options: LogQueryOptionsAPI): Promise<LogQueryResultAPI> => {
+  query: async (
+    options: LogQueryOptionsAPI & ApiRequestOptions,
+  ): Promise<LogQueryResultAPI> => {
     const params = new URLSearchParams();
     if (options.category) params.set("category", options.category);
     if (options.custom_category)
@@ -72,12 +74,15 @@ export const logsApi = {
 
     const response = await api.get<LogQueryResultAPI>(
       `/api/v1/admin/logs?${params.toString()}`,
+      { signal: options.signal },
     );
     return response.data;
   },
 
-  getStats: async (): Promise<LogStatsAPI> => {
-    const response = await api.get<LogStatsAPI>("/api/v1/admin/logs/stats");
+  getStats: async (options?: ApiRequestOptions): Promise<LogStatsAPI> => {
+    const response = await api.get<LogStatsAPI>("/api/v1/admin/logs/stats", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 

@@ -25,7 +25,7 @@ export function SecuritySummary() {
     isError,
   } = useQuery({
     queryKey: ["security-warnings"],
-    queryFn: () => policyApi.getSecurityWarnings(),
+    queryFn: ({ signal }) => policyApi.getSecurityWarnings({ signal }),
     staleTime: 60000, // Cache for 1 minute
     retry: false,
   });

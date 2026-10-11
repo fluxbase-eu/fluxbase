@@ -9,8 +9,8 @@ export function useChatbots() {
 
   const query = useQuery({
     queryKey: ["chatbots", currentTenantId],
-    queryFn: async () => {
-      const data = await chatbotsApi.list();
+    queryFn: async ({ signal }) => {
+      const data = await chatbotsApi.list(undefined, { signal });
       return data || [];
     },
   });

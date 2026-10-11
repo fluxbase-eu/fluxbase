@@ -73,7 +73,7 @@ export function SAMLProvidersTab() {
 
   const { data: providers = [], isLoading } = useQuery({
     queryKey: ["samlProviders"],
-    queryFn: samlProviderApi.list,
+    queryFn: ({ signal }) => samlProviderApi.list({ signal }),
   });
 
   const createMutation = useMutation({

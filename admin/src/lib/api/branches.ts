@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export type BranchStatus =
   | "creating"
@@ -36,11 +36,14 @@ export interface ListBranchesResponse {
 }
 
 export const branchesApi = {
-  list: async (params?: {
-    status?: BranchStatus;
-    type?: BranchType;
-    mine?: boolean;
-  }): Promise<ListBranchesResponse> => {
+  list: async (
+    params?: {
+      status?: BranchStatus;
+      type?: BranchType;
+      mine?: boolean;
+    },
+    options?: ApiRequestOptions,
+  ): Promise<ListBranchesResponse> => {
     const searchParams = new URLSearchParams();
     if (params?.status) searchParams.set("status", params.status);
     if (params?.type) searchParams.set("type", params.type);
@@ -51,7 +54,9 @@ export const branchesApi = {
       ? `/api/v1/admin/branches?${queryString}`
       : "/api/v1/admin/branches";
 
-    const response = await api.get<ListBranchesResponse>(url);
+    const response = await api.get<ListBranchesResponse>(url, {
+      signal: options?.signal,
+    });
     return response.data;
   },
 
