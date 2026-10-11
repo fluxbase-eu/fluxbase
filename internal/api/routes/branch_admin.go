@@ -43,9 +43,11 @@ func BuildBranchRoutes(deps *BranchDeps) *RouteGroup {
 		DefaultAuth:  AuthRequired,
 		DefaultRoles: []string{"admin", "instance_admin", "tenant_admin", "service_role"},
 		Routes: []Route{
-			{Method: "GET", Path: "/branches/active", Handler: deps.GetActiveBranch, Summary: "Get active branch"},
-			{Method: "POST", Path: "/branches/active", Handler: deps.SetActiveBranch, Summary: "Set active branch"},
-			{Method: "DELETE", Path: "/branches/active", Handler: deps.ResetActiveBranch, Summary: "Reset active branch"},
+			// SEC-09 (#375): the active branch is an instance-global setting on
+			// the branching router; only instance-level admins may read/change it.
+			{Method: "GET", Path: "/branches/active", Handler: deps.GetActiveBranch, Summary: "Get active branch", Roles: []string{"admin", "instance_admin"}},
+			{Method: "POST", Path: "/branches/active", Handler: deps.SetActiveBranch, Summary: "Set active branch", Roles: []string{"admin", "instance_admin"}},
+			{Method: "DELETE", Path: "/branches/active", Handler: deps.ResetActiveBranch, Summary: "Reset active branch", Roles: []string{"admin", "instance_admin"}},
 			{Method: "GET", Path: "/branches/stats/pools", Handler: deps.GetPoolStats, Summary: "Get branch pool stats"},
 			{Method: "POST", Path: "/branches", Handler: deps.CreateBranch, Summary: "Create a branch"},
 			{Method: "GET", Path: "/branches", Handler: deps.ListBranches, Summary: "List branches"},

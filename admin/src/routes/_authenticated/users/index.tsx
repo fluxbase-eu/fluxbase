@@ -39,7 +39,7 @@ function UsersPage() {
 
   const { data: usersResponse, isLoading } = useQuery({
     queryKey: ["users", activeTab, currentTenant?.id],
-    queryFn: () => userManagementApi.listUsers(activeTab),
+    queryFn: ({ signal }) => userManagementApi.listUsers(activeTab, { signal }),
   });
 
   const rawUsers = usersResponse?.users || [];

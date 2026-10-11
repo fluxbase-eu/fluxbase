@@ -26,7 +26,9 @@ services:
       FLUXBASE_DATABASE_PASSWORD: fluxbase_app_password
       FLUXBASE_DATABASE_DATABASE: fluxbase_dev
       # This is just for the devcontainer. In production, you should use a strong, unique secret and manage it securely.
-      FLUXBASE_AUTH_JWT_SECRET: u9fJD9GFueM7Y1UPySQqLs2U6SHm3QB/vo3PiKclYwc=
+      # Value below is an obviously-fake placeholder that still passes the server's
+      # boot guard (>=32 chars, entropy >= 4.5 bits/char, not the blacklisted default).
+      FLUXBASE_AUTH_JWT_SECRET: devcontainer-JWT-placeholder-N0tF0rPr0duct10n-ch4ng3-me!2026
       FLUXBASE_DEBUG: "true"
       FLUXBASE_STORAGE_PROVIDER: s3
       FLUXBASE_STORAGE_S3_ENDPOINT: http://minio:9000

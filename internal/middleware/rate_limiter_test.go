@@ -197,7 +197,8 @@ func TestGitHubWebhookLimiter(t *testing.T) {
 }
 
 func TestMigrationAPILimiter(t *testing.T) {
-	limiter := MigrationAPILimiter()
+	limiter, stop := MigrationAPILimiter()
+	defer stop()
 	assert.NotNil(t, limiter)
 }
 
@@ -431,7 +432,9 @@ func TestMigrationAPILimiter_ServiceRoleBypass(t *testing.T) {
 		return c.Next()
 	})
 
-	app.Use(MigrationAPILimiter())
+	migrationLimiter, stop := MigrationAPILimiter()
+	defer stop()
+	app.Use(migrationLimiter)
 	app.Post("/migrations/up", func(c fiber.Ctx) error {
 		return c.SendString("Migration successful")
 	})
@@ -454,7 +457,9 @@ func TestMigrationAPILimiter_NonServiceRole(t *testing.T) {
 		return c.Next()
 	})
 
-	app.Use(MigrationAPILimiter())
+	migrationLimiter, stop := MigrationAPILimiter()
+	defer stop()
+	app.Use(migrationLimiter)
 	app.Post("/migrations/up", func(c fiber.Ctx) error {
 		return c.SendString("Migration successful")
 	})
@@ -478,7 +483,9 @@ func TestMigrationAPILimiter_ServiceRoleRateLimited(t *testing.T) {
 	})
 
 	// Use MigrationAPILimiterWithConfig with a low rate limit for testing
-	app.Use(MigrationAPILimiterWithConfig(5, 1*time.Minute))
+	migrationLimiter, stop := MigrationAPILimiterWithConfig(5, 1*time.Minute)
+	defer stop()
+	app.Use(migrationLimiter)
 	app.Post("/migrations/up", func(c fiber.Ctx) error {
 		return c.SendString("Migration successful")
 	})
@@ -510,7 +517,9 @@ func TestMigrationAPILimiter_ServiceRoleUnlimitedWhenZeroConfig(t *testing.T) {
 	})
 
 	// Use MigrationAPILimiterWithConfig with 0 rate limit (unlimited, backward compatible)
-	app.Use(MigrationAPILimiterWithConfig(0, 0))
+	migrationLimiter, stop := MigrationAPILimiterWithConfig(0, 0)
+	defer stop()
+	app.Use(migrationLimiter)
 	app.Post("/migrations/up", func(c fiber.Ctx) error {
 		return c.SendString("Migration successful")
 	})

@@ -80,6 +80,12 @@ func (h *TenantHandler) AssignAdmin(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
 
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict admin assignment to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
+
 	var req AssignAdminRequest
 	if err := ParseBody(c, &req); err != nil {
 		return err
@@ -135,6 +141,12 @@ func (h *TenantHandler) RemoveAdmin(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
 	userID := c.Params("user_id")
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict admin removal to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
 
 	result, err := h.DB.Pool().Exec(ctx, `
 		DELETE FROM platform.tenant_admin_assignments

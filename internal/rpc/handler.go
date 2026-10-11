@@ -592,7 +592,13 @@ func (h *Handler) CancelExecution(c fiber.Ctx) error {
 	}
 
 	// Get the updated execution
-	execution, _ = h.storage.GetExecution(ctx, id)
+	execution, err = h.storage.GetExecution(ctx, id)
+	if err != nil {
+		log.Error().Err(err).Str("id", id).Msg("Failed to get execution")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get execution",
+		})
+	}
 
 	return c.JSON(execution)
 }

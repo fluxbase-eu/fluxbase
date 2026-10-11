@@ -124,11 +124,12 @@ on:
         type: boolean
         default: true
 
+# Least privilege: default is read-only; each job that writes something
+# (releases/tags/git pushes, GHCR images, cosign signing) grants exactly what
+# it needs below. id-token: write appears ONLY on jobs that cosign-sign pushed
+# images (keyless Sigstore signing needs OIDC) — nothing else uses OIDC.
 permissions:
-  id-token: write
-  contents: write
-  packages: write
-  actions: read
+  contents: read
 
 jobs:
   get-version:
@@ -294,6 +295,11 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && !inputs.skip_validation
+    # gh run list (actions: read) and gh issue list (issues: read)
+    permissions:
+      contents: read
+      actions: read
+      issues: read
     steps:
       - uses: actions/checkout@v7
 
@@ -391,6 +397,10 @@ jobs:
     name: Generate Changelog
     needs: get-version
     runs-on: ubuntu-latest
+    # gh pr list (pull-requests: read) + gh release list (contents: read)
+    permissions:
+      contents: read
+      pull-requests: read
     # Runs for ALL trigger types (workflow_dispatch, tag push, release
     # published): create-release and the publish jobs below require its
     # outputs, so gating it on dispatch alone silently skipped binaries on
@@ -624,6 +634,9 @@ jobs:
     name: Create GitHub Release
     needs: [get-version, pre-release-checks, generate-changelog]
     runs-on: ubuntu-latest
+    # Creates and pushes the release tag + GitHub release
+    permissions:
+      contents: write
     if: |
       always() &&
       (needs.pre-release-checks.result == 'success' || needs.pre-release-checks.result == 'skipped') &&
@@ -713,6 +726,9 @@ jobs:
     name: Update version in config files
     needs: get-version
     runs-on: ubuntu-latest
+    # Commits and pushes version bumps to the source branch
+    permissions:
+      contents: write
     # workflow_dispatch ONLY: this job edits and pushes version files. On tag
     # pushes it used to check out the tag and `git push origin HEAD:<tag>`,
     # creating a stray branch named after the tag. Version bumps belong on the
@@ -821,6 +837,9 @@ jobs:
     name: Publish Binaries
     needs: [get-version, create-release]
     if: always() && (github.event_name != 'workflow_dispatch' || inputs.publish_binaries) && needs.create-release.result == 'success'
+    # Uploads assets to the GitHub release
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
@@ -935,6 +954,9 @@ jobs:
     name: Publish CLI (Cross-Platform)
     needs: [get-version, create-release]
     if: always() && (github.event_name != 'workflow_dispatch' || inputs.publish_binaries) && needs.create-release.result == 'success'
+    # Uploads assets to the GitHub release
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
@@ -995,6 +1017,11 @@ jobs:
     name: Build Docker Image (${{ matrix.flavor }} / ${{ matrix.arch }})
     needs: get-version
     if: github.event_name != 'workflow_dispatch' || inputs.publish_docker
+    # packages: write → GHCR push; id-token: write → cosign keyless signing
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -1034,12 +1061,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push ${{ matrix.flavor }}/${{ matrix.arch }} image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
           platforms: linux/${{ matrix.arch }}
           push: true
+          # SLSA provenance (max detail) + SBOM attestation pushed alongside
+          # the image so consumers can verify the build supply chain.
+          provenance: mode=max
+          sbom: true
           # full is the default image (unsuffixed arch tag); lite uses -lite.
           # --target selects the runtime stage; FLAVOR selects the go-builder config.
           target: ${{ matrix.flavor == 'lite' && 'runtime-lite' || 'runtime-full' }}
@@ -1052,10 +1084,24 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.flavor }}-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.flavor }}-${{ matrix.arch }}
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign the pushed image (keyless)
+        # Signs by digest so the signature is bound to the exact image that was
+        # just pushed; verify with `cosign verify ghcr.io/<repo>@<digest>`.
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign sign --yes "ghcr.io/${{ github.repository }}@${DIGEST}"
+
   publish-docker-manifest:
     name: Create Docker Multi-arch Manifest (${{ matrix.flavor }})
     needs: [get-version, publish-docker-arch]
     if: github.event_name != 'workflow_dispatch' || inputs.publish_docker
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -1115,6 +1161,11 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     if: github.event_name != 'workflow_dispatch' || inputs.publish_docs
+    # packages: write → GHCR push; id-token: write → cosign keyless signing
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -1167,16 +1218,28 @@ jobs:
             type=raw,value=rc,enable=${{ needs.get-version.outputs.is_prerelease == 'true' }}
 
       - name: Build and push documentation image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile.docs
           platforms: linux/amd64
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ${{ steps.meta-docs.outputs.tags }}
           labels: ${{ steps.meta-docs.outputs.labels }}
           cache-from: type=gha,scope=docs
           cache-to: type=gha,mode=max,scope=docs
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign the pushed docs image (keyless)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign sign --yes "ghcr.io/${{ github.repository }}-docs@${DIGEST}"
 
   publish-npm-sdk:
     name: Publish TypeScript SDK to NPM
@@ -1486,6 +1549,10 @@ jobs:
         update-postgres-version,
       ]
     runs-on: ubuntu-latest
+    # packages: write → OCI chart push to GHCR; contents: write → gh-pages index commit
+    permissions:
+      contents: write
+      packages: write
     # Publish Helm chart for all releases (stable and RC) unless disabled in workflow_dispatch
     if: |
       always() &&
@@ -1600,6 +1667,11 @@ jobs:
     needs: [get-version, get-postgres-versions]
     if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
     runs-on: ubuntu-latest
+    # packages: write → GHCR push; id-token: write → cosign keyless signing
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     strategy:
       matrix: ${{ fromJson(needs.get-postgres-versions.outputs.matrix) }}
     steps:
@@ -1616,12 +1688,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push AMD64 image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: ./postgres
           file: ./postgres/Dockerfile
           platforms: linux/amd64
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ghcr.io/${{ github.repository_owner }}/fluxbase-postgres:${{ matrix.version }}-amd64
           build-args: |
             POSTGRES_VERSION=${{ matrix.version }}
@@ -1629,11 +1704,25 @@ jobs:
           cache-from: type=gha,scope=postgres-${{ matrix.major }}-amd64
           cache-to: type=gha,mode=max,scope=postgres-${{ matrix.major }}-amd64
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign the pushed image (keyless)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign sign --yes "ghcr.io/${{ github.repository_owner }}/fluxbase-postgres@${DIGEST}"
+
   publish-postgres-arm64:
     name: Build Postgres Image (ARM64)
     needs: [get-version, get-postgres-versions]
     if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
     runs-on: ubuntu-24.04-arm
+    # packages: write → GHCR push; id-token: write → cosign keyless signing
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     strategy:
       matrix: ${{ fromJson(needs.get-postgres-versions.outputs.matrix) }}
     steps:
@@ -1650,18 +1739,30 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push ARM64 image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: ./postgres
           file: ./postgres/Dockerfile
           platforms: linux/arm64
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ghcr.io/${{ github.repository_owner }}/fluxbase-postgres:${{ matrix.version }}-arm64
           build-args: |
             POSTGRES_VERSION=${{ matrix.version }}
             POSTGRES_MAJOR=${{ matrix.major }}
           cache-from: type=gha,scope=postgres-${{ matrix.major }}-arm64
           cache-to: type=gha,mode=max,scope=postgres-${{ matrix.major }}-arm64
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign the pushed image (keyless)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign sign --yes "ghcr.io/${{ github.repository_owner }}/fluxbase-postgres@${DIGEST}"
 
   publish-postgres-manifests:
     name: Create Postgres Multi-arch Manifests
@@ -1674,6 +1775,9 @@ jobs:
       ]
     if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix: ${{ fromJson(needs.get-postgres-versions.outputs.matrix) }}
     steps:
@@ -1725,6 +1829,9 @@ jobs:
     needs: [get-postgres-versions, publish-postgres-manifests]
     runs-on: ubuntu-latest
     if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
+    # Commits and pushes the values.yaml bump
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -1781,6 +1888,9 @@ jobs:
         publish-npm-sdk-vue,
       ]
     runs-on: ubuntu-latest
+    # Edits the release body with smoke-test results → contents: write
+    permissions:
+      contents: write
     if: |
       always() &&
       (needs.publish-docker-manifest.result == 'success' || needs.publish-docker-manifest.result == 'skipped') &&

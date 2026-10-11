@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface EdgeFunction {
   id: string;
@@ -134,10 +134,14 @@ export const functionsApi = {
     return response.data.namespaces || ["default"];
   },
 
-  list: async (namespace?: string): Promise<EdgeFunction[]> => {
+  list: async (
+    namespace?: string,
+    options?: ApiRequestOptions,
+  ): Promise<EdgeFunction[]> => {
     const params = namespace ? `?namespace=${namespace}` : "";
     const response = await api.get<EdgeFunction[]>(
       `/api/v1/functions${params}`,
+      { signal: options?.signal },
     );
     return response.data;
   },

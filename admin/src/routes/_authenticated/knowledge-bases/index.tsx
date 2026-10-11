@@ -75,9 +75,9 @@ function KnowledgeBasesPage() {
     KnowledgeBaseSummary[]
   >({
     queryKey: ["knowledge-bases", currentTenantId],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        const data = await knowledgeBasesApi.list();
+        const data = await knowledgeBasesApi.list({ signal });
         return { bases: data || [], disabled: false };
       } catch (error) {
         const axiosError = error as {

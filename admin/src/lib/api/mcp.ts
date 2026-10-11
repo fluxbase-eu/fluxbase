@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface MCPTool {
   id: string;
@@ -130,10 +130,14 @@ export const mcpConfigApi = {
 };
 
 export const mcpToolsApi = {
-  list: async (namespace?: string): Promise<MCPTool[]> => {
+  list: async (
+    namespace?: string,
+    options?: ApiRequestOptions,
+  ): Promise<MCPTool[]> => {
     const params = namespace ? `?namespace=${namespace}` : "";
     const response = await api.get<{ tools: MCPTool[]; count: number }>(
       `/api/v1/mcp/tools${params}`,
+      { signal: options?.signal },
     );
     return response.data.tools || [];
   },
@@ -261,9 +265,12 @@ export interface UpdateCaptchaSettingsRequest {
 }
 
 export const captchaSettingsApi = {
-  get: async (): Promise<CaptchaSettingsResponse> => {
+  get: async (
+    options?: ApiRequestOptions,
+  ): Promise<CaptchaSettingsResponse> => {
     const response = await api.get<CaptchaSettingsResponse>(
       "/api/v1/admin/settings/captcha",
+      { signal: options?.signal },
     );
     return response.data;
   },

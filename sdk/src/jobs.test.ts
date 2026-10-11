@@ -177,23 +177,34 @@ describe('FluxbaseJobs', () => {
   })
 
   describe('list', () => {
-    it('should list all jobs', async () => {
+    it('should list all jobs from the { jobs, limit, offset } envelope', async () => {
       const mockJobs: Partial<Job>[] = [
         { id: 'job-1', status: 'completed' },
         { id: 'job-2', status: 'running' },
       ]
-      mockFetch.mockResponse = mockJobs
+      // Wire shape returned by GET /api/v1/jobs (handler_jobs.go ListJobs)
+      mockFetch.mockResponse = { jobs: mockJobs, limit: 50, offset: 0 }
 
       const { data, error } = await jobs.list()
 
       expect(mockFetch.lastUrl).toBe('/api/v1/jobs')
       expect(mockFetch.lastMethod).toBe('GET')
+      // The envelope is unwrapped: consumers get the jobs array
       expect(data).toEqual(mockJobs)
       expect(error).toBeNull()
     })
 
+    it('should return an empty array when no jobs are returned', async () => {
+      mockFetch.mockResponse = { jobs: [], limit: 50, offset: 0 }
+
+      const { data, error } = await jobs.list()
+
+      expect(error).toBeNull()
+      expect(data).toEqual([])
+    })
+
     it('should filter jobs by status', async () => {
-      mockFetch.mockResponse = []
+      mockFetch.mockResponse = { jobs: [], limit: 50, offset: 0 }
 
       await jobs.list({ status: 'running' })
 
@@ -201,7 +212,7 @@ describe('FluxbaseJobs', () => {
     })
 
     it('should filter jobs by namespace', async () => {
-      mockFetch.mockResponse = []
+      mockFetch.mockResponse = { jobs: [], limit: 50, offset: 0 }
 
       await jobs.list({ namespace: 'my-app' })
 
@@ -209,7 +220,7 @@ describe('FluxbaseJobs', () => {
     })
 
     it('should support pagination with limit', async () => {
-      mockFetch.mockResponse = []
+      mockFetch.mockResponse = { jobs: [], limit: 20, offset: 0 }
 
       await jobs.list({ limit: 20 })
 
@@ -217,7 +228,7 @@ describe('FluxbaseJobs', () => {
     })
 
     it('should support pagination with offset', async () => {
-      mockFetch.mockResponse = []
+      mockFetch.mockResponse = { jobs: [], limit: 50, offset: 40 }
 
       await jobs.list({ offset: 40 })
 
@@ -225,7 +236,7 @@ describe('FluxbaseJobs', () => {
     })
 
     it('should support includeResult option', async () => {
-      mockFetch.mockResponse = []
+      mockFetch.mockResponse = { jobs: [], limit: 50, offset: 0 }
 
       await jobs.list({ includeResult: true })
 
@@ -233,7 +244,7 @@ describe('FluxbaseJobs', () => {
     })
 
     it('should combine multiple filters', async () => {
-      mockFetch.mockResponse = []
+      mockFetch.mockResponse = { jobs: [], limit: 10, offset: 20 }
 
       await jobs.list({
         status: 'completed',

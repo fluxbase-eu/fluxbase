@@ -35,7 +35,7 @@ function LoginPage() {
   // Fetch SSO providers available for dashboard login
   const { data: ssoData } = useQuery({
     queryKey: ['sso-providers'],
-    queryFn: () => dashboardAuthAPI.getSSOProviders(),
+    queryFn: ({ signal }) => dashboardAuthAPI.getSSOProviders({ signal }),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false, // Don't retry on failure - SSO is optional
   })

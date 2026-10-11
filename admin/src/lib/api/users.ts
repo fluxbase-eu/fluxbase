@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 import type { User } from "./auth";
 export interface TenantAssignment {
   tenant_id: string;
@@ -38,11 +38,13 @@ const mapUserType = (userType: "app" | "dashboard"): "app" | "platform" => {
 export const userManagementApi = {
   listUsers: async (
     userType: "app" | "dashboard" = "app",
+    options?: ApiRequestOptions,
   ): Promise<{ users: EnrichedUser[]; total: number }> => {
     const response = await api.get<{ users: EnrichedUser[]; total: number }>(
       "/api/v1/admin/users",
       {
         params: { type: mapUserType(userType) },
+        signal: options?.signal,
       },
     );
     return response.data;

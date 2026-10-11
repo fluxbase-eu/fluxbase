@@ -62,7 +62,7 @@ function SchemaViewerPage() {
   const { data: availableSchemas = ["public"], isLoading: schemasLoading } =
     useQuery({
       queryKey: ["available-schemas"],
-      queryFn: databaseApi.getSchemas,
+      queryFn: ({ signal }) => databaseApi.getSchemas({ signal }),
       staleTime: 5 * 60 * 1000,
     });
 
@@ -74,13 +74,13 @@ function SchemaViewerPage() {
     error,
   } = useQuery({
     queryKey: ["schema-graph", selectedSchema],
-    queryFn: () => schemaApi.getGraph([selectedSchema]),
+    queryFn: ({ signal }) => schemaApi.getGraph([selectedSchema], { signal }),
     enabled: !schemasLoading,
   });
 
   const { data: warningsData } = useQuery({
     queryKey: ["security-warnings"],
-    queryFn: () => policyApi.getSecurityWarnings(),
+    queryFn: ({ signal }) => policyApi.getSecurityWarnings({ signal }),
     staleTime: 60000,
   });
 

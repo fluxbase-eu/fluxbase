@@ -38,13 +38,14 @@ export function ActiveSessionsTab() {
 
   const { data: sessionsData, isLoading } = useQuery({
     queryKey: ["sessions", page, pageSize],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const response = await api.get<{
         sessions: Session[];
         count: number;
         total_count: number;
       }>(
         `/api/v1/admin/auth/sessions?include_expired=true&limit=${pageSize}&offset=${page * pageSize}`,
+        { signal },
       );
       return response.data;
     },

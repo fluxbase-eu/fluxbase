@@ -7,6 +7,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mustEncodeCursor encodes a cursor for tests, failing the test on marshal error.
+func mustEncodeCursor(t testing.TB, column string, value interface{}, desc bool) string {
+	t.Helper()
+	cursor, err := EncodeCursor(column, value, desc)
+	require.NoError(t, err)
+	return cursor
+}
+
 func TestQueryBuilder_BuildSelect(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -462,7 +470,7 @@ func TestQueryBuilder_InvalidIdentifiers(t *testing.T) {
 
 	t.Run("cursor with invalid column returns an error", func(t *testing.T) {
 		qb := NewQueryBuilder("public", "users")
-		require.NoError(t, qb.WithCursor(EncodeCursor("bad col", "x", false), ""))
+		require.NoError(t, qb.WithCursor(mustEncodeCursor(t, "bad col", "x", false), ""))
 		sql, _, err := qb.BuildSelect()
 		require.Error(t, err)
 		assert.Empty(t, sql)
@@ -486,7 +494,7 @@ func TestNewQueryBuilder(t *testing.T) {
 
 func TestEncodeCursor(t *testing.T) {
 	t.Run("encodes cursor correctly", func(t *testing.T) {
-		cursor := EncodeCursor("id", "abc123", false)
+		cursor := mustEncodeCursor(t, "id", "abc123", false)
 		assert.NotEmpty(t, cursor)
 
 		// Should be valid base64
@@ -498,7 +506,7 @@ func TestEncodeCursor(t *testing.T) {
 	})
 
 	t.Run("encodes descending cursor", func(t *testing.T) {
-		cursor := EncodeCursor("created_at", "2025-01-01", true)
+		cursor := mustEncodeCursor(t, "created_at", "2025-01-01", true)
 		decoded, err := DecodeCursor(cursor)
 		assert.NoError(t, err)
 		assert.Equal(t, "created_at", decoded.Column)
@@ -506,17 +514,24 @@ func TestEncodeCursor(t *testing.T) {
 	})
 
 	t.Run("encodes numeric value", func(t *testing.T) {
-		cursor := EncodeCursor("count", 42, false)
+		cursor := mustEncodeCursor(t, "count", 42, false)
 		decoded, err := DecodeCursor(cursor)
 		assert.NoError(t, err)
 		assert.Equal(t, float64(42), decoded.Value) // JSON unmarshals numbers as float64
+	})
+
+	t.Run("propagates marshal error for unsupported value", func(t *testing.T) {
+		cursor, err := EncodeCursor("id", make(chan int), false)
+		assert.Error(t, err)
+		assert.Empty(t, cursor)
+		assert.Contains(t, err.Error(), "failed to encode cursor")
 	})
 }
 
 func TestDecodeCursor(t *testing.T) {
 	t.Run("decodes valid cursor", func(t *testing.T) {
 		// First encode, then decode
-		original := EncodeCursor("id", "test123", false)
+		original := mustEncodeCursor(t, "id", "test123", false)
 		decoded, err := DecodeCursor(original)
 		assert.NoError(t, err)
 		assert.Equal(t, "id", decoded.Column)
@@ -546,7 +561,7 @@ func TestDecodeCursor(t *testing.T) {
 
 func TestQueryBuilder_WithCursor(t *testing.T) {
 	t.Run("applies cursor condition ascending", func(t *testing.T) {
-		cursor := EncodeCursor("id", "last123", false)
+		cursor := mustEncodeCursor(t, "id", "last123", false)
 
 		qb := NewQueryBuilder("public", "users")
 		err := qb.WithCursor(cursor, "")
@@ -559,7 +574,7 @@ func TestQueryBuilder_WithCursor(t *testing.T) {
 	})
 
 	t.Run("applies cursor condition descending", func(t *testing.T) {
-		cursor := EncodeCursor("created_at", "2025-01-01", true)
+		cursor := mustEncodeCursor(t, "created_at", "2025-01-01", true)
 
 		qb := NewQueryBuilder("public", "users")
 		err := qb.WithCursor(cursor, "")
@@ -571,7 +586,7 @@ func TestQueryBuilder_WithCursor(t *testing.T) {
 	})
 
 	t.Run("cursor column override", func(t *testing.T) {
-		cursor := EncodeCursor("old_column", "value", false)
+		cursor := mustEncodeCursor(t, "old_column", "value", false)
 
 		qb := NewQueryBuilder("public", "users")
 		err := qb.WithCursor(cursor, "new_column")
@@ -583,7 +598,7 @@ func TestQueryBuilder_WithCursor(t *testing.T) {
 	})
 
 	t.Run("combines cursor with filters", func(t *testing.T) {
-		cursor := EncodeCursor("id", "last123", false)
+		cursor := mustEncodeCursor(t, "id", "last123", false)
 
 		qb := NewQueryBuilder("public", "users").
 			WithFilters([]Filter{{Column: "status", Operator: OpEqual, Value: "active"}})
@@ -1158,7 +1173,7 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cursor := EncodeCursor(tt.column, tt.value, tt.desc)
+			cursor := mustEncodeCursor(t, tt.column, tt.value, tt.desc)
 			decoded, err := DecodeCursor(cursor)
 
 			require.NoError(t, err)

@@ -568,12 +568,6 @@ func (p *DocumentProcessor) StartProcessingSweeper(ctx context.Context, interval
 		interval = 5 * time.Minute
 	}
 	go func() {
-		defer func() {
-			if rec := recover(); rec != nil {
-				log.Error().Interface("panic", rec).Msg("Panic in document processing sweeper - recovered")
-			}
-		}()
-
 		// Initial sweep shortly after startup so documents orphaned by a
 		// previous process are recovered without waiting a full interval.
 		select {
@@ -581,7 +575,19 @@ func (p *DocumentProcessor) StartProcessingSweeper(ctx context.Context, interval
 			return
 		case <-time.After(30 * time.Second):
 		}
-		p.runProcessingSweep(ctx)
+
+		// sweep runs a single recovery pass, recovering from panics inside
+		// the pass so one panicking iteration cannot permanently kill the
+		// sweeper loop.
+		sweep := func() {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Error().Interface("panic", rec).Msg("Panic in document processing sweeper - recovered")
+				}
+			}()
+			p.runProcessingSweep(ctx)
+		}
+		sweep()
 
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
@@ -590,7 +596,7 @@ func (p *DocumentProcessor) StartProcessingSweeper(ctx context.Context, interval
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				p.runProcessingSweep(ctx)
+				sweep()
 			}
 		}
 	}()

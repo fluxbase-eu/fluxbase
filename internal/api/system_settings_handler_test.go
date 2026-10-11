@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -176,31 +177,31 @@ func TestGetDefaultSetting(t *testing.T) {
 	handler := NewSystemSettingsHandler(nil, nil)
 
 	t.Run("returns default for known key", func(t *testing.T) {
-		setting := handler.getDefaultSetting("app.auth.signup_enabled")
+		setting := handler.getDefaultSetting(context.Background(), "app.auth.signup_enabled")
 		assert.NotNil(t, setting)
 		assert.Equal(t, "app.auth.signup_enabled", setting.Key)
 		assert.NotNil(t, setting.Value)
 	})
 
 	t.Run("returns nil for unknown key", func(t *testing.T) {
-		setting := handler.getDefaultSetting("unknown.key")
+		setting := handler.getDefaultSetting(context.Background(), "unknown.key")
 		assert.Nil(t, setting)
 	})
 
 	t.Run("returns correct default value for password min length", func(t *testing.T) {
-		setting := handler.getDefaultSetting("app.auth.password_min_length")
+		setting := handler.getDefaultSetting(context.Background(), "app.auth.password_min_length")
 		assert.NotNil(t, setting)
 		assert.Equal(t, 12, setting.Value["value"])
 	})
 
 	t.Run("returns correct default value for captcha provider", func(t *testing.T) {
-		setting := handler.getDefaultSetting("app.security.captcha.provider")
+		setting := handler.getDefaultSetting(context.Background(), "app.security.captcha.provider")
 		assert.NotNil(t, setting)
 		assert.Equal(t, "hcaptcha", setting.Value["value"])
 	})
 
 	t.Run("returns correct default value for SES region", func(t *testing.T) {
-		setting := handler.getDefaultSetting("app.email.ses_region")
+		setting := handler.getDefaultSetting(context.Background(), "app.email.ses_region")
 		assert.NotNil(t, setting)
 		assert.Equal(t, "us-east-1", setting.Value["value"])
 	})

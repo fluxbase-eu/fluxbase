@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface JobFunction {
   id: string;
@@ -133,10 +133,14 @@ export const jobsApi = {
     return response.data.namespaces || ["default"];
   },
 
-  listFunctions: async (namespace?: string): Promise<JobFunction[]> => {
+  listFunctions: async (
+    namespace?: string,
+    options?: ApiRequestOptions,
+  ): Promise<JobFunction[]> => {
     const params = namespace ? `?namespace=${namespace}` : "";
     const response = await api.get<JobFunction[]>(
       `/api/v1/admin/jobs/functions${params}`,
+      { signal: options?.signal },
     );
     return response.data;
   },

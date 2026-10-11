@@ -1,7 +1,15 @@
 import { useAuthStore } from "@/stores/auth-store";
 import { useImpersonationStore } from "@/stores/impersonation-store";
+import { ensureFreshAccessToken } from "@/lib/api/client";
+import { removeCookie } from "@/lib/cookies";
 
 const USER_KEY = "fluxbase_admin_user";
+// Legacy JS-readable refresh copies written by older builds. They are read
+// once (adopted into memory by the auth store on startup) and scrubbed here
+// and on logout; the server-side HttpOnly `fluxbase_admin_refresh` cookie is
+// the authoritative refresh storage now.
+const LEGACY_REFRESH_SESSION_KEY = "fluxbase_admin_refresh_token";
+const LEGACY_REFRESH_COOKIE_NAME = "fluxbase_admin_refresh_token";
 
 export interface AdminUser {
   id: string;
@@ -82,10 +90,33 @@ export function clearTokens(): void {
   localStorage.removeItem("fluxbase_admin_refresh_token");
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  // Legacy JS-readable refresh copies (sessionStorage key + cookie).
+  try {
+    sessionStorage.removeItem(LEGACY_REFRESH_SESSION_KEY);
+  } catch {
+    // sessionStorage may be unavailable (privacy mode)
+  }
+  removeCookie(LEGACY_REFRESH_COOKIE_NAME);
 }
 
 export function isAuthenticated(): boolean {
   return !!getAccessToken();
+}
+
+/**
+ * Silent session restore for cold page loads.
+ *
+ * The access token cookie restores the session instantly; when it is missing
+ * (or already expired) but the HttpOnly `fluxbase_admin_refresh` cookie is
+ * still present, this performs one silent token refresh so the user does not
+ * have to sign in again. Safe to call on every startup: it is a no-op when a
+ * valid access token exists and simply resolves to logged-out when no
+ * refresh cookie is present.
+ */
+export async function attemptSessionRestore(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (useAuthStore.getState().auth.accessToken) return;
+  await ensureFreshAccessToken();
 }
 
 export function logout(): void {

@@ -180,18 +180,18 @@ test.describe("SSO Login", () => {
       )
       .toBe(accessToken);
 
-    // Verify refresh token is stored in session storage (the server also
-    // sets an HttpOnly cookie that JavaScript cannot read)
+    // Security contract (audit SEC-06): the refresh token must NOT be
+    // persisted in web storage (XSS-stealable). It lives in memory only on
+    // this path; the HttpOnly cookie is set exclusively by the server for
+    // the /dashboard/auth flows, so it cannot exist for a client-side SSO
+    // callback — assert its absence from storage instead.
     const storedRefresh = await page.evaluate(() => {
-      const raw = sessionStorage.getItem("fluxbase_admin_refresh_token");
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return raw;
-      }
+      const legacy = sessionStorage.getItem("fluxbase_admin_refresh_token");
+      const local = localStorage.getItem("fluxbase_admin_refresh_token");
+      return { legacy, local };
     });
-    expect(storedRefresh).toBe(refreshToken);
+    expect(storedRefresh.legacy).toBeNull();
+    expect(storedRefresh.local).toBeNull();
   });
 
   test("callback page handles missing tokens", async ({ page }) => {

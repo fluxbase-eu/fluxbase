@@ -61,17 +61,19 @@ function SecretsPage() {
 
   const { data: secrets, isLoading } = useQuery<Secret[]>({
     queryKey: ['secrets', scopeFilter, currentTenantId],
-    queryFn: () => secretsApi.list(scopeFilter || undefined),
+    queryFn: ({ signal }) =>
+      secretsApi.list(scopeFilter || undefined, undefined, { signal }),
   })
 
   const { data: stats } = useQuery<SecretsStats>({
     queryKey: ['secrets-stats', currentTenantId],
-    queryFn: secretsApi.getStats,
+    queryFn: ({ signal }) => secretsApi.getStats({ signal }),
   })
 
   const { data: versions } = useQuery<SecretVersion[]>({
     queryKey: ['secret-versions', selectedSecret?.id, currentTenantId],
-    queryFn: () => secretsApi.getVersions(selectedSecret!.id),
+    queryFn: ({ signal }) =>
+      secretsApi.getVersions(selectedSecret!.id, { signal }),
     enabled: !!selectedSecret && isHistoryDialogOpen,
   })
 

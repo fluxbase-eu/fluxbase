@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface ClientKey {
   id: string;
@@ -22,14 +22,18 @@ export interface CreateClientKeyRequest {
   expires_at?: string;
 }
 
-export interface CreateClientKeyResponse {
-  client_key: ClientKey;
+// The server returns the created key FLATTENED: the ClientKey fields plus the
+// one-time plaintext under `key` (see internal/auth/clientkey.go
+// ClientKeyWithPlaintext).
+export interface CreateClientKeyResponse extends ClientKey {
   key: string;
 }
 
 export const clientKeysApi = {
-  list: async (): Promise<ClientKey[]> => {
-    const response = await api.get<ClientKey[]>("/api/v1/client-keys");
+  list: async (options?: ApiRequestOptions): Promise<ClientKey[]> => {
+    const response = await api.get<ClientKey[]>("/api/v1/client-keys", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 
@@ -128,8 +132,10 @@ export interface UpdateServiceKeyRequest {
 }
 
 export const serviceKeysApi = {
-  list: async (): Promise<ServiceKey[]> => {
-    const response = await api.get<ServiceKey[]>("/api/v1/admin/service-keys");
+  list: async (options?: ApiRequestOptions): Promise<ServiceKey[]> => {
+    const response = await api.get<ServiceKey[]>("/api/v1/admin/service-keys", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 
@@ -280,9 +286,12 @@ export interface RotatePlatformServiceKeyRequest {
 }
 
 export const platformServiceKeysApi = {
-  list: async (): Promise<PlatformServiceKey[]> => {
+  list: async (
+    options?: ApiRequestOptions,
+  ): Promise<PlatformServiceKey[]> => {
     const response = await api.get<PlatformServiceKey[]>(
       "/api/v1/admin/service-keys",
+      { signal: options?.signal },
     );
     return response.data;
   },

@@ -3,10 +3,16 @@ import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 import { setAuthToken as setFluxbaseAuthToken } from '@/lib/fluxbase-client'
 
 const AUTH_COOKIE_NAME = 'fluxbase_admin_token'
-// The refresh token is no longer persisted in a JavaScript-readable cookie:
-// the server sets it as an HttpOnly cookie (`fluxbase_admin_refresh`) and the
-// client keeps a session-scoped copy (per browser tab) for API calls. The
-// legacy cookie name is kept only to migrate/clean up older sessions.
+// Token storage design: the ACCESS token lives in a JS-readable cookie so a
+// page reload restores the session without extra requests. The REFRESH token
+// is never persisted in JavaScript-readable storage: the server sets it as an
+// HttpOnly cookie (`fluxbase_admin_refresh`, scoped to /api/v1/admin) and the
+// client only keeps it in memory for the current tab. When the access token
+// is gone but the HttpOnly refresh cookie still exists, the app performs a
+// silent refresh (`attemptSessionRestore` in lib/auth.ts) to rebuild the
+// session. Legacy JS-readable refresh copies (sessionStorage key and cookie
+// below) are adopted into memory and cleared on startup for one transition
+// release.
 const REFRESH_SESSION_KEY = 'fluxbase_admin_refresh_token'
 const LEGACY_REFRESH_COOKIE_NAME = 'fluxbase_admin_refresh_token'
 
@@ -40,24 +46,33 @@ function parseCookieToken(name: string): string {
   }
 }
 
-function getSessionRefreshToken(): string {
-  if (typeof window === 'undefined') return ''
-  try {
-    const raw = sessionStorage.getItem(REFRESH_SESSION_KEY)
-    return raw ? JSON.parse(raw) : ''
-  } catch {
-    return ''
-  }
-}
+// One-transition-release migration: older builds persisted the refresh token
+// in sessionStorage and a JS-readable cookie. If either is present, adopt it
+// into memory (so the in-flight refresh flow keeps working) and clear both.
+function adoptLegacySessionRefreshToken(): string {
+  let token = ''
 
-function setSessionRefreshToken(token: string): void {
-  if (typeof window === 'undefined') return
-  try {
-    sessionStorage.setItem(REFRESH_SESSION_KEY, JSON.stringify(token))
-  } catch {
-    // sessionStorage may be unavailable (privacy mode); the HttpOnly cookie
-    // set by the server keeps the refresh flow working without it.
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = sessionStorage.getItem(REFRESH_SESSION_KEY)
+      if (raw) token = JSON.parse(raw) || ''
+    } catch {
+      // ignore malformed values
+    }
+    try {
+      sessionStorage.removeItem(REFRESH_SESSION_KEY)
+    } catch {
+      // sessionStorage may be unavailable (privacy mode)
+    }
   }
+
+  const legacyCookie = parseCookieToken(LEGACY_REFRESH_COOKIE_NAME)
+  if (legacyCookie) {
+    removeCookie(LEGACY_REFRESH_COOKIE_NAME)
+    if (!token) token = legacyCookie
+  }
+
+  return token
 }
 
 function clearSessionRefreshToken(): void {
@@ -69,19 +84,9 @@ function clearSessionRefreshToken(): void {
   }
 }
 
-// Migrates sessions from the legacy JS refresh cookie into sessionStorage.
-function migrateLegacyRefreshCookie(): string {
-  const legacy = parseCookieToken(LEGACY_REFRESH_COOKIE_NAME)
-  if (legacy) {
-    removeCookie(LEGACY_REFRESH_COOKIE_NAME)
-    setSessionRefreshToken(legacy)
-  }
-  return legacy
-}
-
 export const useAuthStore = create<AuthState>()((set) => {
   const initToken = parseCookieToken(AUTH_COOKIE_NAME)
-  const initRefreshToken = getSessionRefreshToken() || migrateLegacyRefreshCookie()
+  const initRefreshToken = adoptLegacySessionRefreshToken()
 
   if (initToken) {
     setFluxbaseAuthToken(initToken)
@@ -100,10 +105,11 @@ export const useAuthStore = create<AuthState>()((set) => {
           setFluxbaseAuthToken(accessToken)
           return { ...state, auth: { ...state.auth, accessToken } }
         }),
+      // The refresh token is kept in memory only; the server persists the
+      // authoritative copy in the HttpOnly `fluxbase_admin_refresh` cookie.
       setTokens: (accessToken, refreshToken) =>
         set((state) => {
           setCookie(AUTH_COOKIE_NAME, JSON.stringify(accessToken))
-          setSessionRefreshToken(refreshToken)
           setFluxbaseAuthToken(accessToken)
           return {
             ...state,
@@ -119,7 +125,7 @@ export const useAuthStore = create<AuthState>()((set) => {
       reset: () =>
         set((state) => {
           removeCookie(AUTH_COOKIE_NAME)
-          // Clean up both the session copy and the legacy JS cookie.
+          // Scrub any legacy JS-readable refresh copies too.
           clearSessionRefreshToken()
           removeCookie(LEGACY_REFRESH_COOKIE_NAME)
           setFluxbaseAuthToken(null)

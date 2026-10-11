@@ -76,9 +76,12 @@ export function KeyValueArrayEditor({
             <div key={claimKey} className='space-y-1 rounded-md border p-3'>
               <div className='text-sm font-semibold'>{claimKey}</div>
               <div className='space-y-1'>
+                {/* Values are unique within a claim (handleAdd rejects
+                    duplicates), so the value itself is a stable identity —
+                    unlike the array index, which shifts on removal. */}
                 {values.map((val, idx) => (
                   <div
-                    key={idx}
+                    key={val}
                     className='bg-muted flex items-center gap-2 rounded-md px-3 py-1'
                   >
                     <span className='flex-1 font-mono text-sm'>{val}</span>

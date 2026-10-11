@@ -52,13 +52,13 @@ function InstanceSettingsPage() {
   // Fetch instance settings
   const { data: settingsData, isLoading } = useQuery<InstanceSettingsResponse>({
     queryKey: ["instance-settings"],
-    queryFn: () => instanceSettingsApi.get(),
+    queryFn: ({ signal }) => instanceSettingsApi.get({ signal }),
   });
 
   // Fetch overridable settings list
   const { data: overridableData } = useQuery<OverridableResponse>({
     queryKey: ["instance-settings", "overridable"],
-    queryFn: () => instanceSettingsApi.getOverridable(),
+    queryFn: ({ signal }) => instanceSettingsApi.getOverridable({ signal }),
   });
 
   // Get rate limit setting from nested structure

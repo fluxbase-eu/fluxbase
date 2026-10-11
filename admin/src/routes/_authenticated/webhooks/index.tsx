@@ -93,7 +93,7 @@ function WebhooksPage() {
   // Fetch webhooks
   const { data: webhooks, isLoading } = useQuery<WebhookType[]>({
     queryKey: ['webhooks', currentTenantId],
-    queryFn: webhooksApi.list,
+    queryFn: ({ signal }) => webhooksApi.list({ signal }),
   })
 
   // Fetch deliveries for selected webhook
@@ -104,9 +104,9 @@ function WebhooksPage() {
       selectedWebhook,
       currentTenantId,
     ],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!selectedWebhook) return []
-      return webhooksApi.getDeliveries(selectedWebhook.id, 50)
+      return webhooksApi.getDeliveries(selectedWebhook.id, 50, { signal })
     },
     enabled: !!selectedWebhook,
   })
@@ -114,7 +114,7 @@ function WebhooksPage() {
   // Fetch available tables
   const { data: tables } = useQuery<Array<{ schema: string; name: string }>>({
     queryKey: ['tables'],
-    queryFn: () => databaseApi.getTables(),
+    queryFn: ({ signal }) => databaseApi.getTables(undefined, { signal }),
   })
 
   // Create webhook

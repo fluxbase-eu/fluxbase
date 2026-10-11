@@ -13,6 +13,12 @@ on:
         default: "18"
         type: string
 
+# Least privilege: CI only reads source and uploads artifacts/coverage.
+# The Codecov steps authenticate with the CODECOV_TOKEN secret, not the
+# GITHUB_TOKEN, so no job needs anything beyond read.
+permissions:
+  contents: read
+
 jobs:
   changes:
     name: Detect Changes
@@ -671,7 +677,7 @@ jobs:
 
       - name: Check coverage thresholds
         run: |
-          go install github.com/vladopajic/go-test-coverage/v2@v2.19.0
+          go install github.com/vladopajic/go-test-coverage/v2@v2.19.0 # pinned: v2.20.0 requires Go 1.27, CI runs 1.26.x
 
           # On a selective (non-core, partial-e2e) run, coverage-e2e.out only
           # reflects the selected tests, so the merged coverage.out would

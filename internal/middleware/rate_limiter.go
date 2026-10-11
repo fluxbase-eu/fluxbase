@@ -566,7 +566,7 @@ func GitHubWebhookLimiter(storage ...fiber.Storage) fiber.Handler {
 // Service keys (sk_*) use per-key configurable rate limits from the database
 //
 // Deprecated: Use MigrationAPILimiterWithConfig for H-2 security fix
-func MigrationAPILimiter(storage ...fiber.Storage) fiber.Handler {
+func MigrationAPILimiter(storage ...fiber.Storage) (fiber.Handler, func()) {
 	return MigrationAPILimiterWithConfig(0, 0, storage...)
 }
 
@@ -574,7 +574,10 @@ func MigrationAPILimiter(storage ...fiber.Storage) fiber.Handler {
 // H-2: Enforces rate limiting for service_role tokens when configured
 // serviceRoleRateLimit: Max requests for service_role tokens (0 = unlimited, for backward compatibility)
 // serviceRoleRateWindow: Time window for service_role rate limiting
-func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWindow time.Duration, storage ...fiber.Storage) fiber.Handler {
+//
+// It also returns a stop function that terminates the background stale-limiter
+// eviction goroutine; callers should defer it so the goroutine does not leak.
+func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWindow time.Duration, storage ...fiber.Storage) (fiber.Handler, func()) {
 	// Default rate limiter for service keys without custom limits
 	defaultRateLimiterCfg := RateLimiterConfig{
 		Max:        10,            // 10 requests
@@ -631,20 +634,27 @@ func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWind
 	perKeyLimiterTimes := make(map[string]time.Time)
 	var limiterMu sync.RWMutex
 
-	// Periodically evict stale per-key limiters to prevent unbounded growth
+	// Periodically evict stale per-key limiters to prevent unbounded growth.
+	// The evictor runs until the returned stop function is called.
+	stopEvictor := make(chan struct{})
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		defer ticker.Stop()
-		for range ticker.C {
-			limiterMu.Lock()
-			now := time.Now()
-			for k, t := range perKeyLimiterTimes {
-				if now.Sub(t) > time.Hour {
-					delete(perKeyLimiters, k)
-					delete(perKeyLimiterTimes, k)
+		for {
+			select {
+			case <-ticker.C:
+				limiterMu.Lock()
+				now := time.Now()
+				for k, t := range perKeyLimiterTimes {
+					if now.Sub(t) > time.Hour {
+						delete(perKeyLimiters, k)
+						delete(perKeyLimiterTimes, k)
+					}
 				}
+				limiterMu.Unlock()
+			case <-stopEvictor:
+				return
 			}
-			limiterMu.Unlock()
 		}
 	}()
 
@@ -721,7 +731,7 @@ func MigrationAPILimiterWithConfig(serviceRoleRateLimit int, serviceRoleRateWind
 		}
 
 		return limiter(c)
-	}
+	}, func() { close(stopEvictor) }
 }
 
 // StorageUploadLimiter limits file upload requests per user/IP

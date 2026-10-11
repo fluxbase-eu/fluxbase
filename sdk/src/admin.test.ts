@@ -240,18 +240,32 @@ describe("FluxbaseAdmin", () => {
               id: "user-1",
               email: "user1@example.com",
               role: "user",
-              created_at: "2024-01-26T10:00:00Z",
+              provider: "email",
+              active_sessions: 1,
+              last_sign_in: "2024-01-26T10:00:00Z",
+              is_locked: false,
               email_verified: true,
+              user_metadata: {},
+              app_metadata: {},
+              created_at: "2024-01-26T10:00:00Z",
+              updated_at: "2024-01-26T10:00:00Z",
             },
             {
               id: "user-2",
               email: "user2@example.com",
               role: "user",
-              created_at: "2024-01-26T11:00:00Z",
+              provider: "invite_pending",
+              active_sessions: 0,
+              last_sign_in: null,
+              is_locked: false,
               email_verified: false,
+              created_at: "2024-01-26T11:00:00Z",
+              updated_at: "2024-01-26T11:00:00Z",
             },
           ],
           total: 2,
+          limit: 100,
+          offset: 0,
         };
 
         vi.mocked(mockFetch.get).mockResolvedValue(response);
@@ -263,6 +277,8 @@ describe("FluxbaseAdmin", () => {
         expect(result).toBeDefined();
         expect(result!.users).toHaveLength(2);
         expect(result!.total).toBe(2);
+        expect(result!.limit).toBe(100);
+        expect(result!.offset).toBe(0);
       });
 
       it("should list users with filters", async () => {
@@ -272,10 +288,17 @@ describe("FluxbaseAdmin", () => {
               id: "user-1",
               email: "john@example.com",
               role: "user",
+              provider: "email",
+              active_sessions: 0,
+              last_sign_in: null,
+              is_locked: false,
               created_at: "2024-01-26T10:00:00Z",
+              updated_at: "2024-01-26T10:00:00Z",
             },
           ],
           total: 1,
+          limit: 10,
+          offset: 0,
         };
 
         vi.mocked(mockFetch.get).mockResolvedValue(response);
@@ -284,19 +307,42 @@ describe("FluxbaseAdmin", () => {
           exclude_admins: true,
           search: "john",
           limit: 10,
+          offset: 0,
           type: "app",
         });
 
         expect(mockFetch.get).toHaveBeenCalledWith(
-          "/api/v1/admin/users?exclude_admins=true&search=john&limit=10&type=app",
+          "/api/v1/admin/users?exclude_admins=true&search=john&limit=10&offset=0&type=app",
         );
         expect(error).toBeNull();
         expect(result).toBeDefined();
         expect(result!.users).toHaveLength(1);
       });
 
+      it("should pass platform user type to the server", async () => {
+        const response: ListUsersResponse = {
+          users: [],
+          total: 0,
+          limit: 100,
+          offset: 0,
+        };
+        vi.mocked(mockFetch.get).mockResolvedValue(response);
+
+        const { error } = await admin.listUsers({ type: "platform" });
+
+        expect(mockFetch.get).toHaveBeenCalledWith(
+          "/api/v1/admin/users?type=platform",
+        );
+        expect(error).toBeNull();
+      });
+
       it("should handle empty filters", async () => {
-        const response: ListUsersResponse = { users: [], total: 0 };
+        const response: ListUsersResponse = {
+          users: [],
+          total: 0,
+          limit: 100,
+          offset: 0,
+        };
         vi.mocked(mockFetch.get).mockResolvedValue(response);
 
         const { data: result, error } = await admin.listUsers({});
@@ -313,7 +359,12 @@ describe("FluxbaseAdmin", () => {
             id: "new-user-id",
             email: "newuser@example.com",
             role: "user",
+            provider: "invite_pending",
+            active_sessions: 0,
+            last_sign_in: null,
+            is_locked: false,
             created_at: "2024-01-26T12:00:00Z",
+            updated_at: "2024-01-26T12:00:00Z",
             email_verified: false,
           },
           invitation_link: "https://app.example.com/invite?token=abc123",
@@ -343,13 +394,18 @@ describe("FluxbaseAdmin", () => {
         expect(result!.invitation_link).toBeDefined();
       });
 
-      it("should invite dashboard user", async () => {
+      it("should invite platform user", async () => {
         const response: InviteUserResponse = {
           user: {
             id: "new-user-id",
-            email: "dashboarduser@example.com",
+            email: "platformuser@example.com",
             role: "dashboard_user",
+            provider: "invite_pending",
+            active_sessions: 0,
+            last_sign_in: null,
+            is_locked: false,
             created_at: "2024-01-26T12:00:00Z",
+            updated_at: "2024-01-26T12:00:00Z",
           },
           message: "User invited successfully",
         };
@@ -358,20 +414,21 @@ describe("FluxbaseAdmin", () => {
 
         const { data: result, error } = await admin.inviteUser(
           {
-            email: "dashboarduser@example.com",
+            email: "platformuser@example.com",
             role: "dashboard_user",
           },
-          "dashboard",
+          "platform",
         );
 
         expect(mockFetch.post).toHaveBeenCalledWith(
-          "/api/v1/admin/users/invite?type=dashboard",
+          "/api/v1/admin/users/invite?type=platform",
           {
-            email: "dashboarduser@example.com",
+            email: "platformuser@example.com",
             role: "dashboard_user",
           },
         );
         expect(error).toBeNull();
+        expect(result!.user.email).toBe("platformuser@example.com");
       });
     });
 
@@ -393,7 +450,7 @@ describe("FluxbaseAdmin", () => {
         expect(result!.message).toBe("User deleted successfully");
       });
 
-      it("should delete dashboard user", async () => {
+      it("should delete platform user", async () => {
         const response: DeleteUserResponse = {
           message: "User deleted successfully",
         };
@@ -402,11 +459,11 @@ describe("FluxbaseAdmin", () => {
 
         const { data: result, error } = await admin.deleteUser(
           "user-123",
-          "dashboard",
+          "platform",
         );
 
         expect(mockFetch.delete).toHaveBeenCalledWith(
-          "/api/v1/admin/users/user-123?type=dashboard",
+          "/api/v1/admin/users/user-123?type=platform",
         );
         expect(error).toBeNull();
       });
@@ -418,6 +475,10 @@ describe("FluxbaseAdmin", () => {
           id: "user-123",
           email: "user@example.com",
           role: "admin",
+          provider: "email",
+          active_sessions: 1,
+          last_sign_in: null,
+          is_locked: false,
           created_at: "2024-01-26T10:00:00Z",
           updated_at: "2024-01-26T12:00:00Z",
         };
@@ -440,12 +501,17 @@ describe("FluxbaseAdmin", () => {
         expect(result!.role).toBe("admin");
       });
 
-      it("should update dashboard user role", async () => {
+      it("should update platform user role", async () => {
         const user: EnrichedUser = {
           id: "user-123",
           email: "user@example.com",
           role: "instance_admin",
+          provider: "email",
+          active_sessions: 0,
+          last_sign_in: null,
+          is_locked: false,
           created_at: "2024-01-26T10:00:00Z",
+          updated_at: "2024-01-26T10:00:00Z",
         };
 
         vi.mocked(mockFetch.patch).mockResolvedValue(user);
@@ -453,16 +519,17 @@ describe("FluxbaseAdmin", () => {
         const { data: result, error } = await admin.updateUserRole(
           "user-123",
           "instance_admin",
-          "dashboard",
+          "platform",
         );
 
         expect(mockFetch.patch).toHaveBeenCalledWith(
-          "/api/v1/admin/users/user-123/role?type=dashboard",
+          "/api/v1/admin/users/user-123/role?type=platform",
           {
             role: "instance_admin",
           },
         );
         expect(error).toBeNull();
+        expect(result!.role).toBe("instance_admin");
       });
     });
 
@@ -486,7 +553,7 @@ describe("FluxbaseAdmin", () => {
         expect(result!.message).toBe("Password reset email sent");
       });
 
-      it("should reset dashboard user password", async () => {
+      it("should reset platform user password", async () => {
         const response: ResetUserPasswordResponse = {
           message: "Password reset successfully",
         };
@@ -495,11 +562,11 @@ describe("FluxbaseAdmin", () => {
 
         const { data: result, error } = await admin.resetUserPassword(
           "user-123",
-          "dashboard",
+          "platform",
         );
 
         expect(mockFetch.post).toHaveBeenCalledWith(
-          "/api/v1/admin/users/user-123/reset-password?type=dashboard",
+          "/api/v1/admin/users/user-123/reset-password?type=platform",
           {},
         );
         expect(error).toBeNull();
@@ -563,10 +630,17 @@ describe("FluxbaseAdmin", () => {
             id: "user-1",
             email: "user1@example.com",
             role: "user",
+            provider: "email",
+            active_sessions: 0,
+            last_sign_in: null,
+            is_locked: false,
             created_at: "2024-01-26T10:00:00Z",
+            updated_at: "2024-01-26T10:00:00Z",
           },
         ],
         total: 1,
+        limit: 100,
+        offset: 0,
       });
 
       const { data: users, error: usersError } = await admin.listUsers();

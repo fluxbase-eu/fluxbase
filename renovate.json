@@ -15,6 +15,10 @@
   "vulnerabilityAlerts": {
     "labels": ["security"]
   },
+  "pinDigests": true,
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "regexManagers": [
     {
       "description": "Update go-version in GitHub Actions workflows",

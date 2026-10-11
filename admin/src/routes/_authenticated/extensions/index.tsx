@@ -105,9 +105,10 @@ function ExtensionsPage() {
 
   const { data, isLoading, error } = useQuery<ListExtensionsResponse>({
     queryKey: ['extensions'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const response = await apiClient.get<ListExtensionsResponse>(
-        '/api/v1/admin/extensions'
+        '/api/v1/admin/extensions',
+        { signal }
       )
       return response.data
     },

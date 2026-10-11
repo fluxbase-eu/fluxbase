@@ -522,7 +522,7 @@ func main() {
 	go func() {
 		time.Sleep(2 * time.Second)
 		log.Warn().Msg("Force exiting - cleanup took too long")
-		os.Exit(0)
+		os.Exit(1)
 	}()
 }
 

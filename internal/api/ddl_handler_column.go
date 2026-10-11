@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/nimbleflux/fluxbase/internal/database"
 	apperrors "github.com/nimbleflux/fluxbase/internal/errors"
 	"github.com/nimbleflux/fluxbase/internal/logutil"
 )
@@ -170,7 +171,7 @@ func (h *DDLHandler) DropColumn(c fiber.Ctx) error {
 	})
 	if err != nil {
 		log.Error().Err(err).Str("table", schema+"."+table).Str("column", column).Msg("Failed to drop column")
-		return SendInternalError(c, fmt.Sprintf("Failed to drop column: %v", err))
+		return SendInternalError(c, fmt.Sprintf("Failed to drop column: %v", database.SanitizeErrorMessage(err)))
 	}
 
 	h.invalidateCache(ctx)

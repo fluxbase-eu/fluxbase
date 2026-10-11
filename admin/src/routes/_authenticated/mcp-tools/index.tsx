@@ -86,7 +86,7 @@ function ToolsTab() {
     refetch: fetchTools,
   } = useQuery({
     queryKey: ["mcp-tools", currentTenantId],
-    queryFn: () => mcpToolsApi.list(),
+    queryFn: ({ signal }) => mcpToolsApi.list(undefined, { signal }),
   });
 
   const handleDelete = async (id: string) => {

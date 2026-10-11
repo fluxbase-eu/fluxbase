@@ -2,46 +2,76 @@ package api
 
 // addAuthEndpoints adds authentication endpoints to the spec
 func (h *OpenAPIHandler) addAuthEndpoints(spec *OpenAPISpec) {
-	// User schema
+	// User schema — mirrors auth.User (user.go); role/metadata fields are
+	// omitempty on the wire
 	spec.Components.Schemas["User"] = map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"id":         map[string]string{"type": "string", "format": "uuid"},
-			"email":      map[string]string{"type": "string", "format": "email"},
-			"created_at": map[string]string{"type": "string", "format": "date-time"},
-			"updated_at": map[string]string{"type": "string", "format": "date-time"},
+			"id":             map[string]string{"type": "string", "format": "uuid"},
+			"email":          map[string]string{"type": "string", "format": "email"},
+			"email_verified": map[string]string{"type": "boolean"},
+			"role":           map[string]string{"type": "string", "description": "Assigned when the user has a non-default role"},
+			"tenant_id":      map[string]string{"type": "string", "description": "Present when the user belongs to a tenant"},
+			"user_metadata":  map[string]interface{}{"type": "object", "additionalProperties": map[string]interface{}{}, "description": "User-editable metadata"},
+			"app_metadata":   map[string]interface{}{"type": "object", "additionalProperties": map[string]interface{}{}, "description": "Application/admin-only metadata"},
+			"created_at":     map[string]string{"type": "string", "format": "date-time"},
+			"updated_at":     map[string]string{"type": "string", "format": "date-time"},
 		},
+		"required": []string{"id", "email", "email_verified", "created_at", "updated_at"},
 	}
 
-	// Token response schema
+	// Token response schema — mirrors auth.SignInResponse
 	spec.Components.Schemas["TokenResponse"] = map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
 			"access_token":  map[string]string{"type": "string"},
 			"refresh_token": map[string]string{"type": "string"},
-			"token_type":    map[string]string{"type": "string"},
 			"expires_in":    map[string]string{"type": "integer"},
 			"user":          map[string]string{"$ref": "#/components/schemas/User"},
 		},
+		"required": []string{"access_token", "refresh_token", "expires_in", "user"},
 	}
 
-	// Signup request schema
+	// Signup response schema — mirrors the auth handler's SignUp response:
+	// 201 with tokens, or 201 with requires_email_verification and no tokens
+	spec.Components.Schemas["SignUpResponse"] = map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"user":                        map[string]string{"$ref": "#/components/schemas/User"},
+			"access_token":                map[string]string{"type": "string", "description": "Absent when email verification is required"},
+			"refresh_token":               map[string]string{"type": "string", "description": "Absent when email verification is required"},
+			"expires_in":                  map[string]string{"type": "integer", "description": "Access token lifetime in seconds"},
+			"requires_email_verification": map[string]string{"type": "boolean", "description": "True when the user must verify their email before signing in"},
+			"trust_token":                 map[string]string{"type": "string", "description": "Issued after CAPTCHA verification for subsequent trust checks"},
+			"message":                     map[string]string{"type": "string"},
+		},
+		"required": []string{"user"},
+	}
+
+	// Signup request schema — mirrors auth.SignUpRequest
 	spec.Components.Schemas["SignupRequest"] = map[string]interface{}{
 		"type":     "object",
 		"required": []string{"email", "password"},
 		"properties": map[string]interface{}{
-			"email":    map[string]string{"type": "string", "format": "email"},
-			"password": map[string]string{"type": "string", "minLength": "8"},
+			"email":              map[string]string{"type": "string", "format": "email"},
+			"password":           map[string]string{"type": "string", "minLength": "8"},
+			"user_metadata":      map[string]interface{}{"type": "object", "additionalProperties": map[string]interface{}{}},
+			"captcha_token":      map[string]string{"type": "string"},
+			"challenge_id":       map[string]string{"type": "string", "description": "Challenge ID from the pre-flight CAPTCHA check"},
+			"device_fingerprint": map[string]string{"type": "string"},
 		},
 	}
 
-	// Signin request schema
+	// Signin request schema — mirrors auth.SignInRequest
 	spec.Components.Schemas["SigninRequest"] = map[string]interface{}{
 		"type":     "object",
 		"required": []string{"email", "password"},
 		"properties": map[string]interface{}{
-			"email":    map[string]string{"type": "string", "format": "email"},
-			"password": map[string]string{"type": "string"},
+			"email":              map[string]string{"type": "string", "format": "email"},
+			"password":           map[string]string{"type": "string"},
+			"captcha_token":      map[string]string{"type": "string"},
+			"challenge_id":       map[string]string{"type": "string", "description": "Challenge ID from the pre-flight CAPTCHA check"},
+			"device_fingerprint": map[string]string{"type": "string"},
 		},
 	}
 
@@ -70,7 +100,8 @@ func (h *OpenAPIHandler) addAuthEndpoints(spec *OpenAPISpec) {
 		"type":     "object",
 		"required": []string{"email"},
 		"properties": map[string]interface{}{
-			"email": map[string]string{"type": "string", "format": "email"},
+			"email":         map[string]string{"type": "string", "format": "email"},
+			"captcha_token": map[string]string{"type": "string"},
 		},
 	}
 
@@ -98,16 +129,24 @@ func (h *OpenAPIHandler) addAuthEndpoints(spec *OpenAPISpec) {
 				},
 			},
 			Responses: map[string]OpenAPIResponse{
-				"200": {
-					Description: "User created successfully",
+				"201": {
+					Description: "User created. Returns tokens when email verification is disabled, otherwise requires_email_verification=true with no tokens.",
 					Content: map[string]OpenAPIMedia{
 						"application/json": {
-							Schema: map[string]string{"$ref": "#/components/schemas/TokenResponse"},
+							Schema: map[string]string{"$ref": "#/components/schemas/SignUpResponse"},
 						},
 					},
 				},
 				"400": {
 					Description: "Invalid request",
+					Content: map[string]OpenAPIMedia{
+						"application/json": {
+							Schema: map[string]string{"$ref": "#/components/schemas/Error"},
+						},
+					},
+				},
+				"403": {
+					Description: "Signup disabled or CAPTCHA/challenge verification failed",
 					Content: map[string]OpenAPIMedia{
 						"application/json": {
 							Schema: map[string]string{"$ref": "#/components/schemas/Error"},

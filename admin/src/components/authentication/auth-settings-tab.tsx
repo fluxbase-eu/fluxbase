@@ -34,24 +34,24 @@ export function AuthSettingsTab() {
 
   const { data: fetchedSettings, isLoading } = useQuery({
     queryKey: ["authSettings"],
-    queryFn: authSettingsApi.get,
+    queryFn: ({ signal }) => authSettingsApi.get({ signal }),
   });
 
   const { data: ssoData } = useQuery({
     queryKey: ["dashboard-sso-providers"],
-    queryFn: dashboardAuthAPI.getSSOProviders,
+    queryFn: ({ signal }) => dashboardAuthAPI.getSSOProviders({ signal }),
   });
 
   const hasDashboardSSOProviders = (ssoData?.providers?.length ?? 0) > 0;
 
   const { data: oauthProviders = [] } = useQuery({
     queryKey: ["oauthProviders"],
-    queryFn: oauthProviderApi.list,
+    queryFn: ({ signal }) => oauthProviderApi.list({ signal }),
   });
 
   const { data: samlProviders = [] } = useQuery({
     queryKey: ["samlProviders"],
-    queryFn: samlProviderApi.list,
+    queryFn: ({ signal }) => samlProviderApi.list({ signal }),
   });
 
   const hasAppSSOProviders =

@@ -15,6 +15,16 @@ export const API_BASE_URL =
   "";
 
 /**
+ * Optional per-call options accepted by api service methods. Currently only
+ * request cancellation: TanStack Query passes an AbortSignal in the queryFn
+ * context ({ signal }) which is forwarded here so in-flight requests are
+ * aborted when a query is unmounted or superseded.
+ */
+export interface ApiRequestOptions {
+  signal?: AbortSignal;
+}
+
+/**
  * Axios-based API client for admin dashboard API calls.
  *
  * Use this for all /api/v1/admin/* and /dashboard/auth/* endpoints.
@@ -29,6 +39,10 @@ export const api: AxiosInstance = axios.create({
     "Content-Type": "application/json",
   },
   timeout: 30000,
+  // Send/accept cookies (the HttpOnly `fluxbase_admin_refresh` cookie) so the
+  // refresh flow works even when the API base URL differs from the dashboard
+  // origin (e.g. Vite dev server on a sibling port).
+  withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -48,7 +62,13 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue = [];
 };
 
-async function refreshTokens(): Promise<string> {
+// Single in-flight refresh shared by the axios 401 interceptor, the Fluxbase
+// SDK refresh callback (see lib/fluxbase-client.ts) and the session-restore
+// path — refresh tokens rotate on use, so only one POST /refresh may run at
+// a time.
+let refreshPromise: Promise<string> | null = null;
+
+async function performRefresh(): Promise<string> {
   const { refreshToken } = useAuthStore.getState().auth;
 
   // The server prefers the HttpOnly refresh cookie (`fluxbase_admin_refresh`);
@@ -78,6 +98,31 @@ async function refreshTokens(): Promise<string> {
   }
 
   return access_token;
+}
+
+async function refreshTokens(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+/**
+ * Silently refresh the session using the HttpOnly refresh cookie (and the
+ * in-memory refresh token as fallback). Returns true when a new access token
+ * was obtained. Never triggers a logout — callers decide how to handle
+ * failure (the axios interceptor logs out; the SDK callback and the
+ * session-restore path just surface the failure).
+ */
+export async function ensureFreshAccessToken(): Promise<boolean> {
+  try {
+    await refreshTokens();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function forceLogout(): Promise<never> {

@@ -53,7 +53,7 @@ const ClientKeysPage = () => {
 
   const { data: clientKeys, isLoading } = useQuery<ClientKey[]>({
     queryKey: ['client-keys', currentTenantId],
-    queryFn: clientKeysApi.list,
+    queryFn: ({ signal }) => clientKeysApi.list({ signal }),
     enabled: !!currentTenantId,
   })
 
@@ -63,7 +63,7 @@ const ClientKeysPage = () => {
       queryClient.invalidateQueries({
         queryKey: ['client-keys', currentTenantId],
       })
-      setCreatedKey(data as unknown as ClientKeyWithPlaintext)
+      setCreatedKey(data)
       setIsCreateDialogOpen(false)
       setIsKeyDialogOpen(true)
       setName('')

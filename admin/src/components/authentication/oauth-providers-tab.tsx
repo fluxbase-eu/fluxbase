@@ -44,6 +44,22 @@ interface OAuthProvidersTabProps {
   onProviderTest?: (provider: OAuthProviderConfig) => void;
 }
 
+// Editable redirect-URL list items carry a locally-generated stable id so
+// React keys survive insertion/removal mid-list (inputs keep focus and DOM
+// state on the right row); ids are created when an item is added.
+interface RedirectUrlItem {
+  id: string;
+  url: string;
+}
+
+const newRedirectUrlItem = (url = ""): RedirectUrlItem => ({
+  id:
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `url-${Math.random().toString(36).slice(2)}`,
+  url,
+});
+
 export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
   const queryClient = useQueryClient();
   const [isAddProviderOpen, setIsAddProviderOpen] = useState(false);
@@ -59,9 +75,11 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-  const [editRedirectUrls, setEditRedirectUrls] = useState<string[]>([]);
+  const [editRedirectUrls, setEditRedirectUrls] = useState<RedirectUrlItem[]>(
+    [],
+  );
   const [additionalRedirectUrls, setAdditionalRedirectUrls] = useState<
-    string[]
+    RedirectUrlItem[]
   >([]);
   const [allowDashboardLogin, setAllowDashboardLogin] = useState(false);
   const [allowAppLogin, setAllowAppLogin] = useState(true);
@@ -78,7 +96,7 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
 
   const { data: enabledProviders = [] } = useQuery({
     queryKey: ["oauthProviders"],
-    queryFn: oauthProviderApi.list,
+    queryFn: ({ signal }) => oauthProviderApi.list({ signal }),
   });
 
   const createProviderMutation = useMutation({
@@ -167,9 +185,9 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
     setClientSecret("");
     setEditRedirectUrls(
       provider.redirect_urls?.length
-        ? [...provider.redirect_urls]
+        ? provider.redirect_urls.map((url) => newRedirectUrlItem(url))
         : provider.redirect_url
-          ? [provider.redirect_url]
+          ? [newRedirectUrlItem(provider.redirect_url)]
           : [],
     );
     setAllowDashboardLogin(provider.allow_dashboard_login);
@@ -212,7 +230,7 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
     const defaultRedirectUrl = getCreateDefaultRedirectUrl();
 
     const additionalUrls = additionalRedirectUrls
-      .map((url) => url.trim())
+      .map((item) => item.url.trim())
       .filter((url) => url !== "" && url !== defaultRedirectUrl);
 
     const data: CreateOAuthProviderRequest = {
@@ -248,7 +266,7 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
     if (!editingProvider) return;
 
     const redirectUrls = editRedirectUrls
-      .map((url) => url.trim())
+      .map((item) => item.url.trim())
       .filter((url) => url !== "");
     if (redirectUrls.length === 0) {
       toast.error("At least one redirect URL is required");
@@ -740,13 +758,13 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                   be registered with the OAuth provider.
                 </p>
                 <div className="space-y-2">
-                  {additionalRedirectUrls.map((url, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                  {additionalRedirectUrls.map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-2">
                       <Input
-                        value={url}
+                        value={item.url}
                         onChange={(e) => {
                           const next = [...additionalRedirectUrls];
-                          next[index] = e.target.value;
+                          next[index] = { ...next[index], url: e.target.value };
                           setAdditionalRedirectUrls(next);
                         }}
                         className="font-mono text-xs"
@@ -760,7 +778,7 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                         onClick={() =>
                           setAdditionalRedirectUrls(
                             additionalRedirectUrls.filter(
-                              (_, i) => i !== index,
+                              (entry) => entry.id !== item.id,
                             ),
                           )
                         }
@@ -775,7 +793,10 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setAdditionalRedirectUrls([...additionalRedirectUrls, ""])
+                      setAdditionalRedirectUrls([
+                        ...additionalRedirectUrls,
+                        newRedirectUrlItem(),
+                      ])
                     }
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -970,13 +991,13 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                 provider.
               </p>
               <div className="space-y-2">
-                {editRedirectUrls.map((url, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                {editRedirectUrls.map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-2">
                     <Input
-                      value={url}
+                      value={item.url}
                       onChange={(e) => {
                         const next = [...editRedirectUrls];
-                        next[index] = e.target.value;
+                        next[index] = { ...next[index], url: e.target.value };
                         setEditRedirectUrls(next);
                       }}
                       className="bg-muted font-mono text-xs"
@@ -989,7 +1010,9 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                       size="icon"
                       onClick={() =>
                         setEditRedirectUrls(
-                          editRedirectUrls.filter((_, i) => i !== index),
+                          editRedirectUrls.filter(
+                            (entry) => entry.id !== item.id,
+                          ),
                         )
                       }
                       disabled={editRedirectUrls.length <= 1}
@@ -1003,7 +1026,12 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setEditRedirectUrls([...editRedirectUrls, ""])}
+                  onClick={() =>
+                    setEditRedirectUrls([
+                      ...editRedirectUrls,
+                      newRedirectUrlItem(),
+                    ])
+                  }
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add URL
