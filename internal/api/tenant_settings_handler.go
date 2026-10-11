@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
+	"github.com/nimbleflux/fluxbase/internal/middleware"
 	"github.com/nimbleflux/fluxbase/internal/settings"
 	"github.com/nimbleflux/fluxbase/internal/tenantdb"
 )
@@ -47,6 +48,12 @@ func (h *TenantSettingsHandler) GetTenantSettings(c fiber.Ctx) error {
 
 	if tenantID == "" {
 		return SendMissingField(c, "tenant_id")
+	}
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict settings access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.tenantDB, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
 	}
 
 	// Verify tenant exists
@@ -104,6 +111,12 @@ func (h *TenantSettingsHandler) UpdateTenantSettings(c fiber.Ctx) error {
 
 	if tenantID == "" {
 		return SendMissingField(c, "tenant_id")
+	}
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict settings access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.tenantDB, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
 	}
 
 	// Verify tenant exists
@@ -164,6 +177,12 @@ func (h *TenantSettingsHandler) DeleteTenantSetting(c fiber.Ctx) error {
 		return SendMissingField(c, "tenant_id")
 	}
 
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict settings access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.tenantDB, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
+
 	if settingPath == "" {
 		return SendMissingField(c, "path")
 	}
@@ -201,6 +220,12 @@ func (h *TenantSettingsHandler) GetTenantSetting(c fiber.Ctx) error {
 
 	if tenantID == "" {
 		return SendMissingField(c, "tenant_id")
+	}
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict settings access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.tenantDB, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
 	}
 
 	if settingPath == "" {

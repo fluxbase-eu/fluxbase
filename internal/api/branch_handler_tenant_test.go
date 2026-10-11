@@ -680,6 +680,124 @@ func TestGetBranchActivity_TenantIsolation(t *testing.T) {
 }
 
 // =============================================================================
+// resolveBranchTenant Tests (SEC-09 #375: tenant pinning on branch creation)
+// =============================================================================
+
+func TestResolveBranchTenant(t *testing.T) {
+	tenantA := uuid.New()
+	tenantB := uuid.New()
+	requestedB := &tenantB
+
+	tests := []struct {
+		name           string
+		setupLocals    func(c fiber.Ctx)
+		requested      *uuid.UUID
+		expectedResult *uuid.UUID
+	}{
+		{
+			name: "tenant admin requesting another tenant is pinned to own tenant",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("tenant_id", tenantA.String())
+				c.Locals("user_role", "tenant_admin")
+			},
+			requested:      requestedB,
+			expectedResult: &tenantA,
+		},
+		{
+			name: "tenant admin without explicit request uses own tenant",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("tenant_id", tenantA.String())
+				c.Locals("user_role", "tenant_admin")
+			},
+			requested:      nil,
+			expectedResult: &tenantA,
+		},
+		{
+			name: "tenant user without tenant context gets nil",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("user_role", "authenticated")
+			},
+			requested:      requestedB,
+			expectedResult: nil,
+		},
+		{
+			name: "instance admin may target another tenant",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("tenant_id", tenantA.String())
+				c.Locals("is_instance_admin", true)
+			},
+			requested:      requestedB,
+			expectedResult: requestedB,
+		},
+		{
+			name: "instance admin without request gets nil (instance-level branch)",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("is_instance_admin", true)
+			},
+			requested:      nil,
+			expectedResult: nil,
+		},
+		{
+			name: "service key may target another tenant",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("tenant_id", tenantA.String())
+				c.Locals("auth_type", "service_key")
+			},
+			requested:      requestedB,
+			expectedResult: requestedB,
+		},
+		{
+			name: "service key without request falls back to context tenant",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("tenant_id", tenantA.String())
+				c.Locals("auth_type", "service_key")
+			},
+			requested:      nil,
+			expectedResult: &tenantA,
+		},
+		{
+			name: "unparseable tenant context yields nil for regular user",
+			setupLocals: func(c fiber.Ctx) {
+				c.Locals("tenant_id", "not-a-uuid")
+				c.Locals("user_role", "tenant_admin")
+			},
+			requested:      requestedB,
+			expectedResult: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := newTestApp(t)
+
+			var captured *uuid.UUID
+			app.Use(func(c fiber.Ctx) error {
+				tt.setupLocals(c)
+				captured = resolveBranchTenant(c, tt.requested)
+				return c.Next()
+			})
+			app.Post("/test", func(c fiber.Ctx) error {
+				return c.SendString("ok")
+			})
+
+			req := httptest.NewRequest(http.MethodPost, "/test", nil)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer func() { _ = resp.Body.Close() }()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			if tt.expectedResult == nil {
+				assert.Nil(t, captured, "expected nil tenant")
+			} else {
+				require.NotNil(t, captured, "expected a tenant")
+				assert.Equal(t, *tt.expectedResult, *captured, "tenant mismatch")
+			}
+		})
+	}
+}
+
+// =============================================================================
 // Helper Functions
 // =============================================================================
 

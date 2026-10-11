@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
+	"github.com/nimbleflux/fluxbase/internal/middleware"
 	"github.com/nimbleflux/fluxbase/internal/tenantdb"
 )
 
@@ -18,6 +19,12 @@ type UploadTenantSchemaRequest struct {
 func (h *TenantHandler) GetTenantSchemaStatus(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict schema access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
 
 	// Check if tenant exists
 	t, err := h.Storage.GetTenant(ctx, tenantID)
@@ -66,6 +73,12 @@ func (h *TenantHandler) ApplyTenantSchema(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
 
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict schema access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
+
 	// Check if tenant exists
 	t, err := h.Storage.GetTenant(ctx, tenantID)
 	if err != nil {
@@ -106,6 +119,12 @@ func (h *TenantHandler) ApplyTenantSchema(c fiber.Ctx) error {
 func (h *TenantHandler) GetStoredSchema(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict schema access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
 
 	// Check if tenant exists
 	t, err := h.Storage.GetTenant(ctx, tenantID)
@@ -152,6 +171,12 @@ func (h *TenantHandler) GetStoredSchema(c fiber.Ctx) error {
 func (h *TenantHandler) UploadTenantSchema(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict schema access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
 
 	// Check if tenant exists
 	t, err := h.Storage.GetTenant(ctx, tenantID)
@@ -202,6 +227,12 @@ func (h *TenantHandler) UploadTenantSchema(c fiber.Ctx) error {
 func (h *TenantHandler) ApplyUploadedTenantSchema(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict schema access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
 
 	// Check if tenant exists
 	t, err := h.Storage.GetTenant(ctx, tenantID)
@@ -255,6 +286,12 @@ func (h *TenantHandler) ApplyUploadedTenantSchema(c fiber.Ctx) error {
 func (h *TenantHandler) DeleteStoredSchema(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
+
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict schema access to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
 
 	// Check if tenant exists
 	t, err := h.Storage.GetTenant(ctx, tenantID)

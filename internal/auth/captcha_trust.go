@@ -616,10 +616,13 @@ func (s *CaptchaTrustService) ValidateTrustToken(ctx context.Context, token, ipA
 		SET used_count = used_count + 1, last_used_at = NOW()
 		WHERE token_hash = $1
 	`
-	_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+	if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, updateQuery, tokenHash)
 		return err
-	})
+	}); err != nil {
+		// Stats are advisory; validation already succeeded so don't fail the request.
+		log.Warn().Err(err).Str("token_hash", tokenHash).Msg("Failed to update captcha trust token usage stats")
+	}
 
 	return true, nil
 }
@@ -749,9 +752,12 @@ func (s *CaptchaTrustService) userHasMFA(ctx context.Context, userID uuid.UUID) 
 		)
 	`
 	var hasMFA bool
-	_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+	if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, query, userID).Scan(&hasMFA)
-	})
+	}); err != nil {
+		// Fail closed on the MFA trust signal (no bonus score) on query errors.
+		log.Debug().Err(err).Str("user_id", userID.String()).Msg("Failed to check MFA status for trust evaluation, treating as MFA disabled")
+	}
 	return hasMFA
 }
 

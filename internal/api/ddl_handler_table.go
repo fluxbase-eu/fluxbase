@@ -115,16 +115,33 @@ func (h *DDLHandler) CreateTable(c fiber.Ctx) error {
 		log.Error().Err(err).Str("table", req.Schema+"."+req.Name).Msg("Failed to grant permissions to service_role")
 	}
 
-	h.autoCreateTenantServicePolicy(ctx, c, req.Schema, req.Name)
-
 	h.invalidateCache(ctx)
+
+	// GO-03 (#379): a failed tenant_service RLS auto-policy no longer goes
+	// unnoticed — log it and surface an additive warning to the caller.
+	var warnings []string
+	if err := h.autoCreateTenantServicePolicy(ctx, c, req.Schema, req.Name); err != nil {
+		log.Error().Err(err).
+			Str("schema", req.Schema).
+			Str("table", req.Name).
+			Msg("Failed to auto-create tenant_service RLS policy")
+		warnings = append(warnings, fmt.Sprintf(
+			"table created but automatic tenant_service RLS policy could not be created: %s",
+			database.SanitizeErrorMessage(err),
+		))
+	}
+
 	log.Info().Str("table", req.Schema+"."+req.Name).Msg("Table created successfully")
-	return c.Status(201).JSON(fiber.Map{
+	resp := fiber.Map{
 		"success": true,
 		"schema":  req.Schema,
 		"table":   req.Name,
 		"message": fmt.Sprintf("Table '%s.%s' created successfully", req.Schema, req.Name),
-	})
+	}
+	if len(warnings) > 0 {
+		resp["warnings"] = warnings
+	}
+	return c.Status(201).JSON(resp)
 }
 
 // DeleteTable drops a table from the database
@@ -378,9 +395,11 @@ func (h *DDLHandler) grantTablePermissions(ctx context.Context, c fiber.Ctx, sch
 // autoCreateTenantServicePolicy creates a tenant_service RLS policy on a table
 // that has a tenant_id column. This ensures functions/jobs using tenant_service
 // can access tenant-scoped data when RLS is enabled on the table.
-func (h *DDLHandler) autoCreateTenantServicePolicy(ctx context.Context, c fiber.Ctx, schema, table string) {
+// A failure is returned to the caller (which logs it and surfaces a warning)
+// instead of being silently discarded (GO-03, #379).
+func (h *DDLHandler) autoCreateTenantServicePolicy(ctx context.Context, c fiber.Ctx, schema, table string) error {
 	if schema != "public" {
-		return
+		return nil
 	}
 
 	var hasTenantCol bool
@@ -391,7 +410,7 @@ func (h *DDLHandler) autoCreateTenantServicePolicy(ctx context.Context, c fiber.
 		)
 	`, schema, table).Scan(&hasTenantCol)
 	if err != nil || !hasTenantCol {
-		return
+		return nil
 	}
 
 	policyName := fmt.Sprintf("%s_tenant_service_auto", table)
@@ -404,7 +423,7 @@ func (h *DDLHandler) autoCreateTenantServicePolicy(ctx context.Context, c fiber.
 		quoteIdentifier(table),
 	)
 
-	_ = h.executeWithAdminRole(ctx, c, func(tx pgx.Tx) error {
+	return h.executeWithAdminRole(ctx, c, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, policySQL)
 		return err
 	})

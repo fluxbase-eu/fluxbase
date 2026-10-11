@@ -41,6 +41,25 @@ func TestIsPrivateIP(t *testing.T) {
 		{"IPv6 unique local fd00::", "fd00::1", true},
 		{"IPv6 link-local", "fe80::1", true},
 
+		// Unspecified / "this network" (0.0.0.0/8)
+		{"Unspecified IPv4", "0.0.0.0", true},
+		{"This-network range", "0.1.2.3", true},
+		{"IPv6 unspecified", "::", true},
+
+		// Carrier-grade NAT (RFC 6598)
+		{"CGNAT start", "100.64.0.0", true},
+		{"CGNAT mid", "100.100.1.1", true},
+		{"CGNAT end", "100.127.255.255", true},
+
+		// Network benchmarking (RFC 2544)
+		{"Benchmarking start", "198.18.0.0", true},
+		{"Benchmarking mid", "198.19.128.1", true},
+		{"Benchmarking end", "198.19.255.255", true},
+
+		// NAT64 translation prefix (RFC 6052)
+		{"NAT64 translated 8.8.8.8", "64:ff9b::808:808", true},
+		{"NAT64 translated 10.0.0.1", "64:ff9b::a00:1", true},
+
 		// Public IPs - should NOT be private
 		{"Public IP 8.8.8.8", "8.8.8.8", false},
 		{"Public IP 1.1.1.1", "1.1.1.1", false},
@@ -48,9 +67,10 @@ func TestIsPrivateIP(t *testing.T) {
 		{"Public IP 172.32.0.1 (outside 172.16/12)", "172.32.0.1", false},
 		{"Public IP 192.167.1.1 (not 192.168)", "192.167.1.1", false},
 		{"Public IPv6", "2001:4860:4860::8888", false},
-
-		// Edge cases
-		{"Zero IP", "0.0.0.0", false},
+		{"Public IP just above CGNAT", "100.128.0.0", false},
+		{"Public IP just below CGNAT", "100.63.255.255", false},
+		{"Public IP just above benchmarking", "198.20.0.0", false},
+		{"Public IP just below benchmarking", "198.17.255.255", false},
 	}
 
 	for _, tc := range testCases {

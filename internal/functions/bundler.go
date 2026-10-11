@@ -14,6 +14,19 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// bundlerEnvBlocklist lists environment variable names stripped from the deno
+// bundle child process environment. DENO_DIR/HOME and the registry variables
+// are re-set explicitly after filtering; FLUXBASE_SERVICE_ROLE_KEY is a
+// bypass-privilege service credential exported into the process environment
+// that must never leak into child processes (SEC-10).
+var bundlerEnvBlocklist = []string{
+	"DENO_DIR",
+	"HOME",
+	"NPM_CONFIG_REGISTRY",
+	"DENO_JSR_URL",
+	"FLUXBASE_SERVICE_ROLE_KEY",
+}
+
 // validateModulePath validates a module path to prevent path traversal attacks.
 // It ensures the path doesn't contain dangerous sequences like ".." or absolute paths.
 func validateModulePath(modulePath string) error {
@@ -251,7 +264,7 @@ func (b *Bundler) Bundle(ctx context.Context, code string) (*BundleResult, error
 
 	// Build environment for Deno, ensuring DENO_DIR and HOME are set correctly
 	// Filter out existing env vars we'll set explicitly
-	cmd.Env = filterEnvVars(os.Environ(), "DENO_DIR", "HOME", "NPM_CONFIG_REGISTRY", "DENO_JSR_URL")
+	cmd.Env = filterEnvVars(os.Environ(), bundlerEnvBlocklist...)
 	denoDir := os.Getenv("DENO_DIR")
 	if denoDir == "" {
 		denoDir = "/tmp/deno"
@@ -551,7 +564,7 @@ func (b *Bundler) BundleWithFiles(ctx context.Context, mainCode string, supporti
 
 	// Build environment for Deno, ensuring DENO_DIR and HOME are set correctly
 	// Filter out existing env vars we'll set explicitly
-	cmd.Env = filterEnvVars(os.Environ(), "DENO_DIR", "HOME", "NPM_CONFIG_REGISTRY", "DENO_JSR_URL")
+	cmd.Env = filterEnvVars(os.Environ(), bundlerEnvBlocklist...)
 	denoDir := os.Getenv("DENO_DIR")
 	if denoDir == "" {
 		denoDir = "/tmp/deno"

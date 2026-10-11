@@ -16,11 +16,19 @@ import (
 type TenancyModule struct {
 	Handlers   *TenancyHandlers
 	Middleware *MiddlewareComponents
+
+	// ctx/cancel scope the module's fire-and-forget startup goroutines so
+	// Shutdown can stop them instead of leaving them running (and sleeping)
+	// for the lifetime of the process.
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func (m *TenancyModule) Name() string { return "tenancy" }
 
 func (m *TenancyModule) Init(ctx context.Context, registry *ServiceRegistry) error {
+	m.ctx, m.cancel = context.WithCancel(context.Background())
+
 	cfg := registry.Config
 	db := registry.DB
 
@@ -73,10 +81,22 @@ func (m *TenancyModule) Init(ctx context.Context, registry *ServiceRegistry) err
 			log.Info().Msg("FDW enabled for tenant databases")
 
 			go func() {
-				time.Sleep(5 * time.Second)
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Error().
+							Interface("panic", rec).
+							Str("module", m.Name()).
+							Msg("Panic in tenant FDW upgrade goroutine - recovered")
+					}
+				}()
+				select {
+				case <-time.After(5 * time.Second):
+				case <-m.ctx.Done():
+					return
+				}
+				upgCtx, cancel := context.WithTimeout(m.ctx, 10*time.Minute)
 				defer cancel()
-				tenantManager.UpgradeAllTenantsFDW(ctx)
+				tenantManager.UpgradeAllTenantsFDW(upgCtx)
 			}()
 		}
 	}
@@ -114,9 +134,17 @@ func (m *TenancyModule) Init(ctx context.Context, registry *ServiceRegistry) err
 
 		if cfg.Tenants.Declarative.OnStartup {
 			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Error().
+							Interface("panic", rec).
+							Str("module", m.Name()).
+							Msg("Panic in tenant declarative schema startup goroutine - recovered")
+					}
+				}()
+				schemaCtx, cancel := context.WithTimeout(m.ctx, 5*time.Minute)
 				defer cancel()
-				if err := tenantManager.ApplyDeclarativeSchemas(ctx); err != nil {
+				if err := tenantManager.ApplyDeclarativeSchemas(schemaCtx); err != nil {
 					log.Error().Err(err).Msg("Failed to apply tenant declarative schemas on startup")
 				}
 			}()
@@ -149,6 +177,10 @@ func (m *TenancyModule) Init(ctx context.Context, registry *ServiceRegistry) err
 }
 
 func (m *TenancyModule) Shutdown(ctx context.Context) error {
+	// Stop any pending fire-and-forget startup goroutines.
+	if m.cancel != nil {
+		m.cancel()
+	}
 	if m.Handlers != nil && m.Handlers.Manager != nil && m.Handlers.Manager.GetRouter() != nil {
 		m.Handlers.Manager.GetRouter().Close()
 	}

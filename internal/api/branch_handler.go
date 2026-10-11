@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -63,6 +64,41 @@ func getTenantFilter(c fiber.Ctx) *uuid.UUID {
 	return nil
 }
 
+// resolveBranchTenant decides which tenant a new branch belongs to.
+// Instance admins and service keys may target any tenant (instance admins may
+// also omit it for instance-level branches); every other principal is pinned
+// to the tenant in their context, ignoring a client-supplied tenant_id
+// (SEC-09, #375).
+func resolveBranchTenant(c fiber.Ctx, requested *uuid.UUID) *uuid.UUID {
+	contextTenant := func() *uuid.UUID {
+		if tid := middleware.GetTenantID(c); tid != "" {
+			if id, err := uuid.Parse(tid); err == nil {
+				return &id
+			}
+		}
+		return nil
+	}
+
+	// Service keys are not user-bound: honor their explicit request and fall
+	// back to the tenant context (previous behavior).
+	if middleware.GetAuthType(c) == "service_key" {
+		if requested != nil {
+			return requested
+		}
+		return contextTenant()
+	}
+
+	// Instance-level principals may target any tenant.
+	if middleware.IsInstanceAdminFromContext(c) {
+		return requested
+	}
+
+	// Every other principal is pinned to their own tenant context: a
+	// client-supplied tenant_id is ignored so a tenant admin cannot create
+	// branches in another tenant.
+	return contextTenant()
+}
+
 // CreateBranchRequest represents the request body for creating a branch
 type CreateBranchRequest struct {
 	Name           string                  `json:"name"`
@@ -99,18 +135,11 @@ func (h *BranchHandler) CreateBranch(c fiber.Ctx) error {
 		}
 	}
 
-	// Get tenant ID from context (set by tenant middleware)
-	var tenantID *uuid.UUID
-	if tid := middleware.GetTenantID(c); tid != "" {
-		if id, err := uuid.Parse(tid); err == nil {
-			tenantID = &id
-		}
-	}
-
-	// If request doesn't specify tenant_id, use context tenant
-	if req.TenantID == nil && tenantID != nil {
-		req.TenantID = tenantID
-	}
+	// SEC-09 (#375): only instance-level principals may choose the target
+	// tenant for a new branch. Everyone else is pinned to their own tenant
+	// context so a tenant admin cannot create branches in another tenant by
+	// supplying a client-side tenant_id.
+	req.TenantID = resolveBranchTenant(c, req.TenantID)
 
 	// Parse expires_in to ExpiresAt
 	var expiresAt *time.Time
@@ -164,8 +193,13 @@ func (h *BranchHandler) CreateBranch(c fiber.Ctx) error {
 		return SendInternalError(c, "Failed to create branch")
 	}
 
+	// SEC-08 (#375): fasthttp recycles c.RequestCtx() as soon as the handler
+	// returns, so the background pool warmup must not use it directly.
+	// WithoutCancel detaches from request cancellation while preserving
+	// context values (e.g. the tenant ID set via database.ContextWithTenant).
+	ctx := context.WithoutCancel(c.RequestCtx())
 	go func() {
-		if err := h.router.WarmupPool(c.RequestCtx(), branch.Slug); err != nil {
+		if err := h.router.WarmupPool(ctx, branch.Slug); err != nil {
 			log.Warn().Err(err).Str("slug", branch.Slug).Msg("Failed to warmup branch pool")
 		}
 	}()

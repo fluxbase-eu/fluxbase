@@ -298,6 +298,12 @@ func (h *TenantHandler) UpdateTenant(c fiber.Ctx) error {
 	ctx := c.Context()
 	tenantID := c.Params("id")
 
+	// SEC-01 (#369): the route group admits tenant admins of any tenant;
+	// restrict updates to the caller's own tenant.
+	if !middleware.RequireTenantParamAccess(c, h.Storage, tenantID) {
+		return SendForbidden(c, "Access denied to this tenant", ErrCodeAccessDenied)
+	}
+
 	var req UpdateTenantRequest
 	if err := ParseBody(c, &req); err != nil {
 		return err

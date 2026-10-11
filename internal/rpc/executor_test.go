@@ -43,113 +43,6 @@ func TestNewExecutor(t *testing.T) {
 }
 
 // =============================================================================
-// formatValue Tests - Critical for SQL injection prevention
-// =============================================================================
-
-func TestExecutor_formatValue(t *testing.T) {
-	executor := NewExecutor(nil, nil, nil, nil)
-
-	t.Run("formats nil as NULL", func(t *testing.T) {
-		result := executor.formatValue(nil)
-		assert.Equal(t, "NULL", result)
-	})
-
-	t.Run("formats string with escaping", func(t *testing.T) {
-		result := executor.formatValue("hello")
-		assert.Equal(t, "'hello'", result)
-	})
-
-	t.Run("escapes single quotes in strings - SQL injection prevention", func(t *testing.T) {
-		result := executor.formatValue("O'Brien")
-		assert.Equal(t, "'O''Brien'", result)
-	})
-
-	t.Run("escapes multiple single quotes", func(t *testing.T) {
-		result := executor.formatValue("it's a 'test' string")
-		assert.Equal(t, "'it''s a ''test'' string'", result)
-	})
-
-	t.Run("formats integer types", func(t *testing.T) {
-		assert.Equal(t, "42", executor.formatValue(42))
-		assert.Equal(t, "42", executor.formatValue(int32(42)))
-		assert.Equal(t, "42", executor.formatValue(int64(42)))
-	})
-
-	t.Run("formats float types", func(t *testing.T) {
-		result := executor.formatValue(3.14)
-		assert.Equal(t, "3.14", result)
-
-		result = executor.formatValue(float32(2.5))
-		assert.Equal(t, "2.5", result)
-	})
-
-	t.Run("formats boolean true", func(t *testing.T) {
-		result := executor.formatValue(true)
-		assert.Equal(t, "TRUE", result)
-	})
-
-	t.Run("formats boolean false", func(t *testing.T) {
-		result := executor.formatValue(false)
-		assert.Equal(t, "FALSE", result)
-	})
-
-	t.Run("formats json.Number", func(t *testing.T) {
-		num := json.Number("123.456")
-		result := executor.formatValue(num)
-		assert.Equal(t, "123.456", result)
-	})
-
-	t.Run("formats []float32 as vector literal", func(t *testing.T) {
-		vec := []float32{0.1, 0.2, 0.3}
-		result := executor.formatValue(vec)
-		assert.Equal(t, "'[0.1,0.2,0.3]'::vector", result)
-	})
-
-	t.Run("formats []float64 as vector literal", func(t *testing.T) {
-		vec := []float64{0.1, 0.2, 0.3}
-		result := executor.formatValue(vec)
-		assert.Equal(t, "'[0.1,0.2,0.3]'::vector", result)
-	})
-
-	t.Run("formats numeric []interface{} as vector literal", func(t *testing.T) {
-		vec := []interface{}{0.1, 0.2, 0.3}
-		result := executor.formatValue(vec)
-		assert.Equal(t, "'[0.1,0.2,0.3]'::vector", result)
-	})
-
-	t.Run("formats non-numeric []interface{} as ARRAY", func(t *testing.T) {
-		arr := []interface{}{"a", "b", "c"}
-		result := executor.formatValue(arr)
-		assert.Contains(t, result, "ARRAY[")
-		assert.Contains(t, result, "'a'")
-		assert.Contains(t, result, "'b'")
-		assert.Contains(t, result, "'c'")
-	})
-
-	t.Run("formats map as JSONB", func(t *testing.T) {
-		m := map[string]interface{}{"key": "value", "num": 42}
-		result := executor.formatValue(m)
-		assert.Contains(t, result, "::jsonb")
-		assert.Contains(t, result, "key")
-		assert.Contains(t, result, "value")
-	})
-
-	t.Run("escapes single quotes in JSONB", func(t *testing.T) {
-		m := map[string]interface{}{"name": "O'Brien"}
-		result := executor.formatValue(m)
-		assert.Contains(t, result, "::jsonb")
-		// The JSON itself will have the single quote, but it's escaped in SQL
-		assert.Contains(t, result, "O''Brien")
-	})
-
-	t.Run("formats unknown types as escaped strings", func(t *testing.T) {
-		type customType struct{ value int }
-		result := executor.formatValue(customType{value: 42})
-		assert.Contains(t, result, "'")
-	})
-}
-
-// =============================================================================
 // buildParameterizedSQL Tests - Security-critical parameterized query builder
 // =============================================================================
 
@@ -1267,40 +1160,6 @@ func TestExecutor_SQLInjectionPrevention(t *testing.T) {
 // Benchmarks
 // =============================================================================
 
-func BenchmarkExecutor_formatValue_String(b *testing.B) {
-	executor := NewExecutor(nil, nil, nil, nil)
-	value := "test string with 'quotes'"
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = executor.formatValue(value)
-	}
-}
-
-func BenchmarkExecutor_formatValue_Vector(b *testing.B) {
-	executor := NewExecutor(nil, nil, nil, nil)
-	value := []float64{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = executor.formatValue(value)
-	}
-}
-
-func BenchmarkExecutor_formatValue_Map(b *testing.B) {
-	executor := NewExecutor(nil, nil, nil, nil)
-	value := map[string]interface{}{
-		"key1": "value1",
-		"key2": 42,
-		"key3": true,
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = executor.formatValue(value)
-	}
-}
-
 func BenchmarkExecutor_buildSQL_Simple(b *testing.B) {
 	executor := NewExecutor(nil, nil, nil, nil)
 	execCtx := &ExecuteContext{
@@ -1603,4 +1462,147 @@ func TestExecuteResult_Fields(t *testing.T) {
 		assert.Equal(t, 50, *result.DurationMs)
 		assert.Equal(t, "test error", *result.Error)
 	})
+}
+
+// =============================================================================
+// buildParameterizedSQL Lexical Context Tests (SEC-12)
+//
+// The parameter rewriter must only touch `$name` tokens that are actual SQL
+// placeholders; `$name` sequences inside string literals, dollar-quoted blocks
+// and comments must survive byte-identically, or procedure bodies are corrupted
+// and parameter indices shift.
+// =============================================================================
+
+func TestExecutor_buildParameterizedSQL_LexicalContext(t *testing.T) {
+	executor := NewExecutor(nil, nil, nil, nil)
+
+	tests := []struct {
+		name        string
+		template    string
+		params      map[string]interface{}
+		userID      string
+		wantSQL     string
+		wantArgs    []interface{}
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:     "plain named params are rewritten in first-appearance order",
+			template: "SELECT $b, $a, $b",
+			params:   map[string]interface{}{"a": 1, "b": 2},
+			wantSQL:  "SELECT $1, $2, $1",
+			wantArgs: []interface{}{2, 1},
+		},
+		{
+			name:     "named token inside single-quoted literal is untouched",
+			template: "SELECT * FROM t WHERE status = '$active' AND id = $id",
+			params:   map[string]interface{}{"id": "u1"},
+			wantSQL:  "SELECT * FROM t WHERE status = '$active' AND id = $1",
+			wantArgs: []interface{}{"u1"},
+		},
+		{
+			name:     "escaped quote literal does not end the string early",
+			template: "SELECT 'it''s $not_a_param' WHERE id = $id",
+			params:   map[string]interface{}{"id": 7},
+			wantSQL:  "SELECT 'it''s $not_a_param' WHERE id = $1",
+			wantArgs: []interface{}{7},
+		},
+		{
+			name:     "dollar-quoted block with quoted token is untouched",
+			template: "$fn$ SELECT '$x' $fn$",
+			params:   map[string]interface{}{"x": "ignored"},
+			wantSQL:  "$fn$ SELECT '$x' $fn$",
+			wantArgs: []interface{}{},
+		},
+		{
+			name:     "adjacent $$ dollar-quoted blocks are untouched",
+			template: "SELECT $$lit one$$ || $$lit two$$, $param",
+			params:   map[string]interface{}{"param": true},
+			wantSQL:  "SELECT $$lit one$$ || $$lit two$$, $1",
+			wantArgs: []interface{}{true},
+		},
+		{
+			name:     "tagged dollar quote containing $$ inside is skipped entirely",
+			template: "SELECT $fn$ inner $$ not a tag $$ outer $fn$ AS v, $id",
+			params:   map[string]interface{}{"id": 3},
+			wantSQL:  "SELECT $fn$ inner $$ not a tag $$ outer $fn$ AS v, $1",
+			wantArgs: []interface{}{3},
+		},
+		{
+			name:     "double-quoted identifier is untouched",
+			template: `SELECT "col$name" FROM t WHERE id = $id`,
+			params:   map[string]interface{}{"id": 9},
+			wantSQL:  `SELECT "col$name" FROM t WHERE id = $1`,
+			wantArgs: []interface{}{9},
+		},
+		{
+			name:     "token in line comment is untouched",
+			template: "SELECT val -- $name is a comment\nFROM t WHERE v = $val",
+			params:   map[string]interface{}{"val": 5},
+			wantSQL:  "SELECT val -- $name is a comment\nFROM t WHERE v = $1",
+			wantArgs: []interface{}{5},
+		},
+		{
+			name:     "token in block comment is untouched",
+			template: "/* $name */ SELECT $v",
+			params:   map[string]interface{}{"v": 7},
+			wantSQL:  "/* $name */ SELECT $1",
+			wantArgs: []interface{}{7},
+		},
+		{
+			name:     "mixed params and literals",
+			template: "SELECT '$a', $real1, '$$not a param$$', $real2 /* $hidden */",
+			params:   map[string]interface{}{"real1": "x", "real2": "y"},
+			wantSQL:  "SELECT '$a', $1, '$$not a param$$', $2 /* $hidden */",
+			wantArgs: []interface{}{"x", "y"},
+		},
+		{
+			name:     "ordinal placeholders are left untouched",
+			template: "SELECT * FROM t WHERE id = $1 AND tenant_id = $2",
+			params:   map[string]interface{}{},
+			wantSQL:  "SELECT * FROM t WHERE id = $1 AND tenant_id = $2",
+			wantArgs: []interface{}{},
+		},
+		{
+			name:     "empty body",
+			template: "",
+			params:   map[string]interface{}{"a": 1},
+			wantSQL:  "",
+			wantArgs: []interface{}{},
+		},
+		{
+			name:        "missing param outside literal still errors",
+			template:    "SELECT * FROM t WHERE x = $required",
+			params:      map[string]interface{}{},
+			wantErr:     true,
+			errContains: "missing required parameters",
+		},
+		{
+			name:     "token inside literal does not satisfy missing-param check",
+			template: "SELECT '$ghost' FROM t WHERE id = $present",
+			params:   map[string]interface{}{"present": 1},
+			wantSQL:  "SELECT '$ghost' FROM t WHERE id = $1",
+			wantArgs: []interface{}{1},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			execCtx := &ExecuteContext{
+				Params:   tt.params,
+				UserID:   tt.userID,
+				UserRole: "authenticated",
+			}
+
+			sql, args, err := executor.buildParameterizedSQL(tt.template, tt.params, execCtx)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantSQL, sql)
+			assert.Equal(t, tt.wantArgs, args)
+		})
+	}
 }

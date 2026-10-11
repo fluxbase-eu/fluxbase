@@ -196,7 +196,9 @@ func ExtractAuthContext(c fiber.Ctx) *AuthContext {
 
 	// Extract auth type
 	if authType := c.Locals("auth_type"); authType != nil {
-		ctx.AuthType = authType.(string)
+		if s, ok := authType.(string); ok {
+			ctx.AuthType = s
+		}
 	}
 
 	// Extract user info from JWT auth
@@ -210,11 +212,15 @@ func ExtractAuthContext(c fiber.Ctx) *AuthContext {
 	}
 
 	if userEmail := c.Locals("user_email"); userEmail != nil {
-		ctx.UserEmail = userEmail.(string)
+		if s, ok := userEmail.(string); ok {
+			ctx.UserEmail = s
+		}
 	}
 
 	if userRole := c.Locals("user_role"); userRole != nil {
-		ctx.UserRole = userRole.(string)
+		if s, ok := userRole.(string); ok {
+			ctx.UserRole = s
+		}
 	}
 
 	// Extract tenant from Fiber locals (set by tenant middleware)
@@ -252,11 +258,15 @@ func ExtractAuthContext(c fiber.Ctx) *AuthContext {
 
 	// Extract client key info
 	if clientKeyID := c.Locals("client_key_id"); clientKeyID != nil {
-		ctx.ClientKeyID = clientKeyID.(string)
+		if s, ok := clientKeyID.(string); ok {
+			ctx.ClientKeyID = s
+		}
 	}
 
 	if clientKeyName := c.Locals("client_key_name"); clientKeyName != nil {
-		ctx.ClientKeyName = clientKeyName.(string)
+		if s, ok := clientKeyName.(string); ok {
+			ctx.ClientKeyName = s
+		}
 	}
 
 	// Mirror the clientkey middleware's RLS mapping: a client key bound to a

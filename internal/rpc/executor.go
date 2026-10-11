@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -335,9 +334,11 @@ func (e *Executor) buildParameterizedSQL(sqlTemplate string, params map[string]i
 		allParams[k] = v
 	}
 
-	// Find all unique parameter placeholders in the SQL template
-	paramPattern := regexp.MustCompile(`\$([a-zA-Z_][a-zA-Z0-9_]*)`)
-	matches := paramPattern.FindAllStringSubmatch(sqlTemplate, -1)
+	// Find all unique parameter placeholders in the SQL template.
+	// SECURITY (SEC-12): scanning is context-aware — `$name` tokens inside
+	// string literals, quoted identifiers, dollar-quoted blocks or comments are
+	// not placeholders and are left untouched (see scanNamedParamTokens).
+	tokens := scanNamedParamTokens(sqlTemplate)
 
 	// Build the set of optional parameters from the procedure's input_schema.
 	// Schema is stored as json.RawMessage; the convention is a flat object whose
@@ -366,11 +367,8 @@ func (e *Executor) buildParameterizedSQL(sqlTemplate string, params map[string]i
 	missingParamsSet := make(map[string]bool) // dedupe across multiple SQL references
 	var missingParams []string
 
-	for _, match := range matches {
-		if len(match) < 2 {
-			continue
-		}
-		paramName := match[1]
+	for _, tok := range tokens {
+		paramName := tok.name
 
 		// Check if parameter exists in the merged caller+user params
 		if _, exists := allParams[paramName]; !exists {
@@ -421,22 +419,30 @@ func (e *Executor) buildParameterizedSQL(sqlTemplate string, params map[string]i
 		}
 	}
 
-	// Replace $param_name with $1, $2, etc. or vector literals
-	sql := paramPattern.ReplaceAllStringFunc(sqlTemplate, func(match string) string {
-		paramName := strings.TrimPrefix(match, "$")
+	// Replace $param_name with $1, $2, etc. or vector literals, copying all
+	// non-placeholder bytes (including literals and comments) verbatim.
+	var out strings.Builder
+	out.Grow(len(sqlTemplate))
+	last := 0
+	for _, tok := range tokens {
+		out.WriteString(sqlTemplate[last:tok.start])
 
-		if idx, exists := paramNameToIndex[paramName]; exists {
+		if idx, exists := paramNameToIndex[tok.name]; exists {
 			// Vector types embed the literal directly (not $N)
 			if idx == 0 {
-				return vectorLiterals[paramName]
+				out.WriteString(vectorLiterals[tok.name])
+			} else {
+				// Return positional placeholder
+				fmt.Fprintf(&out, "$%d", idx)
 			}
-			// Return positional placeholder
-			return fmt.Sprintf("$%d", idx)
+		} else {
+			// Shouldn't reach here due to missing param check above
+			out.WriteString(sqlTemplate[tok.start : tok.start+1+len(tok.name)])
 		}
-
-		// Shouldn't reach here due to missing param check above
-		return match
-	})
+		last = tok.start + 1 + len(tok.name)
+	}
+	out.WriteString(sqlTemplate[last:])
+	sql := out.String()
 
 	return sql, args, nil
 }
@@ -484,65 +490,6 @@ func (e *Executor) formatVectorLiteral(value interface{}) string {
 func (e *Executor) buildSQL(sqlTemplate string, params map[string]interface{}, execCtx *ExecuteContext) (string, error) {
 	sql, _, err := e.buildParameterizedSQL(sqlTemplate, params, execCtx)
 	return sql, err
-}
-
-// formatValue formats a Go value for use in SQL.
-//
-// DEPRECATED FOR NON-VECTOR USE: This method uses string interpolation which is vulnerable
-// to SQL injection if not carefully validated. Use buildParameterizedSQL instead, which uses
-// pgx parameterized queries.
-//
-// This method is still used for vector types ([]float32, []float64, numeric []interface{})
-// because pgx doesn't natively support the ::vector type constructor with parameters.
-// The validateAndFormatVector function in query_parser.go validates these values
-// character-by-character to ensure they contain only safe numeric content.
-func (e *Executor) formatValue(value interface{}) string {
-	if value == nil {
-		return "NULL"
-	}
-
-	switch v := value.(type) {
-	case string:
-		// Escape single quotes
-		escaped := strings.ReplaceAll(v, "'", "''")
-		return fmt.Sprintf("'%s'", escaped)
-	case int, int32, int64, float32, float64:
-		return fmt.Sprintf("%v", v)
-	case bool:
-		if v {
-			return "TRUE"
-		}
-		return "FALSE"
-	case json.Number:
-		return v.String()
-	case []float32:
-		// Format as PostgreSQL vector literal: '[0.1, 0.2, ...]'::vector
-		return formatVectorLiteral32(v)
-	case []float64:
-		// Format as PostgreSQL vector literal: '[0.1, 0.2, ...]'::vector
-		return formatVectorLiteral64(v)
-	case []interface{}:
-		// Check if it's a numeric array (potential vector from JSON)
-		if isNumericArray(v) {
-			return formatVectorLiteralInterface(v)
-		}
-		// Format as PostgreSQL array
-		var items []string
-		for _, item := range v {
-			items = append(items, e.formatValue(item))
-		}
-		return fmt.Sprintf("ARRAY[%s]", strings.Join(items, ", "))
-	case map[string]interface{}:
-		// Format as JSONB
-		jsonBytes, _ := json.Marshal(v)
-		escaped := strings.ReplaceAll(string(jsonBytes), "'", "''")
-		return fmt.Sprintf("'%s'::jsonb", escaped)
-	default:
-		// Convert to string
-		str := fmt.Sprintf("%v", v)
-		escaped := strings.ReplaceAll(str, "'", "''")
-		return fmt.Sprintf("'%s'", escaped)
-	}
 }
 
 // isNumericArray checks if a []interface{} contains only numeric values

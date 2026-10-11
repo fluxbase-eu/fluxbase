@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/nimbleflux/fluxbase/internal/database"
@@ -142,12 +143,15 @@ func (s *DashboardAuthService) DeleteAccount(ctx context.Context, userID uuid.UU
 	}
 
 	// Delete all sessions
-	_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+	if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			DELETE FROM platform.sessions WHERE user_id = $1
 		`, userID)
 		return err
-	})
+	}); err != nil {
+		// Best-effort purge; deletion already succeeded so don't fail the request.
+		log.Warn().Err(err).Str("user_id", userID.String()).Msg("Failed to purge sessions during account deletion")
+	}
 
 	// Log activity
 	s.logActivity(ctx, userID, "account_delete", "user", userID.String(), ipAddress, userAgent, nil)

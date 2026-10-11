@@ -160,11 +160,7 @@ func (m *Manager) CreateTenantDatabase(ctx context.Context, req CreateTenantRequ
 	if err := bootstrap.RunBootstrapOnDB(ctx, tenantDBURL, appUser); err != nil {
 		log.Warn().Err(err).Str("tenant", req.Slug).Msg("Failed to bootstrap tenant database")
 		if req.DBMode != "existing" {
-			_, _ = m.adminPool.Exec(ctx, fmt.Sprintf(
-				"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s'",
-				escapeSQLString(dbName),
-			))
-			_, _ = m.adminPool.Exec(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", quoteIdent(dbName)))
+			m.rollbackTenantDatabase(ctx, dbName)
 		}
 		if statusErr := m.storage.UpdateTenantStatus(ctx, tenant.ID, TenantStatusError); statusErr != nil {
 			log.Warn().Err(statusErr).Str("tenant_id", tenant.ID).Msg("Failed to update tenant status to error")
@@ -199,11 +195,7 @@ func (m *Manager) CreateTenantDatabase(ctx context.Context, req CreateTenantRequ
 			// Best-effort rollback of what was created so a partially
 			// provisioned tenant is not left behind.
 			if req.DBMode != "existing" {
-				_, _ = m.adminPool.Exec(ctx, fmt.Sprintf(
-					"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s'",
-					escapeSQLString(dbName),
-				))
-				_, _ = m.adminPool.Exec(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", quoteIdent(dbName)))
+				m.rollbackTenantDatabase(ctx, dbName)
 			}
 			if statusErr := m.storage.UpdateTenantStatus(ctx, tenant.ID, TenantStatusError); statusErr != nil {
 				log.Warn().Err(statusErr).Str("tenant_id", tenant.ID).Msg("Failed to update tenant status to error")
@@ -231,6 +223,23 @@ func (m *Manager) CreateTenantDatabase(ctx context.Context, req CreateTenantRequ
 
 	log.Info().Str("tenant_id", tenant.ID).Str("slug", req.Slug).Str("db", dbName).Msg("Tenant database created successfully")
 	return tenant, nil
+}
+
+// rollbackTenantDatabase best-effort drops a partially provisioned tenant
+// database: it terminates remaining backends and force-drops the database.
+// Failures are logged at Warn (with the database name) and intentionally not
+// returned — callers use this only on rollback paths where the original
+// provisioning error is returned regardless.
+func (m *Manager) rollbackTenantDatabase(ctx context.Context, dbName string) {
+	if _, err := m.adminPool.Exec(ctx, fmt.Sprintf(
+		"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s'",
+		escapeSQLString(dbName),
+	)); err != nil {
+		log.Warn().Err(err).Str("db", dbName).Msg("tenant rollback: failed to terminate database connections")
+	}
+	if _, err := m.adminPool.Exec(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", quoteIdent(dbName))); err != nil {
+		log.Warn().Err(err).Str("db", dbName).Msg("tenant rollback: failed to drop database")
+	}
 }
 
 // setupTenantFDW provisions the per-tenant FDW plumbing: role on the main

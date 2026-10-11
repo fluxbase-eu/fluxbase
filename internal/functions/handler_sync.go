@@ -342,9 +342,9 @@ func (h *Handler) SyncFunctions(c fiber.Ctx) error {
 
 			if hasSharedImports {
 				supportingFiles := make(map[string]string)
-				result, bundleErr = bundler.BundleWithFiles(context.Background(), spec.Code, supportingFiles, sharedModulesMap)
+				result, bundleErr = bundler.BundleWithFiles(ctx, spec.Code, supportingFiles, sharedModulesMap)
 			} else {
-				result, bundleErr = bundler.Bundle(context.Background(), spec.Code)
+				result, bundleErr = bundler.Bundle(ctx, spec.Code)
 			}
 
 			if bundleErr != nil {
