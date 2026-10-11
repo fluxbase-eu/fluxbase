@@ -38,6 +38,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Least privilege: builds a local image and exercises it via docker compose.
+# Nothing is published, so read access to the repo is all the token needs.
+permissions:
+  contents: read
+
 jobs:
   changes:
     name: Detect Changes

@@ -141,3 +141,6 @@ admin/playwright-report/
 # Compiled binaries accidentally committed (kept locally, never tracked)
 /cmd/cli
 /cmd/cmd
+
+# Internal audit report - contains vulnerability analysis, never publish
+/AUDIT_REPORT.md
