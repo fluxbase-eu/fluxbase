@@ -96,6 +96,14 @@ jobs:
             fi
           }
 
+      - name: Deduplicate SARIF stacks
+        # govulncheck emits identical call-stack entries that the upload API
+        # rejects ("stacks contains duplicate item"). Dedupe before uploading.
+        if: always() && hashFiles('govulncheck-results.sarif') != ''
+        run: |
+          jq '.runs[].results |= map(.stacks |= (if . then unique else . end))'             govulncheck-results.sarif > govulncheck-results.dedup.sarif
+          mv govulncheck-results.dedup.sarif govulncheck-results.sarif
+
       - name: Upload govulncheck results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('govulncheck-results.sarif') != ''
@@ -143,7 +151,7 @@ jobs:
         uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
         with:
           languages: go
-          build-mode: none
+          build-mode: autobuild
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
@@ -164,7 +172,11 @@ jobs:
           # real secrets in history — the scan is purely preventive.
           fetch-depth: 0
 
+      - name: Install gitleaks (pinned binary - gitleaks-action requires an org license)
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" | tar -xz -C /tmp gitleaks
+          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gitleaks detect --source . --redact --verbose --no-banner
