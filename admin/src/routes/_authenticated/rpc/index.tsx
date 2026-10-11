@@ -175,8 +175,8 @@ function RPCContent() {
     refetch: refetchProcedures,
   } = useQuery({
     queryKey: ["rpc-procedures", currentTenantId, selectedNamespace],
-    queryFn: async () => {
-      const data = await rpcApi.listProcedures(selectedNamespace);
+    queryFn: async ({ signal }) => {
+      const data = await rpcApi.listProcedures(selectedNamespace, { signal });
       return data || [];
     },
     enabled: namespacesLoaded,
@@ -195,23 +195,26 @@ function RPCContent() {
       searchQuery,
       statusFilter,
     ],
-    queryFn: async () => {
-      const result = await rpcApi.listExecutions({
-        namespace: selectedNamespace !== "all" ? selectedNamespace : undefined,
-        procedure: searchQuery || undefined,
-        status:
-          statusFilter !== "all"
-            ? (statusFilter as
-                | "pending"
-                | "running"
-                | "completed"
-                | "failed"
-                | "cancelled"
-                | "timeout")
-            : undefined,
-        limit: RPC_PAGE_SIZE,
-        offset: 0,
-      });
+    queryFn: async ({ signal }) => {
+      const result = await rpcApi.listExecutions(
+        {
+          namespace: selectedNamespace !== "all" ? selectedNamespace : undefined,
+          procedure: searchQuery || undefined,
+          status:
+            statusFilter !== "all"
+              ? (statusFilter as
+                  | "pending"
+                  | "running"
+                  | "completed"
+                  | "failed"
+                  | "cancelled"
+                  | "timeout")
+              : undefined,
+          limit: RPC_PAGE_SIZE,
+          offset: 0,
+        },
+        { signal },
+      );
       return result;
     },
     enabled: activeTab === "executions" && namespacesLoaded,

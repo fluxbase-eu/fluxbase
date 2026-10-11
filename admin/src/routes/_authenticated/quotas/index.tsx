@@ -82,9 +82,10 @@ function UserQuotasPage() {
   // Fetch users with their quotas
   const { data: users, isLoading } = useQuery({
     queryKey: ['users-with-quotas'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const response = await api.get<UserWithQuota[]>(
-        '/api/v1/admin/users-with-quotas'
+        '/api/v1/admin/users-with-quotas',
+        { signal }
       )
       return response.data
     },

@@ -73,10 +73,10 @@ function InlineTenantSelector() {
 
   const { data: fetchedTenants } = useQuery({
     queryKey: ["tenants", storeIsInstanceAdmin, setIsInstanceAdmin],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       setIsInstanceAdmin(storeIsInstanceAdmin);
       if (storeIsInstanceAdmin) {
-        return await tenantsApi.list();
+        return await tenantsApi.list({ signal });
       }
       return await tenantsApi.listMine();
     },

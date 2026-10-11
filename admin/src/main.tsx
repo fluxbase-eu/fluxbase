@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth-store";
 import { fluxbaseClient } from "@/lib/fluxbase-client";
+import { attemptSessionRestore } from "@/lib/auth";
 import { handleServerError } from "@/lib/handle-server-error";
 import { DirectionProvider } from "./context/direction-provider";
 import { FontProvider } from "./context/font-provider";
@@ -99,6 +100,11 @@ declare module "@tanstack/react-router" {
     router: typeof router;
   }
 }
+
+// Restore the session on cold loads: if the access-token cookie is gone but
+// the HttpOnly refresh cookie is still present, silently refresh so the user
+// lands back in the dashboard instead of on the login page. No-op otherwise.
+void attemptSessionRestore();
 
 // Render the app
 const rootElement = document.getElementById("root")!;

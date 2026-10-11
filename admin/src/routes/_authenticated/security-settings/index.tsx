@@ -58,7 +58,7 @@ function SecuritySettingsPage() {
     dataUpdatedAt,
   } = useQuery<CaptchaSettingsResponse>({
     queryKey: ['captcha-settings'],
-    queryFn: () => captchaSettingsApi.get(),
+    queryFn: ({ signal }) => captchaSettingsApi.get({ signal }),
   })
 
   // Captcha form state - continuous editing pattern

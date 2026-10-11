@@ -358,14 +358,14 @@ export function ChatbotSettingsDialog({
   // Fetch full chatbot details
   const { data: fullChatbot, isLoading } = useQuery({
     queryKey: ["chatbot", chatbot.id],
-    queryFn: () => chatbotsApi.get(chatbot.id),
+    queryFn: ({ signal }) => chatbotsApi.get(chatbot.id, { signal }),
     enabled: open,
   });
 
   // Fetch available providers
   const { data: providers = [] } = useQuery({
     queryKey: ["ai-providers"],
-    queryFn: () => aiProvidersApi.list(),
+    queryFn: ({ signal }) => aiProvidersApi.list({ signal }),
     enabled: open,
   });
 

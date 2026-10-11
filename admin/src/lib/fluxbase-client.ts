@@ -2,6 +2,7 @@ import { createClient } from "@nimbleflux/fluxbase-sdk";
 import { useAuthStore } from "@/stores/auth-store";
 import { useTenantStore } from "@/stores/tenant-store";
 import { useImpersonationStore } from "@/stores/impersonation-store";
+import { ensureFreshAccessToken } from "@/lib/api/client";
 
 // Declare the runtime config type injected by the server
 declare global {
@@ -57,6 +58,26 @@ export function setAuthToken(token: string | null) {
     fluxbaseClient.setAuthToken(null);
   }
 }
+
+// On a 401, let the SDK retry through the SAME refresh flow the axios client
+// uses (single in-flight refresh in lib/api/client.ts). A successful refresh
+// updates the auth store, which pushes the new access token into this client
+// via setAuthToken, so the SDK's automatic retry picks it up.
+//
+// FluxbaseClient does not expose the underlying FluxbaseFetch (its `fetch`
+// field is private) and FluxbaseAuth unconditionally registers its own
+// refresh callback on it during createClient(). The admin app never uses
+// client.auth sessions (persist: false, autoRefresh: false), so replacing
+// that callback is safe: the SDK's own refreshSession() path would be a
+// no-op here anyway.
+const sdkFetch = (
+  fluxbaseClient as unknown as {
+    fetch: {
+      setRefreshTokenCallback: (cb: () => Promise<boolean>) => void;
+    };
+  }
+).fetch;
+sdkFetch.setRefreshTokenCallback(() => ensureFreshAccessToken());
 
 // Helper to get the auth token
 export function getAuthToken(): string | null {

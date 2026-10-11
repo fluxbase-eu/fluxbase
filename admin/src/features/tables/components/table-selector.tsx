@@ -125,12 +125,12 @@ export function TableSelector({
 
   const { data: schemas, isLoading: schemasLoading } = useQuery({
     queryKey: ["schemas"],
-    queryFn: databaseApi.getSchemas,
+    queryFn: ({ signal }) => databaseApi.getSchemas({ signal }),
   });
 
   const { data: tables, isLoading: tablesLoading } = useQuery({
     queryKey: ["tables", selectedSchema],
-    queryFn: () => databaseApi.getTables(selectedSchema),
+    queryFn: ({ signal }) => databaseApi.getTables(selectedSchema, { signal }),
     staleTime: 0, // Always refetch when component mounts
     refetchOnMount: "always", // Force refetch on mount
   });

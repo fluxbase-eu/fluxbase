@@ -84,7 +84,7 @@ export function ServiceKeyList({ onCreateSuccess }: ServiceKeyListProps) {
 
   const { data: serviceKeys, isLoading } = useQuery<PlatformServiceKey[]>({
     queryKey: ["platform-service-keys"],
-    queryFn: platformServiceKeysApi.list,
+    queryFn: ({ signal }) => platformServiceKeysApi.list({ signal }),
   });
 
   const enableMutation = useMutation({

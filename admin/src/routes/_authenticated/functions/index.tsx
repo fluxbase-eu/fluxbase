@@ -110,8 +110,8 @@ function EdgeFunctionsTab() {
     refetch: refetchFunctions,
   } = useQuery({
     queryKey: ["edge-functions", selectedNamespace, currentTenantId],
-    queryFn: async () => {
-      const data = await functionsApi.list(selectedNamespace);
+    queryFn: async ({ signal }) => {
+      const data = await functionsApi.list(selectedNamespace, { signal });
       return data || [];
     },
   });

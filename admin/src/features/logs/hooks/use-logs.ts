@@ -16,10 +16,11 @@ export function useLogs(
 ) {
   return useQuery<LogQueryResultAPI>({
     queryKey: ['logs', options],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       logsApi.query({
         ...options,
         levels: options.levels?.length ? options.levels : undefined,
+        signal,
       }),
     staleTime: 10000, // 10 seconds
     refetchOnWindowFocus: false,
@@ -34,9 +35,9 @@ export function useLogs(
 export function useLogStats() {
   return useQuery<LogStatsAPI>({
     queryKey: ['log-stats'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        return await logsApi.getStats()
+        return await logsApi.getStats({ signal })
       } catch (err) {
         // If logging API is not available (404), return default stats
         // instead of throwing an error

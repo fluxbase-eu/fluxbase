@@ -122,8 +122,8 @@ function JobsPage() {
   // Job functions via TanStack Query
   const { data: jobFunctions = [], refetch: refetchJobFunctions } = useQuery({
     queryKey: ["job-functions", selectedNamespace, currentTenantId],
-    queryFn: async () => {
-      const data = await jobsApi.listFunctions(selectedNamespace);
+    queryFn: async ({ signal }) => {
+      const data = await jobsApi.listFunctions(selectedNamespace, { signal });
       return data || [];
     },
   });

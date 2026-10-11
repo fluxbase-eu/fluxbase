@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface SystemMetrics {
   uptime_seconds: number;
@@ -47,13 +47,19 @@ export interface SystemHealth {
 }
 
 export const monitoringApi = {
-  getMetrics: async (): Promise<SystemMetrics> => {
-    const response = await api.get<SystemMetrics>("/api/v1/monitoring/metrics");
+  getMetrics: async (
+    options?: ApiRequestOptions,
+  ): Promise<SystemMetrics> => {
+    const response = await api.get<SystemMetrics>("/api/v1/monitoring/metrics", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 
-  getHealth: async (): Promise<SystemHealth> => {
-    const response = await api.get<SystemHealth>("/api/v1/monitoring/health");
+  getHealth: async (options?: ApiRequestOptions): Promise<SystemHealth> => {
+    const response = await api.get<SystemHealth>("/api/v1/monitoring/health", {
+      signal: options?.signal,
+    });
     return response.data;
   },
 };
@@ -95,16 +101,22 @@ export interface UpdateTenantSettingsRequest {
 }
 
 export const instanceSettingsApi = {
-  get: async (): Promise<InstanceSettingsResponse> => {
+  get: async (
+    options?: ApiRequestOptions,
+  ): Promise<InstanceSettingsResponse> => {
     const response = await api.get<InstanceSettingsResponse>(
       "/api/v1/admin/instance/settings",
+      { signal: options?.signal },
     );
     return response.data;
   },
 
-  getOverridable: async (): Promise<{ overridable_settings: string[] }> => {
+  getOverridable: async (
+    options?: ApiRequestOptions,
+  ): Promise<{ overridable_settings: string[] }> => {
     const response = await api.get<{ overridable_settings: string[] }>(
       "/api/v1/admin/instance/settings/overridable",
+      { signal: options?.signal },
     );
     return response.data;
   },
@@ -131,9 +143,13 @@ export const instanceSettingsApi = {
 };
 
 export const tenantSettingsApi = {
-  get: async (tenantId: string): Promise<TenantSettingsResponse> => {
+  get: async (
+    tenantId: string,
+    options?: ApiRequestOptions,
+  ): Promise<TenantSettingsResponse> => {
     const response = await api.get<TenantSettingsResponse>(
       `/api/v1/admin/tenants/${tenantId}/settings`,
+      { signal: options?.signal },
     );
     return response.data;
   },

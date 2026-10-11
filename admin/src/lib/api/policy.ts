@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, type ApiRequestOptions } from "./client";
 
 export interface RLSPolicy {
   schema: string;
@@ -76,10 +76,14 @@ export const policyApi = {
     return response.data || [];
   },
 
-  getTablesWithRLS: async (schema?: string): Promise<TableRLSStatus[]> => {
+  getTablesWithRLS: async (
+    schema?: string,
+    options?: ApiRequestOptions,
+  ): Promise<TableRLSStatus[]> => {
     const params = schema ? `?schema=${schema}` : "";
     const response = await api.get<TableRLSStatus[]>(
       `/api/v1/admin/tables/rls${params}`,
+      { signal: options?.signal },
     );
     return response.data || [];
   },
@@ -87,9 +91,11 @@ export const policyApi = {
   getTableRLSStatus: async (
     schema: string,
     table: string,
+    options?: ApiRequestOptions,
   ): Promise<TableRLSStatus> => {
     const response = await api.get<TableRLSStatus>(
       `/api/v1/admin/tables/${schema}/${table}/rls`,
+      { signal: options?.signal },
     );
     return response.data;
   },
@@ -145,16 +151,22 @@ export const policyApi = {
     return response.data;
   },
 
-  getSecurityWarnings: async (): Promise<SecurityWarningsResponse> => {
+  getSecurityWarnings: async (
+    options?: ApiRequestOptions,
+  ): Promise<SecurityWarningsResponse> => {
     const response = await api.get<SecurityWarningsResponse>(
       "/api/v1/admin/security/warnings",
+      { signal: options?.signal },
     );
     return response.data;
   },
 
-  getTemplates: async (): Promise<PolicyTemplate[]> => {
+  getTemplates: async (
+    options?: ApiRequestOptions,
+  ): Promise<PolicyTemplate[]> => {
     const response = await api.get<PolicyTemplate[]>(
       "/api/v1/admin/policies/templates",
+      { signal: options?.signal },
     );
     return response.data || [];
   },

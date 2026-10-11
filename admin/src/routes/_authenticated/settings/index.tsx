@@ -50,7 +50,7 @@ function SettingsPage() {
   // Fetch current user data
   const { data: user, isLoading } = useQuery<DashboardUser>({
     queryKey: ['dashboard-user'],
-    queryFn: dashboardAuthAPI.me,
+    queryFn: ({ signal }) => dashboardAuthAPI.me({ signal }),
   })
 
   // Profile state

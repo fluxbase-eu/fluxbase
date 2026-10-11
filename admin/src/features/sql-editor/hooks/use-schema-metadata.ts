@@ -15,7 +15,7 @@ export function useSchemaMetadata(): SchemaMetadata {
     error: schemasError,
   } = useQuery({
     queryKey: ['sql-editor', 'schemas'],
-    queryFn: () => databaseApi.getSchemas(),
+    queryFn: ({ signal }) => databaseApi.getSchemas({ signal }),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
@@ -25,7 +25,7 @@ export function useSchemaMetadata(): SchemaMetadata {
     error: tablesError,
   } = useQuery({
     queryKey: ['sql-editor', 'tables'],
-    queryFn: () => databaseApi.getTables(),
+    queryFn: ({ signal }) => databaseApi.getTables(undefined, { signal }),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 

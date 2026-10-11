@@ -29,7 +29,7 @@ function TenantDetailPage() {
 
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ['tenant', tenantId],
-    queryFn: () => tenantsApi.get(tenantId),
+    queryFn: ({ signal }) => tenantsApi.get(tenantId, { signal }),
   })
 
   if (tenantLoading) {
