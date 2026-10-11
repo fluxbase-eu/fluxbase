@@ -33,8 +33,7 @@ pnpm add @nimbleflux/fluxbase-sdk
 import { createClient } from "@nimbleflux/fluxbase-sdk";
 
 // Create a client
-const client = createClient({
-  url: "http://localhost:8080",
+const client = createClient("http://localhost:8080", "your-api-key", {
   auth: {
     autoRefresh: true,
     persist: true,
@@ -91,8 +90,7 @@ const cookieStorage: StorageAdapter = {
   removeItem: (key) => deleteCookie(key),
 };
 
-const client = createClient({
-  url: "http://localhost:8080",
+const client = createClient("http://localhost:8080", "your-api-key", {
   auth: {
     storage: cookieStorage, // takes precedence over the default localStorage/in-memory choice
   },

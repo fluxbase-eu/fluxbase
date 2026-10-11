@@ -5,8 +5,7 @@
  * ```typescript
  * import { createClient } from '@nimbleflux/fluxbase-sdk'
  *
- * const client = createClient({
- *   url: 'http://localhost:8080',
+ * const client = createClient('http://localhost:8080', 'your-api-key', {
  *   auth: {
  *     token: 'your-token',
  *     autoRefresh: true,
@@ -28,7 +27,7 @@
  *   .execute()
  *
  * // Realtime
- * client.channel('table:public.products')
+ * client.realtime.channel('table:public.products')
  *   .on('INSERT', (payload) => console.log('New product:', payload))
  *   .subscribe()
  *
