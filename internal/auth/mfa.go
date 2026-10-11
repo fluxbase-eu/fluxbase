@@ -202,11 +202,16 @@ func (m *MFAService) EnableTOTP(ctx context.Context, userID, code string) ([]str
 		return nil, fmt.Errorf("failed to enable TOTP: %w", err)
 	}
 
-	_, _ = m.db.Exec(ctx, `
+	// Best-effort accounting write: the factor is enabled, so a failure to mark
+	// the setup row verified must not fail the enrollment. Logged so the stale
+	// setup row is observable.
+	if _, err := m.db.Exec(ctx, `
 		UPDATE auth.two_factor_setups
 		SET verified = TRUE
 		WHERE user_id = $1
-	`, userID)
+	`, userID); err != nil {
+		log.Warn().Err(err).Str("user_id", userID).Msg("Failed to mark TOTP setup as verified after enabling TOTP")
+	}
 
 	return backupCodes, nil
 }
@@ -254,7 +259,12 @@ func (m *MFAService) VerifyTOTPWithContext(ctx context.Context, userID, code, ip
 	if err == nil && valid {
 		if matchedStep <= lastUsedStep {
 			if m.totpRateLimiter != nil {
-				_ = m.totpRateLimiter.RecordAttempt(ctx, userID, false, ipAddress, userAgent)
+				// Deliberate availability trade-off: rate-limit accounting is
+				// fail-open (a failed record never blocks verification), but
+				// failures are logged so the gap is observable.
+				if recErr := m.totpRateLimiter.RecordAttempt(ctx, userID, false, ipAddress, userAgent); recErr != nil {
+					log.Warn().Err(recErr).Str("user_id", userID).Msg("Failed to record rejected TOTP replay attempt in rate limiter")
+				}
 			}
 			return errors.New("2FA code has already been used")
 		}
@@ -270,7 +280,9 @@ func (m *MFAService) VerifyTOTPWithContext(ctx context.Context, userID, code, ip
 		}
 
 		if m.totpRateLimiter != nil {
-			_ = m.totpRateLimiter.RecordAttempt(ctx, userID, true, ipAddress, userAgent)
+			if recErr := m.totpRateLimiter.RecordAttempt(ctx, userID, true, ipAddress, userAgent); recErr != nil {
+				log.Warn().Err(recErr).Str("user_id", userID).Msg("Failed to record successful TOTP attempt in rate limiter")
+			}
 		}
 		return nil
 	}
@@ -289,13 +301,19 @@ func (m *MFAService) VerifyTOTPWithContext(ctx context.Context, userID, code, ip
 				return fmt.Errorf("failed to update backup codes: %w", err)
 			}
 
-			_, _ = m.db.Exec(ctx, `
+			// Best-effort audit write; the backup code was already consumed
+			// above, so a failure must not roll back the successful recovery.
+			if _, auditErr := m.db.Exec(ctx, `
 				INSERT INTO auth.two_factor_recovery_attempts (user_id, code_used, success)
 				VALUES ($1, $2, TRUE)
-			`, userID, "backup_code")
+			`, userID, "backup_code"); auditErr != nil {
+				log.Warn().Err(auditErr).Str("user_id", userID).Msg("Failed to record successful backup code recovery attempt")
+			}
 
 			if m.totpRateLimiter != nil {
-				_ = m.totpRateLimiter.RecordAttempt(ctx, userID, true, ipAddress, userAgent)
+				if recErr := m.totpRateLimiter.RecordAttempt(ctx, userID, true, ipAddress, userAgent); recErr != nil {
+					log.Warn().Err(recErr).Str("user_id", userID).Msg("Failed to record successful backup code attempt in rate limiter")
+				}
 			}
 
 			return nil
@@ -303,12 +321,18 @@ func (m *MFAService) VerifyTOTPWithContext(ctx context.Context, userID, code, ip
 	}
 
 	if m.totpRateLimiter != nil {
-		_ = m.totpRateLimiter.RecordAttempt(ctx, userID, false, ipAddress, userAgent)
+		if recErr := m.totpRateLimiter.RecordAttempt(ctx, userID, false, ipAddress, userAgent); recErr != nil {
+			log.Warn().Err(recErr).Str("user_id", userID).Msg("Failed to record failed TOTP attempt in rate limiter")
+		}
 	} else {
-		_, _ = m.db.Exec(ctx, `
+		// Deliberate availability trade-off, same as the rate limiter above:
+		// fail-open accounting, logged so failures stay observable.
+		if _, auditErr := m.db.Exec(ctx, `
 			INSERT INTO auth.two_factor_recovery_attempts (user_id, code_used, success)
 			VALUES ($1, $2, FALSE)
-		`, userID, "totp_code")
+		`, userID, "totp_code"); auditErr != nil {
+			log.Warn().Err(auditErr).Str("user_id", userID).Msg("Failed to record failed TOTP attempt in recovery attempts")
+		}
 	}
 
 	return errors.New("invalid 2FA code")
@@ -335,9 +359,13 @@ func (m *MFAService) DisableTOTP(ctx context.Context, userID, password string) e
 		return fmt.Errorf("failed to disable 2FA: %w", err)
 	}
 
-	_, _ = m.db.Exec(ctx, `
+	// Best-effort cleanup; the factor is already disabled, so a leftover setup
+	// row is logged rather than failing the request.
+	if _, err := m.db.Exec(ctx, `
 		DELETE FROM auth.two_factor_setups WHERE user_id = $1
-	`, userID)
+	`, userID); err != nil {
+		log.Warn().Err(err).Str("user_id", userID).Msg("Failed to delete TOTP setup record after disabling TOTP")
+	}
 
 	return nil
 }

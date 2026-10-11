@@ -143,10 +143,19 @@ func (b *Batcher) run() {
 		if len(batch) == 0 {
 			return nil
 		}
+		count := len(batch)
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		err := b.writeFunc(ctx, batch)
 		cancel()
 		batch = nil
+		if err != nil {
+			// The batch is dropped on failure; log it so log loss is visible
+			// instead of silently discarded (GO-13).
+			log.Warn().
+				Err(err).
+				Int("batch_size", count).
+				Msg("Log batch flush failed, batch entries dropped")
+		}
 		return err
 	}
 

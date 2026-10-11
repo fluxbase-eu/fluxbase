@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 
 	"github.com/nimbleflux/fluxbase/internal/database"
 )
@@ -93,12 +94,15 @@ func (s *DashboardAuthService) FindOrCreateUserBySSO(ctx context.Context, email,
 	}
 	if user != nil {
 		// Update last login
-		_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+		if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `
 				UPDATE platform.users SET last_login_at = NOW() WHERE id = $1
 			`, user.ID)
 			return err
-		})
+		}); err != nil {
+			// Best-effort bookkeeping; don't block an otherwise valid SSO login.
+			log.Warn().Err(err).Str("user_id", user.ID.String()).Msg("Failed to update last login time for SSO user")
+		}
 		return user, false, nil
 	}
 
@@ -115,12 +119,15 @@ func (s *DashboardAuthService) FindOrCreateUserBySSO(ctx context.Context, email,
 			return nil, false, err
 		}
 		// Update last login
-		_ = database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
+		if err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `
 				UPDATE platform.users SET last_login_at = NOW() WHERE id = $1
 			`, user.ID)
 			return err
-		})
+		}); err != nil {
+			// Best-effort bookkeeping; identity linking already succeeded.
+			log.Warn().Err(err).Str("user_id", user.ID.String()).Msg("Failed to update last login time for SSO user")
+		}
 		return user, false, nil
 	}
 

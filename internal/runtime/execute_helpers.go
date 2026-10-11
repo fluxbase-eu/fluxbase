@@ -74,11 +74,12 @@ func buildDenoArgs(cfg denoArgsConfig, permissions Permissions, secrets map[stri
 
 		// Enforce the SSRF blocklist at the Deno level. Deno deny flags take
 		// precedence over allow flags, so this holds even when the function has
-		// an explicit allow list. An explicitly empty BlockedDomains opts out.
-		if len(permissions.BlockedDomains) > 0 {
-			if denied := buildNetworkDenyList(permissions, cfg.PublicURL); len(denied) > 0 {
-				args = append(args, fmt.Sprintf("--deny-net=%s", strings.Join(denied, ",")))
-			}
+		// an explicit allow list. The default deny entries (loopback + cloud
+		// metadata endpoints, see buildNetworkDenyList) are ALWAYS emitted so a
+		// caller clearing BlockedDomains cannot disable the sandbox deny
+		// (SEC-13); BlockedDomains only adds entries to the deny list.
+		if denied := buildNetworkDenyList(permissions, cfg.PublicURL); len(denied) > 0 {
+			args = append(args, fmt.Sprintf("--deny-net=%s", strings.Join(denied, ",")))
 		}
 	}
 	if permissions.AllowEnv {

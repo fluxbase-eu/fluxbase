@@ -15,6 +15,7 @@ import (
 
 	"github.com/nimbleflux/fluxbase/internal/branching"
 	"github.com/nimbleflux/fluxbase/internal/config"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 // GitHubWebhookHandler handles GitHub webhook events for database branching
@@ -375,7 +376,7 @@ func (h *GitHubWebhookHandler) createBranchForPR(c fiber.Ctx, repo string, pr *G
 			return SendErrorWithCode(c, fiber.StatusForbidden, "Maximum number of branches has been reached", "MAX_BRANCHES_REACHED")
 		}
 
-		return SendErrorWithCode(c, fiber.StatusInternalServerError, "Failed to create branch: "+err.Error(), "CREATE_FAILED")
+		return SendErrorWithCode(c, fiber.StatusInternalServerError, "Failed to create branch: "+database.SanitizeErrorMessage(err), "CREATE_FAILED")
 	}
 
 	log.Info().
@@ -384,9 +385,13 @@ func (h *GitHubWebhookHandler) createBranchForPR(c fiber.Ctx, repo string, pr *G
 		Int("pr_number", pr.Number).
 		Msg("Created branch for PR")
 
-	// Warmup the connection pool
+	// SEC-08 (#375): fasthttp recycles c.RequestCtx() as soon as the handler
+	// returns, so the background pool warmup must not use it directly.
+	// WithoutCancel detaches from request cancellation while preserving
+	// context values (e.g. the tenant ID set via database.ContextWithTenant).
+	ctx := context.WithoutCancel(c.RequestCtx())
 	go func() {
-		if err := h.router.WarmupPool(c.RequestCtx(), branch.Slug); err != nil {
+		if err := h.router.WarmupPool(ctx, branch.Slug); err != nil {
 			log.Warn().Err(err).Str("slug", branch.Slug).Msg("Failed to warmup branch pool")
 		}
 	}()
@@ -416,7 +421,7 @@ func (h *GitHubWebhookHandler) deleteBranchForPR(c fiber.Ctx, repo string, pr *G
 			Str("repository", repo).
 			Int("pr_number", pr.Number).
 			Msg("Failed to find branch for PR")
-		return SendErrorWithCode(c, fiber.StatusInternalServerError, "Failed to find branch: "+err.Error(), "FIND_FAILED")
+		return SendErrorWithCode(c, fiber.StatusInternalServerError, "Failed to find branch: "+database.SanitizeErrorMessage(err), "FIND_FAILED")
 	}
 
 	// Close the connection pool first
@@ -429,7 +434,7 @@ func (h *GitHubWebhookHandler) deleteBranchForPR(c fiber.Ctx, repo string, pr *G
 			Int("pr_number", pr.Number).
 			Str("branch_id", branch.ID.String()).
 			Msg("Failed to delete branch for PR")
-		return SendErrorWithCode(c, fiber.StatusInternalServerError, "Failed to delete branch: "+err.Error(), "DELETE_FAILED")
+		return SendErrorWithCode(c, fiber.StatusInternalServerError, "Failed to delete branch: "+database.SanitizeErrorMessage(err), "DELETE_FAILED")
 	}
 
 	log.Info().

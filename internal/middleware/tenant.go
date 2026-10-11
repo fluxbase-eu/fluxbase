@@ -269,6 +269,47 @@ func EnsureTenantAccess(cfg TenantConfig) fiber.Handler {
 	}
 }
 
+// TenantParamAccessChecker is the minimal repository surface needed to verify
+// membership for the tenant referenced by a path parameter.
+// *tenantdb.Repository satisfies it.
+type TenantParamAccessChecker interface {
+	IsUserAssignedToTenant(ctx context.Context, userID, tenantID string) (bool, error)
+}
+
+// RequireTenantParamAccess reports whether the authenticated principal may act
+// on the tenant identified by a :id path parameter.
+//
+// EnsureTenantAccess only re-validates the tenant resolved from the
+// X-FB-Tenant header — it never inspects path parameters. Admin handlers under
+// /tenants/:id/* act on the path tenant, so they need this additional check
+// (SEC-01, #369): instance admins pass, everyone else must hold a tenant admin
+// assignment for the parameter tenant. The caller turns a false result into
+// its own forbidden response shape. Database failures deny access (fail
+// closed) and are logged.
+func RequireTenantParamAccess(c fiber.Ctx, checker TenantParamAccessChecker, tenantID string) bool {
+	if tenantID == "" || checker == nil {
+		return false
+	}
+
+	if IsInstanceAdminFromContext(c) {
+		return true
+	}
+
+	// Dashboard/platform instance admins authenticate with JWTs whose role
+	// claim carries instance_admin; they are not tenant members.
+	if role, _ := c.Locals("user_role").(string); role == "instance_admin" {
+		return true
+	}
+
+	userID, _ := c.Locals("user_id").(string)
+	hasAccess, err := checker.IsUserAssignedToTenant(c.Context(), userID, tenantID)
+	if err != nil {
+		log.Error().Err(err).Str("user_id", userID).Str("tenant_id", tenantID).
+			Msg("Failed to validate tenant path parameter access")
+	}
+	return err == nil && hasAccess
+}
+
 // ValidateTenantMembership checks if user is assigned to manage the specified tenant
 func ValidateTenantMembership(ctx context.Context, db *database.Connection, userID, tenantID string) (bool, error) {
 	var isMember bool

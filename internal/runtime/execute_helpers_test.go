@@ -109,20 +109,32 @@ func TestBuildDenoArgs_DenyNetAndScopedEnv(t *testing.T) {
 	assert.False(t, joined == strings.Join(args, " ") && strings.Contains(joined, "--allow-env --allow"), "env must not be unscoped")
 }
 
-// TestBuildDenoArgs_NoDenyWhenBlocklistCleared verifies an explicitly empty
-// BlockedDomains opts out of deny-net.
-func TestBuildDenoArgs_NoDenyWhenBlocklistCleared(t *testing.T) {
+// TestBuildDenoArgs_DenyEvenWhenBlocklistCleared verifies that an explicitly
+// empty BlockedDomains cannot disable the sandbox deny (SEC-13): the default
+// deny entries (loopback + cloud metadata endpoints) are always emitted.
+func TestBuildDenoArgs_DenyEvenWhenBlocklistCleared(t *testing.T) {
 	perms := Permissions{AllowNet: true, AllowEnv: true}
 	cfg := denoArgsConfig{
 		RuntimeType: RuntimeTypeFunction,
+		PublicURL:   "https://api.example.com",
 		ExecDir:     t.TempDir(),
 		EnvVarNames: []string{"HOME"},
 	}
 
 	args, _, _ := buildDenoArgs(cfg, perms, nil, "/tmp/fake-main.ts")
+
+	denyArg := ""
 	for _, a := range args {
-		assert.False(t, strings.HasPrefix(a, "--deny-net"), "deny-net must not be emitted when BlockedDomains is empty")
+		if strings.HasPrefix(a, "--deny-net=") {
+			denyArg = a
+		}
 	}
+	require.NotEmpty(t, denyArg, "deny-net must be emitted even when BlockedDomains is empty")
+	assert.Contains(t, denyArg, "169.254.169.254")
+	assert.Contains(t, denyArg, "metadata.google.internal")
+	assert.Contains(t, denyArg, "localhost")
+	assert.Contains(t, denyArg, "127.0.0.1")
+	assert.NotContains(t, denyArg, "api.example.com", "self host must never be denied")
 }
 
 // TestBuildDenoArgs_ScopedFilesystem verifies read/write permissions point at

@@ -313,14 +313,6 @@ func (s *TriggerService) EnablePrivateIPs() {
 // listen listens for PostgreSQL notifications about new webhook events
 func (s *TriggerService) listen(ctx context.Context) {
 	defer s.wg.Done()
-	defer func() {
-		if rec := recover(); rec != nil {
-			log.Error().
-				Interface("panic", rec).
-				Str("goroutine", "webhook_listen").
-				Msg("Panic in webhook listener - recovered")
-		}
-	}()
 
 	// Retry logic to handle race conditions during startup
 	maxRetries := 5
@@ -393,6 +385,54 @@ func (s *TriggerService) listen(ctx context.Context) {
 	// Signal that the listener is ready (close channel to unblock all waiters)
 	s.signalReady(false)
 
+	// waitForNotification waits for and dispatches a single notification,
+	// recovering from panics inside the call so one panicking iteration
+	// cannot permanently kill the listen loop. Continuation/exit is decided
+	// by the outer select below, which keeps ctx/stop semantics unchanged.
+	waitForNotification := func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Error().
+					Interface("panic", rec).
+					Str("goroutine", "webhook_listen").
+					Msg("Panic in webhook listener - recovered")
+			}
+		}()
+
+		// Wait for notification with timeout to allow checking stop signals
+		waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		notification, err := conn.Conn().WaitForNotification(waitCtx)
+		cancel()
+
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			// Timeout is expected, just continue to check stop signals
+			if waitCtx.Err() == context.DeadlineExceeded {
+				return
+			}
+			log.Error().Err(err).Msg("Error waiting for notification")
+			time.Sleep(1 * time.Second)
+			return
+		}
+
+		// Parse webhook ID from notification payload
+		webhookID, err := uuid.Parse(notification.Payload)
+		if err != nil {
+			log.Error().Err(err).Str("payload", notification.Payload).Msg("Invalid webhook ID in notification")
+			return
+		}
+
+		// Queue webhook for processing
+		select {
+		case s.eventChan <- webhookID:
+			log.Debug().Str("webhook_id", webhookID.String()).Msg("Queued webhook for processing")
+		default:
+			log.Warn().Str("webhook_id", webhookID.String()).Msg("Event channel full, skipping")
+		}
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -400,38 +440,7 @@ func (s *TriggerService) listen(ctx context.Context) {
 		case <-s.stopChan:
 			return
 		default:
-			// Wait for notification with timeout to allow checking stop signals
-			waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			notification, err := conn.Conn().WaitForNotification(waitCtx)
-			cancel()
-
-			if err != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				// Timeout is expected, just continue to check stop signals
-				if waitCtx.Err() == context.DeadlineExceeded {
-					continue
-				}
-				log.Error().Err(err).Msg("Error waiting for notification")
-				time.Sleep(1 * time.Second)
-				continue
-			}
-
-			// Parse webhook ID from notification payload
-			webhookID, err := uuid.Parse(notification.Payload)
-			if err != nil {
-				log.Error().Err(err).Str("payload", notification.Payload).Msg("Invalid webhook ID in notification")
-				continue
-			}
-
-			// Queue webhook for processing
-			select {
-			case s.eventChan <- webhookID:
-				log.Debug().Str("webhook_id", webhookID.String()).Msg("Queued webhook for processing")
-			default:
-				log.Warn().Str("webhook_id", webhookID.String()).Msg("Event channel full, skipping")
-			}
+			waitForNotification()
 		}
 	}
 }
@@ -439,15 +448,6 @@ func (s *TriggerService) listen(ctx context.Context) {
 // worker processes webhook events from the queue
 func (s *TriggerService) worker(ctx context.Context, workerID int) {
 	defer s.wg.Done()
-	defer func() {
-		if rec := recover(); rec != nil {
-			log.Error().
-				Interface("panic", rec).
-				Int("worker_id", workerID).
-				Str("goroutine", "webhook_worker").
-				Msg("Panic in webhook worker - recovered")
-		}
-	}()
 	log.Debug().Int("worker_id", workerID).Msg("Webhook worker started")
 
 	for {
@@ -457,7 +457,21 @@ func (s *TriggerService) worker(ctx context.Context, workerID int) {
 		case <-s.stopChan:
 			return
 		case webhookID := <-s.eventChan:
-			s.processWebhookEvents(ctx, webhookID, workerID)
+			// processOne recovers from panics inside the call so one
+			// panicking event cannot permanently kill the worker loop.
+			processOne := func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Error().
+							Interface("panic", rec).
+							Int("worker_id", workerID).
+							Str("goroutine", "webhook_worker").
+							Msg("Panic in webhook worker - recovered")
+					}
+				}()
+				s.processWebhookEvents(ctx, webhookID, workerID)
+			}
+			processOne()
 		}
 	}
 }

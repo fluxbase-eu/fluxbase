@@ -9,6 +9,9 @@ on:
     # Run daily at 2 AM UTC
     - cron: "0 2 * * *"
 
+permissions:
+  contents: read
+
 jobs:
   trivy-scan:
     name: Trivy Vulnerability Scanner
@@ -93,6 +96,15 @@ jobs:
             fi
           }
 
+      - name: Deduplicate SARIF stacks
+        # govulncheck emits identical call-stack entries that the upload API
+        # rejects ("stacks contains duplicate item") and emits "stacks": null for
+          # module-level (uncalled) findings; drop null stacks and dedupe arrays.
+        if: always() && hashFiles('govulncheck-results.sarif') != ''
+        run: |
+          jq '.runs[].results |= map(if (.stacks | type) == "array" then .stacks |= unique else delpaths([["stacks"]]) end)'             govulncheck-results.sarif > govulncheck-results.dedup.sarif
+          mv govulncheck-results.dedup.sarif govulncheck-results.sarif
+
       - name: Upload govulncheck results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('govulncheck-results.sarif') != ''
@@ -113,3 +125,59 @@ jobs:
             exit 1
           fi
           cat govulncheck.out
+
+  codeql:
+    name: CodeQL Analysis (Go)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Create placeholder embed files
+        run: |
+          # CodeQL builds the Go tree; the embed directives reference
+          # build-generated artifacts a fresh checkout does not have.
+          mkdir -p internal/adminui/dist
+          echo "<!DOCTYPE html><html><body>placeholder</body></html>" > internal/adminui/dist/index.html
+          echo "// placeholder SDK" > internal/runtime/embedded_sdk.js
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          languages: go
+          build-mode: autobuild
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          category: "/language:go"
+
+  gitleaks:
+    name: Secret Scanning (gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so gitleaks scans every commit, not just the push
+          # shallow clone. NOTE: an audit verified the repo currently has no
+          # real secrets in history — the scan is purely preventive.
+          fetch-depth: 0
+
+      - name: Install gitleaks (pinned binary - gitleaks-action requires an org license)
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" | tar -xz -C /tmp gitleaks
+          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Run gitleaks
+        run: gitleaks detect --source . --redact --verbose --no-banner

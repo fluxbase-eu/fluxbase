@@ -20,6 +20,9 @@
 #   STORAGE_TYPE    Storage type: local, s3 (default: local)
 #   S3_BUCKET       S3 bucket name (for s3 storage type)
 #   S3_ENDPOINT     S3 endpoint URL (for MinIO/Wasabi)
+#   AGE_IDENTITY_FILE Optional: path to the age identity file used to decrypt
+#                   backups created with AGE_RECIPIENT (see backup.sh). Without
+#                   it, `age -d` uses the default identity location or prompts.
 #
 # Exit Codes:
 #   0 - Success
@@ -30,6 +33,9 @@
 #   5 - Backup not found
 
 set -euo pipefail
+
+# Restored artifacts contain credentials and user data — keep them private.
+umask 077
 
 # Colors for output
 RED='\033[0;31m'
@@ -77,6 +83,46 @@ error() {
 info() {
     echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO:${NC} $1"
 }
+
+# Decrypt an age-encrypted backup artifact to a temp file and print its path.
+# Passthrough (echo input) for non-.age files. Requires the `age` binary and
+# the matching identity (AGE_IDENTITY_FILE or the default identity location).
+decrypt_if_encrypted() {
+    local backup_file="$1"
+
+    if [[ "$backup_file" != *.age ]]; then
+        echo "$backup_file"
+        return 0
+    fi
+
+    if ! command -v age &> /dev/null; then
+        error "Backup is age-encrypted but 'age' is not installed: $backup_file"
+        exit 2
+    fi
+
+    local decrypt_args=()
+    if [ -n "${AGE_IDENTITY_FILE:-}" ]; then
+        decrypt_args+=(-i "$AGE_IDENTITY_FILE")
+    fi
+
+    local decrypted_tmp
+    decrypted_tmp="$(mktemp "${TMPDIR:-/tmp}/restore_decrypt.XXXXXX")"
+    if ! age -d "${decrypt_args[@]+"${decrypt_args[@]}"}" -o "$decrypted_tmp" "$backup_file"; then
+        error "Failed to decrypt $backup_file (identity unavailable or wrong)"
+        rm -f "$decrypted_tmp"
+        exit 3
+    fi
+    echo "$decrypted_tmp"
+}
+
+# Temp files created by decrypt_if_encrypted, removed on exit.
+DECRYPTED_TEMPS=""
+cleanup_decrypted() {
+    for t in $DECRYPTED_TEMPS; do
+        rm -f "$t"
+    done
+}
+trap cleanup_decrypted EXIT
 
 usage() {
     cat << EOF
@@ -652,6 +698,25 @@ main() {
         if [ "$DATABASE_ONLY" = false ]; then
             warn "No storage backup found in: $BACKUP_PATH"
         fi
+    fi
+
+    # Decrypt age-encrypted artifacts (created with backup.sh + AGE_RECIPIENT)
+    # into temp files; verification and restore below work on the plaintext.
+    local decrypted
+    if [ -n "$db_file" ]; then
+        decrypted=$(decrypt_if_encrypted "$db_file")
+        [ "$decrypted" != "$db_file" ] && DECRYPTED_TEMPS="$DECRYPTED_TEMPS $decrypted"
+        db_file="$decrypted"
+    fi
+    if [ -n "$globals_file" ]; then
+        decrypted=$(decrypt_if_encrypted "$globals_file")
+        [ "$decrypted" != "$globals_file" ] && DECRYPTED_TEMPS="$DECRYPTED_TEMPS $decrypted"
+        globals_file="$decrypted"
+    fi
+    if [ -n "$storage_file" ]; then
+        decrypted=$(decrypt_if_encrypted "$storage_file")
+        [ "$decrypted" != "$storage_file" ] && DECRYPTED_TEMPS="$DECRYPTED_TEMPS $decrypted"
+        storage_file="$decrypted"
     fi
 
     # Verify backups

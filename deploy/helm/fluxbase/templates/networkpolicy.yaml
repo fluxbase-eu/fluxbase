@@ -1,0 +1,53 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "fluxbase.fullname" . }}
+  namespace: {{ include "fluxbase.namespace" . | quote }}
+  labels: {{- include "fluxbase.labels" . | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- toYaml .Values.commonAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels: {{- include "fluxbase.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # App traffic on the service port. Namespace-agnostic (from any source) so
+    # ingress controllers running in other namespaces are not locked out.
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.service.ports.http }}
+    {{- if .Values.metrics.enabled }}
+    # Prometheus scraping hits the dedicated metrics server (separate port),
+    # which would be silently blocked by an 8080-only ingress allowlist.
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.config.metrics.port }}
+    {{- end }}
+    {{- if .Values.networkPolicy.extraIngress }}
+    {{- toYaml .Values.networkPolicy.extraIngress | nindent 4 }}
+    {{- end }}
+  egress:
+    # DNS (kube-dns/CoreDNS) — required for any hostname resolution.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # PostgreSQL — bundled sub-chart or external database (any namespace).
+    - ports:
+        - protocol: TCP
+          port: {{ include "fluxbase.databasePort" . }}
+    # Redis/Dragonfly — only when the scaling backend uses it.
+    {{- if or (eq .Values.scaling.backend "redis") .Values.scaling.externalRedis.host }}
+    - ports:
+        - protocol: TCP
+          port: {{ default 6379 .Values.scaling.externalRedis.port }}
+    {{- end }}
+    {{- if .Values.networkPolicy.extraEgress }}
+    {{- toYaml .Values.networkPolicy.extraEgress | nindent 4 }}
+    {{- end }}
+{{- end }}

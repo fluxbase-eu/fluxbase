@@ -649,6 +649,14 @@ In production environments, use `anon_key_file` and `service_key_file` to load k
 | `FLUXBASE_CORS_ALLOW_CREDENTIALS` | Allow credentials                 | `true`                                         | `true`, `false`                         |
 | `FLUXBASE_CORS_MAX_AGE`           | Preflight cache time (seconds)    | `300`                                          | `86400`                                 |
 
+:::note[Wildcard origins disable credentials]
+Wildcard origins (`*`) combined with `FLUXBASE_CORS_ALLOW_CREDENTIALS=true` are
+an invalid combination per the CORS spec — the server overrides credentials to
+`false` when the origin list contains `*`. If your clients need credentialed
+requests (cookies, Authorization headers), list explicit origins instead of the
+wildcard.
+:::
+
 ### Email
 
 | Variable                          | Description        | Default          | Example                        |

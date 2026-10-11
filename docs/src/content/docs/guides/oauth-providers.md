@@ -550,10 +550,17 @@ Authorization: Bearer <admin-token>
 
 ### Token Encryption
 
+:::caution[Encryption key required]
+A valid 32-byte `FLUXBASE_ENCRYPTION_KEY` is **required** for encrypted OAuth
+client credentials and other stored secrets. Generate one with
+`deploy/generate-keys.sh` (or `openssl rand -base64 32 | head -c 32`).
+Without it, OAuth credentials are stored **unencrypted**.
+:::
+
 OAuth tokens are encrypted at rest using AES-256-GCM. Configure an encryption key:
 
 ```bash
-# Must be exactly 32 bytes
+# Must be exactly 32 bytes — generate with deploy/generate-keys.sh
 FLUXBASE_ENCRYPTION_KEY=your-32-byte-encryption-key-here
 ```
 

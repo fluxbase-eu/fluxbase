@@ -9,12 +9,52 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
+
+// sensitiveEnvBlocklist lists process environment variables that must never
+// reach child processes. pgschema receives all connection details via flags
+// (plus an explicitly appended PGPASSWORD), so the parent's FluxBase secrets —
+// most importantly the bypass-privilege FLUXBASE_SERVICE_ROLE_KEY service
+// credential exported at startup — must be stripped (SEC-10).
+var sensitiveEnvBlocklist = []string{
+	"FLUXBASE_SERVICE_ROLE_KEY",
+	"FLUXBASE_ANON_KEY",
+	"FLUXBASE_AUTH_JWT_SECRET",
+	"FLUXBASE_DATABASE_PASSWORD",
+	"FLUXBASE_DATABASE_ADMIN_PASSWORD",
+	"FLUXBASE_DATABASE_URL",
+	"FLUXBASE_DATABASE_ADMIN_URL",
+	"FLUXBASE_ENCRYPTION_KEY",
+	"FLUXBASE_SECURITY_SETUP_TOKEN",
+	"FLUXBASE_STORAGE_S3_ACCESS_KEY",
+	"FLUXBASE_STORAGE_S3_SECRET_KEY",
+	"FLUXBASE_EMAIL_SMTP_PASSWORD",
+}
+
+// filteredChildEnv returns the process environment stripped of every variable
+// in sensitiveEnvBlocklist, for use as an explicit child process environment.
+func filteredChildEnv() []string {
+	filtered := make([]string, 0, len(os.Environ()))
+	for _, e := range os.Environ() {
+		skip := false
+		for _, name := range sensitiveEnvBlocklist {
+			if strings.HasPrefix(e, name+"=") {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
+}
 
 // Plan represents a migration plan from pgschema
 type Plan struct {
@@ -143,7 +183,7 @@ func (s *DeclarativeService) PlanForTenant(ctx context.Context, tenant *Tenant) 
 	}
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	start := time.Now()
 	output, err := cmd.Output()
@@ -218,7 +258,7 @@ func (s *DeclarativeService) ApplyTenantSchema(ctx context.Context, tenant *Tena
 	}
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	start := time.Now()
 	if _, err := cmd.Output(); err != nil {
@@ -499,7 +539,7 @@ func (s *DeclarativeService) ApplyTenantSchemaFromContent(ctx context.Context, t
 	}
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -540,7 +580,7 @@ func (s *DeclarativeService) ApplyTenantSchemaFromContent(ctx context.Context, t
 	}
 
 	applyCmd := exec.CommandContext(ctx, s.pgschemaPath, applyArgs...)
-	applyCmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	applyCmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	if _, err := applyCmd.Output(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -602,7 +642,7 @@ func (s *DeclarativeService) DumpTenantSchema(ctx context.Context, tenant *Tenan
 	}
 
 	cmd := exec.CommandContext(ctx, s.pgschemaPath, args...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
+	cmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 	cmd.Stdout = f
 
 	if err := cmd.Run(); err != nil {

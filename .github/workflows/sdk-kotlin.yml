@@ -22,6 +22,11 @@ on:
       - ".github/workflows/sdk-kotlin.yml"
   workflow_dispatch:
 
+# Least privilege: CI-only (lint/test/build + artifact upload). Publishing to
+# GitHub Packages happens in release.yml, which grants packages: write there.
+permissions:
+  contents: read
+
 jobs:
   changes:
     name: Detect Changes
