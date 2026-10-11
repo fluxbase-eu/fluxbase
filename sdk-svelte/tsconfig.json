@@ -16,13 +16,10 @@
     "forceConsistentCasingInFileNames": true,
     "ignoreDeprecations": "6.0",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node", "svelte"],
-    "baseUrl": ".",
-    "paths": {
-      "@fluxbase/sdk": ["../sdk/dist/index.d.ts"]
-    }
+    "types": ["node", "svelte"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "examples"]
