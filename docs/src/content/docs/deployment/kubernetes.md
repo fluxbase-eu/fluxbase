@@ -102,27 +102,23 @@ image:
 # Fluxbase configuration
 config:
   database:
-    host: my-postgres.example.com
-    port: 5432
-    name: fluxbase
-    user: fluxbase
     # Don't set password here - use existingSecret
-    sslMode: require
+    # host/port/user are auto-derived from the postgresql.* section
+    ssl_mode: "require"
 
   server:
     port: 8080
     host: "0.0.0.0"
 
-  jwt:
+  auth:
     # Don't set secret here - use existingSecret
-    expirationMinutes: 60
+    jwt_expiry: "1h"
 
   storage:
     provider: s3
-    s3:
-      bucket: fluxbase-production
-      region: us-east-1
-      endpoint: "" # Leave empty for AWS S3
+    s3_bucket: fluxbase-production
+    s3_region: us-east-1
+    s3_endpoint: "" # Leave empty for AWS S3
 
 # Use external database (disable embedded PostgreSQL)
 postgresql:
@@ -250,8 +246,8 @@ kubectl create secret generic fluxbase-secrets \
   --namespace fluxbase \
   --from-literal=jwt-secret='your-jwt-secret-at-least-32-chars' \
   --from-literal=database-password='your-postgres-password' \
-  --from-literal=s3-access-key-id='AKIAXXXXXXXXXXXXXXXX' \
-  --from-literal=s3-secret-access-key='your-aws-secret-key'
+  --from-literal=s3-access-key='AKIAXXXXXXXXXXXXXXXX' \
+  --from-literal=s3-secret-key='your-aws-secret-key'
 ```
 
 ### Install with Custom Values
@@ -275,11 +271,11 @@ See [values.yaml](https://github.com/nimbleflux/fluxbase/blob/main/deploy/helm/f
 
 | Section               | Description                   | Default                             |
 | --------------------- | ----------------------------- | ----------------------------------- |
-| `replicaCount`        | Number of Fluxbase pods       | 3                                   |
+| `replicaCount`        | Number of Fluxbase pods       | 1                                   |
 | `image`               | Container image configuration | ghcr.io/nimbleflux/fluxbase:latest |
 | `config.database`     | Database connection settings  | PostgreSQL defaults                 |
 | `config.server`       | HTTP server settings          | Port 8080                           |
-| `config.jwt`          | JWT authentication settings   | 60 min expiry                       |
+| `config.auth`         | Authentication settings       | 1h token expiry                     |
 | `config.storage`      | Storage backend (local/s3)    | local                               |
 | `postgresql.enabled`  | Deploy PostgreSQL in cluster  | true                                |
 | `externalDatabase`    | External database settings    | -                                   |
@@ -635,14 +631,13 @@ persistence:
 config:
   storage:
     provider: s3
-    s3:
-      bucket: fluxbase-production
-      region: us-east-1
-      endpoint: "" # Empty for AWS S3
+    s3_bucket: fluxbase-production
+    s3_region: us-east-1
+    s3_endpoint: "" # Empty for AWS S3
 
 # Add S3 credentials to existingSecret
 existingSecret: fluxbase-secrets
-# Secret should contain: s3-access-key-id, s3-secret-access-key
+# Secret should contain: s3-access-key, s3-secret-key
 ```
 
 ### MinIO (Self-Hosted S3)
@@ -662,10 +657,9 @@ Configure Fluxbase:
 config:
   storage:
     provider: s3
-    s3:
-      bucket: fluxbase
-      region: us-east-1
-      endpoint: http://minio:9000
+    s3_bucket: fluxbase
+    s3_region: us-east-1
+    s3_endpoint: http://minio:9000
 ```
 
 ---
