@@ -66,4 +66,17 @@ You are using an external PostgreSQL database at {{ .Values.externalDatabase.hos
 
 {{- end }}
 
+{{- if and (not .Values.existingSecret) (not .Values.config.auth.jwt_secret) (not .Values.config.security.setup_token) (not .Values.config.encryption_key) }}
+
+⚠️  AUTO-GENERATED SECRETS
+
+No existingSecret (or explicit jwt_secret / setup_token / encryption_key
+values) was configured, so jwt-secret, setup-token, and encryption-key were
+generated randomly and stored in the Secret "{{ include "fluxbase.fullname" . }}".
+These values are now STABLE across `helm upgrade` (the chart reuses the
+persisted Secret), but they are not backed up anywhere: losing the Secret
+loses your encryption key, and every credential encrypted with it. For
+production, provide an existingSecret or set the values explicitly.
+{{- end }}
+
 {{ include "fluxbase.validateValues" . }}

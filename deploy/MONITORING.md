@@ -59,14 +59,20 @@ docker run -d --name prometheus --network deploy_fluxbase \
 
 docker run -d --name grafana --network deploy_fluxbase \
   -p 3000:3000 \
+  -e GF_SECURITY_ADMIN_PASSWORD=change-me-strong-password \
+  -e GF_USERS_ALLOW_SIGN_UP=false \
   -v "$(pwd)/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro" \
   -v "$(pwd)/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro" \
-  grafana/grafana:latest
+  grafana/grafana:11.6.0
 ```
+
+Set `GF_SECURITY_ADMIN_PASSWORD` to a real password (the default is
+`admin/admin`) and keep `GF_USERS_ALLOW_SIGN_UP=false` so anonymous visitors
+cannot self-register on an internet-exposed Grafana.
 
 Access the dashboards:
 
-- **Grafana**: http://localhost:3000 (admin/admin)
+- **Grafana**: http://localhost:3000 (log in with the admin password you set)
 - **Prometheus**: http://localhost:9090
 - **Fluxbase**: http://localhost (via NGINX)
 
