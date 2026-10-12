@@ -57,7 +57,7 @@ import { FluxbaseBranching } from "./branching";
 import { FluxbaseTenant } from "./tenant";
 import { QueryBuilder } from "./query-builder";
 import { SchemaQueryBuilder } from "./schema-query-builder";
-import type { FluxbaseClientOptions } from "./types";
+import type { FluxbaseClientOptions, FluxbaseError } from "./types";
 
 /**
  * Callable RPC type - can be called directly (Supabase-compatible) or access methods
@@ -87,7 +87,7 @@ export type CallableRPC = {
     fn: string,
     params?: Record<string, unknown>,
     options?: { namespace?: string; async?: boolean; timeout?: number },
-  ): Promise<{ data: T | null; error: Error | null }>;
+  ): Promise<{ data: T | null; error: FluxbaseError | null }>;
 } & FluxbaseRPC;
 
 /**
@@ -395,7 +395,7 @@ export class FluxbaseClient<
       fn: string,
       params?: Record<string, unknown>,
       options?: { namespace?: string; async?: boolean; timeout?: number },
-    ): Promise<{ data: T | null; error: Error | null }> => {
+    ): Promise<{ data: T | null; error: FluxbaseError | null }> => {
       const result = await rpcInstance.invoke<T>(fn, params, options);
       return {
         data: (result.data?.result as T) ?? null,

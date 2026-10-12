@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { wrapAsync, wrapAsyncVoid, wrapSync } from "./error-handling";
+import type { FluxbaseError } from "../types";
 
 describe("error-handling utilities", () => {
   describe("wrapAsync()", () => {
@@ -34,6 +35,24 @@ describe("error-handling utilities", () => {
 
       expect(result.data).toBeNull();
       expect(result.error).toBe(error);
+    });
+
+    it("should preserve a hydrated FluxbaseError as-is", async () => {
+      // The fetch layer throws Errors hydrated with status/code/details
+      const error = new Error("Reserved") as FluxbaseError;
+      error.status = 403;
+      error.code = "RLS_POLICY_VIOLATION";
+      error.details = { table: "jobs" };
+
+      const result = await wrapAsync(async () => {
+        throw error;
+      });
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBe(error);
+      expect(result.error!.status).toBe(403);
+      expect(result.error!.code).toBe("RLS_POLICY_VIOLATION");
+      expect(result.error!.details).toEqual({ table: "jobs" });
     });
 
     it("should convert non-Error to Error", async () => {

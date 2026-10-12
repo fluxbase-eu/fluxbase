@@ -4,15 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  JobFunction,
-  Job,
-  JobStats,
-  JobWorker,
-  SyncJobsResult,
-  JobFunctionSpec,
-  SyncJobsOptions,
-} from "./types";
+import type { FluxbaseError, Job, JobFunction, JobFunctionSpec, JobStats, JobWorker, SyncJobsOptions, SyncJobsResult } from "./types";
 import {
   bundleCode,
   loadEsbuild,
@@ -51,7 +43,7 @@ export class FluxbaseAdminJobs {
     enabled?: boolean;
     timeout_seconds?: number;
     namespace?: string;
-  }): Promise<{ data: JobFunction | null; error: Error | null }> {
+  }): Promise<{ data: JobFunction | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<JobFunction>(
         "/api/v1/admin/jobs/functions",
@@ -59,7 +51,7 @@ export class FluxbaseAdminJobs {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -78,7 +70,7 @@ export class FluxbaseAdminJobs {
    */
   async listNamespaces(): Promise<{
     data: string[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const response = await this.fetch.get<{ namespaces: string[] }>(
@@ -86,7 +78,7 @@ export class FluxbaseAdminJobs {
       );
       return { data: response.namespaces || ["default"], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -106,7 +98,7 @@ export class FluxbaseAdminJobs {
    */
   async list(
     namespace?: string,
-  ): Promise<{ data: JobFunction[] | null; error: Error | null }> {
+  ): Promise<{ data: JobFunction[] | null; error: FluxbaseError | null }> {
     try {
       const params = namespace ? `?namespace=${namespace}` : "";
       const data = await this.fetch.get<JobFunction[]>(
@@ -114,7 +106,7 @@ export class FluxbaseAdminJobs {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -136,14 +128,14 @@ export class FluxbaseAdminJobs {
   async get(
     namespace: string,
     name: string,
-  ): Promise<{ data: JobFunction | null; error: Error | null }> {
+  ): Promise<{ data: JobFunction | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<JobFunction>(
         `/api/v1/admin/jobs/functions/${namespace}/${name}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -162,14 +154,14 @@ export class FluxbaseAdminJobs {
   async delete(
     namespace: string,
     name: string,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(
         `/api/v1/admin/jobs/functions/${namespace}/${name}`,
       );
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -189,7 +181,7 @@ export class FluxbaseAdminJobs {
       timeout_seconds?: number;
       code?: string;
     },
-  ): Promise<{ data: JobFunction | null; error: Error | null }> {
+  ): Promise<{ data: JobFunction | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<JobFunction>(
         `/api/v1/admin/jobs/functions/${namespace}/${name}`,
@@ -197,7 +189,7 @@ export class FluxbaseAdminJobs {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -227,7 +219,7 @@ export class FluxbaseAdminJobs {
     limit?: number;
     offset?: number;
     includeResult?: boolean;
-  }): Promise<{ data: Job[] | null; error: Error | null }> {
+  }): Promise<{ data: Job[] | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams();
       if (filters?.status) params.append("status", filters.status);
@@ -244,7 +236,7 @@ export class FluxbaseAdminJobs {
       );
       return { data: response?.jobs ?? [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -264,14 +256,14 @@ export class FluxbaseAdminJobs {
    */
   async getJob(
     jobId: string,
-  ): Promise<{ data: Job | null; error: Error | null }> {
+  ): Promise<{ data: Job | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<Job>(
         `/api/v1/admin/jobs/queue/${jobId}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -286,12 +278,12 @@ export class FluxbaseAdminJobs {
    * const { data, error } = await client.admin.jobs.cancel('550e8400-e29b-41d4-a716-446655440000')
    * ```
    */
-  async cancel(jobId: string): Promise<{ data: null; error: Error | null }> {
+  async cancel(jobId: string): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.post(`/api/v1/admin/jobs/queue/${jobId}/cancel`, {});
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -306,12 +298,12 @@ export class FluxbaseAdminJobs {
    * const { data, error } = await client.admin.jobs.terminate('550e8400-e29b-41d4-a716-446655440000')
    * ```
    */
-  async terminate(jobId: string): Promise<{ data: null; error: Error | null }> {
+  async terminate(jobId: string): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.post(`/api/v1/admin/jobs/queue/${jobId}/terminate`, {});
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -328,7 +320,7 @@ export class FluxbaseAdminJobs {
    */
   async retry(
     jobId: string,
-  ): Promise<{ data: Job | null; error: Error | null }> {
+  ): Promise<{ data: Job | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<Job>(
         `/api/v1/admin/jobs/queue/${jobId}/retry`,
@@ -336,7 +328,7 @@ export class FluxbaseAdminJobs {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -356,7 +348,7 @@ export class FluxbaseAdminJobs {
    */
   async getStats(
     namespace?: string,
-  ): Promise<{ data: JobStats | null; error: Error | null }> {
+  ): Promise<{ data: JobStats | null; error: FluxbaseError | null }> {
     try {
       const params = namespace ? `?namespace=${namespace}` : "";
       const data = await this.fetch.get<JobStats>(
@@ -364,7 +356,7 @@ export class FluxbaseAdminJobs {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -385,7 +377,7 @@ export class FluxbaseAdminJobs {
    */
   async listWorkers(): Promise<{
     data: JobWorker[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.get<JobWorker[]>(
@@ -393,7 +385,7 @@ export class FluxbaseAdminJobs {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -437,7 +429,7 @@ export class FluxbaseAdminJobs {
    */
   async sync(
     options: SyncJobsOptions | string,
-  ): Promise<{ data: SyncJobsResult | null; error: Error | null }> {
+  ): Promise<{ data: SyncJobsResult | null; error: FluxbaseError | null }> {
     try {
       // Support legacy string-only namespace argument
       const syncOptions: SyncJobsOptions =
@@ -456,7 +448,7 @@ export class FluxbaseAdminJobs {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -485,7 +477,7 @@ export class FluxbaseAdminJobs {
   async syncWithBundling(
     options: SyncJobsOptions,
     bundleOptions?: Partial<BundleOptions>,
-  ): Promise<{ data: SyncJobsResult | null; error: Error | null }> {
+  ): Promise<{ data: SyncJobsResult | null; error: FluxbaseError | null }> {
     if (!options.functions || options.functions.length === 0) {
       return this.sync(options);
     }
@@ -536,7 +528,7 @@ export class FluxbaseAdminJobs {
         functions: bundledFunctions,
       });
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 

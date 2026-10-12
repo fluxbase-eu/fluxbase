@@ -54,6 +54,10 @@ export {
   RealtimeChannel,
   ExecutionLogsChannel,
 } from "./realtime";
+export type {
+  RealtimeSubscribeStatus,
+  RealtimeSubscribeStatusCallback,
+} from "./realtime";
 
 // Storage module
 export { FluxbaseStorage, StorageBucket } from "./storage";

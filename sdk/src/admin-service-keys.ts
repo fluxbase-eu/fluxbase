@@ -1,12 +1,5 @@
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  ServiceKey,
-  ServiceKeyWithKey,
-  CreateServiceKeyRequest,
-  UpdateServiceKeyRequest,
-  RevokeServiceKeyRequest,
-  DeprecateServiceKeyRequest,
-} from "./types";
+import type { CreateServiceKeyRequest, DeprecateServiceKeyRequest, FluxbaseError, RevokeServiceKeyRequest, ServiceKey, ServiceKeyWithKey, UpdateServiceKeyRequest } from "./types";
 
 /**
  * Service Keys Manager
@@ -49,12 +42,12 @@ export class ServiceKeysManager {
    * const { data, error } = await client.admin.serviceKeys.list()
    * ```
    */
-  async list(): Promise<{ data: ServiceKey[] | null; error: Error | null }> {
+  async list(): Promise<{ data: ServiceKey[] | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<ServiceKey[]>("/api/v1/admin/service-keys");
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -71,12 +64,12 @@ export class ServiceKeysManager {
    */
   async get(
     id: string,
-  ): Promise<{ data: ServiceKey | null; error: Error | null }> {
+  ): Promise<{ data: ServiceKey | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<ServiceKey>(`/api/v1/admin/service-keys/${id}`);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -105,7 +98,7 @@ export class ServiceKeysManager {
    */
   async create(
     request: CreateServiceKeyRequest,
-  ): Promise<{ data: ServiceKeyWithKey | null; error: Error | null }> {
+  ): Promise<{ data: ServiceKeyWithKey | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<ServiceKeyWithKey>(
         "/api/v1/admin/service-keys",
@@ -113,7 +106,7 @@ export class ServiceKeysManager {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -135,7 +128,7 @@ export class ServiceKeysManager {
   async update(
     id: string,
     request: UpdateServiceKeyRequest,
-  ): Promise<{ data: ServiceKey | null; error: Error | null }> {
+  ): Promise<{ data: ServiceKey | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<ServiceKey>(
         `/api/v1/admin/service-keys/${id}`,
@@ -143,7 +136,7 @@ export class ServiceKeysManager {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -158,12 +151,12 @@ export class ServiceKeysManager {
    * const { error } = await client.admin.serviceKeys.delete('key-id')
    * ```
    */
-  async delete(id: string): Promise<{ error: Error | null }> {
+  async delete(id: string): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(`/api/v1/admin/service-keys/${id}`);
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -178,12 +171,12 @@ export class ServiceKeysManager {
    * const { error } = await client.admin.serviceKeys.disable('key-id')
    * ```
    */
-  async disable(id: string): Promise<{ error: Error | null }> {
+  async disable(id: string): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.post(`/api/v1/admin/service-keys/${id}/disable`, {});
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -198,12 +191,12 @@ export class ServiceKeysManager {
    * const { error } = await client.admin.serviceKeys.enable('key-id')
    * ```
    */
-  async enable(id: string): Promise<{ error: Error | null }> {
+  async enable(id: string): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.post(`/api/v1/admin/service-keys/${id}/enable`, {});
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -226,7 +219,7 @@ export class ServiceKeysManager {
   async revoke(
     id: string,
     request?: RevokeServiceKeyRequest,
-  ): Promise<{ error: Error | null }> {
+  ): Promise<{ error: FluxbaseError | null }> {
     try {
       const body = request?.reason
         ? new URLSearchParams({ reason: request.reason })
@@ -234,7 +227,7 @@ export class ServiceKeysManager {
       await this.fetch.post(`/api/v1/admin/service-keys/${id}/revoke`, body);
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -260,7 +253,7 @@ export class ServiceKeysManager {
     request?: DeprecateServiceKeyRequest,
   ): Promise<{
     data: { deprecated_at: string; grace_period_ends_at: string } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const params = new URLSearchParams();
@@ -276,7 +269,7 @@ export class ServiceKeysManager {
       }>(`/api/v1/admin/service-keys/${id}/deprecate`, body);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -301,7 +294,7 @@ export class ServiceKeysManager {
    */
   async rotate(
     id: string,
-  ): Promise<{ data: ServiceKeyWithKey | null; error: Error | null }> {
+  ): Promise<{ data: ServiceKeyWithKey | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<ServiceKeyWithKey>(
         `/api/v1/admin/service-keys/${id}/rotate`,
@@ -309,7 +302,7 @@ export class ServiceKeysManager {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -332,7 +325,7 @@ export class ServiceKeysManager {
       revoked_by: string;
       revocation_reason: string;
     } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.get<{
@@ -344,7 +337,7 @@ export class ServiceKeysManager {
       }>(`/api/v1/admin/service-keys/${id}/revocations`);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

@@ -4,26 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  KnowledgeBaseSummary,
-  KnowledgeBase,
-  CreateKnowledgeBaseRequest,
-  UpdateKnowledgeBaseRequest,
-  KnowledgeBaseDocument,
-  AddDocumentRequest,
-  AddDocumentResponse,
-  UploadDocumentResponse,
-  UpdateDocumentRequest,
-  DeleteDocumentsByFilterRequest,
-  DeleteDocumentsByFilterResponse,
-  SearchKnowledgeBaseRequest,
-  SearchKnowledgeBaseResponse,
-  Entity,
-  EntityType,
-  EntityRelationship,
-  KnowledgeGraphData,
-  FluxbaseResponse,
-} from "./types";
+import type { AddDocumentRequest, AddDocumentResponse, CreateKnowledgeBaseRequest, DeleteDocumentsByFilterRequest, DeleteDocumentsByFilterResponse, Entity, EntityRelationship, EntityType, FluxbaseError, FluxbaseResponse, KnowledgeBase, KnowledgeBaseDocument, KnowledgeBaseSummary, KnowledgeGraphData, SearchKnowledgeBaseRequest, SearchKnowledgeBaseResponse, UpdateDocumentRequest, UpdateKnowledgeBaseRequest, UploadDocumentResponse } from "./types";
 
 /**
  * FluxbaseKnowledgeBase provides knowledge base management for RAG applications
@@ -80,7 +61,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -97,7 +78,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -126,7 +107,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -147,7 +128,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -156,14 +137,14 @@ export class FluxbaseKnowledgeBase {
    *
    * @param id - Knowledge base ID
    */
-  async delete(id: string): Promise<{ data: boolean; error: Error | null }> {
+  async delete(id: string): Promise<{ data: boolean; error: FluxbaseError | null }> {
     try {
       await this.fetch.request<void>(`/api/v1/ai/knowledge-bases/${id}`, {
         method: "DELETE",
       });
       return { data: true, error: null };
     } catch (error) {
-      return { data: false, error: error as Error };
+      return { data: false, error: error as FluxbaseError };
     }
   }
 
@@ -186,7 +167,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -207,7 +188,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -237,7 +218,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -276,7 +257,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -299,7 +280,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -312,7 +293,7 @@ export class FluxbaseKnowledgeBase {
   async deleteDocument(
     kbId: string,
     docId: string,
-  ): Promise<{ data: boolean; error: Error | null }> {
+  ): Promise<{ data: boolean; error: FluxbaseError | null }> {
     try {
       await this.fetch.request<void>(
         `/api/v1/ai/knowledge-bases/${kbId}/documents/${docId}`,
@@ -320,7 +301,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data: true, error: null };
     } catch (error) {
-      return { data: false, error: error as Error };
+      return { data: false, error: error as FluxbaseError };
     }
   }
 
@@ -341,7 +322,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -381,7 +362,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -407,7 +388,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -428,7 +409,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -449,7 +430,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -470,7 +451,7 @@ export class FluxbaseKnowledgeBase {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

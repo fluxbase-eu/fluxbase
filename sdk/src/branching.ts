@@ -25,14 +25,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  Branch,
-  BranchActivity,
-  BranchPoolStats,
-  CreateBranchOptions,
-  ListBranchesOptions,
-  ListBranchesResponse,
-} from "./types";
+import type { Branch, BranchActivity, BranchPoolStats, CreateBranchOptions, FluxbaseError, ListBranchesOptions, ListBranchesResponse } from "./types";
 
 /**
  * Branching client for database branch management
@@ -75,7 +68,7 @@ export class FluxbaseBranching {
    */
   async list(
     options?: ListBranchesOptions,
-  ): Promise<{ data: ListBranchesResponse | null; error: Error | null }> {
+  ): Promise<{ data: ListBranchesResponse | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams();
 
@@ -125,7 +118,7 @@ export class FluxbaseBranching {
    */
   async get(
     idOrSlug: string,
-  ): Promise<{ data: Branch | null; error: Error | null }> {
+  ): Promise<{ data: Branch | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.get<Branch>(
         `/api/v1/admin/branches/${encodeURIComponent(idOrSlug)}`,
@@ -172,7 +165,7 @@ export class FluxbaseBranching {
   async create(
     name: string,
     options?: CreateBranchOptions,
-  ): Promise<{ data: Branch | null; error: Error | null }> {
+  ): Promise<{ data: Branch | null; error: FluxbaseError | null }> {
     try {
       const body: Record<string, unknown> = { name };
 
@@ -227,7 +220,7 @@ export class FluxbaseBranching {
    * }
    * ```
    */
-  async delete(idOrSlug: string): Promise<{ error: Error | null }> {
+  async delete(idOrSlug: string): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(
         `/api/v1/admin/branches/${encodeURIComponent(idOrSlug)}`,
@@ -259,7 +252,7 @@ export class FluxbaseBranching {
    */
   async reset(
     idOrSlug: string,
-  ): Promise<{ data: Branch | null; error: Error | null }> {
+  ): Promise<{ data: Branch | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.post<Branch>(
         `/api/v1/admin/branches/${encodeURIComponent(idOrSlug)}/reset`,
@@ -296,7 +289,7 @@ export class FluxbaseBranching {
   async getActivity(
     idOrSlug: string,
     limit: number = 50,
-  ): Promise<{ data: BranchActivity[] | null; error: Error | null }> {
+  ): Promise<{ data: BranchActivity[] | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.get<{ activity: BranchActivity[] }>(
         `/api/v1/admin/branches/${encodeURIComponent(idOrSlug)}/activity?limit=${limit}`,
@@ -327,7 +320,7 @@ export class FluxbaseBranching {
    */
   async getPoolStats(): Promise<{
     data: BranchPoolStats[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const response = await this.fetch.get<{ pools: BranchPoolStats[] }>(
@@ -391,7 +384,7 @@ export class FluxbaseBranching {
       /** Poll interval in milliseconds (default: 1000) */
       pollInterval?: number;
     },
-  ): Promise<{ data: Branch | null; error: Error | null }> {
+  ): Promise<{ data: Branch | null; error: FluxbaseError | null }> {
     const timeout = options?.timeout ?? 30000;
     const pollInterval = options?.pollInterval ?? 1000;
     const startTime = Date.now();
