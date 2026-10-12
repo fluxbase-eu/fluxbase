@@ -13,6 +13,13 @@ on:
         default: "18"
         type: string
 
+# Cancel superseded runs: a new push to the same PR stops the outdated run
+# immediately. Merges to main are never cancelled - each merge is validated
+# to completion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # Least privilege: CI only reads source and uploads artifacts/coverage.
 # The Codecov steps authenticate with the CODECOV_TOKEN secret, not the
 # GITHUB_TOKEN, so no job needs anything beyond read.
@@ -34,6 +41,7 @@ jobs:
       docker: ${{ steps.filter.outputs.docker }}
       ci-config: ${{ steps.filter.outputs.ci-config }}
       code-any: ${{ steps.filter.outputs.code-any }}
+      ocr-go: ${{ steps.filter.outputs.ocr-go }}
     steps:
       - uses: actions/checkout@v7
 
@@ -117,6 +125,15 @@ jobs:
               - 'admin/playwright.config.ts'
               - 'admin/global-setup.ts'
               - 'admin/global-teardown.ts'
+            ocr-go:
+              # The cgo/vips build (test-go-build-tags) only exercises code
+              # that can use the ocr build tag, plus the module and image
+              # definitions that affect it.
+              - 'internal/storage/**'
+              - 'internal/ai/**'
+              - 'internal/extensions/**'
+              - 'go.mod'
+              - 'go.sum'
             docker:
               - 'Dockerfile'
               - 'Dockerfile.docs'
@@ -211,18 +228,21 @@ jobs:
           mkdir -p internal/adminui/dist
           echo '<!DOCTYPE html><html><head><title>Placeholder</title></head><body></body></html>' > internal/adminui/dist/index.html
 
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.10.0
-
       - name: Run golangci-lint
-        run: golangci-lint run --timeout 10m ./internal/... ./cmd/... ./cli/...
+        # Action adds module + build caches over the raw binary install.
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
+        with:
+          version: v2.10.0
+          args: --timeout 10m ./internal/... ./cmd/... ./cli/...
 
       - name: Run golangci-lint (integration-tagged test tree)
         # Lint ./test/... with the `integration` build tag so type errors in
         # the tag-gated e2e tree surface here instead of only in release-time
-        # test runs. Same golangci-lint install as above.
-        run: golangci-lint run --build-tags integration --timeout 10m ./test/...
+        # test runs.
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
+        with:
+          version: v2.10.0
+          args: --build-tags integration --timeout 10m ./test/...
 
       - name: Install gofumpt
         run: go install mvdan.cc/gofumpt@latest
@@ -578,100 +598,12 @@ jobs:
             go test -v -short -race -timeout=10m -coverprofile=coverage-unit.out -covermode=atomic $PKGS
           fi
 
-      - name: Run e2e tests with coverage
-        timeout-minutes: 15
-        env:
-          FLUXBASE_DATABASE_HOST: localhost
-          FLUXBASE_DATABASE_PORT: 5432
-          FLUXBASE_DATABASE_USER: fluxbase_app
-          FLUXBASE_DATABASE_PASSWORD: fluxbase_app_password
-          FLUXBASE_DATABASE_ADMIN_USER: postgres
-          FLUXBASE_DATABASE_ADMIN_PASSWORD: postgres
-          FLUXBASE_TEST_DATABASE: fluxbase_go_e2e
-          FLUXBASE_EMAIL_SMTP_HOST: localhost
-          FLUXBASE_EMAIL_SMTP_PORT: 1025
-          FLUXBASE_STORAGE_S3_ENDPOINT: localhost:9000
-          FLUXBASE_STORAGE_S3_ACCESS_KEY: minioadmin
-          FLUXBASE_STORAGE_S3_SECRET_KEY: minioadmin
-          FLUXBASE_STORAGE_S3_BUCKET: fluxbase-test
-          FLUXBASE_SECURITY_SETUP_TOKEN: test-setup-token-e2e-ci
-        run: |
-          if [ "${{ needs.changes.outputs.go-core }}" = "true" ] || \
-             [ "${{ needs.changes.outputs.go-areas }}" = "all" ] || \
-             [ -z "${{ needs.changes.outputs.go-areas }}" ]; then
-            echo "Core package changed — running all e2e tests"
-            go test -tags=integration -v -race -parallel=1 -timeout=10m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/...
-          else
-            # Mark this run as selective so the coverage gate below uses
-            # unit-only coverage (a partial e2e run produces a partial
-            # coverage-e2e.out, which would under-count e2e-backed packages
-            # and could trip per-package thresholds that a full run meets).
-            echo "E2E_SELECTIVE=true" >> "$GITHUB_ENV"
-            # Selective e2e: build a -run regex from the ACTUAL test functions
-            # defined in the changed areas' files, rather than guessing name
-            # prefixes. All e2e tests share one flat package (test/e2e), so
-            # package-level selection can't narrow — only -run can. The regex is
-            # constructed by reading `func TestX` symbols from the matching
-            # files, so it can't silently run the wrong subset the way the old
-            # area->file-prefix mapping did (e.g. auth_test.go defines TestREST*).
-            #
-            # Area -> e2e file-glob mapping. Areas are top-level internal dirs.
-            IFS=',' read -ra AREAS <<< "${{ needs.changes.outputs.go-areas }}"
-            FILES=""
-            for area in "${AREAS[@]}"; do
-              case "$area" in
-                auth)      FILES="$FILES test/e2e/auth_*.go test/e2e/two_factor_*.go test/e2e/oauth_*.go test/e2e/otp_hash_test.go" ;;
-                storage)   FILES="$FILES test/e2e/storage_*.go" ;;
-                ai)        FILES="$FILES test/e2e/ai_*.go test/e2e/postgis_test.go" ;;
-                api)       FILES="$FILES test/e2e/rest_*.go test/e2e/graphql_test.go test/e2e/rpc_test.go test/e2e/sql_editor_test.go" ;;
-                branching) FILES="$FILES test/e2e/branching_*.go" ;;
-                tenantdb)  FILES="$FILES test/e2e/tenant_*.go test/e2e/tenant_isolation_test.go" ;;
-                functions) FILES="$FILES test/e2e/functions_*.go" ;;
-                realtime)  FILES="$FILES test/e2e/realtime_*.go" ;;
-                ratelimit) FILES="$FILES test/e2e/ratelimit_*.go" ;;
-                webhook)   FILES="$FILES test/e2e/webhook_*.go test/e2e/ssrf_*.go" ;;
-                mcp)       FILES="$FILES test/e2e/mcp_*.go" ;;
-                jobs)      FILES="$FILES test/e2e/logging_*.go test/e2e/job_retry_test.go test/e2e/jobs_get_test.go" ;;
-                *)         FILES="$FILES test/e2e/${area}_*.go" ;;
-              esac
-            done
-
-            # Always include setup + health — they validate the harness itself.
-            FILES="$FILES test/e2e/setup_test.go test/e2e/health_test.go"
-
-            # Extract `func TestX` symbols from the selected files (existing
-            # files only) and build a -run alternation regex.
-            RUN_REGEX=""
-            for f in $FILES; do
-              [ -f "$f" ] || continue
-              names=$(grep -hoE "^func Test[A-Za-z0-9_]+" "$f" | sed 's/^func //' | sort -u)
-              for name in $names; do
-                if [ -z "$RUN_REGEX" ]; then
-                  RUN_REGEX="$name"
-                else
-                  RUN_REGEX="$RUN_REGEX|$name"
-                fi
-              done
-            done
-
-            if [ -z "$RUN_REGEX" ]; then
-              echo "No e2e tests matched areas [${{ needs.changes.outputs.go-areas }}] — running full suite"
-              go test -tags=integration -v -race -parallel=1 -timeout=10m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/...
-            else
-              echo "Selective e2e for areas [${{ needs.changes.outputs.go-areas }}]: $(echo "$RUN_REGEX" | tr '|' ' ')"
-              # RUN_REGEX holds full Test function names (e.g. TestAuthSignin);
-              # -run matches against the full name, so anchor the alternation
-              # directly without re-adding a Test prefix.
-              go test -tags=integration -v -race -parallel=1 -timeout=10m -run "^($RUN_REGEX)\$" -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/...
-            fi
-          fi
-
       - name: Merge coverage reports
         run: |
           # Install gocovmerge to combine coverage profiles
-          go install github.com/wadey/gocovmerge@latest
-          # Merge unit and e2e coverage into combined report
-          gocovmerge coverage-unit.out coverage-e2e.out > coverage.out
+          # Unit-only profile: package thresholds are enforced against this
+          # profile (the integration job reports its own coverage separately).
+          cp coverage-unit.out coverage.out
           # Generate HTML report from combined coverage
           go tool cover -html=coverage.out -o coverage.html
 
@@ -684,12 +616,7 @@ jobs:
           # under-count e2e-backed packages and could trip per-package
           # thresholds that a full run meets. Gate against unit-only coverage
           # in that case; the full gate still runs on core/all changes.
-          if [ "$E2E_SELECTIVE" = "true" ]; then
-            echo "Selective e2e run — checking thresholds against unit-only coverage (coverage-unit.out)"
-            cp coverage-unit.out coverage-gate.out
-          else
-            cp coverage.out coverage-gate.out
-          fi
+          cp coverage-unit.out coverage-gate.out
 
           # Temporarily point the config at the gate profile.
           sed "s|^profile: coverage.out|profile: coverage-gate.out|" .testcoverage.yml > .testcoverage-gate.yml
@@ -740,6 +667,193 @@ jobs:
           path: |
             coverage.out
             coverage.html
+
+
+  test-go-integration:
+    name: Test Go (integration e2e)
+    needs: changes
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.go == 'true' ||
+      needs.changes.outputs.ci-config == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: ghcr.io/nimbleflux/fluxbase-postgres:${{ inputs.postgres_tag || '18' }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fluxbase_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+        # Configure PostgreSQL with custom settings
+        # Note: In GitHub Actions, we need to use a workaround to pass postgres args
+        # We'll do this via a step that restarts postgres after configuration
+
+      mailhog:
+        image: mailhog/mailhog:latest
+        ports:
+          - 1025:1025 # SMTP
+          - 8025:8025 # Web UI
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Get dependencies
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.1
+
+      - name: Set up Node.js for embedded SDK generation
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.20.0"
+
+      - name: Generate embedded SDK for Jobs runtime
+        run: |
+          cd sdk
+          bun install --frozen-lockfile
+          bun run generate:embedded-sdk
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.6.4
+
+      - name: Create dist directory with placeholder for embed directive
+        run: |
+          mkdir -p internal/adminui/dist
+          echo '<!DOCTYPE html><html><head><title>Placeholder</title></head><body></body></html>' > internal/adminui/dist/index.html
+
+      - name: Increase PostgreSQL max_connections
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # Default max_connections=100 is too low for test connection pools.
+          # The e2e tests create multiple pools (main, superuser, RLS) that
+          # together consume ~12+ connections, and the server's internal pools
+          # add more. Increase to 400 to prevent connection exhaustion.
+          psql -h localhost -U postgres -c "ALTER SYSTEM SET max_connections = 400;"
+          PG_CONTAINER=$(docker ps --format '{{.ID}}' --filter "publish=5432")
+          if [ -n "$PG_CONTAINER" ]; then
+            docker restart "$PG_CONTAINER"
+            sleep 5
+            for i in $(seq 1 30); do
+              if psql -h localhost -U postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "PostgreSQL ready with max_connections=400"
+                break
+              fi
+              sleep 1
+            done
+          fi
+
+      - name: Create E2E test database and users
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # Create the Go E2E test database (tests self-bootstrap on every run)
+          psql -h localhost -U postgres -c "CREATE DATABASE fluxbase_go_e2e;"
+
+          # Create fluxbase_app user with BYPASSRLS for general testing
+          # CREATEROLE is needed for bootstrap which creates database roles
+          psql -h localhost -U postgres -d fluxbase_go_e2e -c "CREATE USER fluxbase_app WITH PASSWORD 'fluxbase_app_password' LOGIN BYPASSRLS CREATEDB CREATEROLE;"
+          psql -h localhost -U postgres -d fluxbase_go_e2e -c "GRANT ALL PRIVILEGES ON DATABASE fluxbase_go_e2e TO fluxbase_app;"
+
+          # Create fluxbase_rls_test user for RLS policy testing (without BYPASSRLS)
+          psql -h localhost -U postgres -d fluxbase_go_e2e -c "CREATE USER fluxbase_rls_test WITH PASSWORD 'fluxbase_rls_test_password' LOGIN NOBYPASSRLS CREATEDB;"
+          psql -h localhost -U postgres -d fluxbase_go_e2e -c "GRANT ALL PRIVILEGES ON DATABASE fluxbase_go_e2e TO fluxbase_rls_test;"
+
+          # Enable pgvector extension for AI/RAG features
+          psql -h localhost -U postgres -d fluxbase_go_e2e -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+      - name: Start S3 test server (SeaweedFS)
+        run: |
+          # MinIO no longer publishes pullable images (quay.io/Docker Hub both
+          # reject anonymous access), so tests run against SeaweedFS in S3
+          # mode. The identity config matches the minioadmin credentials the
+          # tests were written with.
+          mkdir -p /tmp/seaweed-ci
+          cat > /tmp/seaweed-ci/s3.json <<'EOF'
+          {"identities":[{"name":"minioadmin","credentials":[{"accessKey":"minioadmin","secretKey":"minioadmin"}],"actions":["Admin","Read","Write","List","Tagging"]}]}
+          EOF
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -v /tmp/seaweed-ci/s3.json:/etc/seaweedfs/s3.json:ro \
+            chrislusf/seaweedfs:dev \
+            server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json -master.volumeSizeLimitMB=1024
+          timeout 60 bash -c 'until curl -s http://localhost:9000/ > /dev/null 2>&1; do sleep 1; done'
+
+      - name: Setup MinIO bucket
+        run: |
+          # Pre-create the default test bucket via the SeaweedFS shell
+          # (individual tests create their own buckets as well). The master
+          # needs a few seconds for raft leader election after start, so retry.
+          for i in $(seq 1 10); do
+            if docker exec minio sh -c 'echo "s3.bucket.create -name fluxbase-test" | weed shell -master=localhost:9333' 2>&1 | tee /tmp/bucket.out | grep -qE "created bucket|already exists"; then
+              break
+            fi
+            echo "Bucket setup attempt $i failed — retrying in 3s"
+            sleep 3
+          done
+
+      - name: Start Dex OIDC provider
+        run: |
+          docker run -d --name dex \
+            -p 5556:5556 \
+            -v "$(pwd)/test/e2e/dex-config-ci.yaml:/etc/dex/config.yaml:ro" \
+            ghcr.io/dexidp/dex:latest \
+            dex serve /etc/dex/config.yaml
+          # Wait for Dex to be healthy
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5556/dex/healthz > /dev/null 2>&1; then
+              echo "Dex is ready"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Dex failed to start"
+              docker logs dex
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Run integration e2e tests with coverage (full suite)
+        timeout-minutes: 15
+        env:
+          FLUXBASE_DATABASE_HOST: localhost
+          FLUXBASE_DATABASE_PORT: 5432
+          FLUXBASE_DATABASE_USER: fluxbase_app
+          FLUXBASE_DATABASE_PASSWORD: fluxbase_app_password
+          FLUXBASE_DATABASE_ADMIN_USER: postgres
+          FLUXBASE_DATABASE_ADMIN_PASSWORD: postgres
+          FLUXBASE_TEST_DATABASE: fluxbase_go_e2e
+          FLUXBASE_EMAIL_SMTP_HOST: localhost
+          FLUXBASE_EMAIL_SMTP_PORT: 1025
+          FLUXBASE_STORAGE_S3_ENDPOINT: localhost:9000
+          FLUXBASE_STORAGE_S3_ACCESS_KEY: minioadmin
+          FLUXBASE_STORAGE_S3_SECRET_KEY: minioadmin
+          FLUXBASE_STORAGE_S3_BUCKET: fluxbase-test
+          FLUXBASE_SECURITY_SETUP_TOKEN: test-setup-token-e2e-ci
+        run: |
+          go test -tags=integration -v -race -parallel=1 -timeout=10m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/...
+
 
   # ===========================================================================
   # Non-short tests for the DB-backed packages. `test-go` runs the full tree
@@ -1104,6 +1218,12 @@ jobs:
             sleep 2
           done
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('admin/bun.lock') }}
+
       - name: Install Playwright browsers
         working-directory: ./admin
         run: npx playwright install --with-deps chromium
@@ -1137,15 +1257,13 @@ jobs:
 
   build:
     name: Build
-    needs: [changes, lint-go, lint-typescript, test-sdk, test-go, test-e2e-ui]
-    # Tolerates 'skip-tests'-skipped test jobs; never runs on lint/test failure.
+    # Runs in parallel with the test jobs, not after them: it validates that
+    # the tree cross-compiles, while branch protection requires the test jobs
+    # for the merge. Only a lint failure holds it back.
+    needs: [changes, lint-go]
     if: >-
       !cancelled() &&
       needs.lint-go.result == 'success' &&
-      needs.lint-typescript.result == 'success' &&
-      (needs.test-go.result == 'success' || needs.test-go.result == 'skipped') &&
-      (needs.test-sdk.result == 'success' || needs.test-sdk.result == 'skipped') &&
-      (needs.test-e2e-ui.result == 'success' || needs.test-e2e-ui.result == 'skipped') &&
       (github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       needs.changes.outputs.code-any == 'true' ||
@@ -1238,7 +1356,7 @@ jobs:
   docker:
     name: Docker Build Test (${{ matrix.flavor }})
     runs-on: ubuntu-latest
-    needs: [changes, test-go]
+    needs: [changes]
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
@@ -1346,11 +1464,11 @@ jobs:
   test-go-build-tags:
     name: Go Tests (ocr vips tags)
     runs-on: ubuntu-latest
-    needs: [changes, test-go]
+    needs: [changes]
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
-      needs.changes.outputs.go == 'true' ||
+      needs.changes.outputs.ocr-go == 'true' ||
       needs.changes.outputs.docker == 'true' ||
       needs.changes.outputs.ci-config == 'true'
     steps:
