@@ -172,7 +172,15 @@ aca78ac2682be01babad446dc5e370e131d193b6:docs/docs/getting-started/quick-start.m
 3fdffd3ef51aaeb20b079aea8769fee542dc270e:docs/docs/authentication.md:curl-auth-header:77
 3fdffd3ef51aaeb20b079aea8769fee542dc270e:docs/docs/authentication.md:curl-auth-header:104
 # clientkey-split test fixtures: fake keys, triaged 2026-10-12
-ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:stripe-access-token:70
+
+# servicekey_auth_test.go fixtures (fake keys, triaged 2026-10-12): fingerprints
+# cover historical commits across active PR branches; the current fixture
+# values are gitleaks-inert.
+20c7c3ec29d0675a6cded20716cc73bbb3eed24a:internal/middleware/servicekey_auth_test.go:generic-api-key:72
+20c7c3ec29d0675a6cded20716cc73bbb3eed24a:internal/middleware/servicekey_auth_test.go:generic-api-key:73
+20c7c3ec29d0675a6cded20716cc73bbb3eed24a:internal/middleware/servicekey_auth_test.go:generic-api-key:74
+20c7c3ec29d0675a6cded20716cc73bbb3eed24a:internal/middleware/servicekey_auth_test.go:stripe-access-token:70
 ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:generic-api-key:72
 ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:generic-api-key:73
 ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:generic-api-key:74
+ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:stripe-access-token:70
