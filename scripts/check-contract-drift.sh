@@ -43,7 +43,6 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 SPEC="$WORK/openapi.json"
 GENERATED="$WORK/types-generated.ts"
-COMMITTED_NORM="$WORK/types-committed.ts"
 
 # Keep the inputs/outputs of the check in a stable location (CI uploads this
 # on failure) so a drift is reviewable without re-running the job.
@@ -65,43 +64,28 @@ fi
 echo "==> Regenerating TS types with openapi-typescript"
 bunx openapi-typescript "$SPEC" -o "$GENERATED"
 
-# Normalize both sides with prettier (same formatter the lefthook pre-commit
-# hook applies to sdk/src/**) so formatting can neither mask nor fake drift.
-# Prefer the workspace-installed binary: going through `bunx` here has been
-# observed to silently no-op in CI, which would report phantom drift.
-echo "==> Normalizing formatting (prettier)"
-if [ -x "node_modules/.bin/prettier" ]; then
-  PRETTIER=(node_modules/.bin/prettier --no-config --log-level warn)
-else
-  PRETTIER=(bunx prettier --no-config --log-level warn)
-fi
-"${PRETTIER[@]}" "$GENERATED" > "$WORK/generated.pretty"
-if [ -f "$COMMITTED" ]; then
-  "${PRETTIER[@]}" "$COMMITTED" > "$COMMITTED_NORM"
-fi
-
-# Canary: the raw generator emits 4-space indent, prettier emits 2-space.
-# Path keys ("/...") only sit at depth 1 (2 spaces) in normalized output.
-# If this fires, normalization silently failed — abort instead of reporting
-# phantom drift.
-if grep -q '^    "/' "$WORK/generated.pretty"; then
-  echo "INTERNAL ERROR: prettier normalization did not run; cannot check drift." >&2
-  echo "Run 'bun install' at the repo root so node_modules/.bin/prettier exists," >&2
-  echo "then retry." >&2
+# The committed file is openapi-typescript's RAW output, and it is diffed
+# raw-vs-raw: the generator is a pure function of the spec JSON, so no
+# formatter may touch the file — a prettier pass here silently no-op'd in CI
+# (exit 0, unformatted output) and produced phantom drift. lefthook's
+# pre-commit prettier command excludes this file for the same reason.
+echo "==> Sanity-checking generated output"
+if ! grep -q '^export interface paths' "$GENERATED"; then
+  echo "INTERNAL ERROR: generator output does not look like openapi-typescript output." >&2
   exit 1
 fi
 
 if [ "$UPDATE" = "1" ]; then
   mkdir -p "$(dirname "$COMMITTED")"
-  cp "$WORK/generated.pretty" "$COMMITTED"
+  cp "$GENERATED" "$COMMITTED"
   echo "==> Wrote $COMMITTED ($(wc -l < "$COMMITTED") lines). Review and commit it."
   exit 0
 fi
 
 echo "==> Diffing regenerated types against $COMMITTED"
+# Save the check inputs/outputs BEFORE anything can fail below.
 if [ -n "$DRIFT_ARTIFACTS" ]; then
-  cp -f "$SPEC" "$WORK/generated.pretty" "$DRIFT_ARTIFACTS/" 2>/dev/null || true
-  [ -f "$COMMITTED_NORM" ] && cp -f "$COMMITTED_NORM" "$DRIFT_ARTIFACTS/" 2>/dev/null || true
+  cp -f "$SPEC" "$GENERATED" "$DRIFT_ARTIFACTS/" 2>/dev/null || true
 fi
 if [ ! -f "$COMMITTED" ]; then
   echo "ERROR: $COMMITTED does not exist." >&2
@@ -117,7 +101,7 @@ if grep -q "$PLACEHOLDER_MARKER" "$COMMITTED"; then
   exit 0
 fi
 
-if diff -u "$COMMITTED_NORM" "$WORK/generated.pretty"; then
+if diff -u "$COMMITTED" "$GENERATED"; then
   echo "OK: sdk/src/types-generated.ts matches the served OpenAPI spec."
 else
   echo "" >&2
