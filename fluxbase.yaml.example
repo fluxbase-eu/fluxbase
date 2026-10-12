@@ -526,6 +526,19 @@ ai:
   entity_extraction_min_text_chars: 200 # FLUXBASE_AI_ENTITY_EXTRACTION_MIN_TEXT_CHARS - Skip the LLM below this text length
   entity_extraction_timeout: "60s"      # FLUXBASE_AI_ENTITY_EXTRACTION_TIMEOUT - Per-extraction-request timeout
 
+  # Rerank Configuration (RAG retrieval quality)
+  # When enabled, retrieved chunks are re-ordered by a relevance model:
+  #   llm    - listwise rerank via the default chat provider (no extra vendor)
+  #   cohere - Cohere Rerank API (requires rerank_api_key)
+  # Individual knowledge bases can opt out via rerank_enabled=false.
+  rerank_enabled: false                 # FLUXBASE_AI_RERANK_ENABLED - Enable reranking
+  rerank_provider: "llm"                # FLUXBASE_AI_RERANK_PROVIDER - llm | cohere
+  rerank_model: ""                      # FLUXBASE_AI_RERANK_MODEL - Model override (cohere default: rerank-v3.5)
+  rerank_api_key: ""                    # FLUXBASE_AI_RERANK_API_KEY - Cohere API key
+  rerank_base_url: ""                   # FLUXBASE_AI_RERANK_BASE_URL - Optional base URL override (cohere)
+  rerank_top_n: 10                      # FLUXBASE_AI_RERANK_TOP_N - Max results kept after reranking
+  rerank_timeout: "10s"                 # FLUXBASE_AI_RERANK_TIMEOUT - Per-rerank-request timeout
+
 # RPC Procedures Configuration
 rpc:
   enabled: true                         # FLUXBASE_RPC_ENABLED - Enable RPC procedures

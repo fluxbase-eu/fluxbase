@@ -135,9 +135,9 @@ type HybridSearchOptions struct {
 	Limit          int
 	Threshold      float64
 	Mode           SearchMode
-	SemanticWeight float64         // Weight for semantic score (0-1), keyword weight = 1 - semantic
-	KeywordBoost   float64         // Boost factor for exact keyword matches
-	Filter         *MetadataFilter // Optional metadata filter for user isolation
+	SemanticWeight float64 // Weight for the semantic ranked list in RRF fusion (0-1); keyword weight = 1 - semantic
+	KeywordBoost   float64 // >0 (default) orders the keyword list exact-substring-matches first
+	Filter         *MetadataFilter
 }
 
 // GraphBoostOptions contains options for graph-boosted search
@@ -267,15 +267,87 @@ func (s *KnowledgeBaseStorage) searchKeywordOnly(ctx context.Context, knowledgeB
 	return results, nil
 }
 
-// searchHybrid combines vector similarity with full-text search
+// rrfK is the standard reciprocal rank fusion constant. Ranks start at 1, so
+// the maximum raw RRF score is (semantic_weight + keyword_weight) / (rrfK + 1).
+const rrfK = 60.0
+
+// rrfScore computes the weighted reciprocal rank fusion score for a chunk,
+// normalized to 0-1 (a chunk ranked first in both lists scores 1.0). A rank
+// of 0 means "absent from that list" and contributes nothing. Mirrored by
+// the rank computation in searchHybrid's SQL; kept in Go so the fusion
+// formula is unit-testable in one place.
+func rrfScore(semanticWeight, keywordWeight float64, semanticRank, keywordRank int64) float64 {
+	score := 0.0
+	if semanticRank > 0 {
+		score += semanticWeight / (rrfK + float64(semanticRank))
+	}
+	if keywordRank > 0 {
+		score += keywordWeight / (rrfK + float64(keywordRank))
+	}
+	return score * (rrfK + 1)
+}
+
+// hybridRow is one candidate row from searchHybrid's SQL before fusion.
+type hybridRow struct {
+	result       RetrievalResult
+	semanticRank int64
+	keywordRank  int64
+	vectorSim    float64
+}
+
+// fuseHybridResults applies RRF fusion, the similarity threshold, and the
+// result limit to raw hybrid candidate rows. The threshold filters on the
+// raw cosine similarity (not the fused score): thresholds across the
+// codebase are calibrated to cosine (RAG default 0.7), and the fused RRF
+// score has a different distribution. RRF decides ordering, cosine decides
+// admission. Pure function so the fusion behavior is unit-testable without
+// a database.
+func fuseHybridResults(rows []hybridRow, opts HybridSearchOptions) []RetrievalResult {
+	keywordWeight := 1 - opts.SemanticWeight
+	fused := make([]RetrievalResult, 0, len(rows))
+	for _, row := range rows {
+		if opts.Threshold > 0 && row.vectorSim < opts.Threshold {
+			continue
+		}
+		score := rrfScore(opts.SemanticWeight, keywordWeight, row.semanticRank, row.keywordRank)
+		r := row.result
+		r.Similarity = score
+		fused = append(fused, r)
+	}
+
+	sort.Slice(fused, func(i, j int) bool {
+		return fused[i].Similarity > fused[j].Similarity
+	})
+	if opts.Limit > 0 && len(fused) > opts.Limit {
+		fused = fused[:opts.Limit]
+	}
+	return fused
+}
+
+// rrfCandidateCap bounds each ranked list fed into RRF fusion. Ranks past the
+// cap contribute vanishingly little (1/(60+200) of the weight), and the LIMIT
+// lets Postgres use index-assisted top-K instead of ranking the whole KB.
+const rrfCandidateCap = 200
+
+// searchHybrid combines vector similarity with full-text search using
+// weighted reciprocal rank fusion. Each source (vector, full-text) produces a
+// ranked list capped at rrfCandidateCap entries; fusion happens in Go via
+// fuseHybridResults so the scoring formula has one testable home.
 func (s *KnowledgeBaseStorage) searchHybrid(ctx context.Context, knowledgeBaseID string, opts HybridSearchOptions) ([]RetrievalResult, error) {
 	embeddingStr := formatEmbeddingLiteral(opts.QueryEmbedding)
-	keywordWeight := 1 - opts.SemanticWeight
+
+	capLimit := opts.Limit * 3
+	if capLimit < 50 {
+		capLimit = 50
+	}
+	if capLimit > rrfCandidateCap {
+		capLimit = rrfCandidateCap
+	}
 
 	// Build dynamic filter conditions for user isolation
 	filterConditions := ""
-	args := []interface{}{knowledgeBaseID, opts.Query, opts.SemanticWeight, keywordWeight, opts.KeywordBoost, opts.Threshold, opts.Limit}
-	argIndex := 8
+	args := []interface{}{knowledgeBaseID, opts.Query, capLimit}
+	argIndex := 4
 
 	if opts.Filter != nil && opts.Filter.UserID != nil {
 		// Strict (IncludeGlobal=false) matches only the caller's documents;
@@ -302,10 +374,16 @@ func (s *KnowledgeBaseStorage) searchHybrid(ctx context.Context, knowledgeBaseID
 		}
 	}
 
-	var results []RetrievalResult
+	// The keyword list orders exact substring matches first (when
+	// KeywordBoost > 0), then by ts_rank_cd — the old KeywordBoost score
+	// bonus expressed as a rank ordering instead.
+	keywordOrder := `ts_rank_cd(to_tsvector('simple', c.content), plainto_tsquery('simple', $2)) DESC`
+	if opts.KeywordBoost > 0 {
+		keywordOrder = `CASE WHEN c.content ILIKE '%%' || $2 || '%%' THEN 1 ELSE 0 END DESC, ` + keywordOrder
+	}
+
+	var rows []hybridRow
 	err := s.WithTenant(ctx, func(tx pgx.Tx) error {
-		// Hybrid query combining vector similarity and full-text search
-		// The final score is: (semantic_weight * vector_similarity) + (keyword_weight * text_rank) + keyword_boost_if_match
 		query := fmt.Sprintf(`
 			WITH vector_search AS (
 				SELECT
@@ -313,71 +391,68 @@ func (s *KnowledgeBaseStorage) searchHybrid(ctx context.Context, knowledgeBaseID
 					c.document_id,
 					c.content,
 					c.metadata,
-					1 - (c.embedding <=> '%s'::vector) as vector_similarity
+					1 - (c.embedding <=> '%s'::vector) as vector_similarity,
+					ROW_NUMBER() OVER (ORDER BY c.embedding <=> '%s'::vector ASC) as semantic_rank
 				FROM ai.chunks c
 				WHERE c.knowledge_base_id = $1
 				  AND c.embedding IS NOT NULL
+				ORDER BY c.embedding <=> '%s'::vector ASC
+				LIMIT $3
 			),
 			text_search AS (
 				SELECT
 					c.id as chunk_id,
-					ts_rank_cd(to_tsvector('simple', c.content), plainto_tsquery('simple', $2)) as text_rank,
-					CASE
-						WHEN c.content ILIKE '%%' || $2 || '%%' THEN $5::float
-						ELSE 0
-					END as keyword_boost
+					ROW_NUMBER() OVER (ORDER BY %s) as keyword_rank
 				FROM ai.chunks c
 				WHERE c.knowledge_base_id = $1
+				  AND (
+				    to_tsvector('simple', c.content) @@ plainto_tsquery('simple', $2)
+				    OR c.content ILIKE '%%' || $2 || '%%'
+				  )
+				LIMIT $3
 			)
 			SELECT
 				v.chunk_id,
 				v.document_id,
 				v.content,
-				(($3::float * v.vector_similarity) + ($4::float * COALESCE(t.text_rank, 0)) + COALESCE(t.keyword_boost, 0)) as similarity,
 				v.metadata,
 				d.title as document_title,
 				d.tags,
 				v.vector_similarity,
-				COALESCE(t.text_rank, 0) as text_rank
+				v.semantic_rank,
+				COALESCE(t.keyword_rank, 0) as keyword_rank
 			FROM vector_search v
 			JOIN ai.documents d ON d.id = v.document_id
 			LEFT JOIN text_search t ON t.chunk_id = v.chunk_id
-			WHERE (($3::float * v.vector_similarity) + ($4::float * COALESCE(t.text_rank, 0)) + COALESCE(t.keyword_boost, 0)) >= $6
+			WHERE v.vector_similarity > 0
 			%s
-			ORDER BY similarity DESC
-			LIMIT $7
-		`, embeddingStr, filterConditions)
+		`, embeddingStr, embeddingStr, embeddingStr, keywordOrder, filterConditions)
 
-		rows, err := tx.Query(ctx, query, args...)
+		dbRows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			log.Error().Err(err).Str("kb_id", knowledgeBaseID).Msg("Hybrid search query failed")
 			return fmt.Errorf("failed to search chunks: %w", err)
 		}
-		defer rows.Close()
+		defer dbRows.Close()
 
-		for rows.Next() {
-			var r RetrievalResult
+		for dbRows.Next() {
+			var row hybridRow
 			var docTitle *string
 			var tags []string
-			var vectorSim, textRank float64
-			if err := rows.Scan(&r.ChunkID, &r.DocumentID, &r.Content, &r.Similarity, &r.Metadata, &docTitle, &tags, &vectorSim, &textRank); err != nil {
+			if err := dbRows.Scan(
+				&row.result.ChunkID, &row.result.DocumentID, &row.result.Content,
+				&row.result.Metadata, &docTitle, &tags,
+				&row.vectorSim, &row.semanticRank, &row.keywordRank,
+			); err != nil {
 				log.Warn().Err(err).Msg("Failed to scan hybrid search result")
 				continue
 			}
-			r.KnowledgeBaseID = knowledgeBaseID
+			row.result.KnowledgeBaseID = knowledgeBaseID
 			if docTitle != nil {
-				r.DocumentTitle = *docTitle
+				row.result.DocumentTitle = *docTitle
 			}
-			r.Tags = tags
-
-			log.Debug().
-				Str("chunk_id", r.ChunkID).
-				Float64("vector_sim", vectorSim).
-				Float64("text_rank", textRank).
-				Float64("combined", r.Similarity).
-				Msg("Hybrid result")
-
-			results = append(results, r)
+			row.result.Tags = tags
+			rows = append(rows, row)
 		}
 
 		return nil
@@ -386,10 +461,15 @@ func (s *KnowledgeBaseStorage) searchHybrid(ctx context.Context, knowledgeBaseID
 		return nil, err
 	}
 
-	log.Debug().
-		Int("results_count", len(results)).
-		Str("kb_id", knowledgeBaseID).
-		Msg("Hybrid search completed")
+	results := fuseHybridResults(rows, opts)
+
+	if len(results) > 0 {
+		log.Debug().
+			Int("results_count", len(results)).
+			Float64("top_similarity", results[0].Similarity).
+			Str("kb_id", knowledgeBaseID).
+			Msg("Hybrid search completed")
+	}
 
 	return results, nil
 }

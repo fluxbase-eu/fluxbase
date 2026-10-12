@@ -122,6 +122,8 @@ type Metrics struct {
 	aiWebSocketConnections  prometheus.Gauge
 	aiProviderRequestsTotal *prometheus.CounterVec
 	aiProviderLatency       *prometheus.HistogramVec
+	aiRerankRequestsTotal   *prometheus.CounterVec
+	aiRerankDuration        *prometheus.HistogramVec
 
 	// System metrics
 	systemUptime prometheus.Gauge
@@ -423,6 +425,21 @@ func createMetrics() *Metrics {
 			},
 			[]string{"provider"},
 		),
+		aiRerankRequestsTotal: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "fluxbase_ai_rerank_requests_total",
+				Help: "Total RAG rerank operations",
+			},
+			[]string{"provider", "status"}, // provider: cohere, llm; status: success, error, skipped
+		),
+		aiRerankDuration: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "fluxbase_ai_rerank_duration_seconds",
+				Help:    "RAG rerank operation duration in seconds",
+				Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+			},
+			[]string{"provider"},
+		),
 
 		// System metrics
 		systemUptime: promauto.NewGauge(
@@ -615,6 +632,12 @@ func (m *Metrics) UpdateAIWebSocketConnections(count int) {
 func (m *Metrics) RecordAIProviderRequest(provider, status string, duration time.Duration) {
 	m.aiProviderRequestsTotal.WithLabelValues(provider, status).Inc()
 	m.aiProviderLatency.WithLabelValues(provider).Observe(duration.Seconds())
+}
+
+// RecordAIRerank records a RAG rerank operation
+func (m *Metrics) RecordAIRerank(provider, status string, duration time.Duration) {
+	m.aiRerankRequestsTotal.WithLabelValues(provider, status).Inc()
+	m.aiRerankDuration.WithLabelValues(provider).Observe(duration.Seconds())
 }
 
 // RecordRPCExecution records an RPC procedure execution

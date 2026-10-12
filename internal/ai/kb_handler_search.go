@@ -20,6 +20,7 @@ type SearchKnowledgeBaseRequest struct {
 	Threshold      float64 `json:"threshold,omitempty"`
 	Mode           string  `json:"mode,omitempty"`            // "semantic", "keyword", or "hybrid"
 	SemanticWeight float64 `json:"semantic_weight,omitempty"` // For hybrid mode: 0-1, default 0.5
+	Rerank         *bool   `json:"rerank,omitempty"`          // Override KB rerank opt-in (requires a configured reranker)
 }
 
 // SearchKnowledgeBase searches a specific knowledge base
@@ -111,6 +112,19 @@ func (h *KnowledgeBaseHandler) SearchKnowledgeBase(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to search knowledge base",
 		})
+	}
+
+	// Optional rerank: request flag overrides the KB's rerank_enabled opt-in.
+	if h.reranker != nil && len(results) > 1 {
+		shouldRerank := false
+		if req.Rerank != nil {
+			shouldRerank = *req.Rerank
+		} else if kb, kbErr := h.storage.GetKnowledgeBase(ctx, kbID); kbErr == nil && kb != nil {
+			shouldRerank = kb.RerankEnabled
+		}
+		if shouldRerank {
+			results = rerankResults(ctx, h.reranker, req.Query, results, req.MaxChunks, nil)
+		}
 	}
 
 	// Log results for debugging

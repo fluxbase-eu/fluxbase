@@ -15,6 +15,8 @@ type RAGService struct {
 	embeddingService *EmbeddingService
 	knowledgeGraph   *KnowledgeGraph // For graph-boosted search
 	entityExtractor  EntityExtractor // For extracting entities from queries
+	reranker         Reranker        // Optional: re-orders retrieved chunks (SetReranker)
+	rerankTopN       int             // Max chunks kept after reranking
 }
 
 // NewRAGService creates a new RAG service
@@ -30,6 +32,36 @@ func NewRAGService(
 		knowledgeGraph:   knowledgeGraph,
 		entityExtractor:  entityExtractor,
 	}
+}
+
+// SetReranker wires an optional reranker into the retrieval pipeline. topN
+// caps the number of chunks kept after reranking (<= 0 keeps all reranked).
+func (r *RAGService) SetReranker(reranker Reranker, topN int) {
+	r.reranker = reranker
+	r.rerankTopN = topN
+}
+
+// shouldRerank reports whether reranking applies to a chatbot's retrieval:
+// a reranker must be configured and at least one enabled linked KB must
+// opt in via rerank_enabled.
+func (r *RAGService) shouldRerank(ctx context.Context, chatbotID string) (bool, error) {
+	if r.reranker == nil {
+		return false, nil
+	}
+	return r.storage.ChatbotRerankEnabled(ctx, chatbotID)
+}
+
+// overFetchLimit returns the candidate count to fetch when reranking will
+// run: 3x the requested size with sane bounds (mirrors graph boost).
+func overFetchLimit(maxChunks int) int {
+	if maxChunks <= 0 {
+		maxChunks = 5
+	}
+	limit := maxChunks * 3
+	if limit > 50 {
+		limit = 50
+	}
+	return limit
 }
 
 // RetrieveContextOptions contains options for retrieval
@@ -66,10 +98,21 @@ func (r *RAGService) RetrieveContext(ctx context.Context, opts RetrieveContextOp
 		return nil, fmt.Errorf("failed to embed query: %w", err)
 	}
 
+	// Reranking works best with more candidates than the final chunk count,
+	// so over-fetch when a reranker will run.
+	willRerank, err := r.shouldRerank(ctx, opts.ChatbotID)
+	if err != nil {
+		log.Warn().Err(err).Str("chatbot_id", opts.ChatbotID).Msg("Failed to check rerank opt-in; skipping rerank")
+		willRerank = false
+	}
+
 	// Build search options with user context for isolation
 	searchOpts := SearchChatbotKnowledgeOptions{
 		MaxChunks: opts.MaxChunks,
 		Threshold: opts.Threshold,
+	}
+	if willRerank {
+		searchOpts.MaxChunks = overFetchLimit(opts.MaxChunks)
 	}
 	if opts.UserID != "" {
 		searchOpts.UserID = &opts.UserID
@@ -81,12 +124,25 @@ func (r *RAGService) RetrieveContext(ctx context.Context, opts RetrieveContextOp
 	// the standard cross-KB search.
 	var chunks []RetrievalResult
 	if opts.GraphBoostWeight > 0 && r.knowledgeGraph != nil && r.entityExtractor != nil {
+		if willRerank {
+			opts.MaxChunks = overFetchLimit(opts.MaxChunks)
+		}
 		chunks, err = r.retrieveContextWithGraphBoost(ctx, opts, queryEmbedding)
 	} else {
 		chunks, err = r.storage.SearchChatbotKnowledgeWithOptions(ctx, opts.ChatbotID, queryEmbedding, searchOpts)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to search knowledge: %w", err)
+	}
+
+	// Rerank (opt-in per linked KB) before the context is truncated to the
+	// requested size.
+	var rerankDurationMs *int
+	if willRerank && len(chunks) > 0 {
+		rerankStart := time.Now()
+		chunks = rerankResults(ctx, r.reranker, opts.Query, chunks, 0, nil)
+		dur := int(time.Since(rerankStart).Milliseconds())
+		rerankDurationMs = &dur
 	}
 
 	// Apply optional overrides
@@ -126,6 +182,7 @@ func (r *RAGService) RetrieveContext(ctx context.Context, opts RetrieveContextOp
 		ChunkIDs:            chunkIDs,
 		SimilarityScores:    scores,
 		RetrievalDurationMs: int(duration.Milliseconds()),
+		RerankDurationMs:    rerankDurationMs,
 	})
 
 	return &RetrieveContextResult{
@@ -382,7 +439,7 @@ func (r *RAGService) VectorSearch(ctx context.Context, opts VectorSearchOptions)
 				Threshold:      opts.Threshold,
 				Mode:           SearchModeHybrid,
 				SemanticWeight: 0.7, // 70% semantic, 30% keyword
-				KeywordBoost:   0.2, // 20% boost for exact keyword matches
+				KeywordBoost:   0.2, // exact keyword matches order first
 				Filter:         filter,
 			}
 
@@ -391,6 +448,12 @@ func (r *RAGService) VectorSearch(ctx context.Context, opts VectorSearchOptions)
 				log.Warn().Err(err).Str("kb_id", kbID).Str("kb_name", kb.Name).Msg("Failed to search knowledge base")
 				continue
 			}
+		}
+
+		// Per-KB rerank opt-in: re-order this KB's results when the KB opted
+		// in and a reranker is configured.
+		if r.reranker != nil && kb.RerankEnabled && len(results) > 1 {
+			results = rerankResults(ctx, r.reranker, opts.Query, results, r.rerankTopN, nil)
 		}
 
 		for _, result := range results {

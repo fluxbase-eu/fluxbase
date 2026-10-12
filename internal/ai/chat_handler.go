@@ -58,10 +58,11 @@ func NewChatHandler(
 	var ragService *RAGService
 	if embeddingService != nil {
 		kbStorage := NewKnowledgeBaseStorage(db)
-		// Initialize knowledge graph and entity extractor for graph-boosted search
+		// Initialize knowledge graph and entity extractor for graph-boosted
+		// search. The extractor defaults to rules; SetEntityExtractor upgrades
+		// it to the strategy-aware dispatcher.
 		knowledgeGraph := NewKnowledgeGraph(kbStorage)
-		entityExtractor := NewRuleBasedExtractor()
-		ragService = NewRAGService(kbStorage, embeddingService, knowledgeGraph, entityExtractor)
+		ragService = NewRAGService(kbStorage, embeddingService, knowledgeGraph, NewRuleBasedExtractor())
 	}
 
 	return &ChatHandler{
@@ -83,6 +84,21 @@ func NewChatHandler(
 // SetSettingsResolver sets the settings resolver for template variable resolution in system prompts
 func (h *ChatHandler) SetSettingsResolver(resolver *SettingsResolver) {
 	h.schemaBuilder.SetSettingsResolver(resolver)
+}
+
+// SetReranker wires an optional reranker into the chat RAG path.
+func (h *ChatHandler) SetReranker(reranker Reranker, topN int) {
+	if h.ragService != nil {
+		h.ragService.SetReranker(reranker, topN)
+	}
+}
+
+// SetEntityExtractor upgrades the RAG path's entity extractor (used for
+// query-time graph-boost extraction) to a strategy-aware implementation.
+func (h *ChatHandler) SetEntityExtractor(extractor EntityExtractor) {
+	if h.ragService != nil && extractor != nil {
+		h.ragService.entityExtractor = extractor
+	}
 }
 
 // SetIntegrationsStorage wires the tool integrations storage (Tavily,

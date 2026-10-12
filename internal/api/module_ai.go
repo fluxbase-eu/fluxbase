@@ -77,6 +77,7 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 	var aiConversations *ai.ConversationManager
 	var aiMetrics *observability.Metrics
 	var knowledgeBaseHandler *ai.KnowledgeBaseHandler
+	var reranker ai.Reranker
 	var kbStorage *ai.KnowledgeBaseStorage
 	var knowledgeGraph *ai.KnowledgeGraph
 	var docProcessor *ai.DocumentProcessor
@@ -98,7 +99,45 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 			embeddingService = vectorHandler.GetEmbeddingService()
 		}
 
+		// Reranker: optional relevance re-ordering of retrieved chunks.
+		// Provider "llm" reuses the default chat provider; "cohere" calls the
+		// Cohere Rerank API. Per-KB opt-out via kb.rerank_enabled.
+		if cfg.AI.RerankEnabled {
+			switch strings.ToLower(strings.TrimSpace(cfg.AI.RerankProvider)) {
+			case "cohere":
+				reranker = ai.NewCohereReranker(ai.CohereRerankerConfig{
+					APIKey:  cfg.AI.RerankAPIKey,
+					Model:   cfg.AI.RerankModel,
+					BaseURL: cfg.AI.RerankBaseURL,
+					Timeout: cfg.AI.RerankTimeout,
+				})
+			default: // "llm"
+				reranker = ai.NewLLMReranker(ai.LLMRerankerConfig{
+					Resolve: func(ctx context.Context) (ai.Provider, error) {
+						record, err := aiStorage.GetEffectiveDefaultProvider(ctx)
+						if err != nil {
+							return nil, err
+						}
+						if record == nil {
+							return nil, nil
+						}
+						return ai.NewProvider(ai.ProviderConfig{
+							Name:        record.Name,
+							DisplayName: record.DisplayName,
+							Type:        ai.ProviderType(record.ProviderType),
+							Config:      record.Config,
+						})
+					},
+					Model: cfg.AI.RerankModel,
+				})
+			}
+			log.Info().Str("provider", reranker.Provider()).Int("top_n", cfg.AI.RerankTopN).Msg("Reranker enabled")
+		}
+
 		aiChatHandler = ai.NewChatHandler(db, aiStorage, aiConversations, aiMetrics, &cfg.AI, embeddingService, loggingSvc)
+		if reranker != nil {
+			aiChatHandler.SetReranker(reranker, cfg.AI.RerankTopN)
+		}
 
 		// Wire integrations storage into the chat handler so the supervisor's
 		// Web Agent can resolve Tavily credentials at turn start.
@@ -177,6 +216,9 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 		entityExtractor = ai.NewStrategyEntityExtractor(ruleExtractor, extractionLLM, kbStorage, strategy)
 		log.Info().Str("default_strategy", strategy).Msg("Entity extractor initialized")
 
+		// The chat handler's RAG path reuses the strategy-aware extractor.
+		aiChatHandler.SetEntityExtractor(entityExtractor)
+
 		if vectorHandler != nil && vectorHandler.GetEmbeddingService() != nil {
 			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService(), entityExtractor, knowledgeGraph)
 		}
@@ -197,6 +239,9 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 		}
 		if storageSvc != nil {
 			knowledgeBaseHandler.SetStorageService(storageSvc)
+		}
+		if reranker != nil {
+			knowledgeBaseHandler.SetReranker(reranker)
 		}
 
 		tableExporter := ai.NewTableExporter(db, docProcessor, knowledgeGraph, kbStorage)
@@ -248,6 +293,7 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 		VectorHandler:   vectorHandler,
 		Internal:        internalAIHandler,
 		Integrations:    integrationsHandler,
+		Reranker:        reranker,
 	}
 	m.Quota = &QuotaHandlers{Handler: quotaHandler}
 

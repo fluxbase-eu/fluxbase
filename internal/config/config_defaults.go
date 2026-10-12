@@ -359,6 +359,15 @@ func setDefaults() {
 	viper.SetDefault("ai.entity_extraction_min_text_chars", 200)
 	viper.SetDefault("ai.entity_extraction_timeout", "60s")
 
+	// AI Rerank defaults (RAG retrieval quality)
+	viper.SetDefault("ai.rerank_enabled", false)  // Disabled by default
+	viper.SetDefault("ai.rerank_provider", "llm") // llm (default chat provider) | cohere
+	viper.SetDefault("ai.rerank_model", "")       // Empty = provider default
+	viper.SetDefault("ai.rerank_api_key", "")
+	viper.SetDefault("ai.rerank_base_url", "")
+	viper.SetDefault("ai.rerank_top_n", 10)
+	viper.SetDefault("ai.rerank_timeout", "10s")
+
 	// RPC defaults
 	viper.SetDefault("rpc.enabled", true)           // Enabled by default (controlled by feature flag at runtime)
 	viper.SetDefault("rpc.procedures_dir", "./rpc") // Default procedures directory

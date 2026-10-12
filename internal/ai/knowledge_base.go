@@ -49,9 +49,12 @@ type KnowledgeBase struct {
 	// (regex-based, default), "llm" (model-backed, falls back to rules on
 	// failure), or "hybrid" (both merged). Empty inherits the global
 	// ai.entity_extraction_strategy default.
-	EntityExtractionStrategy string    `json:"entity_extraction_strategy"`
-	CreatedAt                time.Time `json:"created_at"`
-	UpdatedAt                time.Time `json:"updated_at"`
+	EntityExtractionStrategy string `json:"entity_extraction_strategy"`
+	// RerankEnabled opts this KB's search results into reranking when a
+	// reranker is globally configured (ai.rerank_enabled). Default true.
+	RerankEnabled bool      `json:"rerank_enabled"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 	// Tenant info (populated for instance admin cross-tenant queries)
 	TenantID   *string `json:"tenant_id,omitempty"`
 	TenantName *string `json:"tenant_name,omitempty"`
@@ -298,6 +301,7 @@ type RetrievalLog struct {
 	ChunkIDs            []string  `json:"chunk_ids,omitempty"`
 	SimilarityScores    []float64 `json:"similarity_scores,omitempty"`
 	RetrievalDurationMs int       `json:"retrieval_duration_ms"`
+	RerankDurationMs    *int      `json:"rerank_duration_ms,omitempty"`
 	CreatedAt           time.Time `json:"created_at"`
 }
 
@@ -318,6 +322,9 @@ type CreateKnowledgeBaseRequest struct {
 	// EntityExtractionStrategy selects the extractor: "rules", "llm", or
 	// "hybrid". Empty inherits the global ai.entity_extraction_strategy.
 	EntityExtractionStrategy string `json:"entity_extraction_strategy,omitempty"`
+	// RerankEnabled opts this KB's results into reranking when a reranker is
+	// globally configured. nil = default (true).
+	RerankEnabled *bool `json:"rerank_enabled,omitempty"`
 	// InitialPermissions grants permissions to users upon creation
 	InitialPermissions []KBInitialPermission `json:"initial_permissions,omitempty"`
 	// OwnerID is set internally by the handler, not exposed in the API
@@ -343,6 +350,7 @@ type UpdateKnowledgeBaseRequest struct {
 	Enabled                  *bool         `json:"enabled,omitempty"`
 	EntityExtractionEnabled  *bool         `json:"entity_extraction_enabled,omitempty"`
 	EntityExtractionStrategy *string       `json:"entity_extraction_strategy,omitempty"`
+	RerankEnabled            *bool         `json:"rerank_enabled,omitempty"`
 }
 
 // CreateDocumentRequest is the request to add a document to a knowledge base

@@ -74,6 +74,18 @@ type AIConfig struct {
 	EntityExtractionMaxTokens    int           `mapstructure:"entity_extraction_max_tokens"`     // Max tokens per LLM extraction request (default 2000)
 	EntityExtractionMinTextChars int           `mapstructure:"entity_extraction_min_text_chars"` // Skip the LLM below this text length (default 200)
 	EntityExtractionTimeout      time.Duration `mapstructure:"entity_extraction_timeout"`        // Per-extraction-request timeout (default 60s)
+
+	// Rerank Configuration (RAG retrieval quality). When enabled, retrieved
+	// chunks are re-ordered by a relevance model before being used. Provider:
+	// llm (uses the default chat provider, no extra vendor) or cohere (Cohere
+	// Rerank API). Per-KB opt-out via rerank_enabled.
+	RerankEnabled  bool          `mapstructure:"rerank_enabled"`  // Enable reranking (default false)
+	RerankProvider string        `mapstructure:"rerank_provider"` // llm | cohere (default llm)
+	RerankModel    string        `mapstructure:"rerank_model"`    // Model override (cohere default: rerank-v3.5; llm: provider default)
+	RerankAPIKey   string        `mapstructure:"rerank_api_key"`  // API key for cohere provider
+	RerankBaseURL  string        `mapstructure:"rerank_base_url"` // Optional base URL override (cohere)
+	RerankTopN     int           `mapstructure:"rerank_top_n"`    // Max results kept after reranking (default 10)
+	RerankTimeout  time.Duration `mapstructure:"rerank_timeout"`  // Per-rerank-request timeout (default 10s)
 }
 
 // Validate validates AI configuration
@@ -121,6 +133,19 @@ func (ac *AIConfig) Validate() error {
 	// Warn when an LLM strategy is selected without a chat provider source
 	if ac.EntityExtractionStrategy != "" && ac.EntityExtractionStrategy != "rules" && ac.ProviderType == "" {
 		log.Warn().Str("strategy", ac.EntityExtractionStrategy).Msg("entity_extraction_strategy uses the LLM but no ai.provider_type is configured; extraction will fall back to rules until a default provider is set (admin UI/CLI or config)")
+	}
+
+	// Validate rerank configuration
+	if ac.RerankEnabled {
+		switch strings.ToLower(strings.TrimSpace(ac.RerankProvider)) {
+		case "", "llm":
+		case "cohere":
+			if ac.RerankAPIKey == "" && ac.RerankBaseURL == "" {
+				return fmt.Errorf("rerank_provider cohere requires rerank_api_key (or rerank_base_url for a self-hosted compatible API)")
+			}
+		default:
+			return fmt.Errorf("rerank_provider must be llm or cohere, got: %q", ac.RerankProvider)
+		}
 	}
 
 	return nil

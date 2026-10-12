@@ -83,6 +83,9 @@ func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 	default:
 		handler = ai.NewUserKnowledgeBaseHandler(s.AI.KBStorage)
 	}
+	if s.AI.Reranker != nil {
+		handler.SetReranker(s.AI.Reranker)
+	}
 
 	deps.ListKBs = handler.ListMyKnowledgeBases
 	deps.CreateKB = handler.CreateMyKnowledgeBase

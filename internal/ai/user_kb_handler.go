@@ -14,6 +14,12 @@ type UserKnowledgeBaseHandler struct {
 	processor      *DocumentProcessor
 	storageService *storage.Service
 	textExtractor  *TextExtractor
+	reranker       Reranker
+}
+
+// SetReranker wires an optional reranker into the user search endpoints.
+func (h *UserKnowledgeBaseHandler) SetReranker(r Reranker) {
+	h.reranker = r
 }
 
 // NewUserKnowledgeBaseHandler creates a new user KB handler
