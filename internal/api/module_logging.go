@@ -44,7 +44,7 @@ func (m *LoggingModule) Init(ctx context.Context, registry *ServiceRegistry) err
 		Int("batch_size", cfg.Logging.BatchSize).
 		Msg("Central logging service initialized")
 
-	m.Handlers.Handler = NewLoggingHandler(loggingService)
+	m.Handlers.Handler = NewLoggingHandler(loggingService, NewDBExecutionTenantResolver(db))
 
 	if cfg.Logging.RetentionEnabled {
 		m.Handlers.Retention = logging.NewRetentionService(&cfg.Logging, loggingService.Storage())

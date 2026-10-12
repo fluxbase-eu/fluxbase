@@ -455,7 +455,7 @@ func (h *Handler) GetExecutionLogs(c fiber.Ctx) error {
 
 	executionIDStr := c.Params("id")
 
-	_, err := uuid.Parse(executionIDStr)
+	executionID, err := uuid.Parse(executionIDStr)
 	if err != nil {
 		return apperrors.SendInvalidID(c, "execution ID")
 	}
@@ -468,8 +468,28 @@ func (h *Handler) GetExecutionLogs(c fiber.Ctx) error {
 		}
 	}
 
+	ctx := middleware.CtxWithTenant(c)
+
+	// Tenant scoping: execution logs are keyed by execution ID only, so verify
+	// the execution belongs to the caller's tenant before returning them.
+	// Instance admins on the default tenant have a cross-tenant context and
+	// bypass the check; a missing or non-matching owner resolves to 404 so
+	// existence is not disclosed across tenants.
+	callerTenant := database.TenantFromContext(ctx)
+	crossTenant := callerTenant == "" && middleware.IsInstanceAdminFromContext(c)
+	if !crossTenant {
+		ownerTenant, found, err := h.storage.GetExecutionTenant(ctx, executionID)
+		if err != nil {
+			log.Error().Err(err).Str("execution_id", executionIDStr).Msg("Failed to resolve execution owner")
+			return apperrors.SendInternalError(c, "Failed to get execution logs")
+		}
+		if !found || ownerTenant == "" || ownerTenant != callerTenant {
+			return apperrors.SendNotFound(c, "Execution not found")
+		}
+	}
+
 	// Query logs from central logging
-	entries, err := h.loggingService.GetExecutionLogs(middleware.CtxWithTenant(c), executionIDStr, afterLine)
+	entries, err := h.loggingService.GetExecutionLogs(ctx, executionIDStr, afterLine)
 	if err != nil {
 		log.Error().Err(err).Str("execution_id", executionIDStr).Msg("Failed to get execution logs")
 		return apperrors.SendInternalError(c, "Failed to get execution logs")
