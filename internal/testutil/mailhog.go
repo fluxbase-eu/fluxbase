@@ -42,11 +42,13 @@ type MailHogMessages struct {
 // GetMailHogBaseURL returns the MailHog base URL for the current environment.
 // It checks the MAILHOG_HOST environment variable, defaulting to localhost.
 func GetMailHogBaseURL() string {
-	// Allow override via environment variable. CI reaches the MailHog service
-	// container by its hostname; local runs set MAILHOG_HOST=localhost.
+	// Allow override via environment variable. The default is localhost:
+	// GitHub-hosted runners (and local docker setups) reach the MailHog
+	// service through its published ports, and the "mailhog" DNS alias does
+	// not resolve from the runner itself.
 	host := os.Getenv("MAILHOG_HOST")
 	if host == "" {
-		host = "mailhog"
+		host = "localhost"
 	}
 	return fmt.Sprintf("http://%s:8025", host)
 }

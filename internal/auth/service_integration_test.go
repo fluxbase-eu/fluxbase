@@ -784,12 +784,13 @@ func createAuthServiceWithMailHog(t *testing.T, tc *e2e.IntegrationTestContext) 
 	}
 
 	// Create email config for MailHog. The SMTP host follows
-	// FLUXBASE_EMAIL_SMTP_HOST (same default as the rest of the harness) so
-	// local runs against localhost work the same as CI against the service
-	// container hostname.
+	// FLUXBASE_EMAIL_SMTP_HOST, defaulting to localhost: service containers
+	// are reached through their published ports both on CI runners and in
+	// local docker setups (the "mailhog" DNS alias only resolves from inside
+	// a compose network).
 	smtpHost := os.Getenv("FLUXBASE_EMAIL_SMTP_HOST")
 	if smtpHost == "" {
-		smtpHost = "mailhog"
+		smtpHost = "localhost"
 	}
 	emailCfg := &config.EmailConfig{
 		Enabled:        true,
