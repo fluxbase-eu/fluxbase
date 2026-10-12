@@ -1,5 +1,5 @@
 # Fluxbase Minimal Docker Compose
-# Quick start: ./scripts/quick-start.sh
+# Quick start: ./scripts/quick-start.sh (from repo root)
 
 services:
   postgres:
@@ -22,7 +22,7 @@ services:
   # Image variants: use the default (full) tag, or set FLUXBASE_VERSION to
   # <version>-lite for the smaller distroless image (no OCR/ffmpeg/transforms).
   fluxbase:
-    image: ghcr.io/nimbleflux/fluxbase:${FLUXBASE_VERSION:-2026.9.2}
+    image: ghcr.io/nimbleflux/fluxbase:${FLUXBASE_VERSION:-2026.9.10}
     container_name: fluxbase
     ports:
       - "8080:8080"
@@ -35,7 +35,7 @@ services:
       FLUXBASE_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       FLUXBASE_DATABASE_SSL_MODE: disable
 
-      # Required secrets (generate with: ./scripts/quick-start.sh)
+      # Required secrets (generate with: ./generate-keys.sh)
       FLUXBASE_AUTH_JWT_SECRET: ${FLUXBASE_AUTH_JWT_SECRET}
       FLUXBASE_ENCRYPTION_KEY: ${FLUXBASE_ENCRYPTION_KEY}
       FLUXBASE_SECURITY_SETUP_TOKEN: ${FLUXBASE_SECURITY_SETUP_TOKEN}
