@@ -1039,6 +1039,14 @@ jobs:
           bun install --frozen-lockfile
           bun run generate:embedded-sdk
 
+      - name: Install Deno
+        # The server requires a deno binary for the functions/jobs module
+        # loader; without it the process exits at boot (FTL "deno executable
+        # not found").
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.6.4
+
       - name: Create dist directory with placeholder for embed directive
         run: |
           mkdir -p internal/adminui/dist
