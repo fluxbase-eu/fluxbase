@@ -219,6 +219,9 @@ func (h *OpenAPIHandler) generateSpec(tables []database.TableInfo, baseURL strin
 	// Add AI endpoints
 	h.addAIEndpoints(&spec)
 
+	// Add user KB extensions + admin AI endpoints (contract-drift guarded)
+	h.addAIAdminEndpoints(&spec)
+
 	// Add custom MCP tools and resources endpoints
 	h.addMCPEndpoints(&spec)
 

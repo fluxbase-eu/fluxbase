@@ -253,6 +253,127 @@ export function createVectorSearch({ client, queryClient }: StoreDeps) {
 }
 
 // ---------------------------------------------------------------------------
+// AI / Knowledge Base
+// ---------------------------------------------------------------------------
+
+/** List public/enabled AI chatbots. */
+export function createAIChatbots({ client, queryClient }: StoreDeps) {
+  return createQuery(
+    () => ({
+      queryKey: key("ai", "chatbots"),
+      queryFn: async () => {
+        const { data, error } = await client.ai.listChatbots();
+        if (error) throw error;
+        return data || [];
+      },
+    }),
+    () => queryClient,
+  );
+}
+
+/** List the current user's AI conversations. */
+export function createAIConversations({ client, queryClient }: StoreDeps) {
+  return createQuery(
+    () => ({
+      queryKey: key("ai", "conversations"),
+      queryFn: async () => {
+        const { data, error } = await client.ai.listConversations();
+        if (error) throw error;
+        return data;
+      },
+    }),
+    () => queryClient,
+  );
+}
+
+/** List knowledge bases. */
+export function createKnowledgeBases({ client, queryClient }: StoreDeps) {
+  return createQuery(
+    () => ({
+      queryKey: key("knowledge-bases"),
+      queryFn: async () => {
+        const { data, error } = await client.knowledgeBase.list();
+        if (error) throw error;
+        return data || [];
+      },
+    }),
+    () => queryClient,
+  );
+}
+
+/** Search a knowledge base. */
+export function createKBSearch({ client, queryClient }: StoreDeps) {
+  return createMutation(
+    () => ({
+      mutationFn: async ({
+        kbId,
+        request,
+      }: {
+        kbId: string;
+        request: Parameters<FluxbaseClient["knowledgeBase"]["search"]>[1];
+      }) => {
+        const { data, error } = await client.knowledgeBase.search(kbId, request);
+        if (error) throw error;
+        return data;
+      },
+    }),
+    () => queryClient,
+  );
+}
+
+/** Upload a document to a knowledge base, then refresh documents. */
+export function createKBUploadDocument({ client, queryClient }: StoreDeps) {
+  return createMutation(
+    () => ({
+      mutationFn: async ({
+        kbId,
+        file,
+        filename,
+        metadata,
+      }: {
+        kbId: string;
+        file: Parameters<FluxbaseClient["knowledgeBase"]["uploadDocument"]>[1];
+        filename: string;
+        metadata?: Record<string, string>;
+      }) => {
+        const { data, error } = await client.knowledgeBase.uploadDocument(kbId, file, filename, metadata);
+        if (error) throw error;
+        return data;
+      },
+    }),
+    () => queryClient,
+  );
+}
+
+/** Delete a knowledge base, then refresh the list. */
+export function createDeleteKnowledgeBase({ client, queryClient }: StoreDeps) {
+  return createMutation(
+    () => ({
+      mutationFn: async (kbId: string) => {
+        const { error } = await client.knowledgeBase.delete(kbId);
+        if (error) throw error;
+      },
+    }),
+    () => queryClient,
+  );
+}
+
+/** Vector capabilities (pgvector status, embedding provider/model). */
+export function createVectorCapabilities({ client, queryClient }: StoreDeps) {
+  return createQuery(
+    () => ({
+      queryKey: key("vector", "capabilities"),
+      queryFn: async () => {
+        const { data, error } = await client.vector.getCapabilities();
+        if (error) throw error;
+        return data;
+      },
+    }),
+    () => queryClient,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Secrets
 // ---------------------------------------------------------------------------
 

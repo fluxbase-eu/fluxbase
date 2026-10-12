@@ -215,6 +215,13 @@ import {
   createInvokeRPC,
   createVectorEmbed,
   createVectorSearch,
+  createVectorCapabilities,
+  createAIChatbots,
+  createAIConversations,
+  createKnowledgeBases,
+  createKBSearch,
+  createKBUploadDocument,
+  createDeleteKnowledgeBase,
   createSecrets,
   createCreateSecret,
   createUpdateSecret,
@@ -274,6 +281,28 @@ export function vectorEmbed() {
 }
 export function vectorSearch() {
   return createVectorSearch(deps());
+}
+export function vectorCapabilities() {
+  return createVectorCapabilities(deps());
+}
+// AI / Knowledge Base
+export function aiChatbots() {
+  return createAIChatbots(deps());
+}
+export function aiConversations() {
+  return createAIConversations(deps());
+}
+export function knowledgeBases() {
+  return createKnowledgeBases(deps());
+}
+export function kbSearch() {
+  return createKBSearch(deps());
+}
+export function kbUploadDocument() {
+  return createKBUploadDocument(deps());
+}
+export function deleteKnowledgeBase() {
+  return createDeleteKnowledgeBase(deps());
 }
 // Secrets
 export function secrets() {
