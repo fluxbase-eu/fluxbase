@@ -104,7 +104,6 @@ func (s *Storage) ListBranches(ctx context.Context, filter ListBranchesFilter) (
 	if filter.Offset > 0 {
 		query += fmt.Sprintf(" OFFSET $%d", argCounter)
 		args = append(args, filter.Offset)
-		argCounter++ //nolint:ineffassign // keeping for consistency
 	}
 
 	var branches []*Branch

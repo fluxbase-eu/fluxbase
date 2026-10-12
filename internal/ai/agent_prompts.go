@@ -94,7 +94,7 @@ func formatWebTriggersSection(triggers []string) string {
 	b.WriteString("Triggers:\n")
 	for i, t := range triggers {
 		// Numbered list — explicit, harder for the LLM to skip than a bullet list.
-		b.WriteString(fmt.Sprintf("%d. \"%s\"\n", i+1, t))
+		fmt.Fprintf(&b, "%d. \"%s\"\n", i+1, t)
 	}
 	b.WriteString("\nThese triggers supplement (do not replace) the general principle-based rule above. ")
 	b.WriteString("When in doubt, include \"web\" in the route.")

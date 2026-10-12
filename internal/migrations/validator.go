@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -87,7 +88,7 @@ func (v *Validator) DetectMigrationState(ctx context.Context) (*MigrationState, 
 			ORDER BY applied_at DESC
 			LIMIT 1
 		`).Scan(&state.SchemaFingerprint)
-		if err != nil && err != pgx.ErrNoRows {
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			log.Warn().Err(err).Msg("Failed to get schema fingerprint")
 		}
 	}

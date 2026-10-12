@@ -320,7 +320,7 @@ func TestNewOpenSearchLogStorage_WithConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, storage)
 		assert.Equal(t, "opensearch", storage.Name())
-		assert.Equal(t, "os-logs", storage.ElasticsearchLogStorage.index)
+		assert.Equal(t, "os-logs", storage.index)
 	})
 }
 
@@ -510,9 +510,10 @@ func TestElasticsearchLogStorage_Write_BulkIndexFormat(t *testing.T) {
 					if line == "" {
 						continue
 					}
-					if lineIdx == 0 {
+					switch lineIdx {
+					case 0:
 						json.Unmarshal([]byte(line), &actionLine)
-					} else if lineIdx == 1 {
+					case 1:
 						json.Unmarshal([]byte(line), &docLine)
 					}
 					lineIdx++

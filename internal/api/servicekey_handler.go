@@ -135,12 +135,10 @@ func (h *ServiceKeyHandler) ListServiceKeys(c fiber.Ctx) error {
 		WHERE 1=1
 	`
 	args := []interface{}{}
-	argIdx := 1
 
 	if tenantID := middleware.GetTenantID(c); tenantID != "" {
-		query += fmt.Sprintf(" AND tenant_id = $%d", argIdx)
+		query += " AND tenant_id = $1"
 		args = append(args, tenantID)
-		argIdx++
 	}
 
 	query += " ORDER BY created_at DESC"
@@ -199,7 +197,7 @@ func (h *ServiceKeyHandler) GetServiceKey(c fiber.Ctx) error {
 	args := []interface{}{id}
 
 	if tenantID := middleware.GetTenantID(c); tenantID != "" {
-		query += fmt.Sprintf(" AND tenant_id = $2")
+		query += " AND tenant_id = $2"
 		args = append(args, uuid.MustParse(tenantID))
 	}
 

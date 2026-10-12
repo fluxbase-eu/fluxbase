@@ -314,12 +314,12 @@ func TestFunctionExecutionTenantScopedService(t *testing.T) {
 
 	t.Run("function receives tenant context via tenant.getCurrentTenantId()", func(t *testing.T) {
 		functionName := fmt.Sprintf("test_tenant_ctx_%d", timestamp)
-		createTestFunction(t, tc, adminToken, functionName, fmt.Sprintf(`export default async function handler(req) {
+		createTestFunction(t, tc, adminToken, functionName, `export default async function handler(req) {
 			const tenantId = Fluxbase.tenant.getCurrentTenantId();
 			return new Response(JSON.stringify({ tenantId: tenantId }), {
 				headers: { "Content-Type": "application/json" }
 			});
-		}`))
+		}`)
 
 		result := invokeFunction(t, tc, adminToken, functionName)
 		t.Logf("Function result: %v", result)

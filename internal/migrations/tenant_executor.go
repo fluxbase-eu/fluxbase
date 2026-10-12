@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -113,7 +114,7 @@ func (e *TenantExecutor) tenantMigrationStatus(ctx context.Context, namespace, n
 		`SELECT status FROM platform.migrations WHERE namespace = $1 AND name = $2`,
 		namespace, name,
 	).Scan(&status)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}
 	if err != nil {

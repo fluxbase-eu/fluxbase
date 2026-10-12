@@ -1013,7 +1013,7 @@ func TestGenerateAndValidateMFAPendingToken(t *testing.T) {
 	assert.Equal(t, "user-1", claims.UserID)
 	assert.True(t, claims.ExpiresAt.After(time.Now()))
 	// Short-lived: well under the access token TTL
-	ttl := claims.ExpiresAt.Time.Sub(claims.IssuedAt.Time)
+	ttl := claims.ExpiresAt.Sub(claims.IssuedAt.Time)
 	assert.LessOrEqual(t, ttl, MFAPendingTokenTTL)
 
 	// Correct purpose validates and yields the bound user

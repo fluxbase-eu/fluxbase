@@ -558,6 +558,7 @@ func TestWithCaller(t *testing.T) {
 	})
 
 	t.Run("returns empty for nil context", func(t *testing.T) {
+		//nolint:staticcheck // SA1012: nil is the deliberate test input for the nil-context guard.
 		assert.Equal(t, "", getCallerFromContext(nil))
 	})
 

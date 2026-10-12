@@ -74,12 +74,11 @@ func newElasticsearchLogStorage(cfg LogStorageConfig) (*ElasticsearchLogStorage,
 		}
 		storage.clientV8 = client
 	} else {
-		esCfg := elasticsearch9.Config{
-			Addresses: urls,
-			Username:  cfg.ElasticsearchUsername,
-			Password:  cfg.ElasticsearchPassword,
+		opts := []elasticsearch9.Option{elasticsearch9.WithAddresses(urls...)}
+		if cfg.ElasticsearchUsername != "" || cfg.ElasticsearchPassword != "" {
+			opts = append(opts, elasticsearch9.WithBasicAuth(cfg.ElasticsearchUsername, cfg.ElasticsearchPassword))
 		}
-		client, err := elasticsearch9.NewClient(esCfg)
+		client, err := elasticsearch9.New(opts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create elasticsearch v9 client: %w", err)
 		}

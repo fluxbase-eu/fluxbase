@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -238,7 +239,8 @@ func (s *DeclarativeService) planForSchemaWithOptions(ctx context.Context, schem
 	start := time.Now()
 	output, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, fmt.Errorf("pgschema plan failed for schema %s: %w: %s", schema, err, string(exitErr.Stderr))
 		}
 		return nil, fmt.Errorf("pgschema plan failed for schema %s: %w: %s", schema, err, string(output))
@@ -366,7 +368,8 @@ func (s *DeclarativeService) ApplyForSchema(ctx context.Context, schema string, 
 	start := time.Now()
 	output, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, fmt.Errorf("pgschema apply failed for schema %s: %w: %s", schema, err, string(exitErr.Stderr))
 		}
 		return nil, fmt.Errorf("pgschema apply failed for schema %s: %w: %s", schema, err, string(output))
@@ -500,7 +503,8 @@ func (s *DeclarativeService) DumpForSchema(ctx context.Context, schema string, o
 	cmd.Stdout = f
 
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Errorf("pgschema dump failed for schema %s: %w: %s", schema, err, string(exitErr.Stderr))
 		}
 		return fmt.Errorf("pgschema dump failed for schema %s: %w", schema, err)
@@ -1519,7 +1523,6 @@ func firstSQLIdentifier(s string) string {
 					continue
 				}
 				closed = true
-				i++ // consume closing quote
 				break
 			}
 			b.WriteByte(s[i])
@@ -1654,7 +1657,7 @@ func (s *DeclarativeService) GetSchemaStatus(ctx context.Context) (*SchemaStatus
 			status.LastAppliedFingerprint = dbFingerprint
 			status.LastAppliedAt = appliedAt
 			status.Source = source
-		} else if err != pgx.ErrNoRows {
+		} else if !errors.Is(err, pgx.ErrNoRows) {
 			log.Warn().Err(err).Msg("Failed to get declarative state from database")
 		}
 	}

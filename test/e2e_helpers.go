@@ -2028,7 +2028,7 @@ func (tc *TestContext) QuerySQLAsTenant(tenantID, sql string, args ...interface{
 	// Set JWT claims with 'authenticated' role (not service_role) so that
 	// RLS policies checking current_user_role() = 'service_role' do NOT pass.
 	// This ensures the tenant RLS policy is the active filter.
-	jwtClaims := fmt.Sprintf(`{"sub":"00000000-0000-0000-0000-000000000000","role":"authenticated"}`)
+	jwtClaims := `{"sub":"00000000-0000-0000-0000-000000000000","role":"authenticated"}`
 	_, err = tx.Exec(ctx, "SELECT set_config('request.jwt.claims', $1, true)", jwtClaims)
 	require.NoError(tc.T, err, "Failed to set request.jwt.claims")
 
@@ -2071,7 +2071,7 @@ func (tc *TestContext) QuerySQLAsTenantService(tenantID, sql string, args ...int
 	_, err = tx.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
 	require.NoError(tc.T, err, "Failed to set app.current_tenant_id")
 
-	jwtClaims := fmt.Sprintf(`{"sub":"00000000-0000-0000-0000-000000000000","role":"tenant_service"}`)
+	jwtClaims := `{"sub":"00000000-0000-0000-0000-000000000000","role":"tenant_service"}`
 	_, err = tx.Exec(ctx, "SELECT set_config('request.jwt.claims', $1, true)", jwtClaims)
 	require.NoError(tc.T, err, "Failed to set request.jwt.claims")
 

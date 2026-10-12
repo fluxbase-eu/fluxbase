@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
@@ -88,7 +89,7 @@ func (h *AppSchemaHandler) SyncSchema(c fiber.Ctx) error {
 		// the server default.
 		AllowDestructive *bool `json:"allow_destructive"`
 	}
-	if err := c.Bind().Body(&req); err != nil && err != fiber.ErrUnprocessableEntity {
+	if err := c.Bind().Body(&req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return SendBadRequest(c, "Invalid request body", ErrCodeInvalidBody)
 	}
 	if req.Namespace == "" {
@@ -159,7 +160,7 @@ func (h *AppSchemaHandler) ApplySchema(c fiber.Ctx) error {
 		// server default.
 		AllowDestructive *bool `json:"allow_destructive"`
 	}
-	if err := c.Bind().Body(&req); err != nil && err != fiber.ErrUnprocessableEntity {
+	if err := c.Bind().Body(&req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return SendBadRequest(c, "Invalid request body", ErrCodeInvalidBody)
 	}
 	if req.Namespace == "" {
@@ -202,7 +203,7 @@ func (h *AppSchemaHandler) PlanSchema(c fiber.Ctx) error {
 		Namespace string `json:"namespace"`
 		Schema    string `json:"schema"`
 	}
-	if err := c.Bind().Body(&req); err != nil && err != fiber.ErrUnprocessableEntity {
+	if err := c.Bind().Body(&req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return SendBadRequest(c, "Invalid request body", ErrCodeInvalidBody)
 	}
 	if req.Namespace == "" {

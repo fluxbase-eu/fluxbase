@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -218,7 +219,7 @@ func (s *AppDeclarativeService) GetStoredIgnoreContent(ctx context.Context, name
 		SELECT COALESCE(ignore_content, '') FROM platform.app_schemas
 		WHERE namespace = $1 AND schema_name = $2
 	`, namespace, schemaName).Scan(&ignore)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}
 	return ignore, err
@@ -322,7 +323,8 @@ func (s *AppDeclarativeService) planFromContent(ctx context.Context, schemaName,
 	start := time.Now()
 	output, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, fmt.Errorf("pgschema plan failed: %w: %s", err, string(exitErr.Stderr))
 		}
 		return nil, fmt.Errorf("pgschema plan failed: %w: %s", err, string(output))

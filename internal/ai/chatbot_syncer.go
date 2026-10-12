@@ -111,7 +111,7 @@ func (s *chatbotSyncer) syncKnowledgeBaseLinks(ctx context.Context, chatbot *Cha
 	if chatbot.RAGSimilarityThreshold > 0 {
 		similarityThreshold = chatbot.RAGSimilarityThreshold
 	}
-	if err := s.handler.knowledgeBaseStorage.SyncChatbotKnowledgeBaseLinks(ctx, chatbot.ID, chatbot.KnowledgeBases, maxChunks, similarityThreshold); err != nil {
-		// Log but don't fail the sync
-	}
+	// Best-effort sync: log but don't fail the chatbot sync when the
+	// knowledge-base link refresh errors out.
+	_ = s.handler.knowledgeBaseStorage.SyncChatbotKnowledgeBaseLinks(ctx, chatbot.ID, chatbot.KnowledgeBases, maxChunks, similarityThreshold)
 }

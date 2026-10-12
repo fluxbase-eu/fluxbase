@@ -564,7 +564,7 @@ func quoteSelectColumn(col string) string {
 		if i == last-1 {
 			op = "->>"
 		}
-		sb.WriteString(fmt.Sprintf(" %s '%s'", op, strings.ReplaceAll(key, "'", "''")))
+		fmt.Fprintf(&sb, " %s '%s'", op, strings.ReplaceAll(key, "'", "''"))
 	}
 	return sb.String()
 }
