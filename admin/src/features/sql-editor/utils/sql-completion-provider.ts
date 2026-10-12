@@ -329,6 +329,7 @@ function extractTableAliases(
   while ((match = fromPattern.exec(sql)) !== null) {
     const schema = match[1] || 'public'
     const tableName = match[2]
+    if (!tableName) continue
     const alias = match[3]
 
     // Find matching table in metadata
@@ -370,7 +371,7 @@ function getCompletionContext(
     .substring(0, textBeforeCursor.length - prefix.length)
     .trim()
   const wordBeforeMatch = beforePrefix.match(/(\w+)\s*$/)
-  const wordBefore = wordBeforeMatch ? wordBeforeMatch[1].toUpperCase() : ''
+  const wordBefore = (wordBeforeMatch?.[1] ?? '').toUpperCase()
 
   return { prefix, wordBefore }
 }
@@ -404,7 +405,7 @@ export function createSqlCompletionProvider(
       // Get the range to replace
       // When there's a dot, only replace the part after the last dot (e.g., for "schema.tab", only replace "tab")
       const word = model.getWordUntilPosition(position)
-      const afterDot = hasDot ? dotParts[dotParts.length - 1] : ''
+      const afterDot = hasDot ? (dotParts[dotParts.length - 1] ?? '') : ''
       const range: Monaco.IRange = {
         startLineNumber: position.lineNumber,
         startColumn: hasDot
@@ -415,7 +416,7 @@ export function createSqlCompletionProvider(
       }
 
       // After schema. or table. or alias.
-      if (hasDot && dotParts.length === 2) {
+      if (hasDot && dotParts.length === 2 && dotParts[0]) {
         const qualifier = dotParts[0].toLowerCase()
 
         // Check if it's a schema

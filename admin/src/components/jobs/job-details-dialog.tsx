@@ -87,35 +87,39 @@ const formatJsonValue = (value: unknown): string => {
 };
 
 const collapseConsecutiveLogs = (logs: ExecutionLog[]): CollapsedLog[] => {
-  if (logs.length === 0) return [];
-
   const result: CollapsedLog[] = [];
-  let currentLog = logs[0];
-  let count = 1;
+  let currentLog: ExecutionLog | undefined;
+  let count = 0;
 
-  for (let i = 1; i < logs.length; i++) {
+  for (const log of logs) {
     if (
-      logs[i].message === currentLog.message &&
-      logs[i].level === currentLog.level
+      currentLog &&
+      log.message === currentLog.message &&
+      log.level === currentLog.level
     ) {
       count++;
     } else {
-      result.push({
-        id: `log-${currentLog.id}-${count}`,
-        level: currentLog.level || "info",
-        message: currentLog.message,
-        count,
-      });
-      currentLog = logs[i];
+      if (currentLog) {
+        result.push({
+          id: `log-${currentLog.id}-${count}`,
+          level: currentLog.level || "info",
+          message: currentLog.message,
+          count,
+        });
+      }
+      currentLog = log;
       count = 1;
     }
   }
-  result.push({
-    id: `log-${currentLog.id}-${count}`,
-    level: currentLog.level || "info",
-    message: currentLog.message,
-    count,
-  });
+
+  if (currentLog) {
+    result.push({
+      id: `log-${currentLog.id}-${count}`,
+      level: currentLog.level || "info",
+      message: currentLog.message,
+      count,
+    });
+  }
 
   return result;
 };

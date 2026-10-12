@@ -35,7 +35,7 @@ export interface JWTPayload {
  */
 export function decodeJWT(token: string): JWTPayload {
   const parts = token.split('.')
-  if (parts.length !== 3) {
+  if (parts.length !== 3 || !parts[1]) {
     throw new Error('Invalid JWT token format')
   }
 

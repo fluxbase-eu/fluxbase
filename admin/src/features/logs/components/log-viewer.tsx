@@ -93,7 +93,7 @@ export function LogViewer() {
     const path = log.fields?.path as string | undefined;
     if (!path) return false;
     // Check if path ends with any static asset extension (ignore query strings)
-    const pathWithoutQuery = path.split("?")[0];
+    const pathWithoutQuery = path.split("?")[0] ?? path;
     return STATIC_ASSET_EXTENSIONS.some((ext) =>
       pathWithoutQuery.toLowerCase().endsWith(ext),
     );
