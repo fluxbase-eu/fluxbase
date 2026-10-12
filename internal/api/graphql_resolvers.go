@@ -645,12 +645,19 @@ func (g *GraphQLSchemaGenerator) makeForeignKeyResolver(table database.TableInfo
 // buildFiltersFromArgs converts GraphQL filter arguments to query filters
 func (g *GraphQLSchemaGenerator) buildFiltersFromArgs(table database.TableInfo, args map[string]interface{}) []Filter {
 	orGroupCounter := 0
-	return g.buildFiltersFromArgsWithCounter(table, args, &orGroupCounter, 0, false)
+	return g.buildFiltersFromArgsWithCounter(table, args, &orGroupCounter, 0, false, 0)
 }
 
-// buildFiltersFromArgsWithCounter converts GraphQL filter arguments to query filters with OR group tracking
-func (g *GraphQLSchemaGenerator) buildFiltersFromArgsWithCounter(table database.TableInfo, args map[string]interface{}, orGroupCounter *int, currentOrGroup int, negated bool) []Filter {
+// buildFiltersFromArgsWithCounter converts GraphQL filter arguments to query filters with OR group tracking.
+// depth bounds recursion on nested _and/_or/_not arguments, mirroring the REST
+// filter parser's MaxFilterDepth: deeply nested input must not be followed
+// indefinitely.
+func (g *GraphQLSchemaGenerator) buildFiltersFromArgsWithCounter(table database.TableInfo, args map[string]interface{}, orGroupCounter *int, currentOrGroup int, negated bool, depth int) []Filter {
 	var filters []Filter
+
+	if depth > MaxFilterDepth {
+		return filters
+	}
 
 	// Create a map of field names to column names
 	fieldToColumn := make(map[string]string)
@@ -669,7 +676,7 @@ func (g *GraphQLSchemaGenerator) buildFiltersFromArgsWithCounter(table database.
 			if andArr, ok := value.([]interface{}); ok {
 				for _, andItem := range andArr {
 					if andMap, ok := andItem.(map[string]interface{}); ok {
-						subFilters := g.buildFiltersFromArgsWithCounter(table, andMap, orGroupCounter, currentOrGroup, negated)
+						subFilters := g.buildFiltersFromArgsWithCounter(table, andMap, orGroupCounter, currentOrGroup, negated, depth+1)
 						filters = append(filters, subFilters...)
 					}
 				}
@@ -688,7 +695,7 @@ func (g *GraphQLSchemaGenerator) buildFiltersFromArgsWithCounter(table database.
 				}
 				for _, orItem := range orArr {
 					if orMap, ok := orItem.(map[string]interface{}); ok {
-						subFilters := g.buildFiltersFromArgsWithCounter(table, orMap, orGroupCounter, groupID, negated)
+						subFilters := g.buildFiltersFromArgsWithCounter(table, orMap, orGroupCounter, groupID, negated, depth+1)
 						filters = append(filters, subFilters...)
 					}
 				}
@@ -698,7 +705,7 @@ func (g *GraphQLSchemaGenerator) buildFiltersFromArgsWithCounter(table database.
 		if key == "_not" {
 			// NOT: negate the conditions inside
 			if notMap, ok := value.(map[string]interface{}); ok {
-				subFilters := g.buildFiltersFromArgsWithCounter(table, notMap, orGroupCounter, currentOrGroup, !negated)
+				subFilters := g.buildFiltersFromArgsWithCounter(table, notMap, orGroupCounter, currentOrGroup, !negated, depth+1)
 				filters = append(filters, subFilters...)
 			}
 			continue
