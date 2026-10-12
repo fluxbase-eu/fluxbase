@@ -43,6 +43,12 @@ on:
 permissions:
   contents: read
 
+
+# Cancel superseded runs on the same PR; merges to main run to completion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   changes:
     name: Detect Changes
