@@ -1,0 +1,62 @@
+# Nightly fuzzing of the input-parsing surfaces (query DSL, identifiers, MCP
+# tool args, realtime filters, webhook signatures, storage paths/tokens).
+# Seed corpora double as unit tests and run in every normal `go test` run; this
+# workflow does the long-running mutation fuzzing and uploads any crashers.
+# A crasher's minimized input lands in the package's testdata/fuzz/<Name>/
+# directory — commit it as a regression seed together with the fix.
+name: Fuzz
+
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { pkg: ./internal/api/, target: FuzzQueryParser }
+          - { pkg: ./internal/api/, target: FuzzParseFilter }
+          - { pkg: ./internal/api/, target: FuzzDecodeCursor }
+          - { pkg: ./internal/database/, target: FuzzQuoteIdentifier }
+          - { pkg: ./internal/mcp/tools/, target: FuzzMCPFilterParse }
+          - { pkg: ./internal/mcp/tools/, target: FuzzMCPOrder }
+          - { pkg: ./internal/mcp/tools/, target: FuzzMCPCrudFilterToSQL }
+          - { pkg: ./internal/realtime/, target: FuzzParseFilterMatches }
+          - { pkg: ./internal/webhook/, target: FuzzParseWebhookSignature }
+          - { pkg: ./internal/storage/, target: FuzzGetPath }
+          - { pkg: ./internal/storage/, target: FuzzValidateSignedToken }
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Get dependencies
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Fuzz ${{ matrix.target }} (10m)
+        run: go test -run '^$' -fuzz '^${{ matrix.target }}$' -fuzztime 10m ${{ matrix.pkg }}
+
+      - name: Upload crash corpus
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crash-${{ matrix.target }}
+          path: |
+            **/testdata/fuzz/
+            ~/.cache/go-build/fuzz/
+          if-no-files-found: ignore

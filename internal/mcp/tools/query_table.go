@@ -525,6 +525,12 @@ func parseOrder(orderStr string) ([]query.OrderBy, error) {
 			// If more than 2 parts, use the whole thing as column name (will likely fail, but let DB report error)
 		}
 
+		// Skip parts that reduce to an empty column (e.g. ".desc") rather
+		// than emitting a degenerate OrderBy.
+		if column == "" {
+			continue
+		}
+
 		result = append(result, query.OrderBy{
 			Column: column,
 			Desc:   desc,
