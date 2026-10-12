@@ -67,12 +67,14 @@ func TestKeyPrefixRouting_LegacyKeys(t *testing.T) {
 		isSk    bool
 		isFbKey bool
 	}{
-		{"sk_ prefix is legacy", "sk_test_1234567890abcdef", true, false},
-		{"pk_ prefix is legacy", "pk_live_1234567890abcdef", false, false},
-		{"fb_tsk_ is platform key", "fb_tsk_1234567890abcdefghij", false, true},
-		{"fb_anon_ is platform key", "fb_anon_1234567890abcdefghij", false, true},
-		{"fb_gsk_ is platform key", "fb_gsk_1234567890abcdefghij", false, true},
-		{"random prefix is unrecognized", "xx_unknown_1234567890", false, false},
+		// Suffixes are deliberately short/inert: this test only exercises
+		// prefix routing, and long token-shaped values trip secret scanners.
+		{"sk_ prefix is legacy", "sk_test_x", true, false},
+		{"pk_ prefix is legacy", "pk_live_x", false, false},
+		{"fb_tsk_ is platform key", "fb_tsk_x", false, true},
+		{"fb_anon_ is platform key", "fb_anon_x", false, true},
+		{"fb_gsk_ is platform key", "fb_gsk_x", false, true},
+		{"random prefix is unrecognized", "xx_unknown_x", false, false},
 	}
 
 	for _, tt := range tests {
