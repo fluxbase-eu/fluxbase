@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,4 +72,65 @@ func TestSubstituteAppUser(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, sql, result)
 	})
+}
+
+func TestSubstituteAppUser_MultiplePlaceholders(t *testing.T) {
+	sql := "GRANT anon TO {{APP_USER}}; ALTER DEFAULT PRIVILEGES GRANT ALL ON TABLES TO {{APP_USER}};"
+	result, err := SubstituteAppUser(sql, "fluxbase_app")
+	require.NoError(t, err)
+	assert.Equal(t, "GRANT anon TO fluxbase_app; ALTER DEFAULT PRIVILEGES GRANT ALL ON TABLES TO fluxbase_app;", result)
+	assert.NotContains(t, result, AppUserPlaceholder)
+}
+
+func TestSubstituteAppUser_LongIdentifier(t *testing.T) {
+	// PostgreSQL allows identifiers up to 63 bytes; the regex accepts them.
+	long := strings.Repeat("a", 63)
+	result, err := SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long)
+	require.NoError(t, err)
+	assert.Equal(t, "GRANT ALL TO "+long, result)
+
+	// 64+ chars are still regex-valid (length is enforced by PostgreSQL).
+	long64 := strings.Repeat("a", 64)
+	result, err = SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long64)
+	require.NoError(t, err)
+	assert.Equal(t, "GRANT ALL TO "+long64, result)
+}
+
+func TestSubstituteAppUser_RejectsInjectionVectors(t *testing.T) {
+	cases := []struct {
+		name    string
+		appUser string
+	}{
+		{"dollar-quoted string", "$$; DROP SCHEMA auth CASCADE; $$"},
+		{"double-dash comment", "app-- stolen"},
+		{"newline escape", "app\nGRANT ALL ON SCHEMA public TO attacker"},
+		{"parenthesis", "app) TO attacker; --"},
+		{"quoted identifier with spaces", "\"app user\""},
+		{"backslash", "app\\"},
+		{"unicode homoglyph dash", "app\u2013user"},
+		{"percent wildcard", "app%"},
+		{"empty after trim", " "},
+	}
+	sql := "GRANT ALL TO {{APP_USER}}"
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := SubstituteAppUser(sql, tc.appUser)
+			assert.Error(t, err, "identifier %q must be rejected", tc.appUser)
+			assert.Empty(t, result)
+		})
+	}
+}
+
+func TestSubstituteAppUser_EmptySQLWithUser(t *testing.T) {
+	// An empty SQL string containing no placeholder is returned unchanged.
+	result, err := SubstituteAppUser("", "postgres")
+	require.NoError(t, err)
+	assert.Equal(t, "", result)
+}
+
+func TestAppUserPlaceholderConstant(t *testing.T) {
+	// The placeholder is part of the SQL-authoring contract (bootstrap.sql and
+	// the per-schema files embed it); silently changing it would break
+	// provisioning everywhere.
+	assert.Equal(t, "{{APP_USER}}", AppUserPlaceholder)
 }

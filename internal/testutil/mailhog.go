@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -41,9 +42,14 @@ type MailHogMessages struct {
 // GetMailHogBaseURL returns the MailHog base URL for the current environment.
 // It checks the MAILHOG_HOST environment variable, defaulting to localhost.
 func GetMailHogBaseURL() string {
-	host := "mailhog"
-	// Allow override via environment variable
-	// In local development, this might be "localhost"
+	// Allow override via environment variable. The default is localhost:
+	// GitHub-hosted runners (and local docker setups) reach the MailHog
+	// service through its published ports, and the "mailhog" DNS alias does
+	// not resolve from the runner itself.
+	host := os.Getenv("MAILHOG_HOST")
+	if host == "" {
+		host = "localhost"
+	}
 	return fmt.Sprintf("http://%s:8025", host)
 }
 

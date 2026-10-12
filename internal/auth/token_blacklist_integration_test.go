@@ -5,9 +5,12 @@ package auth_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -16,6 +19,23 @@ import (
 )
 
 const authTestSecretKey = "test-secret-key-must-be-32-characters!"
+
+// createBlacklistTestUser inserts a real user row and returns its ID.
+//
+// auth.token_blacklist.revoked_by is a uuid column with a foreign key to
+// auth.users, so user-wide revocations must reference a real user; plain
+// string IDs fail the INSERT with "invalid input syntax for type uuid".
+func createBlacklistTestUser(t *testing.T, db *pgxpool.Pool) string {
+	t.Helper()
+	ctx := context.Background()
+	userID := uuid.New().String()
+	email := fmt.Sprintf("test-blacklist-%s@example.com", uuid.New().String()[:8])
+	_, err := db.Exec(ctx,
+		`INSERT INTO auth.users (id, email, password_hash, email_verified) VALUES ($1, $2, 'hashed_password', true)`,
+		userID, email)
+	require.NoError(t, err, "failed to create blacklist test user")
+	return userID
+}
 
 // TestRevokeAllUserTokens_Integration tests the complete user-wide revocation flow
 func TestRevokeAllUserTokens_Integration(t *testing.T) {
@@ -30,18 +50,18 @@ func TestRevokeAllUserTokens_Integration(t *testing.T) {
 
 	service := auth.NewTokenBlacklistService(repo, manager)
 
-	userID := "user-123"
+	userID := createBlacklistTestUser(t, tc.TestContext.DB.Pool())
 	reason := "security incident"
 
 	t.Run("RevokeAllUserTokens creates marker entry", func(t *testing.T) {
 		err := service.RevokeAllUserTokens(ctx, userID, reason)
 		require.NoError(t, err)
 
-		// Verify the marker was created by querying for it
+		// Verify the marker was created by querying for it (LIKE wildcard is %).
 		var count int
 		err = tc.TestContext.DB.Pool().QueryRow(ctx,
 			`SELECT COUNT(*) FROM auth.token_blacklist WHERE token_jti LIKE $1`,
-			"user:"+userID+":all:*").Scan(&count)
+			"user:"+userID+":all:%").Scan(&count)
 		require.NoError(t, err)
 		assert.Equal(t, 1, count, "expected one revocation marker")
 	})
@@ -89,8 +109,8 @@ func TestRevokeAllUserTokens_Integration(t *testing.T) {
 	})
 
 	t.Run("Multiple users: revoking user A does not affect user B", func(t *testing.T) {
-		userA := "user-A"
-		userB := "user-B"
+		userA := createBlacklistTestUser(t, tc.TestContext.DB.Pool())
+		userB := createBlacklistTestUser(t, tc.TestContext.DB.Pool())
 
 		// Revoke all tokens for user A
 		err := service.RevokeAllUserTokens(ctx, userA, "revoke user A")
@@ -121,7 +141,7 @@ func TestUserRevocationCache(t *testing.T) {
 	require.NoError(t, err)
 
 	service := auth.NewTokenBlacklistService(repo, manager)
-	userID := "cached-user"
+	userID := createBlacklistTestUser(t, tc.TestContext.DB.Pool())
 
 	t.Run("Cache hit: second call within TTL uses cache", func(t *testing.T) {
 		// First call should query DB and populate cache
@@ -156,7 +176,7 @@ func TestUserRevocationCache(t *testing.T) {
 	})
 
 	t.Run("Cache expiration: entries older than TTL are ignored", func(t *testing.T) {
-		userID := "expire-user"
+		userID := createBlacklistTestUser(t, tc.TestContext.DB.Pool())
 		service := auth.NewTokenBlacklistService(repo, manager)
 
 		// Populate cache

@@ -6,6 +6,7 @@ package auth_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -782,11 +783,19 @@ func createAuthServiceWithMailHog(t *testing.T, tc *e2e.IntegrationTestContext) 
 		TOTPIssuer:     "Fluxbase",
 	}
 
-	// Create email config for MailHog
+	// Create email config for MailHog. The SMTP host follows
+	// FLUXBASE_EMAIL_SMTP_HOST, defaulting to localhost: service containers
+	// are reached through their published ports both on CI runners and in
+	// local docker setups (the "mailhog" DNS alias only resolves from inside
+	// a compose network).
+	smtpHost := os.Getenv("FLUXBASE_EMAIL_SMTP_HOST")
+	if smtpHost == "" {
+		smtpHost = "localhost"
+	}
 	emailCfg := &config.EmailConfig{
 		Enabled:        true,
 		Provider:       "smtp",
-		SMTPHost:       "mailhog",
+		SMTPHost:       smtpHost,
 		SMTPPort:       1025,
 		SMTPUsername:   "",
 		SMTPPassword:   "",

@@ -17,6 +17,7 @@ import (
 
 	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/database"
+	"github.com/nimbleflux/fluxbase/internal/testutil/dbbootstrap"
 )
 
 // getEnv retrieves an environment variable or returns the default value
@@ -62,6 +63,16 @@ func TestMain(m *testing.M) {
 		HealthCheck:     1 * time.Minute,
 	}
 
+	// Provision the internal schema before opening the app-user connection:
+	// the schema (auth.*, platform.*, ...) is declarative and is NOT created by
+	// Connection.Migrate(), so a bare test database would fail every query with
+	// SQLSTATE 42P01. Same bootstrap path as test/e2e's TestMain.
+	if skipMigrations := getEnv("SKIP_MIGRATIONS", ""); skipMigrations == "" {
+		if err := ensureTestSchema(cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.AdminUser, cfg.AdminPassword); err != nil {
+			panic(err)
+		}
+	}
+
 	var err error
 	sharedTestDB, err = database.NewConnection(*cfg)
 	if err != nil {
@@ -98,6 +109,36 @@ var (
 	sharedTestDB   *database.Connection
 	sharedTestDBMu sync.Mutex
 )
+
+// ensureTestSchema bootstraps the declarative internal schema on every test
+// database this package touches.
+//
+// Two database names are in play: the package-level sharedTestDB uses
+// FLUXBASE_TEST_DATABASE (default "fluxbase_test"), while the shared e2e test
+// context (internal/testutil/e2e) resolves the same variable with a different
+// default ("fluxbase_go_e2e"). Bootstrap is idempotent, so both names are
+// provisioned when they differ (typical for minimal local setups) and the work
+// happens once when they coincide (CI sets FLUXBASE_TEST_DATABASE).
+func ensureTestSchema(host string, port int, appUser, appPassword, adminUser, adminPassword string) error {
+	dbs := map[string]struct{}{
+		getEnv("FLUXBASE_TEST_DATABASE", "fluxbase_test"):   {},
+		getEnv("FLUXBASE_TEST_DATABASE", "fluxbase_go_e2e"): {},
+	}
+	for dbName := range dbs {
+		if err := dbbootstrap.Ensure(context.Background(), dbbootstrap.Config{
+			Host:          host,
+			Port:          port,
+			Database:      dbName,
+			User:          appUser,
+			Password:      appPassword,
+			AdminUser:     adminUser,
+			AdminPassword: adminPassword,
+		}); err != nil {
+			return fmt.Errorf("failed to bootstrap test database %s: %w", dbName, err)
+		}
+	}
+	return nil
+}
 
 // getSharedTestDB returns a shared database connection for all tests in the package
 // This reduces connection pool exhaustion and improves test performance
