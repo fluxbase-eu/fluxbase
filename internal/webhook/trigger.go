@@ -25,6 +25,7 @@ type endpointRateLimiter struct {
 	requests map[string][]time.Time // webhook URL -> list of request timestamps
 	limit    int                    // requests per minute per endpoint
 	stopCh   chan struct{}
+	stopOnce sync.Once
 }
 
 // newEndpointRateLimiter creates a new endpoint rate limiter
@@ -39,6 +40,11 @@ func newEndpointRateLimiter(limitPerMin int) *endpointRateLimiter {
 	}
 	go rl.cleanup()
 	return rl
+}
+
+// stop terminates the background cleanup goroutine. Safe to call multiple times.
+func (rl *endpointRateLimiter) stop() {
+	rl.stopOnce.Do(func() { close(rl.stopCh) })
 }
 
 // allow checks if a request to the given endpoint should be allowed
@@ -284,7 +290,7 @@ func (s *TriggerService) Stop() {
 
 	// Stop the rate limiter cleanup goroutine
 	if s.rateLimiter != nil {
-		close(s.rateLimiter.stopCh)
+		s.rateLimiter.stop()
 	}
 
 	// Wait for workers to finish processing (with timeout to prevent hanging)

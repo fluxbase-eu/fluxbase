@@ -19,6 +19,7 @@ func TestRealtimeHandler_MaxMessageSize(t *testing.T) {
 
 	t.Run("default when config value unset", func(t *testing.T) {
 		mgr := NewManagerWithConfig(context.Background(), ManagerConfig{})
+		t.Cleanup(mgr.Shutdown)
 		mgr.SetBaseConfig(&config.Config{})
 		h := NewRealtimeHandler(mgr, nil, nil)
 		assert.Equal(t, int64(config.DefaultRealtimeMaxMessageSize), h.maxMessageSize())
@@ -26,6 +27,7 @@ func TestRealtimeHandler_MaxMessageSize(t *testing.T) {
 
 	t.Run("configured value is honored", func(t *testing.T) {
 		mgr := NewManagerWithConfig(context.Background(), ManagerConfig{})
+		t.Cleanup(mgr.Shutdown)
 		mgr.SetBaseConfig(&config.Config{
 			Realtime: config.RealtimeConfig{MaxMessageSize: 131072},
 		})

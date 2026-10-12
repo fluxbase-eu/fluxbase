@@ -6,8 +6,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nimbleflux/fluxbase/internal/pubsub"
 )
+
+// newTrackedListenerPool creates a listener pool that is stopped when the
+// test ends, so its worker goroutines don't leak across tests.
+func newTrackedListenerPool(t *testing.T, pool *pgxpool.Pool, handler *RealtimeHandler, subManager *SubscriptionManager, ps pubsub.PubSub, config ListenerPoolConfig) *ListenerPool {
+	lp := NewListenerPool(pool, handler, subManager, ps, config)
+	t.Cleanup(lp.Stop)
+	return lp
+}
 
 func TestDefaultListenerPoolConfig(t *testing.T) {
 	config := DefaultListenerPoolConfig()
@@ -22,10 +33,10 @@ func TestDefaultListenerPoolConfig(t *testing.T) {
 func TestListenerPoolConfig_DefaultsApplied(t *testing.T) {
 	// Test that zero values get sensible defaults
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	lp := NewListenerPool(nil, handler, nil, nil, ListenerPoolConfig{
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, ListenerPoolConfig{
 		// All zero values
 	})
 
@@ -38,10 +49,10 @@ func TestListenerPoolConfig_DefaultsApplied(t *testing.T) {
 
 func TestListenerPoolConfig_CustomValues(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	lp := NewListenerPool(nil, handler, nil, nil, ListenerPoolConfig{
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, ListenerPoolConfig{
 		PoolSize:      4,
 		WorkerCount:   8,
 		QueueSize:     2000,
@@ -58,10 +69,10 @@ func TestListenerPoolConfig_CustomValues(t *testing.T) {
 
 func TestListenerPoolConfig_NegativeValuesFallback(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	lp := NewListenerPool(nil, handler, nil, nil, ListenerPoolConfig{
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, ListenerPoolConfig{
 		PoolSize:      -1,
 		WorkerCount:   -5,
 		QueueSize:     -100,
@@ -79,10 +90,10 @@ func TestListenerPoolConfig_NegativeValuesFallback(t *testing.T) {
 
 func TestListenerPool_NotificationChannelCapacity(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	lp := NewListenerPool(nil, handler, nil, nil, ListenerPoolConfig{
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, ListenerPoolConfig{
 		WorkerCount: 4,
 		QueueSize:   500,
 	})
@@ -93,10 +104,10 @@ func TestListenerPool_NotificationChannelCapacity(t *testing.T) {
 
 func TestListenerPool_StopBeforeStart(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	lp := NewListenerPool(nil, handler, nil, nil, DefaultListenerPoolConfig())
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, DefaultListenerPoolConfig())
 
 	// Should not panic
 	lp.Stop()
@@ -104,10 +115,10 @@ func TestListenerPool_StopBeforeStart(t *testing.T) {
 
 func TestListenerPool_MetricsInitialValues(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	lp := NewListenerPool(nil, handler, nil, nil, DefaultListenerPoolConfig())
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, DefaultListenerPoolConfig())
 
 	metrics := lp.GetMetrics()
 
@@ -122,7 +133,7 @@ func TestListenerPool_MetricsInitialValues(t *testing.T) {
 
 func TestListenerPool_MetricsQueueCapacity(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
 	config := ListenerPoolConfig{
@@ -130,7 +141,7 @@ func TestListenerPool_MetricsQueueCapacity(t *testing.T) {
 		QueueSize:   100,
 	}
 
-	lp := NewListenerPool(nil, handler, nil, nil, config)
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, config)
 
 	metrics := lp.GetMetrics()
 
@@ -161,7 +172,7 @@ func TestListenerPool_AtomicCountersSafe(t *testing.T) {
 
 func TestListenerPoolImplementsInterface(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
 	// ListenerPool should implement RealtimeListener
@@ -170,7 +181,7 @@ func TestListenerPoolImplementsInterface(t *testing.T) {
 
 func TestListenerImplementsInterface(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
 	// Listener should also implement RealtimeListener
@@ -199,10 +210,10 @@ func TestListenerPoolMetrics_Struct(t *testing.T) {
 
 func TestListenerPool_EnrichJobWithETA_NoProgress(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	lp := NewListenerPool(nil, handler, nil, nil, DefaultListenerPoolConfig())
+	lp := newTrackedListenerPool(t, nil, handler, nil, nil, DefaultListenerPoolConfig())
 
 	// Event without progress should not panic
 	event := &ChangeEvent{
@@ -225,10 +236,11 @@ func TestListenerPool_EnrichJobWithETA_NoProgress(t *testing.T) {
 
 func TestListenerPool_EnrichJobWithETA_WithProgress(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
 	lp := NewListenerPool(nil, handler, nil, nil, DefaultListenerPoolConfig())
+	defer lp.Stop()
 
 	event := &ChangeEvent{
 		Schema: "jobs",
@@ -252,10 +264,11 @@ func TestListenerPool_EnrichJobWithETA_WithProgress(t *testing.T) {
 
 func TestListenerPool_EnrichJobWithETA_WithExistingETA(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
 	lp := NewListenerPool(nil, handler, nil, nil, DefaultListenerPoolConfig())
+	defer lp.Stop()
 
 	event := &ChangeEvent{
 		Schema: "jobs",
@@ -316,10 +329,12 @@ func TestChangeEvent_WithOldRecord_UpdateEmail(t *testing.T) {
 
 func BenchmarkListenerPool_GetMetrics(b *testing.B) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
-	handler := NewRealtimeHandler(manager, nil, nil)
+	mgr := NewManager(ctx)
+	b.Cleanup(mgr.Shutdown)
+	handler := NewRealtimeHandler(mgr, nil, nil)
 
 	lp := NewListenerPool(nil, handler, nil, nil, DefaultListenerPoolConfig())
+	defer lp.Stop()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -329,10 +344,12 @@ func BenchmarkListenerPool_GetMetrics(b *testing.B) {
 
 func BenchmarkListenerPool_EnrichJobWithETA(b *testing.B) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
-	handler := NewRealtimeHandler(manager, nil, nil)
+	mgr := NewManager(ctx)
+	b.Cleanup(mgr.Shutdown)
+	handler := NewRealtimeHandler(mgr, nil, nil)
 
 	lp := NewListenerPool(nil, handler, nil, nil, DefaultListenerPoolConfig())
+	defer lp.Stop()
 
 	event := &ChangeEvent{
 		Schema: "jobs",

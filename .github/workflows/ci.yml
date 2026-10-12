@@ -870,7 +870,9 @@ jobs:
   # ===========================================================================
   # Non-short tests for the DB-backed packages. `test-go` runs the full tree
   # with `-short`; tests gated behind testing.Short() only execute here.
-  # Same Postgres service pattern as test-go; no -race to keep it light.
+  # Same Postgres service pattern as test-go. Runs with -race: these packages
+  # hold the REST surface and the tenant/RLS middleware, and their non-short
+  # tests are the only place much of that code executes concurrently.
   # ===========================================================================
   test-go-db:
     name: Test Go (DB-backed, non-short)
@@ -958,7 +960,7 @@ jobs:
           psql -h localhost -U postgres -d fluxbase_go_e2e -c "GRANT anon, authenticated, service_role, tenant_service TO fluxbase_app;"
 
       - name: Run DB-backed package tests (non-short)
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           FLUXBASE_DATABASE_HOST: localhost
           FLUXBASE_DATABASE_PORT: 5432
@@ -970,7 +972,7 @@ jobs:
           FLUXBASE_TEST_DATABASE: fluxbase_go_e2e
           SKIP_MIGRATIONS: "true"
         run: |
-          go test -v -timeout=15m ./internal/middleware/... ./internal/api/...
+          go test -v -race -timeout=25m ./internal/middleware/... ./internal/api/...
 
 
   # ===========================================================================
@@ -1729,7 +1731,8 @@ jobs:
       - name: Run storage + ai tests with -tags "ocr vips"
         run: |
           CGO_ENABLED=1 go test -tags "ocr vips" \
-            -timeout 10m \
+            -race \
+            -timeout 15m \
             ./internal/storage/... ./internal/ai/...
 
   # ===========================================================================

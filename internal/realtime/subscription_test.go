@@ -9,16 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestSubscriptionManager() *SubscriptionManager {
+func newTestSubscriptionManager(t *testing.T) *SubscriptionManager {
 	mockDB := newMockSubscriptionDB()
 	mockDB.EnableTable("public", "users")
 	mockDB.EnableTable("public", "posts")
 	mockDB.EnableTable("public", "comments")
-	return NewSubscriptionManager(mockDB)
+	sm := NewSubscriptionManager(mockDB)
+	t.Cleanup(sm.Close)
+	return sm
 }
 
 func TestSubscriptionManager_CreateSubscription(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	sub, err := sm.CreateSubscription(
 		"sub1",
@@ -43,7 +45,7 @@ func TestSubscriptionManager_CreateSubscription(t *testing.T) {
 }
 
 func TestSubscriptionManager_RemoveSubscription(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	// Create a subscription
 	_, err := sm.CreateSubscription(
@@ -71,7 +73,7 @@ func TestSubscriptionManager_RemoveSubscription(t *testing.T) {
 }
 
 func TestSubscriptionManager_RemoveNonExistentSubscription(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	err := sm.RemoveSubscription("nonexistent")
 	assert.Error(t, err)
@@ -79,7 +81,7 @@ func TestSubscriptionManager_RemoveNonExistentSubscription(t *testing.T) {
 }
 
 func TestSubscriptionManager_RemoveConnectionSubscriptions(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	// Create multiple subscriptions for the same connection
 	sm.CreateSubscription("sub1", "conn1", "user1", "authenticated", nil, "public", "users", "INSERT", "")
@@ -102,7 +104,7 @@ func TestSubscriptionManager_RemoveConnectionSubscriptions(t *testing.T) {
 }
 
 func TestSubscriptionManager_GetSubscriptionsByConnection(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	// Create subscriptions for different connections
 	sm.CreateSubscription("sub1", "conn1", "user1", "authenticated", nil, "public", "users", "*", "")
@@ -123,7 +125,7 @@ func TestSubscriptionManager_GetSubscriptionsByConnection(t *testing.T) {
 }
 
 func TestSubscriptionManager_MultipleUsersAndTables(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	// Create subscriptions for different users and tables
 	sm.CreateSubscription("sub1", "conn1", "user1", "authenticated", nil, "public", "users", "*", "")
@@ -137,7 +139,7 @@ func TestSubscriptionManager_MultipleUsersAndTables(t *testing.T) {
 }
 
 func TestSubscriptionManager_DefaultEventToWildcard(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	sub, err := sm.CreateSubscription(
 		"sub1",
@@ -156,7 +158,7 @@ func TestSubscriptionManager_DefaultEventToWildcard(t *testing.T) {
 }
 
 func TestSubscriptionManager_WithFilter(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	sub, err := sm.CreateSubscription(
 		"sub1",
@@ -175,7 +177,7 @@ func TestSubscriptionManager_WithFilter(t *testing.T) {
 }
 
 func TestSubscriptionManager_InvalidFilter(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	_, err := sm.CreateSubscription(
 		"sub1",
@@ -194,7 +196,7 @@ func TestSubscriptionManager_InvalidFilter(t *testing.T) {
 }
 
 func TestSubscriptionManager_CleanupOnRemove(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	// Create subscription
 	sm.CreateSubscription("sub1", "conn1", "user1", "authenticated", nil, "public", "users", "*", "")
@@ -214,7 +216,7 @@ func TestSubscriptionManager_CleanupOnRemove(t *testing.T) {
 }
 
 func TestSubscriptionManager_MatchesEvent(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	tests := []struct {
 		name      string
@@ -241,7 +243,7 @@ func TestSubscriptionManager_MatchesEvent(t *testing.T) {
 }
 
 func TestSubscriptionManager_MatchesFilter(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	tests := []struct {
 		name     string
@@ -304,7 +306,7 @@ func TestSubscriptionManager_MatchesFilter(t *testing.T) {
 }
 
 func TestSubscriptionManager_Stats(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	// Initial stats
 	stats := sm.GetStats()
@@ -326,6 +328,7 @@ func TestSubscriptionManager_Stats(t *testing.T) {
 
 func TestRLSCacheConfig_Defaults(t *testing.T) {
 	cache := newRLSCache()
+	t.Cleanup(cache.stop)
 
 	assert.Equal(t, DefaultRLSCacheMaxSize, cache.maxSize)
 	assert.Equal(t, DefaultRLSCacheTTL, cache.ttl)
@@ -337,6 +340,7 @@ func TestRLSCacheConfig_Custom(t *testing.T) {
 		TTL:     60 * time.Second,
 	}
 	cache := newRLSCacheWithConfig(config)
+	t.Cleanup(cache.stop)
 
 	assert.Equal(t, 50000, cache.maxSize)
 	assert.Equal(t, 60*time.Second, cache.ttl)
@@ -348,6 +352,7 @@ func TestRLSCacheConfig_ZeroValuesUseDefaults(t *testing.T) {
 		TTL:     0,
 	}
 	cache := newRLSCacheWithConfig(config)
+	t.Cleanup(cache.stop)
 
 	assert.Equal(t, DefaultRLSCacheMaxSize, cache.maxSize)
 	assert.Equal(t, DefaultRLSCacheTTL, cache.ttl)
@@ -359,6 +364,7 @@ func TestRLSCacheConfig_NegativeValuesUseDefaults(t *testing.T) {
 		TTL:     -1,
 	}
 	cache := newRLSCacheWithConfig(config)
+	t.Cleanup(cache.stop)
 
 	assert.Equal(t, DefaultRLSCacheMaxSize, cache.maxSize)
 	assert.Equal(t, DefaultRLSCacheTTL, cache.ttl)
@@ -373,6 +379,7 @@ func TestSubscriptionManager_WithCustomRLSCache(t *testing.T) {
 		TTL:     10 * time.Second,
 	}
 	sm := NewSubscriptionManagerWithConfig(mockDB, config)
+	t.Cleanup(sm.Close)
 
 	// Verify cache was created with custom config
 	require.NotNil(t, sm.rlsCache)
@@ -383,6 +390,7 @@ func TestSubscriptionManager_WithCustomRLSCache(t *testing.T) {
 func TestSubscriptionManager_DefaultRLSCache(t *testing.T) {
 	mockDB := newMockSubscriptionDB()
 	sm := NewSubscriptionManager(mockDB)
+	t.Cleanup(sm.Close)
 
 	// Verify cache was created with default config
 	require.NotNil(t, sm.rlsCache)
@@ -448,6 +456,7 @@ func TestRLSCache_GetSet(t *testing.T) {
 		MaxSize: 100,
 		TTL:     1 * time.Hour,
 	})
+	t.Cleanup(cache.stop)
 
 	t.Run("get returns false for non-existent key", func(t *testing.T) {
 		allowed, found := cache.get("nonexistent-key")
@@ -473,6 +482,7 @@ func TestRLSCache_GetSet(t *testing.T) {
 			MaxSize: 100,
 			TTL:     1 * time.Millisecond,
 		})
+		t.Cleanup(shortCache.stop)
 
 		shortCache.set("expiring-key", true)
 		time.Sleep(5 * time.Millisecond)
@@ -484,6 +494,7 @@ func TestRLSCache_GetSet(t *testing.T) {
 
 func TestRLSCache_GenerateCacheKey(t *testing.T) {
 	cache := newRLSCache()
+	t.Cleanup(cache.stop)
 
 	t.Run("generates unique keys for different parameters", func(t *testing.T) {
 		key1 := cache.generateCacheKey("public", "users", "authenticated", 1, nil)
@@ -524,6 +535,7 @@ func TestRLSCache_EvictExpired(t *testing.T) {
 		MaxSize: 100,
 		TTL:     1 * time.Millisecond,
 	})
+	t.Cleanup(cache.stop)
 
 	// Add some entries
 	cache.set("key1", true)
@@ -603,7 +615,7 @@ func TestIsValidIdentifier(t *testing.T) {
 // =============================================================================
 
 func TestSubscriptionManager_LogSubscriptions(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	t.Run("create log subscription", func(t *testing.T) {
 		sub, err := sm.CreateLogSubscription("logsub1", "conn1", "exec-123", "function")
@@ -648,7 +660,7 @@ func TestSubscriptionManager_LogSubscriptions(t *testing.T) {
 }
 
 func TestSubscriptionManager_GetLogSubscriptionsByConnection(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	sm.CreateLogSubscription("logsub1", "conn1", "exec-1", "function")
 	sm.CreateLogSubscription("logsub2", "conn1", "exec-2", "job")
@@ -665,7 +677,7 @@ func TestSubscriptionManager_GetLogSubscriptionsByConnection(t *testing.T) {
 }
 
 func TestSubscriptionManager_RemoveConnectionLogSubscriptions(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	sm.CreateLogSubscription("logsub1", "conn1", "exec-1", "function")
 	sm.CreateLogSubscription("logsub2", "conn1", "exec-2", "job")
@@ -685,7 +697,7 @@ func TestSubscriptionManager_RemoveConnectionLogSubscriptions(t *testing.T) {
 // =============================================================================
 
 func TestSubscriptionManager_AllLogsSubscriptions(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	t.Run("create all-logs subscription", func(t *testing.T) {
 		sub, err := sm.CreateAllLogsSubscription("allsub1", "conn1", "function", []string{"info", "error"})
@@ -733,7 +745,7 @@ func TestSubscriptionManager_AllLogsSubscriptions(t *testing.T) {
 }
 
 func TestSubscriptionManager_RemoveConnectionAllLogsSubscriptions(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	sm.CreateAllLogsSubscription("allsub1", "conn1", "function", nil)
 	sm.CreateAllLogsSubscription("allsub2", "conn1", "job", nil)
@@ -826,7 +838,7 @@ func TestParseChangeEvent(t *testing.T) {
 // =============================================================================
 
 func TestSubscriptionManager_UpdateConnectionRole(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	// Create subscriptions for a connection
 	sm.CreateSubscription("sub1", "conn1", "user1", "anon", nil, "public", "users", "*", "")
@@ -850,7 +862,7 @@ func TestSubscriptionManager_UpdateConnectionRole(t *testing.T) {
 }
 
 func TestSubscriptionManager_UpdateConnectionClaims(t *testing.T) {
-	sm := newTestSubscriptionManager()
+	sm := newTestSubscriptionManager(t)
 
 	originalClaims := map[string]interface{}{"user_id": "123"}
 	newClaims := map[string]interface{}{"user_id": "123", "custom_claim": "value"}
@@ -997,6 +1009,7 @@ func TestSubscriptionManager_TableNotEnabled(t *testing.T) {
 	// Only enable "users" table, not "posts"
 	mockDB.EnableTable("public", "users")
 	sm := NewSubscriptionManager(mockDB)
+	t.Cleanup(sm.Close)
 
 	t.Run("subscription to enabled table succeeds", func(t *testing.T) {
 		_, err := sm.CreateSubscription("sub1", "conn1", "user1", "authenticated", nil, "public", "users", "*", "")

@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -8,6 +9,15 @@ import (
 	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/stretchr/testify/assert"
 )
+
+// newTrackedConnection creates an async connection that is closed when the
+// test ends, so its writer goroutine doesn't leak across tests.
+func newTrackedConnection(t *testing.T, id string, conn *websocket.Conn, userID *string, role string, claims map[string]interface{}, tenantID string, parentCtx context.Context) *Connection {
+	t.Helper()
+	c := NewConnection(id, conn, userID, role, claims, tenantID, parentCtx)
+	t.Cleanup(func() { _ = c.Close() })
+	return c
+}
 
 // MockWebSocketConn is a mock WebSocket connection for testing
 type MockWebSocketConn struct {
@@ -50,7 +60,7 @@ func TestNewConnection(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
 	userID := "user123"
 
-	connection := NewConnection("conn1", conn, &userID, "authenticated", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, &userID, "authenticated", nil, "", nil)
 
 	assert.NotNil(t, connection)
 	assert.Equal(t, "conn1", connection.ID)
@@ -62,7 +72,7 @@ func TestNewConnection(t *testing.T) {
 
 func TestConnection_Subscribe(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Subscribe to a channel
 	connection.Subscribe("table:public.products")
@@ -73,7 +83,7 @@ func TestConnection_Subscribe(t *testing.T) {
 
 func TestConnection_SubscribeMultiple(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Subscribe to multiple channels
 	connection.Subscribe("table:public.products")
@@ -88,7 +98,7 @@ func TestConnection_SubscribeMultiple(t *testing.T) {
 
 func TestConnection_SubscribeDuplicate(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Subscribe to same channel twice
 	connection.Subscribe("table:public.products")
@@ -100,7 +110,7 @@ func TestConnection_SubscribeDuplicate(t *testing.T) {
 
 func TestConnection_Unsubscribe(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Subscribe then unsubscribe
 	connection.Subscribe("table:public.products")
@@ -113,7 +123,7 @@ func TestConnection_Unsubscribe(t *testing.T) {
 
 func TestConnection_UnsubscribeNonExistent(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Unsubscribe from channel we never subscribed to
 	connection.Unsubscribe("table:public.products")
@@ -124,7 +134,7 @@ func TestConnection_UnsubscribeNonExistent(t *testing.T) {
 
 func TestConnection_IsSubscribed(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Initially not subscribed
 	assert.False(t, connection.IsSubscribed("table:public.products"))
@@ -140,7 +150,7 @@ func TestConnection_IsSubscribed(t *testing.T) {
 
 func TestConnection_ConcurrentSubscribe(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	var wg sync.WaitGroup
 	numGoroutines := 100
@@ -163,7 +173,7 @@ func TestConnection_ConcurrentSubscribe(t *testing.T) {
 
 func TestConnection_ConcurrentUnsubscribe(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Subscribe to multiple channels first
 	numChannels := 100
@@ -194,7 +204,7 @@ func TestConnection_ConcurrentUnsubscribe(t *testing.T) {
 
 func TestConnection_ConcurrentIsSubscribed(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	connection.Subscribe("table:public.products")
 
@@ -219,7 +229,7 @@ func TestConnection_ConcurrentIsSubscribed(t *testing.T) {
 
 func TestConnection_MixedConcurrentOperations(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 	defer func() { _ = connection.Close() }()
 
 	var wg sync.WaitGroup
@@ -299,7 +309,7 @@ func TestNewConnectionSync(t *testing.T) {
 
 func TestConnection_SendMessage_ToClosedConnection(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 
 	// Close the connection first
 	_ = connection.Close()
@@ -325,7 +335,7 @@ func TestConnection_GetQueueStats(t *testing.T) {
 }
 
 func TestConnection_Close_MultipleTimes(t *testing.T) {
-	connection := NewConnection("conn1", nil, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", nil, nil, "anon", nil, "", nil)
 
 	// First close should succeed
 	err := connection.Close()
@@ -338,7 +348,7 @@ func TestConnection_Close_MultipleTimes(t *testing.T) {
 
 func TestConnection_IsSlowClient_Initial(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 	defer func() { _ = connection.Close() }()
 
 	assert.False(t, connection.IsSlowClient())
@@ -346,7 +356,7 @@ func TestConnection_IsSlowClient_Initial(t *testing.T) {
 
 func TestConnection_IsSlowClient_AfterWarnings(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 	defer func() { _ = connection.Close() }()
 
 	// Manually increment slow client count
@@ -377,7 +387,7 @@ func TestConnectionQueueStats_Struct(t *testing.T) {
 
 func TestConnection_SendMessage_WithSlowClientMarked(t *testing.T) {
 	var conn *websocket.Conn // nil connection for testing
-	connection := NewConnection("conn1", conn, nil, "anon", nil, "", nil)
+	connection := newTrackedConnection(t, "conn1", conn, nil, "anon", nil, "", nil)
 	defer func() { _ = connection.Close() }()
 
 	// Mark as slow client

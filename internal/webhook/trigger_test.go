@@ -10,11 +10,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
+
+// newTestTriggerService creates a trigger service that is stopped when the
+// test ends, so its rate-limiter cleanup goroutine doesn't leak across tests.
+func newTestTriggerService(t *testing.T, db *database.Connection, webhookSvc *WebhookService, workers int) *TriggerService {
+	t.Helper()
+	svc := NewTriggerService(db, webhookSvc, workers)
+	t.Cleanup(svc.Stop)
+	return svc
+}
 
 func TestNewTriggerService(t *testing.T) {
 	t.Run("creates with default workers", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 0)
+		svc := newTestTriggerService(t, nil, nil, 0)
 		require.NotNil(t, svc)
 		assert.Equal(t, 4, svc.workers) // Default
 		assert.Equal(t, 30*time.Second, svc.backlogInterval)
@@ -23,24 +34,24 @@ func TestNewTriggerService(t *testing.T) {
 	})
 
 	t.Run("creates with negative workers uses default", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, -1)
+		svc := newTestTriggerService(t, nil, nil, -1)
 		assert.Equal(t, 4, svc.workers)
 	})
 
 	t.Run("creates with custom workers", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 10)
+		svc := newTestTriggerService(t, nil, nil, 10)
 		assert.Equal(t, 10, svc.workers)
 	})
 
 	t.Run("creates with specified db and webhook service", func(t *testing.T) {
 		webhookSvc := &WebhookService{}
-		svc := NewTriggerService(nil, webhookSvc, 5)
+		svc := newTestTriggerService(t, nil, webhookSvc, 5)
 		assert.Equal(t, webhookSvc, svc.webhookSvc)
 	})
 }
 
 func TestTriggerService_SetBacklogInterval(t *testing.T) {
-	svc := NewTriggerService(nil, nil, 2)
+	svc := newTestTriggerService(t, nil, nil, 2)
 
 	t.Run("sets backlog interval before start", func(t *testing.T) {
 		svc.SetBacklogInterval(1 * time.Minute)
@@ -54,7 +65,7 @@ func TestTriggerService_SetBacklogInterval(t *testing.T) {
 }
 
 func TestTriggerService_Stop(t *testing.T) {
-	svc := NewTriggerService(nil, nil, 1)
+	svc := newTestTriggerService(t, nil, nil, 1)
 
 	// Stop should not panic even without Start
 	assert.NotPanics(t, func() {
@@ -67,7 +78,7 @@ func TestTriggerService_Stop(t *testing.T) {
 // per-iteration and the worker keeps draining the event channel instead of
 // permanently exiting the loop.
 func TestWorker_PanicDoesNotStopLoop(t *testing.T) {
-	svc := NewTriggerService(nil, nil, 1) // nil webhookSvc makes each iteration panic
+	svc := newTestTriggerService(t, nil, nil, 1) // nil webhookSvc makes each iteration panic
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -166,7 +177,7 @@ func TestWebhookEvent_Struct(t *testing.T) {
 }
 
 func TestEventChannel(t *testing.T) {
-	svc := NewTriggerService(nil, nil, 1)
+	svc := newTestTriggerService(t, nil, nil, 1)
 
 	t.Run("event channel has buffer of 1000", func(t *testing.T) {
 		assert.Equal(t, 1000, cap(svc.eventChan))
@@ -355,6 +366,7 @@ func TestEndpointRateLimiter(t *testing.T) {
 func TestNewEndpointRateLimiter(t *testing.T) {
 	t.Run("creates with specified limit", func(t *testing.T) {
 		rl := newEndpointRateLimiter(100)
+		t.Cleanup(rl.stop)
 		require.NotNil(t, rl)
 		assert.Equal(t, 100, rl.limit)
 		assert.NotNil(t, rl.requests)
@@ -362,11 +374,13 @@ func TestNewEndpointRateLimiter(t *testing.T) {
 
 	t.Run("uses default limit when zero provided", func(t *testing.T) {
 		rl := newEndpointRateLimiter(0)
+		t.Cleanup(rl.stop)
 		assert.Equal(t, DefaultRateLimitPerEndpoint, rl.limit)
 	})
 
 	t.Run("uses default limit when negative provided", func(t *testing.T) {
 		rl := newEndpointRateLimiter(-5)
+		t.Cleanup(rl.stop)
 		assert.Equal(t, DefaultRateLimitPerEndpoint, rl.limit)
 	})
 }
@@ -377,7 +391,7 @@ func TestDefaultRateLimitPerEndpoint(t *testing.T) {
 
 func TestTriggerService_WaitForReady(t *testing.T) {
 	t.Run("returns nil when already ready", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		// Simulate successful ready state
 		svc.signalReady(false)
 
@@ -389,7 +403,7 @@ func TestTriggerService_WaitForReady(t *testing.T) {
 	})
 
 	t.Run("returns error when listener failed", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		// Simulate failed ready state
 		svc.signalReady(true)
 
@@ -402,7 +416,7 @@ func TestTriggerService_WaitForReady(t *testing.T) {
 	})
 
 	t.Run("returns context error on timeout", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		// Don't signal ready
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
@@ -414,7 +428,7 @@ func TestTriggerService_WaitForReady(t *testing.T) {
 	})
 
 	t.Run("returns context error when cancelled", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
@@ -427,18 +441,18 @@ func TestTriggerService_WaitForReady(t *testing.T) {
 
 func TestTriggerService_IsReady(t *testing.T) {
 	t.Run("returns false initially", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		assert.False(t, svc.IsReady())
 	})
 
 	t.Run("returns true after successful signal", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		svc.signalReady(false)
 		assert.True(t, svc.IsReady())
 	})
 
 	t.Run("returns false after failed signal", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		svc.signalReady(true)
 		assert.False(t, svc.IsReady())
 	})
@@ -446,7 +460,7 @@ func TestTriggerService_IsReady(t *testing.T) {
 
 func TestTriggerService_signalReady(t *testing.T) {
 	t.Run("only signals once", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		// Signal success
 		svc.signalReady(false)
@@ -460,7 +474,7 @@ func TestTriggerService_signalReady(t *testing.T) {
 	})
 
 	t.Run("closes ready channel", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		svc.signalReady(false)
 
 		// Channel should be closed and receive should not block
@@ -475,7 +489,7 @@ func TestTriggerService_signalReady(t *testing.T) {
 
 func TestTriggerService_RateLimiter(t *testing.T) {
 	t.Run("service has rate limiter initialized", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		assert.NotNil(t, svc.rateLimiter)
 		assert.Equal(t, DefaultRateLimitPerEndpoint, svc.rateLimiter.limit)
 	})
@@ -530,7 +544,7 @@ func TestWebhookPayloadEventTypes(t *testing.T) {
 func TestTriggerService_EnablePrivateIPs(t *testing.T) {
 	t.Run("EnablePrivateIPs sets AllowPrivateIPs on webhook service", func(t *testing.T) {
 		webhookSvc := &WebhookService{}
-		svc := NewTriggerService(nil, webhookSvc, 1)
+		svc := newTestTriggerService(t, nil, webhookSvc, 1)
 
 		assert.False(t, svc.webhookSvc.AllowPrivateIPs())
 
@@ -540,7 +554,7 @@ func TestTriggerService_EnablePrivateIPs(t *testing.T) {
 	})
 
 	t.Run("EnablePrivateIPs with nil webhook service", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		assert.NotPanics(t, func() {
 			svc.EnablePrivateIPs()
@@ -550,7 +564,7 @@ func TestTriggerService_EnablePrivateIPs(t *testing.T) {
 
 func TestTriggerService_Start_Stop_Lifecycle(t *testing.T) {
 	t.Run("Stop can be called multiple times safely", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		assert.NotPanics(t, func() {
 			svc.Stop()
@@ -560,7 +574,7 @@ func TestTriggerService_Start_Stop_Lifecycle(t *testing.T) {
 	})
 
 	t.Run("Stop uses atomic check to prevent double-close", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		// First stop should succeed
 		svc.Stop()
@@ -572,7 +586,7 @@ func TestTriggerService_Start_Stop_Lifecycle(t *testing.T) {
 	})
 
 	t.Run("service initialization defaults", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 0)
+		svc := newTestTriggerService(t, nil, nil, 0)
 		assert.Equal(t, 4, svc.workers) // Default
 		assert.Equal(t, 30*time.Second, svc.backlogInterval)
 		assert.NotNil(t, svc.eventChan)
@@ -582,22 +596,22 @@ func TestTriggerService_Start_Stop_Lifecycle(t *testing.T) {
 	})
 
 	t.Run("custom worker count", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 8)
+		svc := newTestTriggerService(t, nil, nil, 8)
 		assert.Equal(t, 8, svc.workers)
 	})
 
 	t.Run("event channel capacity", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		assert.Equal(t, 1000, cap(svc.eventChan))
 	})
 
 	t.Run("default backlog interval", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		assert.Equal(t, 30*time.Second, svc.backlogInterval)
 	})
 
 	t.Run("can customize backlog interval", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		customInterval := 15 * time.Second
 
 		svc.SetBacklogInterval(customInterval)
@@ -605,7 +619,7 @@ func TestTriggerService_Start_Stop_Lifecycle(t *testing.T) {
 	})
 
 	t.Run("initial state values", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		// Check initial state
 		assert.False(t, svc.IsReady())
@@ -616,7 +630,7 @@ func TestTriggerService_Start_Stop_Lifecycle(t *testing.T) {
 	})
 
 	t.Run("ready channel is not closed initially", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		select {
 		case <-svc.readyChan:
@@ -816,12 +830,12 @@ func TestProcessBacklog_Logic(t *testing.T) {
 	})
 
 	t.Run("uses default backlog interval", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		assert.Equal(t, 30*time.Second, svc.backlogInterval)
 	})
 
 	t.Run("can customize backlog interval", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		customInterval := 15 * time.Second
 
 		svc.SetBacklogInterval(customInterval)
@@ -829,7 +843,7 @@ func TestProcessBacklog_Logic(t *testing.T) {
 	})
 
 	t.Run("resets ticker when changing interval while running", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		// Set initial interval
 		svc.SetBacklogInterval(10 * time.Second)
@@ -1016,12 +1030,12 @@ func TestDeliverEvent_PayloadConstruction(t *testing.T) {
 
 func TestTriggerService_EventChannel(t *testing.T) {
 	t.Run("event channel has buffer of 1000", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		assert.Equal(t, 1000, cap(svc.eventChan))
 	})
 
 	t.Run("can send to event channel", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 		webhookID := uuid.New()
 
 		select {
@@ -1036,7 +1050,7 @@ func TestTriggerService_EventChannel(t *testing.T) {
 	})
 
 	t.Run("event channel blocks when full", func(t *testing.T) {
-		svc := NewTriggerService(nil, nil, 1)
+		svc := newTestTriggerService(t, nil, nil, 1)
 
 		// Fill the channel
 		for i := 0; i < 1000; i++ {

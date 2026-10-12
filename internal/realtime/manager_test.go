@@ -13,6 +13,21 @@ import (
 	"github.com/nimbleflux/fluxbase/internal/pubsub"
 )
 
+// newTrackedManager creates a manager that is shut down when the test ends,
+// so its background goroutines don't leak across tests.
+func newTrackedManager(t *testing.T, ctx context.Context) *Manager {
+	m := NewManager(ctx)
+	t.Cleanup(m.Shutdown)
+	return m
+}
+
+// newTrackedManagerWithConfig is newTrackedManager with a custom config.
+func newTrackedManagerWithConfig(t *testing.T, ctx context.Context, config ManagerConfig) *Manager {
+	m := NewManagerWithConfig(ctx, config)
+	t.Cleanup(m.Shutdown)
+	return m
+}
+
 // mockPubSub implements pubsub.PubSub for testing
 type mockPubSub struct {
 	mu            sync.RWMutex
@@ -67,7 +82,7 @@ func (m *mockPubSub) getPublishedMessages() []pubsubMessage {
 
 func TestNewManager(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.connections)
@@ -76,7 +91,7 @@ func TestNewManager(t *testing.T) {
 
 func TestManager_AddConnection(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	connection, err := manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 
@@ -88,7 +103,7 @@ func TestManager_AddConnection(t *testing.T) {
 
 func TestManager_AddMultipleConnections(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 	manager.AddConnection("conn2", nil, nil, "anon", nil, "")
@@ -99,7 +114,7 @@ func TestManager_AddMultipleConnections(t *testing.T) {
 
 func TestManager_AddConnectionWithUserID(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	userID := "user123"
 
 	connection, err := manager.AddConnection("conn1", nil, &userID, "authenticated", nil, "")
@@ -111,7 +126,7 @@ func TestManager_AddConnectionWithUserID(t *testing.T) {
 
 func TestManager_RemoveConnection(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 	assert.Equal(t, 1, manager.GetConnectionCount())
@@ -122,7 +137,7 @@ func TestManager_RemoveConnection(t *testing.T) {
 
 func TestManager_RemoveNonExistentConnection(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	// Should not panic
 	manager.RemoveConnection("conn1")
@@ -131,7 +146,7 @@ func TestManager_RemoveNonExistentConnection(t *testing.T) {
 
 func TestManager_GetConnectionCount(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	assert.Equal(t, 0, manager.GetConnectionCount())
 
@@ -150,7 +165,7 @@ func TestManager_GetConnectionCount(t *testing.T) {
 
 func TestManager_ConcurrentAddConnection(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	var wg sync.WaitGroup
 	numConnections := 100
@@ -170,7 +185,7 @@ func TestManager_ConcurrentAddConnection(t *testing.T) {
 
 func TestManager_ConcurrentRemoveConnection(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	// Add connections first
 	numConnections := 100
@@ -197,7 +212,7 @@ func TestManager_ConcurrentRemoveConnection(t *testing.T) {
 
 func TestManager_Shutdown(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 	manager.AddConnection("conn2", nil, nil, "anon", nil, "")
@@ -213,7 +228,7 @@ func TestManager_Shutdown(t *testing.T) {
 
 func TestManager_MixedConcurrentOperations(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 
 	var wg sync.WaitGroup
 	numGoroutines := 50
@@ -245,7 +260,7 @@ func TestManager_MixedConcurrentOperations(t *testing.T) {
 
 func TestManager_PerUserConnectionLimit(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerUser: 2,
 	})
 
@@ -273,7 +288,7 @@ func TestManager_PerUserConnectionLimit(t *testing.T) {
 
 func TestManager_PerUserConnectionLimit_DifferentUsers(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerUser: 2,
 	})
 
@@ -300,7 +315,7 @@ func TestManager_PerUserConnectionLimit_DifferentUsers(t *testing.T) {
 
 func TestManager_PerIPConnectionLimit(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerIP: 3,
 	})
 
@@ -332,7 +347,7 @@ func TestManager_PerIPConnectionLimit(t *testing.T) {
 
 func TestManager_PerIPConnectionLimit_DifferentIPs(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerIP: 2,
 	})
 
@@ -354,7 +369,7 @@ func TestManager_PerIPConnectionLimit_DifferentIPs(t *testing.T) {
 
 func TestManager_PerIPLimitNotAppliedToAuthenticatedUsers(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerIP:   2,
 		MaxConnectionsPerUser: 100, // High limit for users
 	})
@@ -377,7 +392,7 @@ func TestManager_PerIPLimitNotAppliedToAuthenticatedUsers(t *testing.T) {
 
 func TestManager_RemoveConnection_DecrementsUserCount(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerUser: 2,
 	})
 
@@ -402,7 +417,7 @@ func TestManager_RemoveConnection_DecrementsUserCount(t *testing.T) {
 
 func TestManager_RemoveConnection_DecrementsIPCount(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerIP: 2,
 	})
 
@@ -427,7 +442,7 @@ func TestManager_RemoveConnection_DecrementsIPCount(t *testing.T) {
 
 func TestManager_Shutdown_ClearsTrackingMaps(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerUser: 10,
 		MaxConnectionsPerIP:   10,
 	})
@@ -451,7 +466,7 @@ func TestManager_Shutdown_ClearsTrackingMaps(t *testing.T) {
 
 func TestManager_SetConnectionLimits(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnectionsPerUser: 100,
 		MaxConnectionsPerIP:   100,
 	})
@@ -473,7 +488,7 @@ func TestManager_SetConnectionLimits(t *testing.T) {
 
 func TestManager_GlobalLimitTakesPrecedence(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManagerWithConfig(ctx, ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 		MaxConnections:        3,
 		MaxConnectionsPerUser: 10,
 		MaxConnectionsPerIP:   10,
@@ -498,7 +513,7 @@ func TestManager_GlobalLimitTakesPrecedence(t *testing.T) {
 
 func TestManager_SlowClientConfig(t *testing.T) {
 	t.Run("default slow client settings", func(t *testing.T) {
-		manager := NewManagerWithConfig(context.Background(), ManagerConfig{})
+		manager := newTrackedManagerWithConfig(t, context.Background(), ManagerConfig{})
 
 		// Check defaults
 		assert.Equal(t, 100, manager.slowClientThreshold)
@@ -506,7 +521,7 @@ func TestManager_SlowClientConfig(t *testing.T) {
 	})
 
 	t.Run("custom slow client settings", func(t *testing.T) {
-		manager := NewManagerWithConfig(context.Background(), ManagerConfig{
+		manager := newTrackedManagerWithConfig(t, context.Background(), ManagerConfig{
 			SlowClientThreshold: 50,
 			SlowClientTimeout:   10 * time.Second,
 		})
@@ -517,7 +532,7 @@ func TestManager_SlowClientConfig(t *testing.T) {
 }
 
 func TestManager_SlowClientTrackingMap(t *testing.T) {
-	manager := NewManagerWithConfig(context.Background(), ManagerConfig{
+	manager := newTrackedManagerWithConfig(t, context.Background(), ManagerConfig{
 		SlowClientThreshold: 5, // Low threshold for testing
 		SlowClientTimeout:   1 * time.Second,
 	})
@@ -528,7 +543,7 @@ func TestManager_SlowClientTrackingMap(t *testing.T) {
 }
 
 func TestManager_GetSlowClientsDisconnected(t *testing.T) {
-	manager := NewManager(context.Background())
+	manager := newTrackedManager(t, context.Background())
 
 	// Initially should be 0
 	assert.Equal(t, uint64(0), manager.GetSlowClientsDisconnected())
@@ -555,7 +570,7 @@ func TestManagerConfig_SlowClientFields(t *testing.T) {
 
 func TestManager_SetPubSub(t *testing.T) {
 	t.Run("sets pubsub backend", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 		mockPubSub := newMockPubSub()
 
 		manager.SetPubSub(mockPubSub)
@@ -565,7 +580,7 @@ func TestManager_SetPubSub(t *testing.T) {
 	})
 
 	t.Run("starts global broadcast handler when pubsub is set", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 		mockPubSub := newMockPubSub()
 
 		// Setting pubsub starts the goroutine
@@ -576,7 +591,7 @@ func TestManager_SetPubSub(t *testing.T) {
 	})
 
 	t.Run("allows nil pubsub", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		// Should not panic
 		manager.SetPubSub(nil)
@@ -588,7 +603,7 @@ func TestManager_SetPubSub(t *testing.T) {
 func TestManager_BroadcastGlobal(t *testing.T) {
 	t.Run("broadcasts locally when no pubsub configured", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		// Add a connection with subscription
 		conn, _ := manager.AddConnection("conn1", nil, nil, "anon", nil, "")
@@ -611,7 +626,7 @@ func TestManager_BroadcastGlobal(t *testing.T) {
 
 	t.Run("publishes to pubsub when configured", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 		mockPubSub := newMockPubSub()
 
 		manager.SetPubSub(mockPubSub)
@@ -637,7 +652,7 @@ func TestManager_handleGlobalBroadcasts(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 		mockPubSub := newMockPubSub()
 
 		// Subscribe first (simulating what SetPubSub does)
@@ -674,7 +689,7 @@ func TestManager_handleGlobalBroadcasts(t *testing.T) {
 func TestManager_handleGlobalMessage(t *testing.T) {
 	t.Run("delivers message to subscribed connections", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		// Add connection with subscription
 		conn, _ := manager.AddConnection("conn1", nil, nil, "anon", nil, "")
@@ -704,7 +719,7 @@ func TestManager_handleGlobalMessage(t *testing.T) {
 
 	t.Run("does not deliver to unsubscribed connections", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		// Add connection WITHOUT subscription
 		_, _ = manager.AddConnection("conn1", nil, nil, "anon", nil, "")
@@ -733,7 +748,7 @@ func TestManager_handleGlobalMessage(t *testing.T) {
 
 	t.Run("handles invalid messages gracefully", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		// Invalid JSON
 		msg := pubsub.Message{
@@ -752,14 +767,14 @@ func TestManager_handleGlobalMessage(t *testing.T) {
 
 func TestManager_updateMetrics(t *testing.T) {
 	t.Run("does not panic when metrics is nil", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		// Should not panic
 		manager.updateMetrics()
 	})
 
 	t.Run("counts active connections", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 		manager.AddConnection("conn2", nil, nil, "anon", nil, "")
@@ -769,7 +784,7 @@ func TestManager_updateMetrics(t *testing.T) {
 	})
 
 	t.Run("counts unique channels", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		conn1, _ := manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 		conn1.Subscribe("channel1")
@@ -790,7 +805,7 @@ func TestManager_updateMetrics(t *testing.T) {
 
 func TestManager_GetDetailedStats(t *testing.T) {
 	t.Run("returns empty stats when no connections", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		stats := manager.GetDetailedStats()
 
@@ -799,7 +814,7 @@ func TestManager_GetDetailedStats(t *testing.T) {
 	})
 
 	t.Run("returns connection details", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		userID := "user123"
 		manager.AddConnection("conn1", nil, &userID, "authenticated", nil, "")
@@ -818,7 +833,7 @@ func TestManager_GetDetailedStats(t *testing.T) {
 	})
 
 	t.Run("includes connected timestamp", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 
@@ -831,7 +846,7 @@ func TestManager_GetDetailedStats(t *testing.T) {
 
 func TestManager_GetConnectionsForStats(t *testing.T) {
 	t.Run("returns empty list when no connections", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		connections := manager.GetConnectionsForStats()
 
@@ -840,7 +855,7 @@ func TestManager_GetConnectionsForStats(t *testing.T) {
 	})
 
 	t.Run("returns all connections", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		userID := "user123"
 		manager.AddConnection("conn1", nil, &userID, "authenticated", nil, "")
@@ -869,7 +884,7 @@ func TestManager_GetConnectionsForStats(t *testing.T) {
 func TestManager_BroadcastConnectionEvent(t *testing.T) {
 	t.Run("broadcasts connection event", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 		mockPubSub := newMockPubSub()
 
 		manager.SetPubSub(mockPubSub)
@@ -887,7 +902,7 @@ func TestManager_BroadcastConnectionEvent(t *testing.T) {
 	})
 
 	t.Run("works without pubsub configured", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		conn, _ := manager.AddConnection("conn1", nil, nil, "anon", nil, "")
 
@@ -904,7 +919,7 @@ func TestManager_BroadcastConnectionEvent(t *testing.T) {
 
 func TestManager_SetMaxConnections(t *testing.T) {
 	t.Run("updates maximum connections", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		manager.SetMaxConnections(50)
 
@@ -912,7 +927,7 @@ func TestManager_SetMaxConnections(t *testing.T) {
 	})
 
 	t.Run("enforces new limit for future connections", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 		manager.SetMaxConnections(2)
 
 		// Add 2 connections
@@ -925,7 +940,7 @@ func TestManager_SetMaxConnections(t *testing.T) {
 	})
 
 	t.Run("allows zero for unlimited", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 		manager.SetMaxConnections(0)
 
 		// Should allow many connections
@@ -943,7 +958,7 @@ func TestManager_SetMaxConnections(t *testing.T) {
 func TestManager_checkAndDisconnectSlowClients(t *testing.T) {
 	t.Run("does not disconnect normal clients", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManagerWithConfig(ctx, ManagerConfig{
+		manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 			SlowClientThreshold: 10,
 			SlowClientTimeout:   1 * time.Second,
 		})
@@ -958,7 +973,7 @@ func TestManager_checkAndDisconnectSlowClients(t *testing.T) {
 
 	t.Run("marks clients as slow when queue exceeds threshold", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManagerWithConfig(ctx, ManagerConfig{
+		manager := newTrackedManagerWithConfig(t, ctx, ManagerConfig{
 			ClientMessageQueueSize: 20,
 			SlowClientThreshold:    10,
 			SlowClientTimeout:      1 * time.Second,
@@ -987,7 +1002,7 @@ func TestManager_checkAndDisconnectSlowClients(t *testing.T) {
 func TestManager_disconnectSlowClient(t *testing.T) {
 	t.Run("removes connection and increments counter", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		// Create a sync connection for testing
 		conn := NewConnectionSync("conn1", nil, nil, "anon", nil)
@@ -1002,7 +1017,7 @@ func TestManager_disconnectSlowClient(t *testing.T) {
 	})
 
 	t.Run("handles non-existent connection gracefully", func(t *testing.T) {
-		manager := NewManager(context.Background())
+		manager := newTrackedManager(t, context.Background())
 
 		// Should not panic
 		manager.disconnectSlowClient("non-existent")
@@ -1050,7 +1065,7 @@ func TestSplitHostPort(t *testing.T) {
 func TestManager_BroadcastToChannel_TenantIsolation(t *testing.T) {
 	t.Run("only sends to connections matching tenant ID", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		connA, _ := manager.AddConnection("conn-a", nil, nil, "anon", nil, "tenant-A")
 		connB, _ := manager.AddConnection("conn-b", nil, nil, "anon", nil, "tenant-B")
@@ -1072,7 +1087,7 @@ func TestManager_BroadcastToChannel_TenantIsolation(t *testing.T) {
 
 	t.Run("sends to all connections of the same tenant", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		connA1, _ := manager.AddConnection("conn-a1", nil, nil, "anon", nil, "tenant-A")
 		connA2, _ := manager.AddConnection("conn-a2", nil, nil, "anon", nil, "tenant-A")
@@ -1098,7 +1113,7 @@ func TestManager_BroadcastToChannel_TenantIsolation(t *testing.T) {
 func TestManager_BroadcastToChannel_EmptyTenantID(t *testing.T) {
 	t.Run("only sends to connections with empty tenant ID", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		connEmpty, _ := manager.AddConnection("conn-empty", nil, nil, "anon", nil, "")
 		connX, _ := manager.AddConnection("conn-x", nil, nil, "anon", nil, "tenant-X")
@@ -1120,7 +1135,7 @@ func TestManager_BroadcastToChannel_EmptyTenantID(t *testing.T) {
 
 	t.Run("does not send to connections with non-empty tenant ID when broadcasting with empty tenant ID", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		connA, _ := manager.AddConnection("conn-a", nil, nil, "anon", nil, "tenant-A")
 		connB, _ := manager.AddConnection("conn-b", nil, nil, "anon", nil, "tenant-B")
@@ -1146,7 +1161,7 @@ func TestManager_BroadcastToChannel_EmptyTenantID(t *testing.T) {
 func TestManager_BroadcastGlobal_TenantIDPropagation(t *testing.T) {
 	t.Run("includes tenant ID in published pubsub message", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 		mockPS := newMockPubSub()
 
 		manager.SetPubSub(mockPS)
@@ -1173,7 +1188,7 @@ func TestManager_BroadcastGlobal_TenantIDPropagation(t *testing.T) {
 
 	t.Run("broadcasts locally with tenant ID when no pubsub configured", func(t *testing.T) {
 		ctx := context.Background()
-		manager := NewManager(ctx)
+		manager := newTrackedManager(t, ctx)
 
 		connA, _ := manager.AddConnection("conn-a", nil, nil, "anon", nil, "tenant-A")
 		connB, _ := manager.AddConnection("conn-b", nil, nil, "anon", nil, "tenant-B")
