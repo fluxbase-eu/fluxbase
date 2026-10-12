@@ -145,7 +145,8 @@ services:
       # FLUXBASE_AUTH_SIGNUP_ENABLED: "true"
       # FLUXBASE_AUTH_MAGIC_LINK_ENABLED: "true"
       # FLUXBASE_AUTH_TOTP_ISSUER: "Fluxbase"
-      # FLUXBASE_AUTH_ALLOW_USER_CLIENT_KEYS: "${FLUXBASE_AUTH_ALLOW_USER_CLIENT_KEYS:-true}"  # Allow users to create their own client keys
+      # Allow users to create their own client keys (system setting "app.auth.allow_user_client_keys", default: true)
+      # FLUXBASE_AUTH_ALLOW_USER_CLIENT_KEYS: "${FLUXBASE_AUTH_ALLOW_USER_CLIENT_KEYS:-}"
 
       # Anon Key: Pre-generated JWT with 'anon' role for client-side apps
       # Generate with: deploy/generate-keys.sh

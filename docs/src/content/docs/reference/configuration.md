@@ -208,8 +208,8 @@ logging:
 cors:
   allowed_origins: "http://localhost:5173,http://localhost:8080"
   allowed_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-  allowed_headers: "Origin,Content-Type,Accept,Authorization,X-Request-ID,X-CSRF-Token,Prefer,apikey"
-  exposed_headers: "Content-Range,Content-Encoding,Content-Length,X-Request-ID"
+  allowed_headers: "Origin,Content-Type,Accept,Authorization,X-Request-ID,X-CSRF-Token,X-Impersonation-Token,Prefer,apikey,x-client-app"
+  exposed_headers: "Content-Range,Content-Encoding,Content-Length,X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
   allow_credentials: true
   max_age: 300
 
@@ -290,7 +290,7 @@ Environment variables take precedence over configuration file values.
 | `FLUXBASE_BASE_URL`        | Internal base URL for server-to-server communication     | `http://localhost:8080` | `http://fluxbase:8080`                  |
 | `FLUXBASE_PUBLIC_BASE_URL` | Public base URL for user-facing links, OAuth callbacks   | `""` (uses BASE_URL)    | `https://api.example.com`               |
 | `FLUXBASE_DEBUG`           | Enable debug mode                                        | `false`                 | `true`, `false`                         |
-| `FLUXBASE_ENCRYPTION_KEY`  | AES-256-GCM encryption key for sensitive data (32 bytes) | `""`                    | `openssl rand -base64 32 \| head -c 32` |
+| `FLUXBASE_ENCRYPTION_KEY`  | AES-256-GCM encryption key for sensitive data (32 bytes) | **(required)**          | `openssl rand -base64 32 \| head -c 32` |
 
 ### Server
 
@@ -744,7 +744,7 @@ When enabled, adaptive trust skips CAPTCHA challenges for low-risk users based o
 
 | Variable                                            | Description                      | Default | Example |
 | --------------------------------------------------- | -------------------------------- | ------- | ------- |
-| `FLUXBASE_SECURITY_AUTH_SIGNUP_RATE_LIMIT`          | Signup attempts per window       | `5`     | `10`    |
+| `FLUXBASE_SECURITY_AUTH_SIGNUP_RATE_LIMIT`          | Signup attempts per window       | `10`    | `20`    |
 | `FLUXBASE_SECURITY_AUTH_SIGNUP_RATE_WINDOW`         | Signup rate limit window         | `15m`   | `30m`   |
 | `FLUXBASE_SECURITY_AUTH_LOGIN_RATE_LIMIT`           | Login attempts per window        | `10`    | `20`    |
 | `FLUXBASE_SECURITY_AUTH_LOGIN_RATE_WINDOW`          | Login rate limit window          | `1m`    | `5m`    |
@@ -752,8 +752,8 @@ When enabled, adaptive trust skips CAPTCHA challenges for low-risk users based o
 | `FLUXBASE_SECURITY_AUTH_PASSWORD_RESET_RATE_WINDOW` | Password reset rate limit window | `15m`   | `30m`   |
 | `FLUXBASE_SECURITY_AUTH_2FA_RATE_LIMIT`             | 2FA attempts per window          | `5`     | `10`    |
 | `FLUXBASE_SECURITY_AUTH_2FA_RATE_WINDOW`            | 2FA rate limit window            | `5m`    | `10m`   |
-| `FLUXBASE_SECURITY_AUTH_REFRESH_RATE_LIMIT`         | Token refresh attempts per window | `30`   | `60`    |
-| `FLUXBASE_SECURITY_AUTH_REFRESH_RATE_WINDOW`        | Refresh rate limit window        | `5m`    | `10m`   |
+| `FLUXBASE_SECURITY_AUTH_REFRESH_RATE_LIMIT`         | Token refresh attempts per window | `10`   | `60`    |
+| `FLUXBASE_SECURITY_AUTH_REFRESH_RATE_WINDOW`        | Refresh rate limit window        | `1m`    | `10m`   |
 | `FLUXBASE_SECURITY_AUTH_MAGIC_LINK_RATE_LIMIT`      | Magic link attempts per window   | `5`     | `10`    |
 | `FLUXBASE_SECURITY_AUTH_MAGIC_LINK_RATE_WINDOW`     | Magic link rate limit window     | `15m`   | `30m`   |
 
@@ -1016,7 +1016,7 @@ MCP OAuth is enabled by default with Dynamic Client Registration (DCR). This all
 | `FLUXBASE_BRANCHING_DEFAULT_DATA_CLONE_MODE` | Default data clone mode          | `schema_only` | `schema_only`, `full_clone` |
 | `FLUXBASE_BRANCHING_AUTO_DELETE_AFTER`       | Auto-delete branches after       | `0` (never)   | `24h`, `168h`               |
 | `FLUXBASE_BRANCHING_DATABASE_PREFIX`         | Prefix for branch database names | `branch_`     | `branch_`                   |
-| `FLUXBASE_BRANCHING_SEEDS_PATH`              | Path to seed data files          | `./seeds`     | `./seeds`                   |
+| `FLUXBASE_BRANCHING_SEEDS_PATH`              | Path to seed data files          | `""` (falls back to `./seeds`; seeding is skipped unless the directory exists) | `./seeds` |
 | `FLUXBASE_BRANCHING_DEFAULT_BRANCH`          | Default branch for all requests  | `main`        | `main`, `develop`           |
 | `FLUXBASE_BRANCHING_MAX_TOTAL_CONNECTIONS`   | Max total branch pool connections| `500`         | `200`                       |
 | `FLUXBASE_BRANCHING_POOL_EVICTION_AGE`       | Evict idle branch pools after    | `1h`          | `30m`, `2h`                 |
@@ -1256,7 +1256,7 @@ volumes:
 
 ## Kubernetes Configuration
 
-Helm chart configuration will be available in a future release.
+Fluxbase ships a Helm chart for Kubernetes deployments. See the [Kubernetes Deployment](/deployment/kubernetes/) guide for installation and chart configuration (the chart lives in [`deploy/helm/fluxbase/`](https://github.com/nimbleflux/fluxbase/tree/main/deploy/helm/fluxbase)).
 
 ## Configuration Priority
 
@@ -1327,7 +1327,7 @@ env | grep FLUXBASE
 
 ```bash
 # Test connection using Fluxbase env vars
-psql "postgresql://$FLUXBASE_DATABASE_USER:$FLUXBASE_DATABASE_PASSWORD@$FLUXBASE_DATABASE_HOST:$FLUXBASE_DATABASE_PORT/$FLUXBASE_DATABASE_NAME"
+psql "postgresql://$FLUXBASE_DATABASE_USER:$FLUXBASE_DATABASE_PASSWORD@$FLUXBASE_DATABASE_HOST:$FLUXBASE_DATABASE_PORT/$FLUXBASE_DATABASE_DATABASE"
 
 # Check individual settings
 echo $FLUXBASE_DATABASE_HOST

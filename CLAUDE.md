@@ -307,7 +307,7 @@ When working in the devcontainer, you can use `psql` to query the database direc
 
 ```bash
 # Connect to the database
-psql "postgresql://$FLUXBASE_DATABASE_USER:$FLUXBASE_DATABASE_PASSWORD@$FLUXBASE_DATABASE_HOST:$FLUXBASE_DATABASE_PORT/$FLUXBASE_DATABASE_NAME"
+psql "postgresql://$FLUXBASE_DATABASE_USER:$FLUXBASE_DATABASE_PASSWORD@$FLUXBASE_DATABASE_HOST:$FLUXBASE_DATABASE_PORT/$FLUXBASE_DATABASE_DATABASE"
 ```
 
 Useful queries for debugging:
@@ -433,14 +433,19 @@ When multi-tenancy is enabled, branches for tenants with separate databases clon
 
 ```yaml
 logging:
-  backend: postgres # postgres, timescaledb, s3, local, loki, elasticsearch, clickhouse
+  backend: postgres # postgres, postgres-timescaledb, timescaledb, s3, local, loki, elasticsearch, opensearch, clickhouse
   batch_size: 100
   flush_interval: 1s
-  retention_days: 90
-  compression_days: 7 # For TimescaleDB
-  s3:
-    bucket: logs
-    prefix: logs/
+  system_retention_days: 7
+  http_retention_days: 30
+  security_retention_days: 90
+  execution_retention_days: 30
+  ai_retention_days: 30
+  retention_enabled: true
+  s3_bucket: "" # Required when backend is s3
+  s3_prefix: logs
+  timescaledb_compression: false # TimescaleDB settings (when backend is timescaledb/postgres-timescaledb)
+  timescaledb_compress_after: 0s # 0 = disabled
 ```
 
 ## Code Quality Standards
@@ -495,7 +500,7 @@ cd sdk-react && bun run type-check  # Uses tsc --noEmit
 - **ESLint**: TypeScript ESLint, React Hooks, React Refresh, TanStack Query
 - **Prettier**: Code formatting with import sorting and Tailwind integration
 - **TypeScript**: No unused vars, type-only imports enforced
-1
+
 ### Pre-Commit Hook Enforcement
 
 Git pre-commit hooks automatically run:
