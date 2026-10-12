@@ -743,6 +743,7 @@ func (p *DocumentProcessor) extractAndStoreEntities(ctx context.Context, doc *Do
 
 	// Use the entity extractor to get entities, relationships, and document-entity links
 	result, err := p.entityExtractor.ExtractEntitiesWithRelationships(
+		ctx,
 		doc.Content,
 		doc.KnowledgeBaseID,
 		doc.ID,

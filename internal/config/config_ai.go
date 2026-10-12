@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -22,7 +23,7 @@ type AIConfig struct {
 
 	// Provider Configuration (read-only in dashboard when set)
 	// If ProviderType is set, a config-based provider will be added to the list
-	ProviderType  string `mapstructure:"provider_type"`  // Provider type: openai, azure, ollama
+	ProviderType  string `mapstructure:"provider_type"`  // Provider type: openai, azure, ollama, anthropic
 	ProviderName  string `mapstructure:"provider_name"`  // Display name for config provider
 	ProviderModel string `mapstructure:"provider_model"` // Default model for config provider
 
@@ -65,6 +66,14 @@ type AIConfig struct {
 
 	// RAG Configuration (for retrieval-augmented generation)
 	RAGGraphBoostWeight float64 `mapstructure:"rag_graph_boost_weight"` // How much to weight entity matches vs vector similarity (0.0-1.0, default 0)
+
+	// Entity Extraction Configuration (knowledge graph quality)
+	// Strategy: rules (regex, default), llm (model-backed with rule fallback),
+	// hybrid (both merged). Per-KB override via entity_extraction_strategy.
+	EntityExtractionStrategy     string        `mapstructure:"entity_extraction_strategy"`       // rules | llm | hybrid
+	EntityExtractionMaxTokens    int           `mapstructure:"entity_extraction_max_tokens"`     // Max tokens per LLM extraction request (default 2000)
+	EntityExtractionMinTextChars int           `mapstructure:"entity_extraction_min_text_chars"` // Skip the LLM below this text length (default 200)
+	EntityExtractionTimeout      time.Duration `mapstructure:"entity_extraction_timeout"`        // Per-extraction-request timeout (default 60s)
 }
 
 // Validate validates AI configuration
@@ -100,6 +109,18 @@ func (ac *AIConfig) Validate() error {
 	// Warn if max rows is very high
 	if ac.MaxRowsPerQuery > 10000 {
 		log.Warn().Int("max_rows_per_query", ac.MaxRowsPerQuery).Msg("max_rows_per_query is over 10000 - large result sets may impact performance")
+	}
+
+	// Validate entity extraction strategy
+	switch strings.ToLower(strings.TrimSpace(ac.EntityExtractionStrategy)) {
+	case "", "rules", "llm", "hybrid":
+	default:
+		return fmt.Errorf("entity_extraction_strategy must be one of rules, llm, hybrid, got: %q", ac.EntityExtractionStrategy)
+	}
+
+	// Warn when an LLM strategy is selected without a chat provider source
+	if ac.EntityExtractionStrategy != "" && ac.EntityExtractionStrategy != "rules" && ac.ProviderType == "" {
+		log.Warn().Str("strategy", ac.EntityExtractionStrategy).Msg("entity_extraction_strategy uses the LLM but no ai.provider_type is configured; extraction will fall back to rules until a default provider is set (admin UI/CLI or config)")
 	}
 
 	return nil

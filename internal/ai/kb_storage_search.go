@@ -425,7 +425,7 @@ func (s *KnowledgeBaseStorage) SearchChunksWithGraphBoost(
 	// Step 1: Extract entities from query text
 	var queryEntities []Entity
 	if entityExtractor != nil && opts.QueryText != "" {
-		extracted, err := entityExtractor.ExtractEntities(opts.QueryText, knowledgeBaseID)
+		extracted, err := entityExtractor.ExtractEntities(ctx, opts.QueryText, knowledgeBaseID)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to extract entities from query, using vector-only search")
 			return s.SearchChunks(ctx, knowledgeBaseID, opts.QueryEmbedding, opts.Limit, opts.Threshold)

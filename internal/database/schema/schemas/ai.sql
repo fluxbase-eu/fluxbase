@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
     pipeline_config jsonb DEFAULT '{}' NOT NULL,
     transformation_function text,
     entity_extraction_enabled boolean DEFAULT true NOT NULL,
+    entity_extraction_strategy text DEFAULT '' NOT NULL,
+    CONSTRAINT knowledge_bases_entity_extraction_strategy_check CHECK (entity_extraction_strategy IN (''::text, 'rules'::text, 'llm'::text, 'hybrid'::text)),
     tenant_id uuid,
     CONSTRAINT knowledge_bases_pkey PRIMARY KEY (id),
     CONSTRAINT unique_knowledge_base_name_namespace UNIQUE (name, namespace),
@@ -65,7 +67,9 @@ COMMENT ON COLUMN ai.knowledge_bases.chunk_strategy IS 'Chunking strategy: recur
 COMMENT ON COLUMN ai.knowledge_bases.visibility IS 'private=owner only, shared=explicit permissions, public=all authenticated users';
 
 
-COMMENT ON COLUMN ai.knowledge_bases.entity_extraction_enabled IS 'When true (default), documents are processed by the rule-based entity extractor on insert/reprocess. Set to false to skip extraction (no entities, no relationships, no graph-boost signal).';
+COMMENT ON COLUMN ai.knowledge_bases.entity_extraction_enabled IS 'When true (default), documents are processed by the entity extractor on insert/reprocess. Set to false to skip extraction (no entities, no relationships, no graph-boost signal).';
+
+COMMENT ON COLUMN ai.knowledge_bases.entity_extraction_strategy IS 'Entity extraction strategy for this KB: empty string (default) inherits the global ai.entity_extraction_strategy setting, or one of rules (regex-based), llm (model-backed, falls back to rules on failure), hybrid (both merged).';
 
 
 COMMENT ON COLUMN ai.knowledge_bases.quota_max_documents IS 'Maximum documents allowed in this KB';

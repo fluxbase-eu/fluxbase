@@ -353,6 +353,12 @@ func setDefaults() {
 	viper.SetDefault("ai.ocr_provider", "tesseract")      // Default OCR provider
 	viper.SetDefault("ai.ocr_languages", []string{"eng"}) // Default to English
 
+	// AI Entity Extraction defaults (knowledge graph quality)
+	viper.SetDefault("ai.entity_extraction_strategy", "rules") // rules (regex, default) | llm | hybrid
+	viper.SetDefault("ai.entity_extraction_max_tokens", 2000)  // Max tokens per LLM extraction request
+	viper.SetDefault("ai.entity_extraction_min_text_chars", 200)
+	viper.SetDefault("ai.entity_extraction_timeout", "60s")
+
 	// RPC defaults
 	viper.SetDefault("rpc.enabled", true)           // Enabled by default (controlled by feature flag at runtime)
 	viper.SetDefault("rpc.procedures_dir", "./rpc") // Default procedures directory

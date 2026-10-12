@@ -43,10 +43,15 @@ type KnowledgeBase struct {
 	PipelineConfig         map[string]interface{} `json:"pipeline_config,omitempty"`
 	TransformationFunction *string                `json:"transformation_function,omitempty"`
 	// Entity extraction toggle (default true). When false, documents in this KB
-	// skip the rule-based entity extractor entirely.
-	EntityExtractionEnabled bool      `json:"entity_extraction_enabled"`
-	CreatedAt               time.Time `json:"created_at"`
-	UpdatedAt               time.Time `json:"updated_at"`
+	// skip the entity extractor entirely.
+	EntityExtractionEnabled bool `json:"entity_extraction_enabled"`
+	// EntityExtractionStrategy selects the extractor for this KB: "rules"
+	// (regex-based, default), "llm" (model-backed, falls back to rules on
+	// failure), or "hybrid" (both merged). Empty inherits the global
+	// ai.entity_extraction_strategy default.
+	EntityExtractionStrategy string    `json:"entity_extraction_strategy"`
+	CreatedAt                time.Time `json:"created_at"`
+	UpdatedAt                time.Time `json:"updated_at"`
 	// Tenant info (populated for instance admin cross-tenant queries)
 	TenantID   *string `json:"tenant_id,omitempty"`
 	TenantName *string `json:"tenant_name,omitempty"`
@@ -307,9 +312,12 @@ type CreateKnowledgeBaseRequest struct {
 	ChunkSize           int           `json:"chunk_size,omitempty"`
 	ChunkOverlap        int           `json:"chunk_overlap,omitempty"`
 	ChunkStrategy       string        `json:"chunk_strategy,omitempty"`
-	// EntityExtractionEnabled toggles the rule-based entity extractor for this KB.
+	// EntityExtractionEnabled toggles the entity extractor for this KB.
 	// nil = use default (true); explicit true/false respected.
 	EntityExtractionEnabled *bool `json:"entity_extraction_enabled,omitempty"`
+	// EntityExtractionStrategy selects the extractor: "rules", "llm", or
+	// "hybrid". Empty inherits the global ai.entity_extraction_strategy.
+	EntityExtractionStrategy string `json:"entity_extraction_strategy,omitempty"`
 	// InitialPermissions grants permissions to users upon creation
 	InitialPermissions []KBInitialPermission `json:"initial_permissions,omitempty"`
 	// OwnerID is set internally by the handler, not exposed in the API
@@ -324,16 +332,17 @@ type KBInitialPermission struct {
 
 // UpdateKnowledgeBaseRequest is the request to update a knowledge base
 type UpdateKnowledgeBaseRequest struct {
-	Name                    *string       `json:"name,omitempty"`
-	Description             *string       `json:"description,omitempty"`
-	Visibility              *KBVisibility `json:"visibility,omitempty"`
-	EmbeddingModel          *string       `json:"embedding_model,omitempty"`
-	EmbeddingDimensions     *int          `json:"embedding_dimensions,omitempty"`
-	ChunkSize               *int          `json:"chunk_size,omitempty"`
-	ChunkOverlap            *int          `json:"chunk_overlap,omitempty"`
-	ChunkStrategy           *string       `json:"chunk_strategy,omitempty"`
-	Enabled                 *bool         `json:"enabled,omitempty"`
-	EntityExtractionEnabled *bool         `json:"entity_extraction_enabled,omitempty"`
+	Name                     *string       `json:"name,omitempty"`
+	Description              *string       `json:"description,omitempty"`
+	Visibility               *KBVisibility `json:"visibility,omitempty"`
+	EmbeddingModel           *string       `json:"embedding_model,omitempty"`
+	EmbeddingDimensions      *int          `json:"embedding_dimensions,omitempty"`
+	ChunkSize                *int          `json:"chunk_size,omitempty"`
+	ChunkOverlap             *int          `json:"chunk_overlap,omitempty"`
+	ChunkStrategy            *string       `json:"chunk_strategy,omitempty"`
+	Enabled                  *bool         `json:"enabled,omitempty"`
+	EntityExtractionEnabled  *bool         `json:"entity_extraction_enabled,omitempty"`
+	EntityExtractionStrategy *string       `json:"entity_extraction_strategy,omitempty"`
 }
 
 // CreateDocumentRequest is the request to add a document to a knowledge base

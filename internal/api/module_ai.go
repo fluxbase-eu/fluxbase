@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -144,8 +145,37 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 
 		quotaService := ai.NewQuotaService(kbStorage)
 
-		entityExtractor := ai.NewRuleBasedExtractor()
-		log.Info().Msg("Entity extractor initialized")
+		// Entity extraction: strategy dispatch (rules/llm/hybrid) per KB.
+		// The LLM extractor resolves the effective default provider at
+		// extraction time so admin provider changes apply without a restart.
+		ruleExtractor := ai.NewRuleBasedExtractor()
+		var entityExtractor ai.EntityExtractor = ruleExtractor
+		strategy := strings.ToLower(strings.TrimSpace(cfg.AI.EntityExtractionStrategy))
+		if strategy == "" {
+			strategy = ai.ExtractionStrategyRules
+		}
+		extractionLLM := ai.NewLLMExtractor(ai.LLMExtractorConfig{
+			Resolve: func(ctx context.Context) (ai.Provider, error) {
+				record, err := aiStorage.GetEffectiveDefaultProvider(ctx)
+				if err != nil {
+					return nil, err
+				}
+				if record == nil {
+					return nil, nil
+				}
+				return ai.NewProvider(ai.ProviderConfig{
+					Name:        record.Name,
+					DisplayName: record.DisplayName,
+					Type:        ai.ProviderType(record.ProviderType),
+					Config:      record.Config,
+				})
+			},
+			MaxTokens:    cfg.AI.EntityExtractionMaxTokens,
+			MinTextChars: cfg.AI.EntityExtractionMinTextChars,
+			Timeout:      cfg.AI.EntityExtractionTimeout,
+		})
+		entityExtractor = ai.NewStrategyEntityExtractor(ruleExtractor, extractionLLM, kbStorage, strategy)
+		log.Info().Str("default_strategy", strategy).Msg("Entity extractor initialized")
 
 		if vectorHandler != nil && vectorHandler.GetEmbeddingService() != nil {
 			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService(), entityExtractor, knowledgeGraph)
@@ -185,6 +215,7 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 			Bool("processing_enabled", docProcessor != nil).
 			Bool("ocr_enabled", ocrService != nil && ocrService.IsEnabled()).
 			Bool("entity_extraction_enabled", true).
+			Str("entity_extraction_strategy", strategy).
 			Bool("table_export_enabled", true).
 			Bool("sync_enabled", true).
 			Msg("Knowledge base handler initialized")
