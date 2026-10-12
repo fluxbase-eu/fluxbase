@@ -276,7 +276,9 @@ func (s *TokenBlacklistService) getUserRevocationTime(ctx context.Context, userI
 	}
 
 	// Cache miss or expired - query the database
-	// Look for the most recent entry matching `user:{userID}:all:*`
+	// Look for the most recent entry matching `user:{userID}:all:*`. The
+	// wildcard must be LIKE's `%` — a literal `*` never matches, which made
+	// user-wide revocation silently ineffective.
 	var revokedAt time.Time
 	query := `
 		SELECT created_at
@@ -285,7 +287,7 @@ func (s *TokenBlacklistService) getUserRevocationTime(ctx context.Context, userI
 		ORDER BY created_at DESC
 		LIMIT 1
 	`
-	pattern := "user:" + userID + ":all:*"
+	pattern := "user:" + userID + ":all:%"
 
 	err := database.WrapWithServiceRole(ctx, s.repo.db, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, query, pattern).Scan(&revokedAt)

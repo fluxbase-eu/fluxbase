@@ -1558,8 +1558,14 @@ func (tc *TestContext) getSuperuserPool(ctx context.Context) (*pgxpool.Pool, err
 		return tc.superuserPool, nil
 	}
 
-	connStr := fmt.Sprintf("host=%s port=%d user=postgres password=postgres dbname=%s sslmode=disable pool_max_conns=2",
-		tc.Config.Database.Host, tc.Config.Database.Port, tc.Config.Database.Database)
+	// Honor the admin credentials used by the rest of the harness so local
+	// runs against a non-default superuser work; CI sets these to
+	// postgres/postgres, matching the previous hardcoded values.
+	superuser := getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_USER", "postgres")
+	superuserPassword := getEnvOrDefault("FLUXBASE_DATABASE_ADMIN_PASSWORD", "postgres")
+
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable pool_max_conns=2",
+		tc.Config.Database.Host, tc.Config.Database.Port, superuser, superuserPassword, tc.Config.Database.Database)
 
 	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {

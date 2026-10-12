@@ -834,8 +834,8 @@ jobs:
             sleep 1
           done
 
-      - name: Run integration e2e tests with coverage (full suite)
-        timeout-minutes: 15
+      - name: Run integration e2e + internal/auth tests with coverage
+        timeout-minutes: 25
         env:
           FLUXBASE_DATABASE_HOST: localhost
           FLUXBASE_DATABASE_PORT: 5432
@@ -852,7 +852,10 @@ jobs:
           FLUXBASE_STORAGE_S3_BUCKET: fluxbase-test
           FLUXBASE_SECURITY_SETUP_TOKEN: test-setup-token-e2e-ci
         run: |
-          go test -tags=integration -v -race -parallel=1 -timeout=10m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/...
+          # -p 1 runs the two package binaries sequentially: the e2e suite's
+          # TestMain resets the shared database schema, which must not race
+          # with the internal/auth tests bootstrapping/provisioning it.
+          go test -tags=integration -v -race -parallel=1 -p 1 -timeout=15m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/... ./internal/auth/...
 
 
   # ===========================================================================

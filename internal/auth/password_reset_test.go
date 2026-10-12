@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -336,8 +337,11 @@ func TestPasswordResetService_RequestPasswordReset_InvalidRedirectURL(t *testing
 	}
 }
 
-// mockPasswordResetEmailSender implements EmailService for testing
+// mockPasswordResetEmailSender implements EmailService for testing.
+// The mutex keeps field writes race-free when tests fire concurrent
+// RequestPasswordReset calls (e.g. TestPasswordWorkflow_ConcurrentRequests).
 type mockPasswordResetEmailSender struct {
+	mu        sync.Mutex
 	sentTo    string
 	sentToken string
 	sentLink  string
@@ -345,6 +349,8 @@ type mockPasswordResetEmailSender struct {
 }
 
 func (m *mockPasswordResetEmailSender) SendPasswordReset(ctx context.Context, to, token, link string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.sentTo = to
 	m.sentToken = token
 	m.sentLink = link

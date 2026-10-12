@@ -234,23 +234,20 @@ func (s *Storage) ListSecrets(ctx context.Context, scope *string, namespace *str
 	return secrets, nil
 }
 
-// UpdateSecret updates a secret's value (increments version and stores history)
-func (s *Storage) UpdateSecret(ctx context.Context, id uuid.UUID, plainValue *string, description *string, expiresAt *time.Time, userID *uuid.UUID) error {
-	tenantID := database.TenantFromContext(ctx)
-
-	// Start with base updates
+// buildUpdateQuery assembles the dynamic UPDATE statement and positional
+// arguments for UpdateSecret. Bindings are ordered: $1 = secret ID, $2 =
+// acting user, then the optional encrypted value, description and expiry
+// bindings in that order, with the tenant filter binding always last. The
+// value is bound only when encryptedValue is non-nil, which is also the only
+// case that bumps version.
+func buildUpdateQuery(secretID uuid.UUID, userID *uuid.UUID, encryptedValue, description *string, expiresAt *time.Time, tenantID string) (string, []interface{}) {
 	updates := "updated_at = NOW(), updated_by = $2"
-	args := []interface{}{id, userID}
+	args := []interface{}{secretID, userID}
 	argIdx := 3
 
-	// Handle value update with encryption
-	if plainValue != nil {
-		encryptedValue, err := crypto.EncryptWithBytesKey(*plainValue, s.encryptionKey)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt secret value: %w", err)
-		}
+	if encryptedValue != nil {
 		updates += fmt.Sprintf(", encrypted_value = $%d, version = version + 1", argIdx)
-		args = append(args, encryptedValue)
+		args = append(args, *encryptedValue)
 		argIdx++
 	}
 
@@ -277,10 +274,29 @@ func (s *Storage) UpdateSecret(ctx context.Context, id uuid.UUID, plainValue *st
 		RETURNING version, encrypted_value
 	`, updates, tenantFilter)
 
+	return query, args
+}
+
+// UpdateSecret updates a secret's value (increments version and stores history)
+func (s *Storage) UpdateSecret(ctx context.Context, id uuid.UUID, plainValue *string, description *string, expiresAt *time.Time, userID *uuid.UUID) error {
+	tenantID := database.TenantFromContext(ctx)
+
+	var encryptedValue *string
+	if plainValue != nil {
+		// Encrypt the value before storage
+		encrypted, err := crypto.EncryptWithBytesKey(*plainValue, s.encryptionKey)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt secret value: %w", err)
+		}
+		encryptedValue = &encrypted
+	}
+
+	query, args := buildUpdateQuery(id, userID, encryptedValue, description, expiresAt, tenantID)
+
 	var newVersion int
-	var encryptedValue string
+	var encryptedReturnValue string
 	err := database.WrapWithServiceRoleAndTenant(ctx, s.db, tenantID, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, query, args...).Scan(&newVersion, &encryptedValue)
+		return tx.QueryRow(ctx, query, args...).Scan(&newVersion, &encryptedReturnValue)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update secret: %w", err)
@@ -288,7 +304,7 @@ func (s *Storage) UpdateSecret(ctx context.Context, id uuid.UUID, plainValue *st
 
 	// Store new version in history (only if value was updated)
 	if plainValue != nil {
-		if err := s.storeVersion(ctx, id, newVersion, encryptedValue, userID); err != nil {
+		if err := s.storeVersion(ctx, id, newVersion, encryptedReturnValue, userID); err != nil {
 			log.Debug().Err(err).Str("secret_id", id.String()).Msg("Failed to store secret version")
 		}
 	}
