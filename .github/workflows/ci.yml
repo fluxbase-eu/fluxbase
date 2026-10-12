@@ -1075,8 +1075,11 @@ jobs:
 
           GOGC=50 /tmp/fluxbase-contract-drift >> /tmp/fluxbase-contract-drift.log 2>&1 &
 
-          # Wait for the server to be ready (health check + bootstrap complete)
-          for i in $(seq 1 60); do
+          # Wait for the server to be ready (health check + bootstrap complete).
+          # A fresh boot applies the declarative schema before the listener
+          # starts; on hosted runners this can take a few minutes (the
+          # docker-smoke job documents the same 300s /health window).
+          for i in $(seq 1 150); do
             if curl -sf http://localhost:8082/health > /dev/null 2>&1; then
               SETUP_STATUS=$(curl -sf http://localhost:8082/api/v1/admin/setup/status 2>/dev/null || echo "")
               if echo "$SETUP_STATUS" | grep -q '"needs_setup"'; then
@@ -1085,8 +1088,8 @@ jobs:
               fi
               echo "Health OK, waiting for bootstrap to finish..."
             fi
-            if [ "$i" -eq 60 ]; then
-              echo "Backend failed to start within 120s"
+            if [ "$i" -eq 150 ]; then
+              echo "Backend failed to start within 300s"
               cat /tmp/fluxbase-contract-drift.log
               exit 1
             fi
@@ -1097,14 +1100,26 @@ jobs:
         env:
           SETUP_TOKEN: contract-drift-ci-setup-token-32-chars
         run: |
-          TOKEN=$(curl -sf -X POST http://localhost:8082/api/v1/admin/setup \
-            -H "Content-Type: application/json" \
-            -d '{"setup_token":"'"$SETUP_TOKEN"'","email":"ci-drift@example.com","password":"CiDrift!2026x","name":"CI Drift"}' \
-            | jq -r '.access_token')
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Failed to obtain admin token from /api/v1/admin/setup"
-            exit 1
-          fi
+          # A successful setup writes to platform.users and system settings,
+          # so it doubles as proof the boot migrations finished. Retry to stay
+          # robust against a health/step race right at the end of the boot.
+          TOKEN=""
+          for attempt in $(seq 1 6); do
+            TOKEN=$(curl -sf -X POST http://localhost:8082/api/v1/admin/setup \
+              -H "Content-Type: application/json" \
+              -d '{"setup_token":"'"$SETUP_TOKEN"'","email":"ci-drift@example.com","password":"CiDrift!2026x","name":"CI Drift"}' \
+              | jq -r '.access_token // empty') || true
+            if [ -n "$TOKEN" ]; then
+              echo "Setup succeeded (attempt $attempt)"
+              break
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "Failed to obtain admin token from /api/v1/admin/setup"
+              exit 1
+            fi
+            echo "Setup attempt $attempt failed; retrying in 5s"
+            sleep 5
+          done
           echo "CONTRACT_DRIFT_TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
       - name: Check contract drift
