@@ -89,7 +89,7 @@ function StorageBrowser() {
       if (error) throw error;
       setBuckets(data?.buckets || []);
       if (data?.buckets && data.buckets.length > 0) {
-        setSelectedBucket((prev) => prev || data.buckets[0].name);
+        setSelectedBucket((prev) => prev || data.buckets[0]?.name || "");
       }
     } catch (error: unknown) {
       const errorMessage =
@@ -493,7 +493,7 @@ function StorageBrowser() {
       '"': "&quot;",
       "'": "&#39;",
     };
-    return text.replace(/[&<>"']/g, (char) => htmlEntities[char]);
+    return text.replace(/[&<>"']/g, (char) => htmlEntities[char] ?? char);
   };
 
   const formatJson = (text: string) => {

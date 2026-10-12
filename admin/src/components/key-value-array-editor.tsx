@@ -37,10 +37,14 @@ export function KeyValueArrayEditor({
   }
 
   const handleRemove = (claimKey: string, valueIndex: number) => {
+    const current = value[claimKey]
+    if (!current) return
+    const next = current.filter((_, i) => i !== valueIndex)
     const newValue = { ...value }
-    newValue[claimKey] = newValue[claimKey].filter((_, i) => i !== valueIndex)
-    if (newValue[claimKey].length === 0) {
+    if (next.length === 0) {
       delete newValue[claimKey]
+    } else {
+      newValue[claimKey] = next
     }
     onChange(newValue)
   }

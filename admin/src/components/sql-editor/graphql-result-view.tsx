@@ -58,7 +58,7 @@ export function GraphQLResultView({
               className="bg-destructive/10 text-destructive rounded-md p-3 text-sm"
             >
               <div className="font-medium">{error.message}</div>
-              {error.locations && error.locations.length > 0 && (
+              {error.locations && error.locations[0] && (
                 <div className="text-destructive/80 mt-1 text-xs">
                   Location: Line {error.locations[0].line}, Column{" "}
                   {error.locations[0].column}

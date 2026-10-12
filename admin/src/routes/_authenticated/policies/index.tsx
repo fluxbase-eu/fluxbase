@@ -585,13 +585,15 @@ function PoliciesPage() {
           onApply={() => {
             if (templateDialog.template && templateDialog.selectedTable) {
               const [schema, table] = templateDialog.selectedTable.split(".");
-              setPolicyModal({ open: true, schema, table });
-              setCreateDialogOpen(true);
-              setTemplateDialog({
-                open: false,
-                template: null,
-                selectedTable: "",
-              });
+              if (schema && table) {
+                setPolicyModal({ open: true, schema, table });
+                setCreateDialogOpen(true);
+                setTemplateDialog({
+                  open: false,
+                  template: null,
+                  selectedTable: "",
+                });
+              }
             }
           }}
         />

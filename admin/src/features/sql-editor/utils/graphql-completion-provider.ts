@@ -179,13 +179,13 @@ function getGraphQLContext(
   const lineText = model.getLineContent(position.lineNumber)
   const textBefore = lineText.substring(0, position.column - 1).trim()
   const wordMatch = textBefore.match(/(\w+)\s*$/)
-  const wordBefore = wordMatch ? wordMatch[1] : ''
+  const wordBefore = wordMatch?.[1] ?? ''
 
   // Try to determine current type context
   let currentType: string | null = null
   const typeMatch = textBeforeCursor.match(/(\w+)\s*\{[^{}]*$/i)
   if (typeMatch) {
-    currentType = typeMatch[1]
+    currentType = typeMatch[1] ?? null
   }
 
   return {

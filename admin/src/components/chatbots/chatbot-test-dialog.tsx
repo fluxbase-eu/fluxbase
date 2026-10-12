@@ -152,11 +152,12 @@ const QueryResultDisplay = memo(function QueryResultDisplay({
           <Table>
             <TableHeader>
               <TableRow>
-                {Object.keys(result.data[0]).map((key) => (
-                  <TableHead key={key} className='px-2 py-1 text-xs'>
-                    {key}
-                  </TableHead>
-                ))}
+                {result.data[0] &&
+                  Object.keys(result.data[0]).map((key) => (
+                    <TableHead key={key} className='px-2 py-1 text-xs'>
+                      {key}
+                    </TableHead>
+                  ))}
               </TableRow>
             </TableHeader>
             <TableBody>

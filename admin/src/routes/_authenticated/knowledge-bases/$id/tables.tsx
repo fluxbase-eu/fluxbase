@@ -231,6 +231,7 @@ function KnowledgeBaseTablesPage() {
 
     for (let i = 0; i < tablesToExport.length; i++) {
       const table = tablesToExport[i]
+      if (!table) continue
       setExportAllState((prev) => ({ ...prev, current: i }))
       try {
         await knowledgeBasesApi.exportTable(id, {
