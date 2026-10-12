@@ -14,6 +14,7 @@ func setDefaults() {
 	viper.SetDefault("server.body_limit", 2*1024*1024*1024)  // 2GB
 	viper.SetDefault("server.allowed_ip_ranges", []string{}) // Empty = allow all (backward compatible)
 	viper.SetDefault("server.trusted_proxies", []string{})   // Empty = trust no proxies (most secure)
+	viper.SetDefault("server.debug_pprof", false)            // /debug/pprof off by default; opt-in for operators
 
 	// Per-endpoint body limits (more granular than global body_limit)
 	viper.SetDefault("server.body_limits.enabled", true)

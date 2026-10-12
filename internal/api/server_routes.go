@@ -16,6 +16,8 @@ func (s *Server) setupRoutes() {
 
 	s.app.Get("/api-docs", HandleScalarAPIReference)
 
+	s.registerDebugPprofRoutes()
+
 	if s.config.Admin.Enabled {
 		if s.config.Security.SetupToken == "" {
 			log.Error().Msg("Admin UI is enabled but FLUXBASE_SECURITY_SETUP_TOKEN is not set. Admin UI will not be registered for security reasons.")

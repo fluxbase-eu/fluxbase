@@ -1,6 +1,11 @@
 # Lychee link checker configuration
 # https://lychee.cli.rs/configuration/
 
+# Retry transient failures (e.g. GitHub blob URLs intermittently returning
+# 503) instead of failing the docs link check on one bad response.
+max_retries = 3
+retry_wait_time = 2
+
 # Root directory for resolving root-relative links in local files
 # Note: In CI, this is overridden with an absolute path via --root-dir
 # For local use, run from the repo root: lychee --root-dir $(pwd)/docs/dist docs/dist
