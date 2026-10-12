@@ -22,10 +22,19 @@ import (
 
 func TestNewLoggingHandler(t *testing.T) {
 	t.Run("creates handler with nil service", func(t *testing.T) {
-		handler := NewLoggingHandler(nil)
+		handler := NewLoggingHandler(nil, nil)
 
 		require.NotNil(t, handler)
 		assert.Nil(t, handler.loggingService)
+	})
+
+	t.Run("stores the execution tenant resolver", func(t *testing.T) {
+		resolver := &fakeExecutionTenantResolver{}
+		handler := NewLoggingHandler(nil, resolver)
+
+		require.NotNil(t, handler)
+		assert.Nil(t, handler.loggingService)
+		assert.Equal(t, resolver, handler.executions)
 	})
 }
 
