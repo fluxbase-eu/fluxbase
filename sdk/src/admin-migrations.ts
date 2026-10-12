@@ -4,14 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  Migration,
-  CreateMigrationRequest,
-  UpdateMigrationRequest,
-  MigrationExecution,
-  SyncMigrationsOptions,
-  SyncMigrationsResult,
-} from "./types";
+import type { CreateMigrationRequest, FluxbaseError, Migration, MigrationExecution, SyncMigrationsOptions, SyncMigrationsResult, UpdateMigrationRequest } from "./types";
 
 /**
  * Admin Migrations manager for database migration operations
@@ -58,7 +51,7 @@ export class FluxbaseAdminMigrations {
    * await client.admin.migrations.sync()
    * ```
    */
-  register(migration: CreateMigrationRequest): { error: Error | null } {
+  register(migration: CreateMigrationRequest): { error: FluxbaseError | null } {
     try {
       // Basic validation
       if (!migration.name || !migration.up_sql) {
@@ -72,7 +65,7 @@ export class FluxbaseAdminMigrations {
 
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -128,7 +121,7 @@ export class FluxbaseAdminMigrations {
    */
   async sync(
     options: Partial<SyncMigrationsOptions> = {}
-  ): Promise<{ data: SyncMigrationsResult | null; error: Error | null }> {
+  ): Promise<{ data: SyncMigrationsResult | null; error: FluxbaseError | null }> {
     try {
       // Group migrations by namespace
       const byNamespace = new Map<string, CreateMigrationRequest[]>();
@@ -228,7 +221,7 @@ export class FluxbaseAdminMigrations {
 
       return { data: combined, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -251,7 +244,7 @@ export class FluxbaseAdminMigrations {
    */
   async create(
     request: CreateMigrationRequest
-  ): Promise<{ data: Migration | null; error: Error | null }> {
+  ): Promise<{ data: Migration | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<Migration>(
         "/api/v1/admin/migrations",
@@ -259,7 +252,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -282,7 +275,7 @@ export class FluxbaseAdminMigrations {
   async list(
     namespace: string = "default",
     status?: "pending" | "applied" | "failed" | "rolled_back"
-  ): Promise<{ data: Migration[] | null; error: Error | null }> {
+  ): Promise<{ data: Migration[] | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams({ namespace });
       if (status) params.append("status", status);
@@ -292,7 +285,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -311,7 +304,7 @@ export class FluxbaseAdminMigrations {
   async get(
     name: string,
     namespace: string = "default"
-  ): Promise<{ data: Migration | null; error: Error | null }> {
+  ): Promise<{ data: Migration | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams({ namespace });
       const data = await this.fetch.get<Migration>(
@@ -319,7 +312,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -344,7 +337,7 @@ export class FluxbaseAdminMigrations {
     name: string,
     updates: UpdateMigrationRequest,
     namespace: string = "default"
-  ): Promise<{ data: Migration | null; error: Error | null }> {
+  ): Promise<{ data: Migration | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams({ namespace });
       const data = await this.fetch.put<Migration>(
@@ -353,7 +346,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -372,7 +365,7 @@ export class FluxbaseAdminMigrations {
   async delete(
     name: string,
     namespace: string = "default"
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams({ namespace });
       await this.fetch.delete(
@@ -380,7 +373,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -402,7 +395,7 @@ export class FluxbaseAdminMigrations {
   async apply(
     name: string,
     namespace: string = "default"
-  ): Promise<{ data: { message: string } | null; error: Error | null }> {
+  ): Promise<{ data: { message: string } | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<{ message: string }>(
         `/api/v1/admin/migrations/${name}/apply`,
@@ -410,7 +403,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -429,7 +422,7 @@ export class FluxbaseAdminMigrations {
   async rollback(
     name: string,
     namespace: string = "default"
-  ): Promise<{ data: { message: string } | null; error: Error | null }> {
+  ): Promise<{ data: { message: string } | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<{ message: string }>(
         `/api/v1/admin/migrations/${name}/rollback`,
@@ -437,7 +430,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -457,7 +450,7 @@ export class FluxbaseAdminMigrations {
    */
   async applyPending(namespace: string = "default"): Promise<{
     data: { message: string; applied: string[]; failed: string[] } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.post<{
@@ -467,7 +460,7 @@ export class FluxbaseAdminMigrations {
       }>("/api/v1/admin/migrations/apply-pending", { namespace });
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -497,7 +490,7 @@ export class FluxbaseAdminMigrations {
     name: string,
     namespace: string = "default",
     limit: number = 50
-  ): Promise<{ data: MigrationExecution[] | null; error: Error | null }> {
+  ): Promise<{ data: MigrationExecution[] | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams({
         namespace,
@@ -508,7 +501,7 @@ export class FluxbaseAdminMigrations {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

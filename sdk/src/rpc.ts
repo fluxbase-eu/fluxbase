@@ -2,12 +2,7 @@
  * RPC (Remote Procedure Call) module for invoking SQL-based procedures
  */
 
-import type {
-  RPCProcedureSummary,
-  RPCExecution,
-  RPCInvokeResponse,
-  RPCExecutionLog,
-} from "./types";
+import type { FluxbaseError, RPCExecution, RPCExecutionLog, RPCInvokeResponse, RPCProcedureSummary } from "./types";
 
 /**
  * Options for invoking an RPC procedure
@@ -68,7 +63,7 @@ export class FluxbaseRPC {
    */
   async list(namespace?: string): Promise<{
     data: RPCProcedureSummary[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const params = namespace
@@ -80,7 +75,7 @@ export class FluxbaseRPC {
       }>(`/api/v1/rpc/procedures${params}`);
       return { data: response.procedures || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -112,7 +107,7 @@ export class FluxbaseRPC {
     name: string,
     params?: Record<string, unknown>,
     options?: RPCInvokeOptions,
-  ): Promise<{ data: RPCInvokeResponse<T> | null; error: Error | null }> {
+  ): Promise<{ data: RPCInvokeResponse<T> | null; error: FluxbaseError | null }> {
     try {
       const namespace = options?.namespace || "default";
       const response = await this.fetch.post<RPCInvokeResponse<T>>(
@@ -125,7 +120,7 @@ export class FluxbaseRPC {
       );
       return { data: response, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -147,7 +142,7 @@ export class FluxbaseRPC {
    */
   async getStatus(executionId: string): Promise<{
     data: RPCExecution | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.get<RPCExecution>(
@@ -155,7 +150,7 @@ export class FluxbaseRPC {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -177,7 +172,7 @@ export class FluxbaseRPC {
   async getLogs(
     executionId: string,
     afterLine?: number,
-  ): Promise<{ data: RPCExecutionLog[] | null; error: Error | null }> {
+  ): Promise<{ data: RPCExecutionLog[] | null; error: FluxbaseError | null }> {
     try {
       const params = afterLine !== undefined ? `?after=${afterLine}` : "";
       const response = await this.fetch.get<{
@@ -188,7 +183,7 @@ export class FluxbaseRPC {
       );
       return { data: response.logs || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -221,7 +216,7 @@ export class FluxbaseRPC {
       /** Callback for progress updates */
       onProgress?: (execution: RPCExecution) => void;
     },
-  ): Promise<{ data: RPCExecution | null; error: Error | null }> {
+  ): Promise<{ data: RPCExecution | null; error: FluxbaseError | null }> {
     const maxWait = options?.maxWaitMs || 30000;
     const initialInterval = options?.initialIntervalMs || 500;
     const maxInterval = options?.maxIntervalMs || 5000;

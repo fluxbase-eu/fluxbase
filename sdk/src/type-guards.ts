@@ -4,6 +4,7 @@
  */
 
 import type {
+  FluxbaseError,
   FluxbaseResponse,
   FluxbaseAuthResponse,
   PostgrestResponse,
@@ -26,7 +27,7 @@ import type {
  * const result = await client.auth.signIn(credentials)
  *
  * if (isFluxbaseError(result)) {
- *   // TypeScript knows: result.error is Error, result.data is null
+ *   // TypeScript knows: result.error is FluxbaseError, result.data is null
  *   console.error('Sign in failed:', result.error.message)
  *   return
  * }
@@ -37,7 +38,7 @@ import type {
  */
 export function isFluxbaseError<T>(
   response: FluxbaseResponse<T>
-): response is { data: null; error: Error } {
+): response is { data: null; error: FluxbaseError } {
   return response.error !== null
 }
 
@@ -88,7 +89,7 @@ export function isFluxbaseSuccess<T>(
  */
 export function isAuthError(
   response: FluxbaseAuthResponse
-): response is { data: null; error: Error } {
+): response is { data: null; error: FluxbaseError } {
   return response.error !== null
 }
 

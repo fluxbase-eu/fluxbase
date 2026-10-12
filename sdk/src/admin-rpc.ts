@@ -4,16 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  RPCProcedure,
-  RPCProcedureSummary,
-  RPCExecution,
-  RPCExecutionLog,
-  SyncRPCOptions,
-  SyncRPCResult,
-  UpdateRPCProcedureRequest,
-  RPCExecutionFilters,
-} from "./types";
+import type { FluxbaseError, RPCExecution, RPCExecutionFilters, RPCExecutionLog, RPCProcedure, RPCProcedureSummary, SyncRPCOptions, SyncRPCResult, UpdateRPCProcedureRequest } from "./types";
 
 /**
  * Admin RPC manager for managing RPC procedures
@@ -69,7 +60,7 @@ export class FluxbaseAdminRPC {
    */
   async sync(
     options?: SyncRPCOptions,
-  ): Promise<{ data: SyncRPCResult | null; error: Error | null }> {
+  ): Promise<{ data: SyncRPCResult | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<SyncRPCResult>(
         "/api/v1/admin/rpc/sync",
@@ -84,7 +75,7 @@ export class FluxbaseAdminRPC {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -104,7 +95,7 @@ export class FluxbaseAdminRPC {
    */
   async list(
     namespace?: string,
-  ): Promise<{ data: RPCProcedureSummary[] | null; error: Error | null }> {
+  ): Promise<{ data: RPCProcedureSummary[] | null; error: FluxbaseError | null }> {
     try {
       const params = namespace ? `?namespace=${encodeURIComponent(namespace)}` : "";
       const response = await this.fetch.get<{ procedures: RPCProcedureSummary[]; count: number }>(
@@ -112,7 +103,7 @@ export class FluxbaseAdminRPC {
       );
       return { data: response.procedures || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -129,14 +120,14 @@ export class FluxbaseAdminRPC {
    * }
    * ```
    */
-  async listNamespaces(): Promise<{ data: string[] | null; error: Error | null }> {
+  async listNamespaces(): Promise<{ data: string[] | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.get<{ namespaces: string[] }>(
         "/api/v1/admin/rpc/namespaces",
       );
       return { data: response.namespaces || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -159,14 +150,14 @@ export class FluxbaseAdminRPC {
   async get(
     namespace: string,
     name: string,
-  ): Promise<{ data: RPCProcedure | null; error: Error | null }> {
+  ): Promise<{ data: RPCProcedure | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<RPCProcedure>(
         `/api/v1/admin/rpc/procedures/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -190,7 +181,7 @@ export class FluxbaseAdminRPC {
     namespace: string,
     name: string,
     updates: UpdateRPCProcedureRequest,
-  ): Promise<{ data: RPCProcedure | null; error: Error | null }> {
+  ): Promise<{ data: RPCProcedure | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<RPCProcedure>(
         `/api/v1/admin/rpc/procedures/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`,
@@ -198,7 +189,7 @@ export class FluxbaseAdminRPC {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -219,7 +210,7 @@ export class FluxbaseAdminRPC {
     namespace: string,
     name: string,
     enabled: boolean,
-  ): Promise<{ data: RPCProcedure | null; error: Error | null }> {
+  ): Promise<{ data: RPCProcedure | null; error: FluxbaseError | null }> {
     return this.update(namespace, name, { enabled });
   }
 
@@ -238,14 +229,14 @@ export class FluxbaseAdminRPC {
   async delete(
     namespace: string,
     name: string,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(
         `/api/v1/admin/rpc/procedures/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`,
       );
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -274,7 +265,7 @@ export class FluxbaseAdminRPC {
    */
   async listExecutions(
     filters?: RPCExecutionFilters,
-  ): Promise<{ data: RPCExecution[] | null; error: Error | null }> {
+  ): Promise<{ data: RPCExecution[] | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams();
       if (filters?.namespace) params.set("namespace", filters.namespace);
@@ -292,7 +283,7 @@ export class FluxbaseAdminRPC {
       const response = await this.fetch.get<{ executions: RPCExecution[]; count: number }>(path);
       return { data: response.executions || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -313,14 +304,14 @@ export class FluxbaseAdminRPC {
    */
   async getExecution(
     executionId: string,
-  ): Promise<{ data: RPCExecution | null; error: Error | null }> {
+  ): Promise<{ data: RPCExecution | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<RPCExecution>(
         `/api/v1/admin/rpc/executions/${encodeURIComponent(executionId)}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -344,7 +335,7 @@ export class FluxbaseAdminRPC {
   async getExecutionLogs(
     executionId: string,
     afterLine?: number,
-  ): Promise<{ data: RPCExecutionLog[] | null; error: Error | null }> {
+  ): Promise<{ data: RPCExecutionLog[] | null; error: FluxbaseError | null }> {
     try {
       const params = afterLine !== undefined ? `?after=${afterLine}` : "";
       const response = await this.fetch.get<{ logs: RPCExecutionLog[]; count: number }>(
@@ -352,7 +343,7 @@ export class FluxbaseAdminRPC {
       );
       return { data: response.logs || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -369,7 +360,7 @@ export class FluxbaseAdminRPC {
    */
   async cancelExecution(
     executionId: string,
-  ): Promise<{ data: RPCExecution | null; error: Error | null }> {
+  ): Promise<{ data: RPCExecution | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<RPCExecution>(
         `/api/v1/admin/rpc/executions/${encodeURIComponent(executionId)}/cancel`,
@@ -377,7 +368,7 @@ export class FluxbaseAdminRPC {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

@@ -4,15 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  EdgeFunction,
-  CreateFunctionRequest,
-  UpdateFunctionRequest,
-  EdgeFunctionExecution,
-  SyncFunctionsOptions,
-  SyncFunctionsResult,
-  FunctionSpec,
-} from "./types";
+import type { CreateFunctionRequest, EdgeFunction, EdgeFunctionExecution, FluxbaseError, FunctionSpec, SyncFunctionsOptions, SyncFunctionsResult, UpdateFunctionRequest } from "./types";
 import {
   bundleCode,
   loadEsbuild,
@@ -56,7 +48,7 @@ export class FluxbaseAdminFunctions {
    */
   async create(
     request: CreateFunctionRequest,
-  ): Promise<{ data: EdgeFunction | null; error: Error | null }> {
+  ): Promise<{ data: EdgeFunction | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<EdgeFunction>(
         "/api/v1/functions",
@@ -64,7 +56,7 @@ export class FluxbaseAdminFunctions {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -83,7 +75,7 @@ export class FluxbaseAdminFunctions {
    */
   async listNamespaces(): Promise<{
     data: string[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const response = await this.fetch.get<{ namespaces: string[] }>(
@@ -91,7 +83,7 @@ export class FluxbaseAdminFunctions {
       );
       return { data: response.namespaces || ["default"], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -115,7 +107,7 @@ export class FluxbaseAdminFunctions {
    */
   async list(
     namespace?: string,
-  ): Promise<{ data: EdgeFunction[] | null; error: Error | null }> {
+  ): Promise<{ data: EdgeFunction[] | null; error: FluxbaseError | null }> {
     try {
       const params = namespace ? `?namespace=${namespace}` : "";
       const data = await this.fetch.get<EdgeFunction[]>(
@@ -123,7 +115,7 @@ export class FluxbaseAdminFunctions {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -143,14 +135,14 @@ export class FluxbaseAdminFunctions {
    */
   async get(
     name: string,
-  ): Promise<{ data: EdgeFunction | null; error: Error | null }> {
+  ): Promise<{ data: EdgeFunction | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<EdgeFunction>(
         `/api/v1/functions/${name}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -172,7 +164,7 @@ export class FluxbaseAdminFunctions {
   async update(
     name: string,
     updates: UpdateFunctionRequest,
-  ): Promise<{ data: EdgeFunction | null; error: Error | null }> {
+  ): Promise<{ data: EdgeFunction | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<EdgeFunction>(
         `/api/v1/functions/${name}`,
@@ -180,7 +172,7 @@ export class FluxbaseAdminFunctions {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -195,12 +187,12 @@ export class FluxbaseAdminFunctions {
    * const { data, error } = await client.admin.functions.delete('my-function')
    * ```
    */
-  async delete(name: string): Promise<{ data: null; error: Error | null }> {
+  async delete(name: string): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(`/api/v1/functions/${name}`);
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -224,7 +216,7 @@ export class FluxbaseAdminFunctions {
   async getExecutions(
     name: string,
     limit?: number,
-  ): Promise<{ data: EdgeFunctionExecution[] | null; error: Error | null }> {
+  ): Promise<{ data: EdgeFunctionExecution[] | null; error: FluxbaseError | null }> {
     try {
       const params = limit ? `?limit=${limit}` : "";
       const data = await this.fetch.get<EdgeFunctionExecution[]>(
@@ -232,7 +224,7 @@ export class FluxbaseAdminFunctions {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -285,7 +277,7 @@ export class FluxbaseAdminFunctions {
    */
   async sync(
     options: SyncFunctionsOptions,
-  ): Promise<{ data: SyncFunctionsResult | null; error: Error | null }> {
+  ): Promise<{ data: SyncFunctionsResult | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<SyncFunctionsResult>(
         "/api/v1/admin/functions/sync",
@@ -293,7 +285,7 @@ export class FluxbaseAdminFunctions {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -322,7 +314,7 @@ export class FluxbaseAdminFunctions {
   async syncWithBundling(
     options: SyncFunctionsOptions,
     bundleOptions?: Partial<BundleOptions>,
-  ): Promise<{ data: SyncFunctionsResult | null; error: Error | null }> {
+  ): Promise<{ data: SyncFunctionsResult | null; error: FluxbaseError | null }> {
     if (!options.functions || options.functions.length === 0) {
       return this.sync(options);
     }
@@ -373,7 +365,7 @@ export class FluxbaseAdminFunctions {
         functions: bundledFunctions,
       });
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 

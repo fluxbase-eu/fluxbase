@@ -3,26 +3,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  FileObject,
-  FileUploadResponse,
-  UploadOptions,
-  UploadProgress,
-  StreamUploadOptions,
-  ListOptions,
-  SignedUrlOptions,
-  DownloadOptions,
-  StreamDownloadData,
-  ResumableDownloadOptions,
-  ResumableDownloadData,
-  ResumableUploadOptions,
-  ChunkedUploadSession,
-  ShareFileOptions,
-  FileShare,
-  BucketSettings,
-  Bucket,
-  TransformOptions,
-} from "./types";
+import type { Bucket, BucketSettings, ChunkedUploadSession, DownloadOptions, FileObject, FileShare, FileUploadResponse, FluxbaseError, ListOptions, ResumableDownloadData, ResumableDownloadOptions, ResumableUploadOptions, ShareFileOptions, SignedUrlOptions, StreamDownloadData, StreamUploadOptions, TransformOptions, UploadOptions, UploadProgress } from "./types";
 
 export class StorageBucket {
   private fetch: FluxbaseFetch;
@@ -45,7 +26,7 @@ export class StorageBucket {
     options?: UploadOptions,
   ): Promise<{
     data: { id: string; path: string; fullPath: string } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       // Prepare FormData (common to both code paths)
@@ -111,7 +92,7 @@ export class StorageBucket {
         error: null,
       };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -221,7 +202,7 @@ export class StorageBucket {
     options?: StreamUploadOptions,
   ): Promise<{
     data: { id: string; path: string; fullPath: string } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       if (size <= 0) {
@@ -310,7 +291,7 @@ export class StorageBucket {
         error: null,
       };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -339,7 +320,7 @@ export class StorageBucket {
     options?: StreamUploadOptions,
   ): Promise<{
     data: { id: string; path: string; fullPath: string } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     // Use file's type if contentType not specified
     const opts: StreamUploadOptions = {
@@ -368,21 +349,21 @@ export class StorageBucket {
    */
   async download(
     path: string,
-  ): Promise<{ data: Blob | null; error: Error | null }>;
+  ): Promise<{ data: Blob | null; error: FluxbaseError | null }>;
   async download(
     path: string,
     options: { stream: true; timeout?: number; signal?: AbortSignal },
-  ): Promise<{ data: StreamDownloadData | null; error: Error | null }>;
+  ): Promise<{ data: StreamDownloadData | null; error: FluxbaseError | null }>;
   async download(
     path: string,
     options: { stream?: false; timeout?: number; signal?: AbortSignal },
-  ): Promise<{ data: Blob | null; error: Error | null }>;
+  ): Promise<{ data: Blob | null; error: FluxbaseError | null }>;
   async download(
     path: string,
     options?: DownloadOptions,
   ): Promise<{
     data: Blob | StreamDownloadData | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const controller = new AbortController();
@@ -451,7 +432,7 @@ export class StorageBucket {
         throw err;
       }
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -485,7 +466,7 @@ export class StorageBucket {
   async downloadResumable(
     path: string,
     options?: ResumableDownloadOptions,
-  ): Promise<{ data: ResumableDownloadData | null; error: Error | null }> {
+  ): Promise<{ data: ResumableDownloadData | null; error: FluxbaseError | null }> {
     try {
       const chunkSize = options?.chunkSize ?? 5 * 1024 * 1024; // 5MB default
       const maxRetries = options?.maxRetries ?? 3;
@@ -675,7 +656,7 @@ export class StorageBucket {
         error: null,
       };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -715,7 +696,7 @@ export class StorageBucket {
     options?: ResumableUploadOptions,
   ): Promise<{
     data: { id: string; path: string; fullPath: string } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const chunkSize = options?.chunkSize ?? 5 * 1024 * 1024; // 5MB default
@@ -935,7 +916,7 @@ export class StorageBucket {
         error: null,
       };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -945,7 +926,7 @@ export class StorageBucket {
    */
   async abortResumableUpload(
     sessionId: string,
-  ): Promise<{ error: Error | null }> {
+  ): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.fetchWithAuthRefresh(
         `/api/v1/storage/${this.bucketName}/chunked/${sessionId}`,
@@ -956,7 +937,7 @@ export class StorageBucket {
 
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -966,7 +947,7 @@ export class StorageBucket {
    */
   async getResumableUploadStatus(
     sessionId: string,
-  ): Promise<{ data: ChunkedUploadSession | null; error: Error | null }> {
+  ): Promise<{ data: ChunkedUploadSession | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.fetchWithAuthRefresh(
         `/api/v1/storage/${this.bucketName}/chunked/${sessionId}/status`,
@@ -981,7 +962,7 @@ export class StorageBucket {
         error: null,
       };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -994,7 +975,7 @@ export class StorageBucket {
   async list(
     pathOrOptions?: string | ListOptions,
     maybeOptions?: ListOptions,
-  ): Promise<{ data: FileObject[] | null; error: Error | null }> {
+  ): Promise<{ data: FileObject[] | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams();
 
@@ -1064,7 +1045,7 @@ export class StorageBucket {
 
       return { data: files, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1074,7 +1055,7 @@ export class StorageBucket {
    */
   async remove(
     paths: string[],
-  ): Promise<{ data: FileObject[] | null; error: Error | null }> {
+  ): Promise<{ data: FileObject[] | null; error: FluxbaseError | null }> {
     try {
       const removedFiles: FileObject[] = [];
 
@@ -1090,7 +1071,7 @@ export class StorageBucket {
 
       return { data: removedFiles, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1104,7 +1085,7 @@ export class StorageBucket {
   async copy(
     fromPath: string,
     toPath: string,
-  ): Promise<{ data: unknown; error: Error | null }> {
+  ): Promise<{ data: unknown; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post(
         `/api/v1/storage/${this.bucketName}/copy`,
@@ -1112,7 +1093,7 @@ export class StorageBucket {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1126,7 +1107,7 @@ export class StorageBucket {
   async move(
     fromPath: string,
     toPath: string,
-  ): Promise<{ data: unknown; error: Error | null }> {
+  ): Promise<{ data: unknown; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post(
         `/api/v1/storage/${this.bucketName}/move`,
@@ -1134,7 +1115,7 @@ export class StorageBucket {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1237,7 +1218,7 @@ export class StorageBucket {
   async createSignedUrl(
     path: string,
     options?: SignedUrlOptions,
-  ): Promise<{ data: { signedUrl: string } | null; error: Error | null }> {
+  ): Promise<{ data: { signedUrl: string } | null; error: FluxbaseError | null }> {
     try {
       const expiresIn = options?.expiresIn || 3600; // Default 1 hour
 
@@ -1270,7 +1251,7 @@ export class StorageBucket {
 
       return { data: { signedUrl: data.signed_url }, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1282,7 +1263,7 @@ export class StorageBucket {
   async share(
     path: string,
     options: ShareFileOptions,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.post(
         `/api/v1/storage/${this.bucketName}/${path}/share`,
@@ -1294,7 +1275,7 @@ export class StorageBucket {
 
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1306,7 +1287,7 @@ export class StorageBucket {
   async revokeShare(
     path: string,
     userId: string,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(
         `/api/v1/storage/${this.bucketName}/${path}/share/${userId}`,
@@ -1314,7 +1295,7 @@ export class StorageBucket {
 
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1324,7 +1305,7 @@ export class StorageBucket {
    */
   async listShares(
     path: string,
-  ): Promise<{ data: FileShare[] | null; error: Error | null }> {
+  ): Promise<{ data: FileShare[] | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<{ shares: FileShare[] }>(
         `/api/v1/storage/${this.bucketName}/${path}/shares`,
@@ -1332,7 +1313,7 @@ export class StorageBucket {
 
       return { data: data.shares || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }
@@ -1357,7 +1338,7 @@ export class FluxbaseStorage {
    */
   async listBuckets(): Promise<{
     data: Array<{ name: string; created_at: string }> | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.get<{
@@ -1366,7 +1347,7 @@ export class FluxbaseStorage {
 
       return { data: data.buckets || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1376,12 +1357,12 @@ export class FluxbaseStorage {
    */
   async createBucket(
     bucketName: string,
-  ): Promise<{ data: { name: string } | null; error: Error | null }> {
+  ): Promise<{ data: { name: string } | null; error: FluxbaseError | null }> {
     try {
       await this.fetch.post(`/api/v1/storage/buckets/${bucketName}`);
       return { data: { name: bucketName }, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1391,12 +1372,12 @@ export class FluxbaseStorage {
    */
   async deleteBucket(
     bucketName: string,
-  ): Promise<{ data: { message: string } | null; error: Error | null }> {
+  ): Promise<{ data: { message: string } | null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(`/api/v1/storage/buckets/${bucketName}`);
       return { data: { message: "Successfully deleted" }, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1406,7 +1387,7 @@ export class FluxbaseStorage {
    */
   async emptyBucket(
     bucketName: string,
-  ): Promise<{ data: { message: string } | null; error: Error | null }> {
+  ): Promise<{ data: { message: string } | null; error: FluxbaseError | null }> {
     try {
       // List all files and delete them
       const bucket = this.from(bucketName);
@@ -1427,7 +1408,7 @@ export class FluxbaseStorage {
 
       return { data: { message: "Successfully emptied" }, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1439,12 +1420,12 @@ export class FluxbaseStorage {
   async updateBucketSettings(
     bucketName: string,
     settings: BucketSettings,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.put(`/api/v1/storage/buckets/${bucketName}`, settings);
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -1454,14 +1435,14 @@ export class FluxbaseStorage {
    */
   async getBucket(
     bucketName: string,
-  ): Promise<{ data: Bucket | null; error: Error | null }> {
+  ): Promise<{ data: Bucket | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<Bucket>(
         `/api/v1/storage/buckets/${bucketName}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

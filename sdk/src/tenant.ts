@@ -5,14 +5,7 @@
  * With database-per-tenant architecture, each tenant has its own isolated database.
  */
 import { FluxbaseFetch } from "./fetch";
-import type {
-  Tenant,
-  TenantAdminAssignment,
-  TenantWithRole,
-  CreateTenantOptions,
-  UpdateTenantOptions,
-  AssignAdminOptions,
-} from "./types";
+import type { AssignAdminOptions, CreateTenantOptions, FluxbaseError, Tenant, TenantAdminAssignment, TenantWithRole, UpdateTenantOptions } from "./types";
 
 import type { FluxbaseResponse } from "./types";
 
@@ -59,7 +52,7 @@ export class FluxbaseTenant {
       const data = await this.fetch.get<Tenant[]>("/api/v1/admin/tenants");
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -79,7 +72,7 @@ export class FluxbaseTenant {
       const data = await this.fetch.get<TenantWithRole[]>("/api/v1/admin/tenants/mine");
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -99,7 +92,7 @@ export class FluxbaseTenant {
       const data = await this.fetch.get<Tenant>(`/api/v1/admin/tenants/${id}`);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -127,7 +120,7 @@ export class FluxbaseTenant {
       const data = await this.fetch.post<Tenant>("/api/v1/admin/tenants", options);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -153,7 +146,7 @@ export class FluxbaseTenant {
       const data = await this.fetch.patch<Tenant>(`/api/v1/admin/tenants/${id}`, options);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -176,7 +169,7 @@ export class FluxbaseTenant {
       await this.fetch.delete(`/api/v1/admin/tenants/${id}`);
       return { data: undefined, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -200,7 +193,7 @@ export class FluxbaseTenant {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -225,7 +218,7 @@ export class FluxbaseTenant {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -254,7 +247,7 @@ export class FluxbaseTenant {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -278,7 +271,7 @@ export class FluxbaseTenant {
       await this.fetch.delete(`/api/v1/admin/tenants/${tenantId}/admins/${userId}`);
       return { data: undefined, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

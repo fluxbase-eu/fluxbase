@@ -1,4 +1,21 @@
-import type { FluxbaseResponse, VoidResponse } from '../types'
+import type { FluxbaseError, FluxbaseResponse, VoidResponse } from '../types'
+
+/**
+ * Normalize a thrown value into the FluxbaseError shape carried by response
+ * envelopes. Errors thrown by the SDK's fetch layer are already hydrated with
+ * `status` / `code` / `details` — they are returned as-is so that context is
+ * preserved. Plain Errors and non-Error throwables are wrapped in an Error
+ * carrying the FluxbaseError shape.
+ */
+function toFluxbaseError(error: unknown): FluxbaseError {
+  if (error instanceof Error) {
+    return error as FluxbaseError
+  }
+  const wrapped = new Error(
+    typeof error === 'string' ? error : JSON.stringify(error) || String(error)
+  ) as FluxbaseError
+  return wrapped
+}
 
 /**
  * Wraps an async operation with try-catch, returning Fluxbase response format
@@ -14,7 +31,7 @@ export async function wrapAsync<T>(
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error : new Error(String(error))
+      error: toFluxbaseError(error)
     }
   }
 }
@@ -32,7 +49,7 @@ export async function wrapAsyncVoid(
     return { error: null }
   } catch (error) {
     return {
-      error: error instanceof Error ? error : new Error(String(error))
+      error: toFluxbaseError(error)
     }
   }
 }
@@ -40,7 +57,7 @@ export async function wrapAsyncVoid(
 /**
  * Wraps synchronous operations (for consistency)
  * @param operation The sync operation to wrap
- * @returns { data, error: null } on success or { data: null, error } on failure
+ * @returns { data, error: null } on success or { data, error } on failure
  */
 export function wrapSync<T>(
   operation: () => T
@@ -51,7 +68,7 @@ export function wrapSync<T>(
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error : new Error(String(error))
+      error: toFluxbaseError(error)
     }
   }
 }

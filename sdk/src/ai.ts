@@ -3,21 +3,7 @@
  * Provides WebSocket-based chat functionality with streaming support
  */
 
-import type {
-  AIChatbotSummary,
-  AIChatbotLookupResponse,
-  AIChatClientMessage,
-  AIChatServerMessage,
-  AIUsageStats,
-  AIUserConversationDetail,
-  AIDailyQuotaSnapshot,
-  AIMatchedIntentRule,
-  AIAgentTransition,
-  AIAgentThought,
-  ListConversationsOptions,
-  ListConversationsResult,
-  UpdateConversationOptions,
-} from "./types";
+import type { AIAgentThought, AIAgentTransition, AIChatbotLookupResponse, AIChatbotSummary, AIChatClientMessage, AIChatServerMessage, AIDailyQuotaSnapshot, AIMatchedIntentRule, AIUsageStats, AIUserConversationDetail, FluxbaseError, ListConversationsOptions, ListConversationsResult, UpdateConversationOptions } from "./types";
 
 /**
  * Event types for chat callbacks
@@ -135,7 +121,7 @@ export interface AIChatOptions {
   /** @internal Lookup function for smart namespace resolution */
   _lookupChatbot?: (
     name: string,
-  ) => Promise<{ data: AIChatbotLookupResponse | null; error: Error | null }>;
+  ) => Promise<{ data: AIChatbotLookupResponse | null; error: FluxbaseError | null }>;
 }
 
 /**
@@ -622,7 +608,7 @@ export class FluxbaseAI {
    */
   async listChatbots(namespace?: string): Promise<{
     data: AIChatbotSummary[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const params = namespace ? `?namespace=${encodeURIComponent(namespace)}` : "";
@@ -632,7 +618,7 @@ export class FluxbaseAI {
       }>(`/api/v1/ai/chatbots${params}`);
       return { data: response.chatbots || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -644,14 +630,14 @@ export class FluxbaseAI {
    */
   async getChatbot(
     id: string,
-  ): Promise<{ data: AIChatbotSummary | null; error: Error | null }> {
+  ): Promise<{ data: AIChatbotSummary | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<AIChatbotSummary>(
         `/api/v1/ai/chatbots/${id}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -679,14 +665,14 @@ export class FluxbaseAI {
    */
   async lookupChatbot(
     name: string,
-  ): Promise<{ data: AIChatbotLookupResponse | null; error: Error | null }> {
+  ): Promise<{ data: AIChatbotLookupResponse | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<AIChatbotLookupResponse>(
         `/api/v1/ai/chatbots/by-name/${encodeURIComponent(name)}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -726,7 +712,7 @@ export class FluxbaseAI {
    */
   async listConversations(
     options?: ListConversationsOptions,
-  ): Promise<{ data: ListConversationsResult | null; error: Error | null }> {
+  ): Promise<{ data: ListConversationsResult | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams();
       if (options?.chatbot) params.set("chatbot", options.chatbot);
@@ -742,7 +728,7 @@ export class FluxbaseAI {
       const response = await this.fetch.get<ListConversationsResult>(path);
       return { data: response, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -763,14 +749,14 @@ export class FluxbaseAI {
    */
   async getConversation(
     id: string,
-  ): Promise<{ data: AIUserConversationDetail | null; error: Error | null }> {
+  ): Promise<{ data: AIUserConversationDetail | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.get<AIUserConversationDetail>(
         `/api/v1/ai/conversations/${id}`,
       );
       return { data: response, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -788,12 +774,12 @@ export class FluxbaseAI {
    * }
    * ```
    */
-  async deleteConversation(id: string): Promise<{ error: Error | null }> {
+  async deleteConversation(id: string): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(`/api/v1/ai/conversations/${id}`);
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -814,7 +800,7 @@ export class FluxbaseAI {
   async updateConversation(
     id: string,
     updates: UpdateConversationOptions,
-  ): Promise<{ data: AIUserConversationDetail | null; error: Error | null }> {
+  ): Promise<{ data: AIUserConversationDetail | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.patch<AIUserConversationDetail>(
         `/api/v1/ai/conversations/${id}`,
@@ -822,7 +808,7 @@ export class FluxbaseAI {
       );
       return { data: response, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -850,14 +836,14 @@ export class FluxbaseAI {
    */
   async getUsage(
     chatbotId: string,
-  ): Promise<{ data: AIDailyQuotaSnapshot | null; error: Error | null }> {
+  ): Promise<{ data: AIDailyQuotaSnapshot | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.get<AIDailyQuotaSnapshot>(
         `/api/v1/ai/usage/${chatbotId}`,
       );
       return { data: response, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }
