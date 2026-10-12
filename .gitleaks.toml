@@ -1,0 +1,15 @@
+# Extends gitleaks' default rule set (gitleaks detect auto-loads this file).
+[extend]
+useDefault = true
+
+[[allowlists]]
+# The contract-drift CI job (ci.yml) boots a throwaway local server whose
+# fixture values MUST satisfy the application boot guard's entropy
+# requirements, so they are intentionally high-entropy. They are CI-only and
+# never deployed. Commit-scoped .gitleaksignore fingerprints break every time
+# a merge shifts the job's line numbers, hence the path+rule allowlist.
+# Other rules still scan this file, so a genuinely leaked credential in a
+# workflow is still caught.
+description = "Contract-drift CI fixture secrets (high-entropy by boot-guard requirement, CI-only)"
+rules = ["generic-api-key", "stripe-access-token"]
+paths = ['''^\.github/workflows/ci\.yml$''']
