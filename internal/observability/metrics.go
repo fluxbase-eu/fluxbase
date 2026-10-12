@@ -124,6 +124,8 @@ type Metrics struct {
 	aiProviderLatency       *prometheus.HistogramVec
 	aiRerankRequestsTotal   *prometheus.CounterVec
 	aiRerankDuration        *prometheus.HistogramVec
+	aiResponseCacheHits     *prometheus.CounterVec
+	aiResponseCacheMisses   *prometheus.CounterVec
 
 	// System metrics
 	systemUptime prometheus.Gauge
@@ -440,6 +442,20 @@ func createMetrics() *Metrics {
 			},
 			[]string{"provider"},
 		),
+		aiResponseCacheHits: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "fluxbase_ai_response_cache_hits_total",
+				Help: "Total AI chat responses served from the semantic response cache",
+			},
+			[]string{"chatbot"},
+		),
+		aiResponseCacheMisses: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "fluxbase_ai_response_cache_misses_total",
+				Help: "Total AI chat responses that missed the semantic response cache",
+			},
+			[]string{"chatbot"},
+		),
 
 		// System metrics
 		systemUptime: promauto.NewGauge(
@@ -638,6 +654,15 @@ func (m *Metrics) RecordAIProviderRequest(provider, status string, duration time
 func (m *Metrics) RecordAIRerank(provider, status string, duration time.Duration) {
 	m.aiRerankRequestsTotal.WithLabelValues(provider, status).Inc()
 	m.aiRerankDuration.WithLabelValues(provider).Observe(duration.Seconds())
+}
+
+// RecordAIResponseCache records a response cache hit or miss
+func (m *Metrics) RecordAIResponseCache(chatbot string, hit bool) {
+	if hit {
+		m.aiResponseCacheHits.WithLabelValues(chatbot).Inc()
+	} else {
+		m.aiResponseCacheMisses.WithLabelValues(chatbot).Inc()
+	}
 }
 
 // RecordRPCExecution records an RPC procedure execution

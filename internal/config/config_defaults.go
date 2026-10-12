@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
@@ -367,6 +369,9 @@ func setDefaults() {
 	viper.SetDefault("ai.rerank_base_url", "")
 	viper.SetDefault("ai.rerank_top_n", 10)
 	viper.SetDefault("ai.rerank_timeout", "10s")
+
+	// AI Response Cache defaults
+	viper.SetDefault("ai.response_cache_ttl", time.Hour) // 0s disables globally
 
 	// RPC defaults
 	viper.SetDefault("rpc.enabled", true)           // Enabled by default (controlled by feature flag at runtime)

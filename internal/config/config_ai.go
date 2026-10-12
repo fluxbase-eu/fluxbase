@@ -86,6 +86,12 @@ type AIConfig struct {
 	RerankBaseURL  string        `mapstructure:"rerank_base_url"` // Optional base URL override (cohere)
 	RerankTopN     int           `mapstructure:"rerank_top_n"`    // Max results kept after reranking (default 10)
 	RerankTimeout  time.Duration `mapstructure:"rerank_timeout"`  // Per-rerank-request timeout (default 10s)
+
+	// Response Cache Configuration (AI chatbot cost/latency optimization).
+	// Opt-in per chatbot via @fluxbase:response-cache; entries expire after
+	// this TTL and are invalidated when linked KB documents change. Set to 0s
+	// to disable globally.
+	ResponseCacheTTL time.Duration `mapstructure:"response_cache_ttl"` // default 1h
 }
 
 // Validate validates AI configuration

@@ -539,6 +539,14 @@ ai:
   rerank_top_n: 10                      # FLUXBASE_AI_RERANK_TOP_N - Max results kept after reranking
   rerank_timeout: "10s"                 # FLUXBASE_AI_RERANK_TIMEOUT - Per-rerank-request timeout
 
+  # Semantic Response Cache
+  # Opt-in per chatbot via the @fluxbase:response-cache annotation. Caches
+  # single-turn question/answer pairs and serves them on exact or
+  # near-duplicate (cosine >= 0.95) question match. Entries expire after this
+  # TTL and are invalidated when a linked knowledge base document changes.
+  # Set to "0s" to disable globally.
+  response_cache_ttl: "1h"              # FLUXBASE_AI_RESPONSE_CACHE_TTL
+
 # RPC Procedures Configuration
 rpc:
   enabled: true                         # FLUXBASE_RPC_ENABLED - Enable RPC procedures

@@ -1276,6 +1276,60 @@ ALTER TABLE retrieval_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ai_retrieval_log_instance_admin ON retrieval_log FOR SELECT TO authenticated USING (auth.role() = 'instance_admin');
 
 --
+-- Name: response_cache; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS response_cache (
+    id uuid DEFAULT gen_random_uuid(),
+    chatbot_id uuid NOT NULL,
+    model text NOT NULL DEFAULT '',
+    question text NOT NULL,
+    question_hash text NOT NULL,
+    embedding public.vector(1536),
+    response text NOT NULL,
+    prompt_tokens integer DEFAULT 0,
+    completion_tokens integer DEFAULT 0,
+    hit_count integer DEFAULT 0 NOT NULL,
+    created_at timestamptz DEFAULT now(),
+    last_hit_at timestamptz,
+    expires_at timestamptz NOT NULL,
+    tenant_id uuid,
+    CONSTRAINT response_cache_pkey PRIMARY KEY (id),
+    CONSTRAINT response_cache_chatbot_model_question_key UNIQUE (chatbot_id, model, question_hash),
+    CONSTRAINT response_cache_chatbot_id_fkey FOREIGN KEY (chatbot_id) REFERENCES chatbots (id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE response_cache IS 'Semantic response cache for AI chatbots: single-turn question/answer pairs, opt-in per chatbot via the @fluxbase:response-cache annotation. Entries are served on exact question hash match or cosine similarity >= 0.95 within the same chatbot and model, and invalidated when linked knowledge base documents change.';
+
+COMMENT ON COLUMN response_cache.question_hash IS 'SHA-256 of the normalized question text for exact-match lookup';
+
+COMMENT ON COLUMN response_cache.embedding IS 'Question embedding (vector(1536), same fixed dimension as ai.chunks.embedding) for semantic lookup';
+
+--
+-- Name: idx_ai_response_cache_embedding; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_ai_response_cache_embedding ON response_cache USING ivfflat (embedding vector_cosine_ops);
+
+--
+-- Name: idx_ai_response_cache_expires; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_ai_response_cache_expires ON response_cache (expires_at);
+
+--
+-- Name: response_cache; Type: RLS; Schema: -; Owner: -
+--
+
+ALTER TABLE response_cache ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: ai_response_cache_instance_admin; Type: POLICY; Schema: -; Owner: -
+--
+
+CREATE POLICY ai_response_cache_instance_admin ON response_cache FOR SELECT TO authenticated USING (auth.role() = 'instance_admin');
+
+--
 -- Name: table_export_sync_configs; Type: TABLE; Schema: -; Owner: -
 --
 

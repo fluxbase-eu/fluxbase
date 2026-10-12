@@ -53,6 +53,15 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 		return
 	}
 
+	// Semantic response cache: single-turn questions on opted-in chatbots
+	// are served directly on an exact or near-duplicate match, skipping the
+	// prompt build, RAG retrieval, and the provider call entirely.
+	if h.responseCacheEligible(chatbot, state) {
+		if h.tryServeCachedResponse(ctx, chatCtx, chatbot, msg) {
+			return
+		}
+	}
+
 	// Send thinking progress
 	h.sendProgress(chatCtx, msg.ConversationID, "thinking", "Thinking...")
 
@@ -195,6 +204,10 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 	// Tool calling loop - continue until AI generates content without tool calls
 	var totalUsage UsageStats
 	var accumulatedQueryResults []QueryResult // Accumulate query results for persistence
+	// usedTools marks turns that ran any tool call. Tool-grounded answers are
+	// excluded from the response cache: their correctness depends on data
+	// fetched at answer time, which the cache key doesn't capture.
+	usedTools := false
 	// matchedIntentRules accumulates rules that fire across the turn (both
 	// pre-tool-selection and post-tool-call). Surfaced in the done event so
 	// apps can observe and tune their rules (Ask 5).
@@ -208,6 +221,10 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 	var lastFailedTool string
 	var consecutiveFailures int
 	const maxConsecutiveFailures = 2
+
+	// finalAnswer captures the plain-text answer of a no-tool turn for the
+	// response cache.
+	var finalAnswer string
 
 	// Track whether think tool has been called (for enforcing ReAct pattern)
 	hasUsedThink := false
@@ -399,6 +416,7 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 
 		// If no tool calls, we're done
 		if len(pendingToolCalls) == 0 {
+			finalAnswer = responseContent.String()
 			// Save assistant message with accumulated query results
 			assistantMsg := Message{
 				Role:         RoleAssistant,
@@ -420,6 +438,7 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 		// Execute each tool call and add results
 		for _, tc := range pendingToolCalls {
 			toolName := tc.Function.Name
+			usedTools = true
 
 			// Track if think tool was used (for ReAct pattern)
 			if toolName == "think" {
@@ -531,6 +550,12 @@ func (h *ChatHandler) handleMessage(ctx context.Context, chatCtx *ChatContext, m
 			effective = 0
 		}
 		h.limiter.AddTokenUsage(chatbot.ID, userIdentifier, effective)
+	}
+
+	// Response cache store: plain-text single-turn answers on opted-in
+	// chatbots. Async and best-effort.
+	if !usedTools && finalAnswer != "" && h.responseCacheEligible(chatbot, state) {
+		h.storeCachedResponse(ctx, chatbot, responseCacheModelKey(chatbot, provider), msg.Content, finalAnswer, totalUsage)
 	}
 
 	// Build the per-user daily quota snapshot for the done event (Ask 2).

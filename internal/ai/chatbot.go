@@ -105,6 +105,10 @@ type Chatbot struct {
 	// WebSearchEnabled turns on the Web Agent specialist. Requires a
 	// configured Tavily integration at the tenant/instance level.
 	WebSearchEnabled bool `json:"web_search_enabled,omitempty"`
+	// ResponseCacheEnabled opts this chatbot into the semantic response
+	// cache for single-turn questions (parsed from
+	// @fluxbase:response-cache, default false).
+	ResponseCacheEnabled bool `json:"response_cache_enabled,omitempty"`
 	// WebSearchDomains optionally restricts the Web Agent to results from
 	// these domains only. Empty = no restriction.
 	WebSearchDomains []string `json:"web_search_domains,omitempty"`
@@ -196,6 +200,10 @@ type ChatbotConfig struct {
 	// BuildSupervisorPrompt so it routes correctly on domain-specific cues
 	// that the static supervisor prompt can't anticipate.
 	SupervisorWebTriggers []string // parsed from @fluxbase:supervisor-web-triggers (optional, comma-separated)
+
+	// ResponseCache enables the semantic response cache for single-turn
+	// questions (parsed from @fluxbase:response-cache, default false).
+	ResponseCache bool
 
 	// Metadata
 	Version int
@@ -361,6 +369,9 @@ var (
 	// Optional allowlist for web search results. Domains not in this list
 	// are filtered out by the Web Agent before passing results to the LLM.
 	webSearchDomainsPattern = regexp.MustCompile(`@fluxbase:web-search-domains\s+(.+)`)
+
+	// @fluxbase:response-cache true
+	responseCachePattern = regexp.MustCompile(`@fluxbase:response-cache\s+(true|false)`)
 
 	// @fluxbase:supervisor-web-triggers "this weekend","next weekend","currently","events in"
 	// Optional comma-separated list of user-message phrases that the chatbot
@@ -638,6 +649,13 @@ func ParseChatbotConfig(code string) ChatbotConfig {
 		}
 	}
 
+	// Parse response cache opt-in. Default is disabled (annotation absent);
+	// opt-in per chatbot so operators consciously accept the staleness
+	// trade-off.
+	if matches := responseCachePattern.FindStringSubmatch(code); len(matches) > 1 {
+		config.ResponseCache = matches[1] == "true"
+	}
+
 	// Parse show reasoning flag
 	if matches := showReasoningPattern.FindStringSubmatch(code); len(matches) > 1 {
 		config.ShowReasoning = matches[1] == "true"
@@ -845,6 +863,7 @@ func (c *Chatbot) ApplyConfig(config ChatbotConfig) {
 	c.WebSearchEnabled = config.WebSearchEnabled
 	c.WebSearchDomains = config.WebSearchDomains
 	c.SupervisorWebTriggers = config.SupervisorWebTriggers
+	c.ResponseCacheEnabled = config.ResponseCache
 
 	// Only override version if explicitly set in annotation
 	if config.Version > 0 {
@@ -960,6 +979,10 @@ func (c *Chatbot) PopulateDerivedFields() {
 			if matches := webSearchPattern.FindStringSubmatch(c.Code); len(matches) > 1 {
 				v := strings.ToLower(matches[1])
 				c.WebSearchEnabled = v == "enabled" || v == "true"
+			}
+			// Response-cache opt-in (no DB column)
+			if matches := responseCachePattern.FindStringSubmatch(c.Code); len(matches) > 1 {
+				c.ResponseCacheEnabled = matches[1] == "true"
 			}
 			if matches := webSearchDomainsPattern.FindStringSubmatch(c.Code); len(matches) > 1 {
 				raw := strings.TrimSpace(matches[1])

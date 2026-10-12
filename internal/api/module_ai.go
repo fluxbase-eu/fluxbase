@@ -99,6 +99,18 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 			embeddingService = vectorHandler.GetEmbeddingService()
 		}
 
+		// Semantic response cache store: opt-in per chatbot via the
+		// @fluxbase:response-cache annotation; entries expire after
+		// ai.response_cache_ttl and are invalidated when a linked KB
+		// document changes. Shared by the chat path and the document
+		// processor invalidation hook below.
+		var responseCacheStore *ai.ResponseCacheStore
+		if cfg.AI.ResponseCacheTTL > 0 && embeddingService != nil {
+			responseCacheStore = ai.NewResponseCacheStore(db)
+			responseCacheStore.StartPurgeSweeper(context.Background(), time.Hour)
+			log.Info().Dur("ttl", cfg.AI.ResponseCacheTTL).Msg("Response cache enabled")
+		}
+
 		// Reranker: optional relevance re-ordering of retrieved chunks.
 		// Provider "llm" reuses the default chat provider; "cohere" calls the
 		// Cohere Rerank API. Per-KB opt-out via kb.rerank_enabled.
@@ -137,6 +149,9 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 		aiChatHandler = ai.NewChatHandler(db, aiStorage, aiConversations, aiMetrics, &cfg.AI, embeddingService, loggingSvc)
 		if reranker != nil {
 			aiChatHandler.SetReranker(reranker, cfg.AI.RerankTopN)
+		}
+		if responseCacheStore != nil {
+			aiChatHandler.SetResponseCache(responseCacheStore)
 		}
 
 		// Wire integrations storage into the chat handler so the supervisor's
@@ -230,6 +245,18 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 			// Document processing recovery: periodically requeue documents
 			// stuck in 'processing' (e.g. after a crash) and drain pending.
 			docProcessor.StartProcessingSweeper(context.Background(), 5*time.Minute)
+		}
+
+		// Invalidate response-cache entries when a linked KB's content
+		// changes, so cached grounded answers never go stale.
+		if responseCacheStore != nil && docProcessor != nil {
+			docProcessor.SetDocumentProcessedHook(func(kbID string) {
+				invalidateCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				if err := responseCacheStore.InvalidateForKnowledgeBase(invalidateCtx, kbID); err != nil {
+					log.Warn().Err(err).Str("kb_id", kbID).Msg("Failed to invalidate response cache for KB")
+				}
+			})
 		}
 
 		if ocrService != nil && ocrService.IsEnabled() {
