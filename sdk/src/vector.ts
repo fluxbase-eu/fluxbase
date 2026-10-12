@@ -4,13 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  EmbedRequest,
-  EmbedResponse,
-  FluxbaseResponse,
-  VectorSearchOptions,
-  VectorSearchResult,
-} from "./types";
+import type { EmbedRequest, EmbedResponse, FluxbaseError, FluxbaseResponse, VectorSearchOptions, VectorSearchResult } from "./types";
 
 /**
  * FluxbaseVector provides vector search functionality using pgvector
@@ -66,7 +60,7 @@ export class FluxbaseVector {
 
       return { data: response, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -134,7 +128,7 @@ export class FluxbaseVector {
 
       return { data: response, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

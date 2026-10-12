@@ -4,22 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type {
-  AIChatbot,
-  AIChatbotSummary,
-  AIProvider,
-  SyncChatbotsOptions,
-  SyncChatbotsResult,
-  ChatbotKnowledgeBaseLink,
-  LinkKnowledgeBaseRequest,
-  UpdateChatbotKnowledgeBaseRequest,
-  TableDetails,
-  ToolIntegration,
-  CreateToolIntegrationRequest,
-  UpdateToolIntegrationRequest,
-  TestToolIntegrationResult,
-  IntegrationType,
-} from "./types";
+import type { AIChatbot, AIChatbotSummary, AIProvider, ChatbotKnowledgeBaseLink, CreateToolIntegrationRequest, FluxbaseError, IntegrationType, LinkKnowledgeBaseRequest, SyncChatbotsOptions, SyncChatbotsResult, TableDetails, TestToolIntegrationResult, ToolIntegration, UpdateChatbotKnowledgeBaseRequest, UpdateToolIntegrationRequest } from "./types";
 
 /**
  * Admin AI manager for managing AI chatbots and providers
@@ -54,7 +39,7 @@ export class FluxbaseAdminAI {
    */
   async listChatbots(
     namespace?: string,
-  ): Promise<{ data: AIChatbotSummary[] | null; error: Error | null }> {
+  ): Promise<{ data: AIChatbotSummary[] | null; error: FluxbaseError | null }> {
     try {
       const params = namespace ? `?namespace=${namespace}` : "";
       const response = await this.fetch.get<{
@@ -63,7 +48,7 @@ export class FluxbaseAdminAI {
       }>(`/api/v1/admin/ai/chatbots${params}`);
       return { data: response.chatbots || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -83,14 +68,14 @@ export class FluxbaseAdminAI {
    */
   async getChatbot(
     id: string,
-  ): Promise<{ data: AIChatbot | null; error: Error | null }> {
+  ): Promise<{ data: AIChatbot | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<AIChatbot>(
         `/api/v1/admin/ai/chatbots/${id}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -109,7 +94,7 @@ export class FluxbaseAdminAI {
   async toggleChatbot(
     id: string,
     enabled: boolean,
-  ): Promise<{ data: AIChatbot | null; error: Error | null }> {
+  ): Promise<{ data: AIChatbot | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<AIChatbot>(
         `/api/v1/admin/ai/chatbots/${id}/toggle`,
@@ -117,7 +102,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -157,7 +142,7 @@ export class FluxbaseAdminAI {
       allow_unauthenticated?: boolean;
       is_public?: boolean;
     },
-  ): Promise<{ data: AIChatbot | null; error: Error | null }> {
+  ): Promise<{ data: AIChatbot | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<AIChatbot>(
         `/api/v1/admin/ai/chatbots/${id}`,
@@ -165,7 +150,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -182,12 +167,12 @@ export class FluxbaseAdminAI {
    */
   async deleteChatbot(
     id: string,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(`/api/v1/admin/ai/chatbots/${id}`);
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -228,7 +213,7 @@ export class FluxbaseAdminAI {
    */
   async sync(
     options?: SyncChatbotsOptions,
-  ): Promise<{ data: SyncChatbotsResult | null; error: Error | null }> {
+  ): Promise<{ data: SyncChatbotsResult | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<SyncChatbotsResult>(
         "/api/v1/admin/ai/chatbots/sync",
@@ -243,7 +228,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -270,7 +255,7 @@ export class FluxbaseAdminAI {
     signal?: AbortSignal | null;
   } = {}): Promise<{
     data: AIProvider[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const response = await this.fetch.get<{
@@ -279,7 +264,7 @@ export class FluxbaseAdminAI {
       }>("/api/v1/admin/ai/providers", { signal: options.signal });
       return { data: response.providers || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -291,14 +276,14 @@ export class FluxbaseAdminAI {
    */
   async getProvider(
     id: string,
-  ): Promise<{ data: AIProvider | null; error: Error | null }> {
+  ): Promise<{ data: AIProvider | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<AIProvider>(
         `/api/v1/admin/ai/providers/${id}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -314,7 +299,7 @@ export class FluxbaseAdminAI {
     provider_type: string;
     is_default?: boolean;
     config?: Record<string, unknown>;
-  }): Promise<{ data: AIProvider | null; error: Error | null }> {
+  }): Promise<{ data: AIProvider | null; error: FluxbaseError | null }> {
     try {
       const body: Record<string, unknown> = {
         name: params.name,
@@ -332,7 +317,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -351,7 +336,7 @@ export class FluxbaseAdminAI {
       config?: Record<string, unknown>;
       embedding_model?: string | null;
     },
-  ): Promise<{ data: AIProvider | null; error: Error | null }> {
+  ): Promise<{ data: AIProvider | null; error: FluxbaseError | null }> {
     try {
       const body: Record<string, unknown> = { ...updates };
       if (updates.config) {
@@ -363,7 +348,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -375,7 +360,7 @@ export class FluxbaseAdminAI {
    */
   async setDefaultProvider(
     id: string,
-  ): Promise<{ data: AIProvider | null; error: Error | null }> {
+  ): Promise<{ data: AIProvider | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<AIProvider>(
         `/api/v1/admin/ai/providers/${id}/default`,
@@ -383,7 +368,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -395,12 +380,12 @@ export class FluxbaseAdminAI {
    */
   async deleteProvider(
     id: string,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(`/api/v1/admin/ai/providers/${id}`);
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -414,7 +399,7 @@ export class FluxbaseAdminAI {
     id: string,
   ): Promise<{
     data: { use_for_embeddings: boolean } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.put<{ use_for_embeddings: boolean }>(
@@ -423,7 +408,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -437,7 +422,7 @@ export class FluxbaseAdminAI {
     id: string,
   ): Promise<{
     data: { use_for_embeddings: boolean } | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.delete<{ use_for_embeddings: boolean }>(
@@ -445,7 +430,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -469,7 +454,7 @@ export class FluxbaseAdminAI {
    */
   async listChatbotKnowledgeBases(
     chatbotId: string,
-  ): Promise<{ data: ChatbotKnowledgeBaseLink[] | null; error: Error | null }> {
+  ): Promise<{ data: ChatbotKnowledgeBaseLink[] | null; error: FluxbaseError | null }> {
     try {
       const response = await this.fetch.get<{
         knowledge_bases: ChatbotKnowledgeBaseLink[];
@@ -477,7 +462,7 @@ export class FluxbaseAdminAI {
       }>(`/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases`);
       return { data: response.knowledge_bases || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -501,7 +486,7 @@ export class FluxbaseAdminAI {
   async linkKnowledgeBase(
     chatbotId: string,
     request: LinkKnowledgeBaseRequest,
-  ): Promise<{ data: ChatbotKnowledgeBaseLink | null; error: Error | null }> {
+  ): Promise<{ data: ChatbotKnowledgeBaseLink | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<ChatbotKnowledgeBaseLink>(
         `/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases`,
@@ -509,7 +494,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -534,7 +519,7 @@ export class FluxbaseAdminAI {
     chatbotId: string,
     knowledgeBaseId: string,
     updates: UpdateChatbotKnowledgeBaseRequest,
-  ): Promise<{ data: ChatbotKnowledgeBaseLink | null; error: Error | null }> {
+  ): Promise<{ data: ChatbotKnowledgeBaseLink | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<ChatbotKnowledgeBaseLink>(
         `/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases/${knowledgeBaseId}`,
@@ -542,7 +527,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -561,14 +546,14 @@ export class FluxbaseAdminAI {
   async unlinkKnowledgeBase(
     chatbotId: string,
     knowledgeBaseId: string,
-  ): Promise<{ data: null; error: Error | null }> {
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(
         `/api/v1/admin/ai/chatbots/${chatbotId}/knowledge-bases/${knowledgeBaseId}`,
       );
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -597,14 +582,14 @@ export class FluxbaseAdminAI {
   async getTableDetails(
     schema: string,
     table: string,
-  ): Promise<{ data: TableDetails | null; error: Error | null }> {
+  ): Promise<{ data: TableDetails | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<TableDetails>(
         `/api/v1/admin/ai/tables/${schema}/${table}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -625,7 +610,7 @@ export class FluxbaseAdminAI {
     params?: { integration_type?: IntegrationType; signal?: AbortSignal | null },
   ): Promise<{
     data: ToolIntegration[] | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const query = params?.integration_type
@@ -639,7 +624,7 @@ export class FluxbaseAdminAI {
       });
       return { data: result.integrations || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -648,14 +633,14 @@ export class FluxbaseAdminAI {
    */
   async getIntegration(
     id: string,
-  ): Promise<{ data: ToolIntegration | null; error: Error | null }> {
+  ): Promise<{ data: ToolIntegration | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<ToolIntegration>(
         `/api/v1/admin/ai/integrations/${id}`,
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -665,7 +650,7 @@ export class FluxbaseAdminAI {
    */
   async createIntegration(
     request: CreateToolIntegrationRequest,
-  ): Promise<{ data: ToolIntegration | null; error: Error | null }> {
+  ): Promise<{ data: ToolIntegration | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<ToolIntegration>(
         "/api/v1/admin/ai/integrations",
@@ -673,7 +658,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -685,7 +670,7 @@ export class FluxbaseAdminAI {
   async updateIntegration(
     id: string,
     request: UpdateToolIntegrationRequest,
-  ): Promise<{ data: ToolIntegration | null; error: Error | null }> {
+  ): Promise<{ data: ToolIntegration | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.put<ToolIntegration>(
         `/api/v1/admin/ai/integrations/${id}`,
@@ -693,7 +678,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -703,12 +688,12 @@ export class FluxbaseAdminAI {
    */
   async deleteIntegration(
     id: string,
-  ): Promise<{ error: Error | null }> {
+  ): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.delete(`/api/v1/admin/ai/integrations/${id}`);
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -719,7 +704,7 @@ export class FluxbaseAdminAI {
    */
   async setDefaultIntegration(
     id: string,
-  ): Promise<{ error: Error | null }> {
+  ): Promise<{ error: FluxbaseError | null }> {
     try {
       await this.fetch.put(
         `/api/v1/admin/ai/integrations/${id}/default`,
@@ -727,7 +712,7 @@ export class FluxbaseAdminAI {
       );
       return { error: null };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as FluxbaseError };
     }
   }
 
@@ -744,7 +729,7 @@ export class FluxbaseAdminAI {
     id: string,
   ): Promise<{
     data: TestToolIntegrationResult | null;
-    error: Error | null;
+    error: FluxbaseError | null;
   }> {
     try {
       const data = await this.fetch.post<TestToolIntegrationResult>(
@@ -753,7 +738,7 @@ export class FluxbaseAdminAI {
       );
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }

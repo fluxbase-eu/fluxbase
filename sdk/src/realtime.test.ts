@@ -32,6 +32,14 @@ class MockWebSocket {
   public onmessage: ((event: MessageEvent) => void) | null = null;
   public onerror: ((event: Event) => void) | null = null;
   public sentMessages: string[] = [];
+  /**
+   * Mimics the Go server (internal/realtime/handler.go): every subscribe /
+   * subscribe_logs message gets an ack with subscribed: true. Set to false
+   * to simulate a server that never acknowledges.
+   */
+  public autoAckSubscribes: boolean = true;
+  /** When true the socket never opens: it fails and fires onclose instead */
+  public failToConnect: boolean = false;
 
   static CONNECTING = 0;
   static OPEN = 1;
@@ -40,8 +48,16 @@ class MockWebSocket {
 
   constructor(url: string) {
     this.url = url;
-    // Simulate connection opening
     setTimeout(() => {
+      if (this.failToConnect) {
+        this.readyState = 3; // WebSocket.CLOSED
+        if (this.onclose) {
+          this.onclose(
+            new CloseEvent("close", { code: 1006, reason: "connection failed" }),
+          );
+        }
+        return;
+      }
       if (this.onopen) {
         this.onopen(new Event("open"));
       }
@@ -55,6 +71,24 @@ class MockWebSocket {
       const msg = JSON.parse(data);
       if (msg.type === "unsubscribe") {
         setTimeout(() => this.close(), 10);
+      }
+      // Auto-ack subscribe messages like the Go server does
+      if (
+        (msg.type === "subscribe" || msg.type === "subscribe_logs") &&
+        this.autoAckSubscribes
+      ) {
+        setTimeout(() => {
+          if (this.onmessage) {
+            this.onmessage(
+              new MessageEvent("message", {
+                data: JSON.stringify({
+                  type: "ack",
+                  payload: { subscribed: true, channel: msg.channel },
+                }),
+              }),
+            );
+          }
+        }, 5);
       }
       // Auto-respond to token updates
       if (msg.type === "token_update") {
@@ -874,7 +908,7 @@ describe("RealtimeChannel - off() method", () => {
 });
 
 describe("RealtimeChannel - Subscribe Status Callback", () => {
-  it("should call callback with SUBSCRIBED status", async () => {
+  it("should call callback with SUBSCRIBED status when the server acks", async () => {
     const channel = new RealtimeChannel(
       "http://localhost:8080",
       "test",
@@ -884,15 +918,106 @@ describe("RealtimeChannel - Subscribe Status Callback", () => {
     const statusCallback = vi.fn();
     channel.subscribe(statusCallback);
 
-    // Wait for connection
+    // Wait for connection + server ack (mock acks like the Go server)
     await new Promise((resolve) => setTimeout(resolve, 100));
 
+    expect(statusCallback).toHaveBeenCalledTimes(1);
     expect(statusCallback).toHaveBeenCalledWith("SUBSCRIBED");
 
     await channel.unsubscribe();
   });
 
-  it("should call callback with CHANNEL_ERROR on connection failure", async () => {
+  it("should NOT report SUBSCRIBED before the server acknowledges", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "test",
+      "test-token",
+    );
+
+    const statusCallback = vi.fn();
+    channel.subscribe(statusCallback);
+    // Disable the mock's auto-ack before the socket opens: simulate a server
+    // that accepts the connection but never acknowledges the subscription
+    lastMockWebSocket!.autoAckSubscribes = false;
+
+    // Wait for the WebSocket to open and the subscribe message to be sent,
+    // but no ack arrives yet (auto-ack disabled)
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(statusCallback).not.toHaveBeenCalled();
+
+    // Server acknowledges the subscription (recorded Go wire format,
+    // internal/realtime/handler.go:485-493)
+    lastMockWebSocket!.simulateMessage({
+      type: "ack",
+      payload: { subscribed: true, channel: "test" },
+    });
+
+    expect(statusCallback).toHaveBeenCalledTimes(1);
+    expect(statusCallback).toHaveBeenCalledWith("SUBSCRIBED");
+
+    await channel.unsubscribe();
+  });
+
+  it("should report SUBSCRIBED from a postgres_changes ack with subscription_id", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "table:public.posts",
+      "test-token",
+    );
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "posts" },
+      () => {},
+    );
+
+    const statusCallback = vi.fn();
+    channel.subscribe(statusCallback, 5000);
+
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    // Mock already acked (channel-level shape); a recorded postgres_changes
+    // ack arriving late must not double-fire SUBSCRIBED
+    lastMockWebSocket!.simulateMessage({
+      type: "ack",
+      payload: {
+        subscribed: true,
+        subscription_id: "sub-abc-123",
+        schema: "public",
+        table: "posts",
+        event: "*",
+      },
+    });
+
+    expect(statusCallback).toHaveBeenCalledTimes(1);
+    expect(statusCallback).toHaveBeenCalledWith("SUBSCRIBED");
+
+    await channel.unsubscribe();
+  });
+
+  it("should report TIMED_OUT when no subscribe ack arrives within the timeout", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "test",
+      "test-token",
+    );
+
+    const statusCallback = vi.fn();
+    // subscribe() with a short timeout; the mock never acks
+    channel.subscribe(statusCallback, 60);
+    lastMockWebSocket!.autoAckSubscribes = false;
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(statusCallback).toHaveBeenCalledTimes(1);
+    expect(statusCallback).toHaveBeenCalledWith(
+      "TIMED_OUT",
+      expect.any(Error),
+    );
+    expect(statusCallback).not.toHaveBeenCalledWith("SUBSCRIBED");
+
+    await channel.unsubscribe();
+  });
+
+  it("should report CHANNEL_ERROR when the connection fails before the ack", async () => {
     const channel = new RealtimeChannel(
       "http://localhost:8080",
       "test",
@@ -902,16 +1027,59 @@ describe("RealtimeChannel - Subscribe Status Callback", () => {
     const statusCallback = vi.fn();
     channel.subscribe(statusCallback);
 
-    // Wait for connection then close it
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    lastMockWebSocket!.close();
+    // Socket fails and closes without ever opening (no ack possible)
+    lastMockWebSocket!.failToConnect = true;
 
-    // Wait for status check
+    // Wait for the failed connection + status check
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(statusCallback).toHaveBeenCalledWith("CHANNEL_ERROR", expect.any(Error));
+    expect(statusCallback).not.toHaveBeenCalledWith("SUBSCRIBED");
 
     // Stop the reconnect loop so no stray socket is created later
+    await channel.unsubscribe();
+  });
+
+  it("should report SUBSCRIBED again after a drop and successful re-ack", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "test",
+      "test-token",
+    );
+
+    const statusCallback = vi.fn();
+    channel.subscribe(statusCallback);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(statusCallback).toHaveBeenCalledWith("SUBSCRIBED");
+
+    // Connection drops after a confirmed subscribe -> reconnect loop runs
+    lastMockWebSocket!.close();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    // No status transition on a plain drop of a subscribed channel
+    expect(statusCallback).toHaveBeenCalledTimes(1);
+
+    await channel.unsubscribe();
+  });
+
+  it("should not emit statuses for a late unsubscribe ack", async () => {
+    const channel = new RealtimeChannel(
+      "http://localhost:8080",
+      "test",
+      "test-token",
+    );
+
+    const statusCallback = vi.fn();
+    channel.subscribe(statusCallback);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(statusCallback).toHaveBeenCalledTimes(1);
+
+    lastMockWebSocket!.simulateMessage({
+      type: "ack",
+      payload: { unsubscribed: true, subscription_id: "sub-1" },
+    });
+
+    expect(statusCallback).toHaveBeenCalledTimes(1);
+
     await channel.unsubscribe();
   });
 });

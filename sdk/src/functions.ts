@@ -20,6 +20,7 @@
 
 import type { FluxbaseFetch } from './fetch'
 import type {
+  FluxbaseError,
   FunctionInvokeOptions,
   EdgeFunction,
 } from './types'
@@ -77,7 +78,7 @@ export class FluxbaseFunctions {
   async invoke<T = unknown>(
     functionName: string,
     options?: FunctionInvokeOptions
-  ): Promise<{ data: T | null; error: Error | null }> {
+  ): Promise<{ data: T | null; error: FluxbaseError | null }> {
     try {
       const method = options?.method || 'POST'
       const headers = options?.headers || {}
@@ -114,7 +115,7 @@ export class FluxbaseFunctions {
 
       return { data: response, error: null }
     } catch (error) {
-      return { data: null, error: error as Error }
+      return { data: null, error: error as FluxbaseError }
     }
   }
 
@@ -131,12 +132,12 @@ export class FluxbaseFunctions {
    * }
    * ```
    */
-  async list(): Promise<{ data: EdgeFunction[] | null; error: Error | null }> {
+  async list(): Promise<{ data: EdgeFunction[] | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<EdgeFunction[]>('/api/v1/functions')
       return { data, error: null }
     } catch (error) {
-      return { data: null, error: error as Error }
+      return { data: null, error: error as FluxbaseError }
     }
   }
 
@@ -154,12 +155,12 @@ export class FluxbaseFunctions {
    * }
    * ```
    */
-  async get(name: string): Promise<{ data: EdgeFunction | null; error: Error | null }> {
+  async get(name: string): Promise<{ data: EdgeFunction | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<EdgeFunction>(`/api/v1/functions/${name}`)
       return { data, error: null }
     } catch (error) {
-      return { data: null, error: error as Error }
+      return { data: null, error: error as FluxbaseError }
     }
   }
 }

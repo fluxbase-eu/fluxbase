@@ -23,6 +23,24 @@ import type {
   ExecutionType,
 } from "./types";
 
+/**
+ * Status reported to the {@link RealtimeChannel.subscribe} callback
+ * (Supabase-compatible union).
+ */
+export type RealtimeSubscribeStatus =
+  | "SUBSCRIBED"
+  | "CHANNEL_ERROR"
+  | "TIMED_OUT"
+  | "CLOSED";
+
+export type RealtimeSubscribeStatusCallback = (
+  status: RealtimeSubscribeStatus,
+  err?: Error
+) => void;
+
+/** Default wait for the server's subscribe acknowledgment */
+const DEFAULT_SUBSCRIBE_TIMEOUT_MS = 10_000;
+
 export class RealtimeChannel {
   private ws: WebSocket | null = null;
   private url: string;
@@ -60,6 +78,23 @@ export class RealtimeChannel {
   private messageIdCounter = 0;
   private onTokenRefreshNeeded: (() => Promise<string | null>) | null = null;
   private isRefreshingToken = false;
+  private statusCallbacks: Set<RealtimeSubscribeStatusCallback> = new Set();
+  /**
+   * Subscribe lifecycle, driven by the server's ack:
+   * - "idle": no subscribe() in flight or completed
+   * - "awaiting-ack": subscribe message sent, waiting for the server ack
+   * - "subscribed": server acknowledged the subscription
+   * - "timed-out": no ack arrived within the subscribe timeout
+   * - "error": connection failed/closed before the ack arrived
+   */
+  private subscribePhase:
+    | "idle"
+    | "awaiting-ack"
+    | "subscribed"
+    | "timed-out"
+    | "error" = "idle";
+  private subscribeAckTimer: ReturnType<typeof setTimeout> | null = null;
+  private subscribeTimeoutMs = DEFAULT_SUBSCRIBE_TIMEOUT_MS;
 
   constructor(
     url: string,
@@ -298,36 +333,109 @@ export class RealtimeChannel {
 
   /**
    * Subscribe to the channel
+   *
+   * The status callback is Supabase-compatible and ack-driven:
+   * - `SUBSCRIBED` fires when the **server acknowledges** the subscribe
+   *   message (an `ack` frame with `subscribed: true`), not merely when the
+   *   WebSocket transport opens.
+   * - `TIMED_OUT` fires when no acknowledgment arrives within `timeout`
+   *   milliseconds.
+   * - `CHANNEL_ERROR` fires when the connection fails or closes before the
+   *   server acknowledges the subscription.
+   * - `CLOSED` is reserved for explicit close and is not currently emitted.
+   *
    * @param callback - Optional status callback (Supabase-compatible)
-   * @param _timeout - Optional timeout in milliseconds (currently unused)
+   * @param timeout - Optional timeout in milliseconds to wait for the
+   *   server's subscribe acknowledgment before `TIMED_OUT` is reported
+   *   (default: 10000)
    */
   subscribe(
-    callback?: (
-      status: "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED",
-      err?: Error
-    ) => void,
-    _timeout?: number
+    callback?: RealtimeSubscribeStatusCallback,
+    timeout?: number
   ): this {
     // Re-enable reconnection in case this is a re-subscribe after unsubscribe
     this.shouldReconnect = true;
-    this.connect();
 
-    // Call callback with SUBSCRIBED status after connection
-    if (callback) {
-      // Wait for connection to open
-      const checkConnection = () => {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-          callback("SUBSCRIBED");
-        } else if (this.ws && this.ws.readyState === WebSocket.CLOSED) {
-          callback("CHANNEL_ERROR", new Error("Failed to connect"));
-        } else {
-          setTimeout(checkConnection, 100);
-        }
-      };
-      setTimeout(checkConnection, 100);
+    if (typeof timeout === "number" && timeout > 0) {
+      this.subscribeTimeoutMs = timeout;
     }
 
+    if (callback) {
+      this.statusCallbacks.add(callback);
+    }
+
+    // Idempotent re-subscribe: already connected and confirmed by the server
+    if (
+      this.ws &&
+      this.ws.readyState === WebSocket.OPEN &&
+      this.subscribePhase === "subscribed"
+    ) {
+      this.emitStatus("SUBSCRIBED");
+      return this;
+    }
+
+    this.beginAwaitingAck();
+    this.connect();
+
     return this;
+  }
+
+  /**
+   * Internal: enter the awaiting-ack phase and arm the subscribe timeout
+   */
+  private beginAwaitingAck() {
+    this.subscribePhase = "awaiting-ack";
+    this.armSubscribeAckTimer();
+  }
+
+  /**
+   * Internal: (re)arm the timer that reports TIMED_OUT when the server's
+   * subscribe acknowledgment does not arrive in time
+   */
+  private armSubscribeAckTimer() {
+    this.clearSubscribeAckTimer();
+    this.subscribeAckTimer = setTimeout(() => {
+      this.subscribeAckTimer = null;
+      if (this.subscribePhase === "awaiting-ack") {
+        this.subscribePhase = "timed-out";
+        this.emitStatus(
+          "TIMED_OUT",
+          new Error(
+            `No subscribe acknowledgment received within ${this.subscribeTimeoutMs}ms`
+          )
+        );
+      }
+    }, this.subscribeTimeoutMs);
+  }
+
+  /**
+   * Internal: clear the subscribe acknowledgment timer
+   */
+  private clearSubscribeAckTimer() {
+    if (this.subscribeAckTimer) {
+      clearTimeout(this.subscribeAckTimer);
+      this.subscribeAckTimer = null;
+    }
+  }
+
+  /**
+   * Internal: notify every registered subscribe status callback
+   */
+  private emitStatus(status: RealtimeSubscribeStatus, err?: Error) {
+    this.statusCallbacks.forEach((callback) => {
+      try {
+        if (err === undefined) {
+          callback(status);
+        } else {
+          callback(status, err);
+        }
+      } catch (callbackErr) {
+        console.error(
+          "[Fluxbase Realtime] Error in status callback:",
+          callbackErr
+        );
+      }
+    });
   }
 
   /**
@@ -678,6 +786,13 @@ export class RealtimeChannel {
 
       // Start heartbeat
       this.startHeartbeat();
+
+      // Subscribe messages were (re)sent: wait for the server's ack again.
+      // This also covers reconnects after a drop, so subscribers get a fresh
+      // SUBSCRIBED once the server confirms the re-subscription.
+      if (this.subscribePhase !== "idle") {
+        this.beginAwaitingAck();
+      }
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
@@ -711,6 +826,16 @@ export class RealtimeChannel {
     this.ws.onclose = () => {
       console.log("[Fluxbase Realtime] Disconnected");
       this.stopHeartbeat();
+
+      // If the socket dropped before the server confirmed the subscription,
+      // surface CHANNEL_ERROR (Supabase-compatible behavior). After a
+      // confirmed subscribe a close is handled by the reconnect loop instead.
+      if (this.subscribePhase === "awaiting-ack") {
+        this.clearSubscribeAckTimer();
+        this.subscribePhase = "error";
+        this.emitStatus("CHANNEL_ERROR", new Error("Failed to connect"));
+      }
+
       this.attemptReconnect();
     };
   }
@@ -720,6 +845,7 @@ export class RealtimeChannel {
    */
   private disconnect() {
     this.stopHeartbeat();
+    this.clearSubscribeAckTimer();
 
     if (this.ws) {
       this.ws.close();
@@ -789,7 +915,25 @@ export class RealtimeChannel {
         const legacy = message as unknown as {
           messageId?: string;
           status?: string;
+          subscribed?: boolean;
         };
+
+        // Subscribe confirmation: the Go server replies to every subscribe
+        // (channel-level, postgres_changes, subscribe_logs) with an ack
+        // payload carrying subscribed: true (internal/realtime/handler.go).
+        // Unsubscribe acks carry unsubscribed: true instead, and broadcast
+        // acks carry messageId/status, so this cannot collide with them.
+        const subscribedAck = payload.subscribed ?? legacy.subscribed;
+        if (subscribedAck === true) {
+          if (
+            this.subscribePhase === "awaiting-ack" ||
+            this.subscribePhase === "timed-out"
+          ) {
+            this.clearSubscribeAckTimer();
+            this.subscribePhase = "subscribed";
+            this.emitStatus("SUBSCRIBED");
+          }
+        }
 
         const messageId = payload.messageId ?? legacy.messageId;
         const status = payload.status ?? legacy.status;
@@ -1320,7 +1464,10 @@ export class ExecutionLogsChannel {
   /**
    * Subscribe to execution logs
    *
-   * @param callback - Optional status callback
+   * @param callback - Optional status callback (Supabase-compatible). Fires
+   *   SUBSCRIBED when the server acknowledges the subscribe_logs message,
+   *   TIMED_OUT when the acknowledgment does not arrive within the timeout,
+   *   and CHANNEL_ERROR when the connection fails before the acknowledgment.
    * @returns Promise that resolves when subscribed
    *
    * @example
@@ -1329,10 +1476,8 @@ export class ExecutionLogsChannel {
    * ```
    */
   subscribe(
-    callback?: (
-      status: "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED",
-      err?: Error
-    ) => void
+    callback?: RealtimeSubscribeStatusCallback,
+    timeout?: number
   ): this {
     // Register all callbacks
     this.channel.on(
@@ -1353,7 +1498,7 @@ export class ExecutionLogsChannel {
     );
 
     // Subscribe to the channel
-    this.channel.subscribe(callback);
+    this.channel.subscribe(callback, timeout);
     return this;
   }
 

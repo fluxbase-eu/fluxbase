@@ -4163,14 +4163,18 @@ export interface AdminListObjectsResponse {
 /**
  * Base Fluxbase response type (Supabase-compatible)
  * Returns either `{ data, error: null }` on success or `{ data: null, error }` on failure
+ *
+ * The failure branch carries a {@link FluxbaseError}: the error instance the
+ * SDK's fetch layer actually produces, hydrated with `status`, `code` and
+ * `details` from the server envelope.
  */
 export type FluxbaseResponse<T> =
-  { data: T; error: null } | { data: null; error: Error };
+  { data: T; error: null } | { data: null; error: FluxbaseError };
 
 /**
  * Response type for operations that don't return data (void operations)
  */
-export type VoidResponse = { error: Error | null };
+export type VoidResponse = { error: FluxbaseError | null };
 
 /**
  * Weak password information (Supabase-compatible)

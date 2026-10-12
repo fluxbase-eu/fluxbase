@@ -19,7 +19,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type { ExecutionLog, Job, OnBehalfOf, SubmitJobRequest, User } from "./types";
+import type { ExecutionLog, FluxbaseError, Job, OnBehalfOf, SubmitJobRequest, User } from "./types";
 
 /**
  * Jobs client for submitting and monitoring background jobs
@@ -144,7 +144,7 @@ export class FluxbaseJobs {
        */
       onBehalfOf?: OnBehalfOf;
     },
-  ): Promise<{ data: Job | null; error: Error | null }> {
+  ): Promise<{ data: Job | null; error: FluxbaseError | null }> {
     try {
       let finalOnBehalfOf = options?.onBehalfOf;
 
@@ -180,7 +180,7 @@ export class FluxbaseJobs {
       const data = await this.fetch.post<Job>("/api/v1/jobs/submit", request);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -202,12 +202,12 @@ export class FluxbaseJobs {
    * }
    * ```
    */
-  async get(jobId: string): Promise<{ data: Job | null; error: Error | null }> {
+  async get(jobId: string): Promise<{ data: Job | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.get<Job>(`/api/v1/jobs/${jobId}`);
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -240,7 +240,7 @@ export class FluxbaseJobs {
     limit?: number;
     offset?: number;
     includeResult?: boolean;
-  }): Promise<{ data: Job[] | null; error: Error | null }> {
+  }): Promise<{ data: Job[] | null; error: FluxbaseError | null }> {
     try {
       const params = new URLSearchParams();
       if (filters?.status) params.append("status", filters.status);
@@ -257,7 +257,7 @@ export class FluxbaseJobs {
       );
       return { data: response?.jobs ?? [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -276,12 +276,12 @@ export class FluxbaseJobs {
    * }
    * ```
    */
-  async cancel(jobId: string): Promise<{ data: null; error: Error | null }> {
+  async cancel(jobId: string): Promise<{ data: null; error: FluxbaseError | null }> {
     try {
       await this.fetch.post(`/api/v1/jobs/${jobId}/cancel`, {});
       return { data: null, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -302,12 +302,12 @@ export class FluxbaseJobs {
    * }
    * ```
    */
-  async retry(jobId: string): Promise<{ data: Job | null; error: Error | null }> {
+  async retry(jobId: string): Promise<{ data: Job | null; error: FluxbaseError | null }> {
     try {
       const data = await this.fetch.post<Job>(`/api/v1/jobs/${jobId}/retry`, {});
       return { data, error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 
@@ -350,7 +350,7 @@ export class FluxbaseJobs {
   async getLogs(
     jobId: string,
     afterLine?: number,
-  ): Promise<{ data: ExecutionLog[] | null; error: Error | null }> {
+  ): Promise<{ data: ExecutionLog[] | null; error: FluxbaseError | null }> {
     try {
       const params = afterLine !== undefined ? `?after_line=${afterLine}` : "";
       const response = await this.fetch.get<{ logs: ExecutionLog[]; count: number }>(
@@ -358,7 +358,7 @@ export class FluxbaseJobs {
       );
       return { data: response.logs || [], error: null };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return { data: null, error: error as FluxbaseError };
     }
   }
 }
