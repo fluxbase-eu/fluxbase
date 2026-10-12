@@ -67,7 +67,7 @@ Tenant middleware runs before auth so that tenant context is available for authe
 
 With tenant context established, authentication validates the user:
 
-1. [`internal/middleware/clientkey_auth.go`](https://github.com/nimbleflux/fluxbase/blob/main/internal/middleware/clientkey_auth.go) — JWT validation, role extraction, `RequireAuth` / `RequireServiceKey`. This is where the `Authorization` header is parsed and claims land in fiber locals
+1. [`internal/middleware/clientkey_middleware.go`](https://github.com/nimbleflux/fluxbase/blob/main/internal/middleware/clientkey_middleware.go) — JWT validation, role extraction, `RequireAuth` / `RequireServiceKey`. This is where the `Authorization` header is parsed and claims land in fiber locals (key lookup lives in [`servicekey_auth.go`](https://github.com/nimbleflux/fluxbase/blob/main/internal/middleware/servicekey_auth.go))
 2. [`internal/auth/jwt.go`](https://github.com/nimbleflux/fluxbase/blob/main/internal/auth/jwt.go) — How tokens are created, what claims they carry (`TokenClaims` struct), and how roles map to PostgreSQL roles
 
 ### ⑥ ⑦ ⑧ Handler → Service → Database — The actual work

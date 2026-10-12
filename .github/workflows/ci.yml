@@ -855,7 +855,12 @@ jobs:
           # -p 1 runs the two package binaries sequentially: the e2e suite's
           # TestMain resets the shared database schema, which must not race
           # with the internal/auth tests bootstrapping/provisioning it.
-          go test -tags=integration -v -race -parallel=1 -p 1 -timeout=15m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/... ./internal/auth/...
+          # Two separate go test invocations: ./test/e2e and ./internal/auth
+          # each manage their own connection pools/DB fixtures, and running
+          # them in one process let e2e pool teardown close the auth suite's
+          # shared connection ('conn closed'). Separate processes isolate that.
+          go test -tags=integration -v -race -parallel=1 -p 1 -timeout=15m -coverprofile=coverage-e2e.out -covermode=atomic ./test/e2e/...
+          go test -tags=integration -v -race -parallel=1 -p 1 -timeout=10m ./internal/auth/...
 
 
   # ===========================================================================
