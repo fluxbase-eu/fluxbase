@@ -1121,9 +1121,10 @@ export class EmailSettingsManager {
    * }
    * ```
    */
-  async get(): Promise<EmailProviderSettings> {
+  async get(options: { signal?: AbortSignal | null } = {}): Promise<EmailProviderSettings> {
     return await this.fetch.get<EmailProviderSettings>(
       "/api/v1/admin/email/settings",
+      { signal: options.signal },
     );
   }
 
@@ -1265,9 +1266,12 @@ export class EmailSettingsManager {
    *
    * @returns Promise resolving to TenantEmailProviderSettings
    */
-  async getForTenant(): Promise<TenantEmailProviderSettings> {
+  async getForTenant(options: {
+    signal?: AbortSignal | null;
+  } = {}): Promise<TenantEmailProviderSettings> {
     return await this.fetch.get<TenantEmailProviderSettings>(
       "/api/v1/admin/email/settings/tenant",
+      { signal: options.signal },
     );
   }
 

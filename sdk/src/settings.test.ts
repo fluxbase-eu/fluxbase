@@ -1446,6 +1446,7 @@ describe("EmailSettingsManager", () => {
 
       expect(mockFetch.get).toHaveBeenCalledWith(
         "/api/v1/admin/email/settings",
+        { signal: undefined },
       );
       expect(result).toEqual(mockSettings);
     });

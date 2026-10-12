@@ -160,6 +160,8 @@ export class FluxbaseAdmin {
    *
    * @returns Health status including database and realtime service status
    *
+   * @param options - Optional request options, including an AbortSignal so
+   *   callers (e.g. TanStack Query) can cancel the request
    * @example
    * ```typescript
    * const { data, error } = await admin.getHealth();
@@ -170,9 +172,13 @@ export class FluxbaseAdmin {
    * }
    * ```
    */
-  async getHealth(): Promise<DataResponse<HealthResponse>> {
+  async getHealth(options: {
+    signal?: AbortSignal | null;
+  } = {}): Promise<DataResponse<HealthResponse>> {
     return wrapAsync(async () => {
-      return await this.fetch.get<HealthResponse>("/health");
+      return await this.fetch.get<HealthResponse>("/health", {
+        signal: options.signal,
+      });
     });
   }
 
@@ -384,7 +390,9 @@ export class FluxbaseAdmin {
         ? `/api/v1/admin/users?${queryString}`
         : "/api/v1/admin/users";
 
-      return await this.fetch.get<ListUsersResponse>(url);
+      return await this.fetch.get<ListUsersResponse>(url, {
+        signal: options.signal,
+      });
     });
   }
 

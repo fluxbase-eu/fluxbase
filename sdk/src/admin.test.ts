@@ -272,7 +272,9 @@ describe("FluxbaseAdmin", () => {
 
         const { data: result, error } = await admin.listUsers();
 
-        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/users");
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/users", {
+          signal: undefined,
+        });
         expect(error).toBeNull();
         expect(result).toBeDefined();
         expect(result!.users).toHaveLength(2);
@@ -313,6 +315,7 @@ describe("FluxbaseAdmin", () => {
 
         expect(mockFetch.get).toHaveBeenCalledWith(
           "/api/v1/admin/users?exclude_admins=true&search=john&limit=10&offset=0&type=app",
+          { signal: undefined },
         );
         expect(error).toBeNull();
         expect(result).toBeDefined();
@@ -332,6 +335,7 @@ describe("FluxbaseAdmin", () => {
 
         expect(mockFetch.get).toHaveBeenCalledWith(
           "/api/v1/admin/users?type=platform",
+          { signal: undefined },
         );
         expect(error).toBeNull();
       });
@@ -347,7 +351,9 @@ describe("FluxbaseAdmin", () => {
 
         const { data: result, error } = await admin.listUsers({});
 
-        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/users");
+        expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/users", {
+          signal: undefined,
+        });
         expect(error).toBeNull();
       });
     });

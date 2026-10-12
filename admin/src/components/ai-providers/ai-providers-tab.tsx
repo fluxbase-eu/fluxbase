@@ -55,8 +55,8 @@ export function AIProvidersTab() {
 
   const { data: providers = [], isLoading } = useQuery<AIProvider[]>({
     queryKey: ["ai-providers", client.admin.ai],
-    queryFn: async () => {
-      const { data, error } = await client.admin.ai.listProviders();
+    queryFn: async ({ signal }) => {
+      const { data, error } = await client.admin.ai.listProviders({ signal });
       if (error) throw error;
       return data ?? [];
     },

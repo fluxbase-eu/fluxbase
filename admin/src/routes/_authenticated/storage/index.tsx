@@ -87,9 +87,9 @@ function StorageBrowser() {
     try {
       const { data, error } = await client.admin.storage.listBuckets();
       if (error) throw error;
-      setBuckets(data?.buckets || []);
-      if (data?.buckets && data.buckets.length > 0) {
-        setSelectedBucket((prev) => prev || data.buckets[0]?.name || "");
+      setBuckets(data || []);
+      if (data && data.length > 0) {
+        setSelectedBucket((prev) => prev || data[0]?.name || "");
       }
     } catch (error: unknown) {
       const errorMessage =

@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { FluxbaseFetch, type FetchOptions, type RefreshTokenCallback } from './fetch'
+import type { FluxbaseError } from './types'
 
 // Mock global fetch
 const mockFetch = vi.fn()
@@ -741,6 +742,126 @@ describe('FluxbaseFetch', () => {
         expect(err.status).toBe(400)
         expect(err.details).toEqual({ error: 'Invalid input', details: { field: 'name' } })
       }
+    })
+  })
+
+  describe('AbortSignal support', () => {
+    it('should reject with a distinguishable error when the signal is already aborted', async () => {
+      const controller = new AbortController()
+      controller.abort()
+
+      // Emulate fetch rejecting immediately for an aborted signal
+      mockFetch.mockImplementationOnce(() => {
+        const abortError = new Error('This operation was aborted')
+        abortError.name = 'AbortError'
+        return Promise.reject(abortError)
+      })
+
+      // Caller abort must NOT surface as the 408 "Request timeout" error
+      const err = await fluxFetch
+        .get('/test', { signal: controller.signal })
+        .then(
+          () => {
+            throw new Error('should have rejected')
+          },
+          (e: Error) => e,
+        )
+      expect(err.name).toBe('AbortError')
+      expect((err as FluxbaseError).status).toBeUndefined()
+    })
+
+    it('should reject with AbortError when the caller aborts mid-flight', async () => {
+      mockFetch.mockImplementationOnce(
+        (_url: string, init: { signal: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            init.signal.addEventListener('abort', () => {
+              const abortError = new Error('This operation was aborted')
+              abortError.name = 'AbortError'
+              reject(abortError)
+            })
+          })
+      )
+
+      const controller = new AbortController()
+      const promise = fluxFetch.get('/slow', { signal: controller.signal })
+      controller.abort()
+
+      const err = await promise.then(
+        () => {
+          throw new Error('should have rejected')
+        },
+        (e: Error) => e,
+      )
+      expect(err.name).toBe('AbortError')
+      expect((err as FluxbaseError).status).toBeUndefined()
+    })
+
+    it('should rethrow the caller abort reason when it is an Error', async () => {
+      mockFetch.mockImplementationOnce(
+        (_url: string, init: { signal: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            init.signal.addEventListener('abort', () => {
+              const abortError = new Error('This operation was aborted')
+              abortError.name = 'AbortError'
+              reject(abortError)
+            })
+          })
+      )
+
+      const controller = new AbortController()
+      const reason = new Error('navigation cancelled')
+      const promise = fluxFetch.get('/slow', { signal: controller.signal })
+      controller.abort(reason)
+
+      await expect(promise).rejects.toBe(reason)
+    })
+
+    it('should keep the 408 timeout error when no caller signal aborts', async () => {
+      const abortError = new Error('Aborted')
+      abortError.name = 'AbortError'
+      mockFetch.mockRejectedValueOnce(abortError)
+
+      await expect(fluxFetch.get('/api/test'))
+        .rejects.toMatchObject({ message: 'Request timeout', status: 408 })
+    })
+
+    it('should thread the signal through post()', async () => {
+      mockFetch.mockImplementationOnce(
+        (_url: string, init: { signal: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            init.signal.addEventListener('abort', () => {
+              const abortError = new Error('This operation was aborted')
+              abortError.name = 'AbortError'
+              reject(abortError)
+            })
+          })
+      )
+
+      const controller = new AbortController()
+      const promise = fluxFetch.post('/slow', { a: 1 }, { signal: controller.signal })
+      controller.abort()
+
+      const err = await promise.then(
+        () => {
+          throw new Error('should have rejected')
+        },
+        (e: Error) => e,
+      )
+      expect(err.name).toBe('AbortError')
+      expect((err as FluxbaseError).status).toBeUndefined()
+    })
+
+    it('should resolve normally when the signal is never aborted', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ ok: true }),
+      })
+
+      const controller = new AbortController()
+      await expect(
+        fluxFetch.get('/test', { signal: controller.signal })
+      ).resolves.toEqual({ ok: true })
     })
   })
 

@@ -403,6 +403,15 @@ describe('StorageBucket - File List', () => {
     expect(fetch.lastUrl).toContain('offset=50')
   })
 
+  it('should send limit/offset of 0 explicitly (valid falsy values)', async () => {
+    fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
+
+    await bucket.list({ limit: 0, offset: 0 })
+
+    expect(fetch.lastUrl).toContain('limit=0')
+    expect(fetch.lastUrl).toContain('offset=0')
+  })
+
   it('should list files with pagination', async () => {
     fetch.mockResponse = { bucket: 'files', objects: [], count: 0 }
 

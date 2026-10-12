@@ -230,7 +230,9 @@ describe('DDLManager', () => {
 
       const result = await manager.listTables()
 
-      expect(mockFetch.get).toHaveBeenCalledWith('/api/v1/admin/ddl/tables')
+      expect(mockFetch.get).toHaveBeenCalledWith('/api/v1/admin/ddl/tables', {
+        signal: undefined,
+      })
       expect(result.tables).toHaveLength(3)
     })
 
@@ -246,7 +248,9 @@ describe('DDLManager', () => {
 
       const result = await manager.listTables('public')
 
-      expect(mockFetch.get).toHaveBeenCalledWith('/api/v1/admin/ddl/tables?schema=public')
+      expect(mockFetch.get).toHaveBeenCalledWith('/api/v1/admin/ddl/tables?schema=public', {
+        signal: undefined,
+      })
       expect(result.tables).toHaveLength(2)
       expect(result.tables.every((t) => t.schema === 'public')).toBe(true)
     })
@@ -272,7 +276,9 @@ describe('DDLManager', () => {
 
       await manager.listTables('my-schema')
 
-      expect(mockFetch.get).toHaveBeenCalledWith('/api/v1/admin/ddl/tables?schema=my-schema')
+      expect(mockFetch.get).toHaveBeenCalledWith('/api/v1/admin/ddl/tables?schema=my-schema', {
+        signal: undefined,
+      })
     })
 
     it('should return tables with column information', async () => {

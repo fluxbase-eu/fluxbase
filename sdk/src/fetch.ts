@@ -9,6 +9,14 @@ export interface FetchOptions {
   headers?: Record<string, string>;
   body?: unknown;
   timeout?: number;
+  /**
+   * AbortSignal for caller-requested cancellation (e.g. TanStack Query's
+   * queryFn signal). Composed with the SDK's own timeout: whichever fires
+   * first cancels the request. A caller abort rejects with a distinguishable
+   * error (name "AbortError", message "Request aborted") instead of the
+   * 408 "Request timeout" FluxbaseError the internal timeout produces.
+   */
+  signal?: AbortSignal | null;
   /** Skip automatic token refresh on 401 (used for auth endpoints) */
   skipAutoRefresh?: boolean;
 }
@@ -116,6 +124,47 @@ export class FluxbaseFetch {
   }
 
   /**
+   * Compose a caller-provided AbortSignal with the per-request timeout
+   * controller: when the caller aborts, the controller (whose signal is
+   * attached to fetch) is aborted with the caller's reason.
+   *
+   * @returns A cleanup function that detaches the listener.
+   */
+  private linkAbortSignal(
+    controller: AbortController,
+    signal?: AbortSignal | null,
+  ): () => void {
+    if (!signal) {
+      return () => {};
+    }
+
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      return () => {};
+    }
+
+    const onAbort = () => controller.abort(signal.reason);
+    signal.addEventListener("abort", onAbort);
+    return () => signal.removeEventListener("abort", onAbort);
+  }
+
+  /**
+   * Build the error for a caller-requested abort, distinguishable from the
+   * SDK's own 408 "Request timeout" error: it carries name "AbortError" and
+   * no status. When the caller aborted with an Error reason (e.g. a
+   * DOMException from another layer), that reason is rethrown as-is.
+   */
+  private callerAbortError(signal: AbortSignal): Error {
+    const reason = signal.reason;
+    if (reason instanceof Error) {
+      return reason;
+    }
+    const abortError = new Error("Request aborted");
+    abortError.name = "AbortError";
+    return abortError;
+  }
+
+  /**
    * Make an HTTP request
    */
   async request<T = unknown>(path: string, options: FetchOptions): Promise<T> {
@@ -142,6 +191,7 @@ export class FluxbaseFetch {
       () => controller.abort(),
       options.timeout ?? this.timeout,
     );
+    const unlinkSignal = this.linkAbortSignal(controller, options.signal);
 
     if (this.debug) {
       console.log(`[Fluxbase SDK] ${options.method} ${url}`, options.body);
@@ -173,6 +223,7 @@ export class FluxbaseFetch {
       });
 
       clearTimeout(timeoutId);
+      unlinkSignal();
 
       const contentType = response.headers.get("content-type");
       let data: unknown;
@@ -229,9 +280,16 @@ export class FluxbaseFetch {
       };
     } catch (err) {
       clearTimeout(timeoutId);
+      unlinkSignal();
 
       if (err instanceof Error) {
         if (err.name === "AbortError") {
+          // Caller-requested cancellation is distinguishable from the SDK's
+          // own timeout (which throws a 408 "Request timeout" FluxbaseError)
+          if (options.signal?.aborted) {
+            throw this.callerAbortError(options.signal);
+          }
+
           const timeoutError = new Error("Request timeout") as FluxbaseError;
           timeoutError.status = 408;
           throw timeoutError;
@@ -501,6 +559,7 @@ export class FluxbaseFetch {
       () => controller.abort(),
       options.timeout ?? this.timeout,
     );
+    const unlinkSignal = this.linkAbortSignal(controller, options.signal);
 
     if (this.debug) {
       console.log(`[Fluxbase SDK] HEAD ${url}`);
@@ -514,6 +573,7 @@ export class FluxbaseFetch {
       });
 
       clearTimeout(timeoutId);
+      unlinkSignal();
 
       if (this.debug) {
         console.log(`[Fluxbase SDK] HEAD Response:`, response.status);
@@ -542,9 +602,14 @@ export class FluxbaseFetch {
       return response.headers;
     } catch (err) {
       clearTimeout(timeoutId);
+      unlinkSignal();
 
       if (err instanceof Error) {
         if (err.name === "AbortError") {
+          if (options.signal?.aborted) {
+            throw this.callerAbortError(options.signal);
+          }
+
           const timeoutError = new Error("Request timeout") as FluxbaseError;
           timeoutError.status = 408;
           throw timeoutError;
@@ -577,6 +642,7 @@ export class FluxbaseFetch {
       () => controller.abort(),
       options.timeout ?? this.timeout,
     );
+    const unlinkSignal = this.linkAbortSignal(controller, options.signal);
 
     if (this.debug) {
       console.log(`[Fluxbase SDK] GET (blob) ${url}`);
@@ -590,6 +656,7 @@ export class FluxbaseFetch {
       });
 
       clearTimeout(timeoutId);
+      unlinkSignal();
 
       if (!response.ok) {
         // Parse the error body (JSON or text) so callers get the server's
@@ -628,9 +695,14 @@ export class FluxbaseFetch {
       return await response.blob();
     } catch (err) {
       clearTimeout(timeoutId);
+      unlinkSignal();
 
       if (err instanceof Error) {
         if (err.name === "AbortError") {
+          if (options.signal?.aborted) {
+            throw this.callerAbortError(options.signal);
+          }
+
           const timeoutError = new Error("Request timeout") as FluxbaseError;
           timeoutError.status = 408;
           throw timeoutError;

@@ -110,7 +110,7 @@ function EmailSettingsPage() {
     dataUpdatedAt: instanceDataUpdatedAt,
   } = useQuery<EmailProviderSettings>({
     queryKey: ["email-provider-settings"],
-    queryFn: () => fluxbaseClient.admin.settings.email.get(),
+    queryFn: ({ signal }) => fluxbaseClient.admin.settings.email.get({ signal }),
   });
 
   // Tenant-level settings (fetched when tenant is selected)
@@ -120,7 +120,8 @@ function EmailSettingsPage() {
     dataUpdatedAt: tenantSettingsDataUpdatedAt,
   } = useQuery<TenantEmailProviderSettings>({
     queryKey: ["email-provider-settings", "tenant", currentTenant?.id],
-    queryFn: () => fluxbaseClient.admin.settings.email.getForTenant(),
+    queryFn: ({ signal }) =>
+      fluxbaseClient.admin.settings.email.getForTenant({ signal }),
     enabled: showTenantLevel,
   });
 

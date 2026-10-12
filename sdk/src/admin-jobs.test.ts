@@ -311,6 +311,16 @@ describe("FluxbaseAdminJobs", () => {
       expect(error).toBeNull();
     });
 
+    it("should send limit/offset of 0 explicitly (valid falsy values)", async () => {
+      vi.mocked(mockFetch.get).mockResolvedValue({ jobs: [], limit: 0, offset: 0 });
+
+      await jobs.listJobs({ limit: 0, offset: 0 });
+
+      expect(mockFetch.get).toHaveBeenCalledWith(
+        "/api/v1/admin/jobs/queue?limit=0&offset=0"
+      );
+    });
+
     it("should handle error", async () => {
       vi.mocked(mockFetch.get).mockRejectedValue(new Error("Access denied"));
 

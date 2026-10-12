@@ -1426,6 +1426,8 @@ export interface ListUsersOptions {
   offset?: number;
   /** Which user table to query. Only "platform" is recognized by the server; any other value defaults to "app". */
   type?: "app" | "platform";
+  /** AbortSignal for caller-requested cancellation of the request */
+  signal?: AbortSignal | null;
 }
 
 export interface InviteUserRequest {

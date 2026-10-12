@@ -1,5 +1,6 @@
 import type { FluxbaseFetch } from "./fetch";
 import type {
+  AdminBucket,
   AdminListBucketsResponse,
   AdminListObjectsResponse,
   AdminStorageObject,
@@ -27,19 +28,24 @@ export class FluxbaseAdminStorage {
    *
    * @returns List of buckets
    *
+   * Returns the unwrapped bucket array — the same shape as
+   * `client.storage.listBuckets()` — instead of the raw `{ buckets }` server
+   * envelope.
+   *
    * @example
    * ```typescript
    * const { data, error } = await admin.storage.listBuckets();
    * if (data) {
-   *   console.log(`Found ${data.buckets.length} buckets`);
+   *   console.log(`Found ${data.length} buckets`);
    * }
    * ```
    */
-  async listBuckets(): Promise<DataResponse<AdminListBucketsResponse>> {
+  async listBuckets(): Promise<DataResponse<AdminBucket[]>> {
     return wrapAsync(async () => {
-      return await this.fetch.get<AdminListBucketsResponse>(
+      const data = await this.fetch.get<AdminListBucketsResponse>(
         "/api/v1/storage/buckets"
       );
+      return data.buckets || [];
     });
   }
 

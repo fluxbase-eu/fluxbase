@@ -920,8 +920,15 @@ export class QueryBuilder<T = unknown>
 
   /**
    * Execute the query and return results
+   *
+   * @param options - Optional request options. `signal` allows caller-requested
+   *   cancellation (e.g. TanStack Query's queryFn signal); when aborted, the
+   *   promise rejects with an "AbortError" instead of the SDK's 408 timeout.
    */
-  async execute(): Promise<PostgrestResponse<T>> {
+  async execute(options: {
+    signal?: AbortSignal | null;
+  } = {}): Promise<PostgrestResponse<T>> {
+    const { signal } = options;
     try {
       // Handle INSERT operation
       if (this.operationType === "insert") {
@@ -931,7 +938,9 @@ export class QueryBuilder<T = unknown>
         const body = Array.isArray(this.insertData)
           ? this.insertData
           : this.insertData;
-        const response = await this.fetch.post<T>(this.buildTablePath(), body);
+        const response = await this.fetch.post<T>(this.buildTablePath(), body, {
+          signal,
+        });
 
         return {
           data: response,
@@ -949,7 +958,9 @@ export class QueryBuilder<T = unknown>
         }
         const queryString = this.buildQueryString();
         const path = `${this.buildTablePath()}${queryString}`;
-        const response = await this.fetch.patch<T>(path, this.updateData);
+        const response = await this.fetch.patch<T>(path, this.updateData, {
+          signal,
+        });
 
         return {
           data: response,
@@ -964,7 +975,7 @@ export class QueryBuilder<T = unknown>
       if (this.operationType === "delete") {
         const queryString = this.buildQueryString();
         const path = `${this.buildTablePath()}${queryString}`;
-        await this.fetch.delete(path);
+        await this.fetch.delete(path, { signal });
 
         return {
           data: null,
@@ -978,7 +989,7 @@ export class QueryBuilder<T = unknown>
       // Handle SELECT operation (default)
       // Check if we should use POST-based query (for complex filters exceeding URL limits)
       if (this.shouldUsePostQuery()) {
-        return this.executePostQuery();
+        return this.executePostQuery({ signal });
       }
 
       const queryString = this.buildQueryString();
@@ -986,7 +997,9 @@ export class QueryBuilder<T = unknown>
 
       // When count is requested, use getWithHeaders to access Content-Range header
       if (this.countType) {
-        const response = await this.fetch.getWithHeaders<T | T[]>(path);
+        const response = await this.fetch.getWithHeaders<T | T[]>(path, {
+          signal,
+        });
         const serverCount = this.parseContentRangeCount(response.headers);
         const data = response.data;
 
@@ -1054,7 +1067,7 @@ export class QueryBuilder<T = unknown>
       }
 
       // Standard path without count - use regular get
-      const data = await this.fetch.get<T | T[]>(path);
+      const data = await this.fetch.get<T | T[]>(path, { signal });
 
       // Handle count aggregation response - extract count from data[0].count
       // Skip if using groupBy (return full array instead)
@@ -1394,13 +1407,18 @@ export class QueryBuilder<T = unknown>
    * Execute a SELECT query using the POST /query endpoint
    * Used when query parameters would exceed URL length limits
    */
-  private async executePostQuery(): Promise<PostgrestResponse<T>> {
+  private async executePostQuery(options: {
+    signal?: AbortSignal | null;
+  }): Promise<PostgrestResponse<T>> {
+    const { signal } = options;
     const body = this.buildQueryBody();
     const path = `${this.buildTablePath()}/query`;
 
     // When count is requested, use postWithHeaders to access Content-Range header
     if (this.countType) {
-      const response = await this.fetch.postWithHeaders<T | T[]>(path, body);
+      const response = await this.fetch.postWithHeaders<T | T[]>(path, body, {
+        signal,
+      });
       const serverCount = this.parseContentRangeCount(response.headers);
       const data = response.data;
 
@@ -1468,7 +1486,7 @@ export class QueryBuilder<T = unknown>
     }
 
     // Standard path without count - use regular post
-    const data = await this.fetch.post<T | T[]>(path, body);
+    const data = await this.fetch.post<T | T[]>(path, body, { signal });
 
     // Handle single row response
     if (this.singleRow) {
