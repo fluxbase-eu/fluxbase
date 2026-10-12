@@ -1142,6 +1142,14 @@ resourcesPreset: "small"
 ##
 resources: {}
 
+## Go GC soft memory limit (GOMEMLIMIT). Set it ~10% below the memory limit
+## above so the Go runtime GC works harder before the container gets OOM-killed.
+## Example (with resources.limits.memory: 1Gi):
+## extraEnvVars:
+##   - name: GOMEMLIMIT
+##     value: 900MiB
+## See docs/deployment/scaling.md for tuning guidance.
+
 ## Configure Pods probes
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 ## @param startupProbe.enabled Enable startupProbe on Fluxbase containers

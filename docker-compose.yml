@@ -120,12 +120,17 @@ services:
       FLUXBASE_GRAPHQL_MAX_DEPTH: ${FLUXBASE_GRAPHQL_MAX_DEPTH:-10}
       FLUXBASE_GRAPHQL_MAX_COMPLEXITY: ${FLUXBASE_GRAPHQL_MAX_COMPLEXITY:-1000}
       FLUXBASE_GRAPHQL_INTROSPECTION: ${FLUXBASE_GRAPHQL_INTROSPECTION:-true}
+
+      # Go GC soft memory limit. Keep it ~10% below mem_limit below so the GC
+      # works harder before the OOM killer does. See docs: deployment/scaling.md
+      GOMEMLIMIT: ${GOMEMLIMIT:-900MiB}
     ports:
       - "${FLUXBASE_PORT:-8080}:8080"
     volumes:
       - ./storage:/data/storage
     networks:
       - fluxbase-network
+    mem_limit: ${FLUXBASE_MEM_LIMIT:-1g}
     restart: unless-stopped
 
   # MailHog for testing email functionality
