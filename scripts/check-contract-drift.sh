@@ -45,6 +45,11 @@ SPEC="$WORK/openapi.json"
 GENERATED="$WORK/types-generated.ts"
 COMMITTED_NORM="$WORK/types-committed.ts"
 
+# Keep the inputs/outputs of the check in a stable location (CI uploads this
+# on failure) so a drift is reviewable without re-running the job.
+DRIFT_ARTIFACTS="${TMPDIR:-/tmp}/openapi-drift"
+mkdir -p "$DRIFT_ARTIFACTS" 2>/dev/null || DRIFT_ARTIFACTS=""
+
 AUTH=()
 if [ -n "${CONTRACT_DRIFT_TOKEN:-}" ]; then
   AUTH=(-H "Authorization: Bearer $CONTRACT_DRIFT_TOKEN")
@@ -62,10 +67,28 @@ bunx openapi-typescript "$SPEC" -o "$GENERATED"
 
 # Normalize both sides with prettier (same formatter the lefthook pre-commit
 # hook applies to sdk/src/**) so formatting can neither mask nor fake drift.
+# Prefer the workspace-installed binary: going through `bunx` here has been
+# observed to silently no-op in CI, which would report phantom drift.
 echo "==> Normalizing formatting (prettier)"
-bunx prettier --no-config --log-level warn "$GENERATED" > "$WORK/generated.pretty"
+if [ -x "node_modules/.bin/prettier" ]; then
+  PRETTIER=(node_modules/.bin/prettier --no-config --log-level warn)
+else
+  PRETTIER=(bunx prettier --no-config --log-level warn)
+fi
+"${PRETTIER[@]}" "$GENERATED" > "$WORK/generated.pretty"
 if [ -f "$COMMITTED" ]; then
-  bunx prettier --no-config --log-level warn "$COMMITTED" > "$COMMITTED_NORM"
+  "${PRETTIER[@]}" "$COMMITTED" > "$COMMITTED_NORM"
+fi
+
+# Canary: the raw generator emits 4-space indent, prettier emits 2-space.
+# Path keys ("/...") only sit at depth 1 (2 spaces) in normalized output.
+# If this fires, normalization silently failed — abort instead of reporting
+# phantom drift.
+if grep -q '^    "/' "$WORK/generated.pretty"; then
+  echo "INTERNAL ERROR: prettier normalization did not run; cannot check drift." >&2
+  echo "Run 'bun install' at the repo root so node_modules/.bin/prettier exists," >&2
+  echo "then retry." >&2
+  exit 1
 fi
 
 if [ "$UPDATE" = "1" ]; then
@@ -76,6 +99,10 @@ if [ "$UPDATE" = "1" ]; then
 fi
 
 echo "==> Diffing regenerated types against $COMMITTED"
+if [ -n "$DRIFT_ARTIFACTS" ]; then
+  cp -f "$SPEC" "$WORK/generated.pretty" "$DRIFT_ARTIFACTS/" 2>/dev/null || true
+  [ -f "$COMMITTED_NORM" ] && cp -f "$COMMITTED_NORM" "$DRIFT_ARTIFACTS/" 2>/dev/null || true
+fi
 if [ ! -f "$COMMITTED" ]; then
   echo "ERROR: $COMMITTED does not exist." >&2
   echo "       Generate it against a running server:" >&2

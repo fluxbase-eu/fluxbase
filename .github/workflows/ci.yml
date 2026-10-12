@@ -1052,16 +1052,39 @@ jobs:
           mkdir -p internal/adminui/dist
           echo '<!DOCTYPE html><html><head><title>Placeholder</title></head><body></body></html>' > internal/adminui/dist/index.html
 
+      - name: Install workspace dependencies
+        # Installs root devDependencies (openapi-typescript, prettier) used by
+        # scripts/check-contract-drift.sh.
+        run: bun install --frozen-lockfile
+
       - name: Create database and app user
         env:
           PGPASSWORD: postgres
         run: |
-          # Only roles + an empty database: the server runs its own migrations
-          # on boot, which is exactly the schema state the committed types
-          # were generated from.
           psql -h localhost -U postgres -c "CREATE DATABASE fluxbase_drift;"
           psql -h localhost -U postgres -d fluxbase_drift -c "CREATE USER fluxbase_app WITH PASSWORD 'fluxbase_app_password' LOGIN BYPASSRLS CREATEDB CREATEROLE;"
           psql -h localhost -U postgres -d fluxbase_drift -c "GRANT ALL PRIVILEGES ON DATABASE fluxbase_drift TO fluxbase_app;"
+
+      - name: Provision database schema
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # The schema is provisioned with psql (same as the test-go-db job)
+          # instead of relying on the server's boot-time declarative apply:
+          # that apply skips failed statements under transient connection
+          # errors, which made a single fresh boot's table set
+          # nondeterministic — and this check compares the exact table set.
+          # The server still applies the declarative schema on boot; against
+          # an existing schema every statement is an idempotent no-op.
+          sed "s/{{APP_USER}}/fluxbase_app/g" internal/database/bootstrap/bootstrap.sql | psql -h localhost -U postgres -d fluxbase_drift -v ON_ERROR_STOP=1
+          for schema in platform auth storage jobs functions realtime ai rpc app branching logging mcp; do
+            sed "s/{{APP_USER}}/fluxbase_app/g" internal/database/schema/schemas/$schema.sql | psql -h localhost -U postgres -d fluxbase_drift || true
+          done
+          psql -h localhost -U postgres -d fluxbase_drift -f internal/database/schema/schemas/post-schema-fks.sql || true
+          psql -h localhost -U postgres -d fluxbase_drift -f internal/database/schema/schemas/post-schema.sql || true
+          psql -h localhost -U postgres -d fluxbase_drift -c "CREATE SCHEMA IF NOT EXISTS _fluxbase;"
+          psql -h localhost -U postgres -d fluxbase_drift -c "GRANT ALL ON SCHEMA _fluxbase TO fluxbase_app;"
+          psql -h localhost -U postgres -d fluxbase_drift -c "GRANT anon, authenticated, service_role, tenant_service TO fluxbase_app;"
 
       - name: Build and start Go backend
         env:
@@ -1132,6 +1155,17 @@ jobs:
 
       - name: Check contract drift
         run: scripts/check-contract-drift.sh http://localhost:8082
+
+      - name: Upload drift artifacts
+        # The generated + normalized files and the served spec: makes a drift
+        # failure reviewable (or regenerable with --update) without re-running
+        # the whole job.
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: contract-drift-generated-types
+          path: /tmp/openapi-drift/
+          retention-days: 7
 
       - name: Upload server logs
         if: failure()
