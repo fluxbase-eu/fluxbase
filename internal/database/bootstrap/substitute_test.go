@@ -83,17 +83,19 @@ func TestSubstituteAppUser_MultiplePlaceholders(t *testing.T) {
 }
 
 func TestSubstituteAppUser_LongIdentifier(t *testing.T) {
-	// PostgreSQL allows identifiers up to 63 bytes; the regex accepts them.
+	// PostgreSQL allows identifiers up to 63 bytes; SubstituteAppUser enforces
+	// that limit up front via database.ValidIdentifier.
 	long := strings.Repeat("a", 63)
 	result, err := SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long)
 	require.NoError(t, err)
 	assert.Equal(t, "GRANT ALL TO "+long, result)
 
-	// 64+ chars are still regex-valid (length is enforced by PostgreSQL).
+	// 64+ chars exceed MaxIdentifierLen and are rejected before reaching the
+	// database (defense in depth — PostgreSQL would reject them anyway).
 	long64 := strings.Repeat("a", 64)
-	result, err = SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long64)
-	require.NoError(t, err)
-	assert.Equal(t, "GRANT ALL TO "+long64, result)
+	_, err = SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long64)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid database username")
 }
 
 func TestSubstituteAppUser_RejectsInjectionVectors(t *testing.T) {
