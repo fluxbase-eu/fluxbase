@@ -89,11 +89,12 @@ func TestSubstituteAppUser_LongIdentifier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "GRANT ALL TO "+long, result)
 
-	// 64+ chars are still regex-valid (length is enforced by PostgreSQL).
+	// 64 chars are rejected: #394 enforces PostgreSQL's 63-byte identifier
+	// limit inside the substitution itself.
 	long64 := strings.Repeat("a", 64)
-	result, err = SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long64)
-	require.NoError(t, err)
-	assert.Equal(t, "GRANT ALL TO "+long64, result)
+	_, err = SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long64)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at most 63 characters")
 }
 
 func TestSubstituteAppUser_RejectsInjectionVectors(t *testing.T) {

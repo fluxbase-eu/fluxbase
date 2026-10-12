@@ -65,7 +65,6 @@ func enrollTOTP(t *testing.T, ctx context.Context, service *auth.Service, userID
 // set, and the setup row is marked verified.
 func TestMFA_EnableTOTP_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -112,7 +111,6 @@ func TestMFA_EnableTOTP_Integration(t *testing.T) {
 // when the confirmation code does not match, leaving the user unenrolled.
 func TestMFA_EnableTOTP_InvalidCode_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -143,7 +141,6 @@ func TestMFA_EnableTOTP_InvalidCode_Integration(t *testing.T) {
 // storing TOTP secrets in plaintext: without a configured key, enabling fails.
 func TestMFA_EnableTOTP_WithoutEncryptionKey_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	// createAuthService intentionally does NOT set an encryption key here.
@@ -170,7 +167,6 @@ func TestMFA_EnableTOTP_WithoutEncryptionKey_Integration(t *testing.T) {
 // happy path and its replay-protection bookkeeping (totp_last_used_step).
 func TestMFA_VerifyTOTP_ValidCode_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -193,7 +189,6 @@ func TestMFA_VerifyTOTP_ValidCode_Integration(t *testing.T) {
 // twice: the second presentation of the same step is rejected.
 func TestMFA_VerifyTOTP_ReplayRejected_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -213,7 +208,6 @@ func TestMFA_VerifyTOTP_ReplayRejected_Integration(t *testing.T) {
 // well-formed but incorrect code.
 func TestMFA_VerifyTOTP_WrongCode_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -230,7 +224,6 @@ func TestMFA_VerifyTOTP_WrongCode_Integration(t *testing.T) {
 // rejected on reuse.
 func TestMFA_VerifyTOTP_BackupCode_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -258,7 +251,6 @@ func TestMFA_VerifyTOTP_BackupCode_Integration(t *testing.T) {
 // user who never enrolled in TOTP.
 func TestMFA_VerifyTOTP_NotEnabled_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -273,7 +265,6 @@ func TestMFA_VerifyTOTP_NotEnabled_Integration(t *testing.T) {
 // disable, and the full cleanup of the stored factor.
 func TestMFA_DisableTOTP_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -320,7 +311,6 @@ func TestMFA_DisableTOTP_Integration(t *testing.T) {
 // valid JWTs backed by a stored session row.
 func TestMFA_GenerateTokensForUser_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
@@ -356,7 +346,6 @@ func TestMFA_GenerateTokensForUser_Integration(t *testing.T) {
 // TestMFA_GenerateTokensForUser_UnknownUser_Integration pins the error path.
 func TestMFA_GenerateTokensForUser_UnknownUser_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	service := newMFAService(t, tc)
