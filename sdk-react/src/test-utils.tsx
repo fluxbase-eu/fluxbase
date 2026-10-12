@@ -274,6 +274,30 @@ export function createMockAIClient(
   const base = createMockClient(overrides);
   return {
     ...base,
+    admin: {
+      ...base.admin,
+      ai: {
+        getMetrics: vi.fn().mockResolvedValue({ data: null, error: null }),
+        listConversations: vi
+          .fn()
+          .mockResolvedValue({ data: { conversations: [], total: 0, total_count: 0 }, error: null }),
+        getConversationMessages: vi.fn().mockResolvedValue({ data: { messages: [], total: 0 }, error: null }),
+        getAuditLog: vi.fn().mockResolvedValue({ data: { entries: [], total: 0 }, error: null }),
+        listTables: vi.fn().mockResolvedValue({ data: [], error: null }),
+        exportTableToKB: vi.fn().mockResolvedValue({ data: null, error: null }),
+        createSyncConfig: vi.fn().mockResolvedValue({ data: null, error: null }),
+        listSyncConfigs: vi.fn().mockResolvedValue({ data: [], error: null }),
+        updateSyncConfig: vi.fn().mockResolvedValue({ data: null, error: null }),
+        deleteSyncConfig: vi.fn().mockResolvedValue({ error: null }),
+        triggerSync: vi.fn().mockResolvedValue({ data: null, error: null }),
+        grantDocumentPermission: vi.fn().mockResolvedValue({ data: null, error: null }),
+        listDocumentPermissions: vi.fn().mockResolvedValue({ data: [], error: null }),
+        revokeDocumentPermission: vi.fn().mockResolvedValue({ error: null }),
+        listChatbots: vi.fn().mockResolvedValue({ data: [], error: null }),
+        listProviders: vi.fn().mockResolvedValue({ data: [], error: null }),
+        listIntegrations: vi.fn().mockResolvedValue({ data: [], error: null }),
+      },
+    },
     ai: {
       listChatbots: vi.fn().mockResolvedValue({ data: [], error: null }),
       getChatbot: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -293,6 +317,7 @@ export function createMockAIClient(
       getConversation: vi.fn().mockResolvedValue({ data: null, error: null }),
       deleteConversation: vi.fn().mockResolvedValue({ error: null }),
       updateConversation: vi.fn().mockResolvedValue({ data: null, error: null }),
+      getUsage: vi.fn().mockResolvedValue({ data: null, error: null }),
       ...overrides.ai,
     },
     knowledgeBase: {
@@ -313,11 +338,17 @@ export function createMockAIClient(
       searchEntities: vi.fn().mockResolvedValue({ data: [], error: null }),
       getEntityRelationships: vi.fn().mockResolvedValue({ data: [], error: null }),
       getKnowledgeGraph: vi.fn().mockResolvedValue({ data: null, error: null }),
+      share: vi.fn().mockResolvedValue({ data: null, error: null }),
+      listPermissions: vi.fn().mockResolvedValue({ data: [], error: null }),
+      revokePermission: vi.fn().mockResolvedValue({ error: null }),
+      debugSearch: vi.fn().mockResolvedValue({ data: null, error: null }),
+      listChatbots: vi.fn().mockResolvedValue({ data: [], error: null }),
       ...overrides.knowledgeBase,
     },
     vector: {
       embed: vi.fn().mockResolvedValue({ data: null, error: null }),
       search: vi.fn().mockResolvedValue({ data: null, error: null }),
+      getCapabilities: vi.fn().mockResolvedValue({ data: { enabled: false }, error: null }),
       ...overrides.vector,
     },
   } as unknown as FluxbaseClient;

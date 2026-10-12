@@ -359,3 +359,31 @@ describe('FluxbaseVector', () => {
     })
   })
 })
+
+describe("FluxbaseVector — capabilities", () => {
+  it("should GET the capabilities endpoint", async () => {
+    // Reuse the module-level mock wiring from the existing describe blocks.
+    const { FluxbaseVector: FreshVector } = await import("./vector");
+    const { FluxbaseFetch: FreshFetch } = await import("./fetch");
+    const vi2 = await import("vitest");
+
+    const mockFetch: any = { get: vi2.vi.fn(), post: vi2.vi.fn() };
+    const vector = new FreshVector(mockFetch as unknown as FreshFetch);
+
+    mockFetch.get.mockResolvedValue({
+      enabled: true,
+      pgvector_installed: true,
+      pgvector_version: "0.8.0",
+      embedding_enabled: true,
+      embedding_provider: "openai",
+      embedding_model: "text-embedding-3-small",
+    });
+
+    const { data, error } = await vector.getCapabilities();
+
+    expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/capabilities/vector");
+    expect(error).toBeNull();
+    expect(data!.enabled).toBe(true);
+    expect(data!.embedding_model).toBe("text-embedding-3-small");
+  });
+});

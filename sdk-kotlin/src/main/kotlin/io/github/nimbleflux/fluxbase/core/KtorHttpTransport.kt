@@ -12,6 +12,9 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.readRawBytes
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.serializerOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -167,6 +170,19 @@ class KtorHttpTransport(
         is List<*> -> kotlinx.serialization.json.buildJsonArray {
             value.forEach { add(encodeToJsonElement(it)) }
         }
-        else -> kotlinx.serialization.json.JsonPrimitive(value.toString())
+        else -> {
+            // @Serializable dataclasses encode via their generated serializer —
+            // previously they fell through to JsonPrimitive(toString()), which
+            // sent a JSON string of the toString instead of the object.
+            @OptIn(kotlinx.serialization.InternalSerializationApi::class)
+            @Suppress("UNCHECKED_CAST")
+            val serializer =
+                value::class.serializerOrNull() as? kotlinx.serialization.KSerializer<Any>
+            if (serializer != null) {
+                json.encodeToJsonElement(serializer, value)
+            } else {
+                kotlinx.serialization.json.JsonPrimitive(value.toString())
+            }
+        }
     }
 }

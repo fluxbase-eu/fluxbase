@@ -12,6 +12,9 @@ import {
   createBranches,
   createCreateBranch,
   createInvokeRPC,
+  createAIChatbots,
+  createKBSearch,
+  createVectorCapabilities,
 } from "./features";
 import {
   createMockClient,
@@ -149,5 +152,70 @@ describe("createInvokeRPC", () => {
     await mutation.mutateAsync({ name: "calc", params: { x: 1 } });
 
     expect(invokeMock).toHaveBeenCalledWith("calc", { x: 1 }, undefined);
+  });
+});
+
+describe("AI / knowledge-base stores", () => {
+  it("createAIChatbots lists chatbots", async () => {
+    const data = [{ id: "bot-1", name: "assistant" }];
+    const client = createMockClient({
+      ai: {
+        listChatbots: vi.fn().mockResolvedValue({ data, error: null }),
+      } as any,
+    });
+    const queryClient = createTestQueryClient();
+
+    // Query stores are verified through the same queryKey/queryFn shape the
+    // factory registers (mirrors the createBranches test above).
+    const result = await queryClient.fetchQuery({
+      queryKey: ["fluxbase", "ai", "chatbots"],
+      queryFn: async () => {
+        const { data, error } = await client.ai.listChatbots();
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    expect(result).toEqual(data);
+    expect(client.ai.listChatbots).toHaveBeenCalled();
+  });
+
+  it("createKBSearch posts the search request", async () => {
+    const client = createMockClient({
+      knowledgeBase: {
+        search: vi.fn().mockResolvedValue({ data: { results: [], count: 0 }, error: null }),
+      } as any,
+    });
+    const queryClient = createTestQueryClient();
+
+    const mutation = renderStore(() => createKBSearch({ client, queryClient }));
+    await mutation.mutateAsync({ kbId: "kb-1", request: { query: "reset", limit: 5 } });
+
+    expect(client.knowledgeBase.search).toHaveBeenCalledWith("kb-1", {
+      query: "reset",
+      limit: 5,
+    });
+  });
+
+  it("createVectorCapabilities fetches capabilities", async () => {
+    const data = { enabled: true };
+    const client = createMockClient({
+      vector: {
+        getCapabilities: vi.fn().mockResolvedValue({ data, error: null }),
+      } as any,
+    });
+    const queryClient = createTestQueryClient();
+
+    const result = await queryClient.fetchQuery({
+      queryKey: ["fluxbase", "vector", "capabilities"],
+      queryFn: async () => {
+        const { data, error } = await client.vector.getCapabilities();
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    expect(result).toEqual(data);
+    expect(client.vector.getCapabilities).toHaveBeenCalled();
   });
 });

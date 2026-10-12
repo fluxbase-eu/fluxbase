@@ -122,7 +122,22 @@ export function createMockClient(
     vector: {
       embed: vi.fn().mockResolvedValue({ data: null, error: null }),
       search: vi.fn().mockResolvedValue({ data: null, error: null }),
+      getCapabilities: vi.fn().mockResolvedValue({ data: { enabled: false }, error: null }),
       ...overrides.vector,
+    },
+    ai: {
+      listChatbots: vi.fn().mockResolvedValue({ data: [], error: null }),
+      listConversations: vi
+        .fn()
+        .mockResolvedValue({ data: { conversations: [], total: 0, has_more: false }, error: null }),
+      ...overrides.ai,
+    },
+    knowledgeBase: {
+      list: vi.fn().mockResolvedValue({ data: [], error: null }),
+      delete: vi.fn().mockResolvedValue({ error: null }),
+      search: vi.fn().mockResolvedValue({ data: null, error: null }),
+      uploadDocument: vi.fn().mockResolvedValue({ data: null, error: null }),
+      ...overrides.knowledgeBase,
     },
     secrets: {
       list: vi.fn().mockResolvedValue([]),

@@ -97,6 +97,10 @@ type Handler struct {
 	config      *config.MCPConfig
 	db          *database.Connection
 	rateLimiter *rateLimiter
+	// ssePingInterval is the keep-alive comment cadence for SSE GET
+	// streams. Defaults to ssePingInterval; shortened in tests so teardown
+	// paths don't wait 30s for the next write.
+	ssePing time.Duration
 }
 
 // NewHandler creates a new MCP HTTP handler
@@ -106,6 +110,7 @@ func NewHandler(cfg *config.MCPConfig, db *database.Connection) *Handler {
 		config:      cfg,
 		db:          db,
 		rateLimiter: newRateLimiter(cfg.RateLimitPerMin),
+		ssePing:     ssePingInterval,
 	}
 	// Enable the durable MCP audit trail when a database is available
 	h.server.SetDB(db)
@@ -226,7 +231,7 @@ func (h *Handler) HandleGet(c fiber.Ctx) error {
 
 	requestCtx.SetBodyStreamWriter(func(w *bufio.Writer) {
 		defer cancel()
-		streamNotifications(w, notifications, requestCtx.Done(), ssePingInterval)
+		streamNotifications(w, notifications, requestCtx.Done(), h.ssePing)
 	})
 
 	return nil

@@ -357,7 +357,7 @@ CREATE POLICY ai_doc_perms_instance_admin ON document_permissions TO authenticat
 -- Name: ai_doc_perms_owner_manage; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY ai_doc_perms_owner_manage ON document_permissions TO authenticated USING (EXISTS ( SELECT 1 FROM documents d WHERE ((d.id = document_permissions.document_id) AND (d.owner_id = auth.uid()))));
+CREATE POLICY ai_doc_perms_owner_manage ON document_permissions TO authenticated USING (EXISTS ( SELECT 1 FROM ai.documents d WHERE ((d.id = document_permissions.document_id) AND (d.owner_id = auth.uid()))));
 
 --
 -- Name: ai_doc_perms_user_read; Type: POLICY; Schema: -; Owner: -
@@ -411,7 +411,7 @@ CREATE POLICY ai_documents_read_public ON documents FOR SELECT TO authenticated 
 -- Name: ai_documents_read_shared; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY ai_documents_read_shared ON documents FOR SELECT TO authenticated USING (EXISTS ( SELECT 1 FROM document_permissions dp WHERE ((dp.document_id = documents.id) AND (dp.user_id = auth.uid()))));
+CREATE POLICY ai_documents_read_shared ON documents FOR SELECT TO authenticated USING (EXISTS ( SELECT 1 FROM ai.document_permissions dp WHERE ((dp.document_id = documents.id) AND (dp.user_id = auth.uid()))));
 
 --
 -- Name: ai_documents_read_via_kb; Type: POLICY; Schema: -; Owner: -
@@ -429,7 +429,7 @@ CREATE POLICY ai_documents_update_own ON documents FOR UPDATE TO authenticated U
 -- Name: ai_documents_update_shared; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY ai_documents_update_shared ON documents FOR UPDATE TO authenticated USING (EXISTS ( SELECT 1 FROM document_permissions dp WHERE ((dp.document_id = documents.id) AND (dp.user_id = auth.uid()) AND (dp.permission = 'editor'))));
+CREATE POLICY ai_documents_update_shared ON documents FOR UPDATE TO authenticated USING (EXISTS ( SELECT 1 FROM ai.document_permissions dp WHERE ((dp.document_id = documents.id) AND (dp.user_id = auth.uid()) AND (dp.permission = 'editor'))));
 
 --
 -- Name: ai_documents_update_via_kb; Type: POLICY; Schema: -; Owner: -
@@ -521,7 +521,7 @@ CREATE POLICY ai_chunks_instance_admin ON chunks TO authenticated USING (auth.ro
 -- Name: ai_chunks_read_own_docs; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY ai_chunks_read_own_docs ON chunks FOR SELECT TO authenticated USING (EXISTS ( SELECT 1 FROM documents d WHERE ((d.id = chunks.document_id) AND (d.owner_id = auth.uid()))));
+CREATE POLICY ai_chunks_read_own_docs ON chunks FOR SELECT TO authenticated USING (EXISTS ( SELECT 1 FROM ai.documents d WHERE ((d.id = chunks.document_id) AND (d.owner_id = auth.uid()))));
 
 --
 -- Name: ai_chunks_read_shared_docs; Type: POLICY; Schema: -; Owner: -
@@ -533,7 +533,7 @@ CREATE POLICY ai_chunks_read_shared_docs ON chunks FOR SELECT TO authenticated U
 -- Name: ai_chunks_user_isolation; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY ai_chunks_user_isolation ON chunks FOR SELECT TO authenticated USING (EXISTS ( SELECT 1 FROM documents d WHERE ((d.id = chunks.document_id) AND (((d.metadata ->> 'user_id') IS NULL) OR ((d.metadata ->> 'user_id') = (current_setting('request.jwt.claims', true)::json ->> 'sub'))))));
+CREATE POLICY ai_chunks_user_isolation ON chunks FOR SELECT TO authenticated USING (EXISTS ( SELECT 1 FROM ai.documents d WHERE ((d.id = chunks.document_id) AND (((d.metadata ->> 'user_id') IS NULL) OR ((d.metadata ->> 'user_id') = (current_setting('request.jwt.claims', true)::json ->> 'sub'))))));
 
 --
 -- Name: entities; Type: TABLE; Schema: -; Owner: -
@@ -1558,7 +1558,7 @@ AS $$
 BEGIN
     -- User owns the document
     IF EXISTS (
-        SELECT 1 FROM documents
+        SELECT 1 FROM ai.documents
         WHERE id = p_document_id
         AND owner_id = p_user_id
     ) THEN
@@ -1567,7 +1567,7 @@ BEGIN
 
     -- Document is shared with user
     IF EXISTS (
-        SELECT 1 FROM document_permissions
+        SELECT 1 FROM ai.document_permissions
         WHERE document_id = p_document_id
         AND user_id = p_user_id
     ) THEN
@@ -1612,8 +1612,8 @@ BEGIN
             r.relationship_type,
             1::INTEGER as depth,
             ARRAY[p_entity_id, e.id]::UUID[] as path
-        FROM entity_relationships r
-        JOIN entities e ON e.id = r.target_entity_id
+        FROM ai.entity_relationships r
+        JOIN ai.entities e ON e.id = r.target_entity_id
         WHERE r.source_entity_id = p_entity_id
             AND r.knowledge_base_id = p_kb_id
             AND (p_relationship_types IS NULL OR r.relationship_type = ANY(p_relationship_types))
@@ -1629,8 +1629,8 @@ BEGIN
             r.relationship_type,
             gt.depth + 1,
             gt.path || e.id
-        FROM entity_relationships r
-        JOIN entities e ON e.id = r.target_entity_id
+        FROM ai.entity_relationships r
+        JOIN ai.entities e ON e.id = r.target_entity_id
         JOIN graph_traversal gt ON gt.entity_id = r.source_entity_id
         WHERE r.knowledge_base_id = p_kb_id
             AND gt.depth < v_max_depth
@@ -1693,16 +1693,16 @@ BEGIN
         c.content,
         1 - (c.embedding <=> p_query_embedding) as similarity,
         c.metadata
-    FROM chatbot_knowledge_bases ckb
-    JOIN knowledge_bases kb ON kb.id = ckb.knowledge_base_id
-    JOIN chunks c ON c.knowledge_base_id = kb.id
+    FROM ai.chatbot_knowledge_bases ckb
+    JOIN ai.knowledge_bases kb ON kb.id = ckb.knowledge_base_id
+    JOIN ai.chunks c ON c.knowledge_base_id = kb.id
     WHERE ckb.chatbot_id = p_chatbot_id
       AND ckb.enabled = true
       AND kb.enabled = true
       AND 1 - (c.embedding <=> p_query_embedding) >= ckb.similarity_threshold
     ORDER BY ckb.priority DESC, c.embedding <=> p_query_embedding
     LIMIT (
-        SELECT SUM(max_chunks) FROM chatbot_knowledge_bases
+        SELECT SUM(max_chunks) FROM ai.chatbot_knowledge_bases
         WHERE chatbot_id = p_chatbot_id AND enabled = true
     );
 END;
@@ -1737,7 +1737,7 @@ BEGIN
         c.content,
         1 - (c.embedding <=> p_query_embedding) as similarity,
         c.metadata
-    FROM chunks c
+    FROM ai.chunks c
     WHERE c.knowledge_base_id = p_knowledge_base_id
       AND 1 - (c.embedding <=> p_query_embedding) >= p_threshold
     ORDER BY c.embedding <=> p_query_embedding
@@ -1780,7 +1780,7 @@ BEGIN
             WHEN EXISTS (SELECT 1 FROM unnest(e.aliases) alias WHERE alias ILIKE '%' || p_query || '%') THEN 0.6
             ELSE ts_rank(to_tsvector('english', e.canonical_name), plainto_tsquery('english', p_query)) * 0.5
         END::REAL as rank
-    FROM entities e
+    FROM ai.entities e
     WHERE e.knowledge_base_id = p_kb_id
         AND (p_entity_types IS NULL OR e.entity_type = ANY(p_entity_types))
         AND (
@@ -1959,17 +1959,17 @@ VOLATILE
 AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        UPDATE knowledge_bases
+        UPDATE ai.knowledge_bases
         SET total_chunks = total_chunks + 1
         WHERE id = NEW.knowledge_base_id;
-        UPDATE documents
+        UPDATE ai.documents
         SET chunks_count = chunks_count + 1
         WHERE id = NEW.document_id;
     ELSIF TG_OP = 'DELETE' THEN
-        UPDATE knowledge_bases
+        UPDATE ai.knowledge_bases
         SET total_chunks = GREATEST(0, total_chunks - 1)
         WHERE id = OLD.knowledge_base_id;
-        UPDATE documents
+        UPDATE ai.documents
         SET chunks_count = GREATEST(0, chunks_count - 1)
         WHERE id = OLD.document_id;
     END IF;
@@ -1988,12 +1988,12 @@ VOLATILE
 AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        UPDATE knowledge_bases
+        UPDATE ai.knowledge_bases
         SET document_count = document_count + 1,
             updated_at = NOW()
         WHERE id = NEW.knowledge_base_id;
     ELSIF TG_OP = 'DELETE' THEN
-        UPDATE knowledge_bases
+        UPDATE ai.knowledge_bases
         SET document_count = GREATEST(0, document_count - 1),
             updated_at = NOW()
         WHERE id = OLD.knowledge_base_id;
