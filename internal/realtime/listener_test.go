@@ -5,8 +5,19 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nimbleflux/fluxbase/internal/pubsub"
 )
+
+// newTrackedListener creates a listener that is stopped when the test ends,
+// so its goroutines don't leak across tests.
+func newTrackedListener(t *testing.T, pool *pgxpool.Pool, handler *RealtimeHandler, subManager *SubscriptionManager, ps pubsub.PubSub) *Listener {
+	l := NewListener(pool, handler, subManager, ps)
+	t.Cleanup(l.Stop)
+	return l
+}
 
 // Mock handler for testing
 type MockRealtimeHandler struct {
@@ -28,7 +39,7 @@ func (m *MockRealtimeHandler) Broadcast(channel string, payload interface{}) {
 
 func TestListener_ProcessNotification_Insert(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil) // nil auth service and sub manager for testing
 	listener := &Listener{
 		handler: handler,
@@ -53,7 +64,7 @@ func TestListener_ProcessNotification_Insert(t *testing.T) {
 
 func TestListener_ProcessNotification_Update(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 	listener := &Listener{
 		handler: handler,
@@ -77,7 +88,7 @@ func TestListener_ProcessNotification_Update(t *testing.T) {
 
 func TestListener_ProcessNotification_Delete(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 	listener := &Listener{
 		handler: handler,
@@ -100,7 +111,7 @@ func TestListener_ProcessNotification_Delete(t *testing.T) {
 
 func TestListener_ProcessNotification_InvalidJSON(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 	listener := &Listener{
 		handler: handler,
@@ -118,7 +129,7 @@ func TestListener_ProcessNotification_InvalidJSON(t *testing.T) {
 
 func TestListener_ProcessNotification_ChannelFormat(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 	listener := &Listener{
 		handler: handler,
@@ -216,10 +227,10 @@ func TestChangeEvent_WithOldRecord(t *testing.T) {
 
 func TestNewListener(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	listener := NewListener(nil, handler, nil, nil)
+	listener := newTrackedListener(t, nil, handler, nil, nil)
 
 	assert.NotNil(t, listener)
 	assert.NotNil(t, listener.handler)
@@ -229,10 +240,10 @@ func TestNewListener(t *testing.T) {
 
 func TestListener_Stop(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 
-	listener := NewListener(nil, handler, nil, nil)
+	listener := newTrackedListener(t, nil, handler, nil, nil)
 
 	// Should not panic
 	listener.Stop()
@@ -349,7 +360,7 @@ func TestChangeEvent_ComplexRecord(t *testing.T) {
 
 func TestListener_enrichJobWithETA(t *testing.T) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
+	manager := newTrackedManager(t, ctx)
 	handler := NewRealtimeHandler(manager, nil, nil)
 	listener := &Listener{
 		handler: handler,
@@ -471,8 +482,9 @@ func TestRealtimeListener_Interface(t *testing.T) {
 
 func BenchmarkProcessNotification(b *testing.B) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
-	handler := NewRealtimeHandler(manager, nil, nil)
+	mgr := NewManager(ctx)
+	b.Cleanup(mgr.Shutdown)
+	handler := NewRealtimeHandler(mgr, nil, nil)
 	listener := &Listener{
 		handler: handler,
 		ctx:     ctx,
@@ -496,8 +508,9 @@ func BenchmarkProcessNotification(b *testing.B) {
 
 func BenchmarkEnrichJobWithETA(b *testing.B) {
 	ctx := context.Background()
-	manager := NewManager(ctx)
-	handler := NewRealtimeHandler(manager, nil, nil)
+	mgr := NewManager(ctx)
+	b.Cleanup(mgr.Shutdown)
+	handler := NewRealtimeHandler(mgr, nil, nil)
 	listener := &Listener{
 		handler: handler,
 		ctx:     ctx,
