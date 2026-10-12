@@ -12,21 +12,6 @@ import (
 	"github.com/nimbleflux/fluxbase/internal/query"
 )
 
-// isValidIdentifier checks if a string is a valid SQL identifier
-func isValidIdentifier(s string) bool {
-	return validIdentifierRegex.MatchString(s)
-}
-
-// quoteIdentifier safely quotes an SQL identifier to prevent injection
-// Returns empty string if the identifier is invalid
-func quoteIdentifier(s string) string {
-	if !isValidIdentifier(s) {
-		return ""
-	}
-	// Escape any embedded double quotes and wrap in double quotes
-	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
-}
-
 // QueryParams represents parsed query parameters for REST API
 type QueryParams struct {
 	Select         []string           // Fields to select

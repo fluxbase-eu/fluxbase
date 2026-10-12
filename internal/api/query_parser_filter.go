@@ -5,14 +5,23 @@ import (
 	"strings"
 )
 
+const (
+	// MaxFilterDepth bounds recursion for nested and()/or() filter expressions.
+	// Deeper expressions are rejected before they can compile to pathological SQL.
+	MaxFilterDepth = 10
+
+	// MaxFilterCount caps the number of filters parsed from a single request.
+	MaxFilterCount = 100
+)
+
 // parseFilter parses filter parameters
 func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error {
-	// Handle logical operators
+	// Handle logical operators (depth 1: top-level or()/and() group)
 	if key == "or" {
-		return qp.parseLogicalFilter(value, params, true)
+		return qp.parseLogicalFilter(value, params, true, 1)
 	}
 	if key == "and" {
-		return qp.parseLogicalFilter(value, params, false)
+		return qp.parseLogicalFilter(value, params, false, 1)
 	}
 
 	// Check for classic format first: column.operator=value
@@ -32,40 +41,19 @@ func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error
 		}
 
 		// Parse value based on operator
-		var filterValue interface{}
-		switch operator {
-		case OpIn:
-			// Parse array values: (1,2,3) or ["a","b","c"]
-			filterValue = qp.parseArrayValue(value)
-		case OpBetween:
-			// Parse range values: (1,10)
-			bounds, err := qp.parseBetweenValue(value)
-			if err != nil {
-				return err
-			}
-			filterValue = bounds
-		case OpIs:
-			// Parse null/true/false - H-14: Validate boolean values
-			switch value {
-			case "null":
-				filterValue = nil
-			case "true":
-				filterValue = true
-			case "false":
-				filterValue = false
-			default:
-				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", value)
-			}
-		default:
-			filterValue = value
+		filterValue, err := qp.parseFilterValue(operator, value)
+		if err != nil {
+			return err
 		}
 
-		params.Filters = append(params.Filters, Filter{
+		if err := addFilter(params, Filter{
 			Column:   column,
 			Operator: operator,
 			Value:    filterValue,
 			IsOr:     false,
-		})
+		}); err != nil {
+			return err
+		}
 
 		return nil
 	}
@@ -87,40 +75,19 @@ func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error
 		operator := FilterOperator(operatorStr)
 
 		// Parse value based on operator
-		var parsedValue interface{}
-		switch operator {
-		case OpIn:
-			// Parse array values: (1,2,3) or ["a","b","c"]
-			parsedValue = qp.parseArrayValue(filterValue)
-		case OpBetween:
-			// Parse range values: (1,10)
-			bounds, err := qp.parseBetweenValue(filterValue)
-			if err != nil {
-				return err
-			}
-			parsedValue = bounds
-		case OpIs:
-			// Parse null/true/false - H-14: Validate boolean values
-			switch filterValue {
-			case "null":
-				parsedValue = nil
-			case "true":
-				parsedValue = true
-			case "false":
-				parsedValue = false
-			default:
-				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", filterValue)
-			}
-		default:
-			parsedValue = filterValue
+		parsedValue, err := qp.parseFilterValue(operator, filterValue)
+		if err != nil {
+			return err
 		}
 
-		params.Filters = append(params.Filters, Filter{
+		if err := addFilter(params, Filter{
 			Column:   column,
 			Operator: operator,
 			Value:    parsedValue,
 			IsOr:     false,
-		})
+		}); err != nil {
+			return err
+		}
 
 		return nil
 	}
@@ -133,7 +100,14 @@ func (qp *QueryParser) parseFilter(key, value string, params *QueryParams) error
 // Supports formats like:
 //   - or=(name.eq.John,age.gt.30)
 //   - and=(or(col.lt.min1,col.gt.max1),or(col.lt.min2,col.gt.max2))
-func (qp *QueryParser) parseLogicalFilter(value string, params *QueryParams, isOr bool) error {
+//
+// depth tracks and()/or() nesting and is capped at MaxFilterDepth to prevent
+// unbounded recursion and pathological SQL generation.
+func (qp *QueryParser) parseLogicalFilter(value string, params *QueryParams, isOr bool, depth int) error {
+	if depth > MaxFilterDepth {
+		return fmt.Errorf("filter expression exceeds maximum nesting depth of %d", MaxFilterDepth)
+	}
+
 	// Parse format: or=(name.eq.John,age.gt.30)
 	// Only remove one pair of outer parentheses (not all leading/trailing parens)
 	if strings.HasPrefix(value, "(") && strings.HasSuffix(value, ")") {
@@ -168,7 +142,7 @@ func (qp *QueryParser) parseLogicalFilter(value string, params *QueryParams, isO
 			// Nested AND expression - parse recursively
 			innerValue := strings.TrimPrefix(filter, "and(")
 			innerValue = strings.TrimSuffix(innerValue, ")")
-			if err := qp.parseLogicalFilter(innerValue, params, false); err != nil {
+			if err := qp.parseLogicalFilter(innerValue, params, false, depth+1); err != nil {
 				return err
 			}
 			continue
@@ -190,40 +164,19 @@ func (qp *QueryParser) parseLogicalFilter(value string, params *QueryParams, isO
 		}
 
 		// Parse value based on operator (same logic as regular filter parsing)
-		var parsedValue interface{}
-		switch operator {
-		case OpIn:
-			// Parse array values: (1,2,3) or ["a","b","c"]
-			parsedValue = qp.parseArrayValue(rawValue)
-		case OpBetween:
-			// Parse range values: (1,10)
-			bounds, err := qp.parseBetweenValue(rawValue)
-			if err != nil {
-				return err
-			}
-			parsedValue = bounds
-		case OpIs:
-			// Parse null/true/false - H-14: Validate boolean values
-			switch rawValue {
-			case "null":
-				parsedValue = nil
-			case "true":
-				parsedValue = true
-			case "false":
-				parsedValue = false
-			default:
-				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", rawValue)
-			}
-		default:
-			parsedValue = rawValue
+		parsedValue, err := qp.parseFilterValue(operator, rawValue)
+		if err != nil {
+			return err
 		}
 
-		params.Filters = append(params.Filters, Filter{
+		if err := addFilter(params, Filter{
 			Column:   column,
 			Operator: operator,
 			Value:    parsedValue,
 			IsOr:     isOr,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -263,41 +216,20 @@ func (qp *QueryParser) parseNestedOrGroup(value string, params *QueryParams) err
 		}
 
 		// Parse value based on operator (same logic as regular filter parsing)
-		var parsedValue interface{}
-		switch operator {
-		case OpIn:
-			// Parse array values: (1,2,3) or ["a","b","c"]
-			parsedValue = qp.parseArrayValue(rawValue)
-		case OpBetween:
-			// Parse range values: (1,10)
-			bounds, err := qp.parseBetweenValue(rawValue)
-			if err != nil {
-				return err
-			}
-			parsedValue = bounds
-		case OpIs:
-			// Parse null/true/false - H-14: Validate boolean values
-			switch rawValue {
-			case "null":
-				parsedValue = nil
-			case "true":
-				parsedValue = true
-			case "false":
-				parsedValue = false
-			default:
-				return fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", rawValue)
-			}
-		default:
-			parsedValue = rawValue
+		parsedValue, err := qp.parseFilterValue(operator, rawValue)
+		if err != nil {
+			return err
 		}
 
-		params.Filters = append(params.Filters, Filter{
+		if err := addFilter(params, Filter{
 			Column:    column,
 			Operator:  operator,
 			Value:     parsedValue,
 			IsOr:      true,
 			OrGroupID: groupID,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -343,6 +275,44 @@ func (qp *QueryParser) parseNestedFilters(value string) ([]string, error) {
 	}
 
 	return filters, nil
+}
+
+// addFilter appends filter to params.Filters, enforcing MaxFilterCount.
+func addFilter(params *QueryParams, filter Filter) error {
+	if len(params.Filters) >= MaxFilterCount {
+		return fmt.Errorf("too many filters: request exceeds the maximum of %d filter expressions", MaxFilterCount)
+	}
+	params.Filters = append(params.Filters, filter)
+	return nil
+}
+
+// parseFilterValue parses a raw filter value based on its operator.
+// It is the single value-parsing path for all filter forms (classic
+// column.op=value, PostgREST column=op.value, logical groups, and nested
+// OR groups) so they cannot drift apart.
+func (qp *QueryParser) parseFilterValue(op FilterOperator, raw string) (interface{}, error) {
+	switch op {
+	case OpIn:
+		// Parse array values: (1,2,3) or ["a","b","c"]
+		return qp.parseArrayValue(raw), nil
+	case OpBetween:
+		// Parse range values: (1,10)
+		return qp.parseBetweenValue(raw)
+	case OpIs:
+		// Parse null/true/false - H-14: Validate boolean values
+		switch raw {
+		case "null":
+			return nil, nil
+		case "true":
+			return true, nil
+		case "false":
+			return false, nil
+		default:
+			return nil, fmt.Errorf("invalid value for OpIs operator: %s (must be null, true, or false)", raw)
+		}
+	default:
+		return raw, nil
+	}
 }
 
 // parseArrayValue parses array values from string

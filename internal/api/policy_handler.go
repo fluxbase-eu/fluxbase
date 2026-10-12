@@ -380,7 +380,7 @@ func (h *PolicyHandlers) CreatePolicy(c fiber.Ctx) error {
 	}
 
 	// Validate policy name format
-	if !validIdentifierRegex.MatchString(req.Name) {
+	if !isValidIdentifier(req.Name) {
 		return SendBadRequest(c, "Invalid policy name: must start with a letter or underscore, followed by letters, digits, or underscores", "INVALID_NAME")
 	}
 

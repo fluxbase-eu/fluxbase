@@ -37,12 +37,6 @@ type errRow struct{ err error }
 
 func (r errRow) Scan(dest ...interface{}) error { return r.err }
 
-// quoteIdentifier safely quotes a PostgreSQL identifier to prevent SQL injection.
-// It wraps the identifier in double quotes and escapes any embedded double quotes.
-func quoteIdentifier(identifier string) string {
-	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
-}
-
 // Connection represents a database connection pool
 type Connection struct {
 	pool               *pgxpool.Pool

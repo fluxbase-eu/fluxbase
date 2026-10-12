@@ -3,9 +3,25 @@ package api
 import (
 	"regexp"
 	"strings"
+
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
-var validIdentifierRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+// isValidIdentifier checks if a string is a valid SQL identifier.
+// Thin wrapper over database.ValidIdentifier (shared with other packages);
+// unlike the plain regex check it also enforces the 63-byte identifier limit.
+func isValidIdentifier(s string) bool {
+	return database.ValidIdentifier(s)
+}
+
+// quoteIdentifier safely quotes an SQL identifier to prevent injection
+// Returns empty string if the identifier is invalid
+func quoteIdentifier(s string) string {
+	if !isValidIdentifier(s) {
+		return ""
+	}
+	return database.QuoteIdentifier(s)
+}
 
 // jsonbKeyRegex restricts JSONB path key segments to word characters so that
 // keys are safe to embed in quoted literals and cannot introduce operators.
@@ -14,7 +30,7 @@ var jsonbKeyRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 // isValidColumnReference reports whether column is a valid column reference:
 // either a plain identifier or a JSONB path of the form
 // "col->key->>subkey" / "col->0->>key", where every segment is validated
-// individually (identifiers by validIdentifierRegex, keys by jsonbKeyRegex,
+// individually (identifiers by isValidIdentifier, keys by jsonbKeyRegex,
 // array indices as numbers). Validate identifiers before they are interpolated.
 func isValidColumnReference(column string) bool {
 	if column == "" {

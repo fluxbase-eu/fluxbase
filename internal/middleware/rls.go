@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
@@ -25,9 +24,9 @@ func TestTransactionMiddleware(tx pgx.Tx) fiber.Handler {
 }
 
 // quoteIdentifier safely quotes a PostgreSQL identifier to prevent SQL injection.
-// It wraps the identifier in double quotes and escapes any embedded double quotes.
+// Thin wrapper over database.QuoteIdentifier.
 func quoteIdentifier(identifier string) string {
-	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
+	return database.QuoteIdentifier(identifier)
 }
 
 // RLSConfig holds configuration for RLS middleware

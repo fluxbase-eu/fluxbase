@@ -2,11 +2,10 @@ package bootstrap
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
-)
 
-var validPgIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	"github.com/nimbleflux/fluxbase/internal/database"
+)
 
 // AppUserPlaceholder is the placeholder string used in SQL files for the
 // runtime database user. It is replaced at execution time with the actual
@@ -21,8 +20,8 @@ func SubstituteAppUser(sql string, appUser string) (string, error) {
 	if appUser == "" || !strings.Contains(sql, AppUserPlaceholder) {
 		return sql, nil
 	}
-	if !validPgIdentifier.MatchString(appUser) {
-		return "", fmt.Errorf("invalid database username %q: must match ^[a-zA-Z_][a-zA-Z0-9_]*$", appUser)
+	if !database.ValidIdentifier(appUser) {
+		return "", fmt.Errorf("invalid database username %q: must start with a letter or underscore, contain only letters, digits and underscores, and be at most %d characters", appUser, database.MaxIdentifierLen)
 	}
 	return strings.ReplaceAll(sql, AppUserPlaceholder, appUser), nil
 }

@@ -346,7 +346,7 @@ func TestParseFilterToSQL(t *testing.T) {
 }
 
 // =============================================================================
-// validIdentifierRegex Tests
+// isValidIdentifier (shared database.ValidIdentifier) Tests
 // =============================================================================
 
 func TestValidIdentifierRegex(t *testing.T) {
@@ -361,7 +361,7 @@ func TestValidIdentifierRegex(t *testing.T) {
 			"A1B2C3",
 		}
 		for _, name := range valid {
-			assert.True(t, validIdentifierRegex.MatchString(name), "should match: %s", name)
+			assert.True(t, isValidIdentifier(name), "should match: %s", name)
 		}
 	})
 
@@ -375,7 +375,7 @@ func TestValidIdentifierRegex(t *testing.T) {
 			"",           // empty
 		}
 		for _, name := range invalid {
-			assert.False(t, validIdentifierRegex.MatchString(name), "should not match: %s", name)
+			assert.False(t, isValidIdentifier(name), "should not match: %s", name)
 		}
 	})
 }
@@ -557,6 +557,6 @@ func BenchmarkParseFilterToSQL(b *testing.B) {
 func BenchmarkValidIdentifierRegex(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		validIdentifierRegex.MatchString("user_accounts_table")
+		isValidIdentifier("user_accounts_table")
 	}
 }

@@ -1337,7 +1337,9 @@ func TestIsValidIdentifier_EdgeCases(t *testing.T) {
 		{name: "carriage return", input: "col\rtest", expected: false},
 		{name: "null byte", input: "col\x00test", expected: false},
 		{name: "unicode letters", input: "colüm_名前", expected: false}, // Only ASCII allowed
-		{name: "very long identifier", input: strings.Repeat("a", 100), expected: true},
+		{name: "63-byte identifier (PostgreSQL limit)", input: strings.Repeat("a", 63), expected: true},
+		{name: "64-byte identifier exceeds PostgreSQL limit", input: strings.Repeat("a", 64), expected: false},
+		{name: "very long identifier", input: strings.Repeat("a", 100), expected: false},
 		{name: "single letter uppercase", input: "X", expected: true},
 		{name: "single letter lowercase", input: "x", expected: true},
 		{name: "zero length", input: "", expected: false},

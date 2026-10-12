@@ -342,7 +342,7 @@ func TestIdentifierPatternRegex(t *testing.T) {
 
 		for _, s := range valid {
 			t.Run(s, func(t *testing.T) {
-				assert.True(t, validIdentifierRegex.MatchString(s))
+				assert.True(t, isValidIdentifier(s))
 			})
 		}
 	})
@@ -361,7 +361,7 @@ func TestIdentifierPatternRegex(t *testing.T) {
 
 		for _, s := range invalid {
 			t.Run(s, func(t *testing.T) {
-				assert.False(t, validIdentifierRegex.MatchString(s))
+				assert.False(t, isValidIdentifier(s))
 			})
 		}
 	})
@@ -428,7 +428,7 @@ func TestValidIdentifierRegex(t *testing.T) {
 			"users", "user_id", "_private", "Table123", "a", "_",
 		}
 		for _, id := range valid {
-			assert.True(t, validIdentifierRegex.MatchString(id), "%s should be valid", id)
+			assert.True(t, isValidIdentifier(id), "%s should be valid", id)
 		}
 
 		// Invalid patterns
@@ -436,7 +436,7 @@ func TestValidIdentifierRegex(t *testing.T) {
 			"123abc", "user-id", "table.name", "", "has space",
 		}
 		for _, id := range invalid {
-			assert.False(t, validIdentifierRegex.MatchString(id), "%s should be invalid", id)
+			assert.False(t, isValidIdentifier(id), "%s should be invalid", id)
 		}
 	})
 }

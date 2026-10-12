@@ -263,6 +263,13 @@ func (t *SyncFunctionTool) Execute(ctx context.Context, args map[string]any, aut
 	}, nil
 }
 
+// isValidFunctionName validates a sync resource name (edge function, RPC
+// procedure, job, or chatbot). This is deliberately NOT a SQL identifier
+// validator: the name is stored via parameterized queries in registry tables
+// and surfaces in HTTP route paths, where hyphens are legitimate. The SQL
+// body of RPC procedures is supplied separately and never interpolated by
+// name. Do not use this to gate SQL identifiers — use the shared
+// database.ValidIdentifier instead.
 func isValidFunctionName(name string) bool {
 	if len(name) == 0 || len(name) > 63 {
 		return false

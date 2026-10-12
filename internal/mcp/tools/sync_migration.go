@@ -300,7 +300,11 @@ func (t *SyncMigrationTool) Execute(ctx context.Context, args map[string]any, au
 	}, nil
 }
 
-// isValidMigrationName validates migration name format
+// isValidMigrationName validates migration name format. This is deliberately
+// NOT a SQL identifier validator: migration names act as file/record names
+// (e.g. "20260101_add-users-table"), stored via parameterized queries, where
+// hyphens are legitimate. Do not use this to gate SQL identifiers — use the
+// shared database.ValidIdentifier instead.
 func isValidMigrationName(name string) bool {
 	if len(name) == 0 || len(name) > 100 {
 		return false
