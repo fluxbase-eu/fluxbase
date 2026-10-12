@@ -148,15 +148,19 @@ FROM pg_stat_replication;
 top -c -p $(pgrep -f fluxbase)
 ```
 
-2. Enable CPU profiling (if compiled with pprof):
+2. Capture a CPU profile. pprof endpoints are opt-in: set
+   `FLUXBASE_SERVER_DEBUG_PPROF=true` (or `server.debug_pprof: true`) and
+   restart, then request with instance-admin credentials:
 ```bash
-curl http://localhost:8080/debug/pprof/profile?seconds=30 > cpu.prof
+curl -H "Authorization: Bearer $FLUXBASE_AUTH_TOKEN" \
+  "http://localhost:8080/debug/pprof/profile?seconds=30" > cpu.prof
 go tool pprof cpu.prof
 ```
 
 3. Check for hot paths in metrics:
 ```bash
-curl -s http://localhost:8080/metrics | grep -E 'fluxbase_(http|db)_requests_total'
+curl -s -H "Authorization: Bearer $FLUXBASE_AUTH_TOKEN" \
+  http://localhost:8080/api/v1/monitoring/metrics | grep -E 'fluxbase_(http|db)_requests_total'
 ```
 
 **Common Causes:**
@@ -178,10 +182,17 @@ curl -s http://localhost:8080/metrics | grep -E 'fluxbase_(http|db)_requests_tot
 # Check process memory
 ps aux | grep fluxbase
 
-# If pprof enabled
-curl http://localhost:8080/debug/pprof/heap > heap.prof
+# Heap profile (pprof endpoints are opt-in, see High CPU Usage above)
+curl -H "Authorization: Bearer $FLUXBASE_AUTH_TOKEN" \
+  "http://localhost:8080/debug/pprof/heap?debug=1" > heap.prof
 go tool pprof heap.prof
 ```
+
+**Memory ceiling:** set `GOMEMLIMIT` to a soft Go-runtime GC target slightly
+below the container memory limit so the GC works harder before the OOM killer
+does. With a 1GiB container limit, `GOMEMLIMIT=900MiB` is a reasonable
+starting point. Raise `GOGC` (default 100) only if CPU is cheap and memory is
+tight; lower it to trade CPU for a smaller heap.
 
 **Common Causes:**
 - Large RLS cache

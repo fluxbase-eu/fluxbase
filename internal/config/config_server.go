@@ -15,6 +15,12 @@ type ServerConfig struct {
 	AllowedIPRanges []string      `mapstructure:"allowed_ip_ranges"` // Global IP CIDR ranges allowed to access server (empty = allow all)
 	TrustedProxies  []string      `mapstructure:"trusted_proxies"`   // Trusted proxy IP ranges for X-Forwarded-For header validation (empty = trust none)
 
+	// DebugPprof exposes Go's pprof handlers at /debug/pprof for operators.
+	// Off by default: profiles expose internals (goroutine stacks, heap
+	// contents) and sampling can be expensive. Requires admin/instance_admin
+	// credentials when enabled. See docs/guides/operational-runbook.md.
+	DebugPprof bool `mapstructure:"debug_pprof"`
+
 	// Per-endpoint body limits (if not specified, uses defaults from middleware)
 	BodyLimits BodyLimitsConfig `mapstructure:"body_limits"`
 }

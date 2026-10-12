@@ -189,3 +189,9 @@ ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_tes
 # test-e2e-ui job has used since the 2026-10-11 audit (fake CI-only secrets).
 b0b144eb7ca6bb89a110cc31cfba3a4c8932c0d7:.github/workflows/ci.yml:generic-api-key:1070
 b0b144eb7ca6bb89a110cc31cfba3a4c8932c0d7:.github/workflows/ci.yml:generic-api-key:1071
+
+# Contract-drift CI job (ci.yml): ephemeral fixture secrets for the drift
+# check's local server. The values must satisfy the boot guard's entropy
+# requirements, so they are intentionally high-entropy; CI-only, never deployed.
+3ac9b83c2bbbb2fcbc863345314e3c8a2089cccb:.github/workflows/ci.yml:generic-api-key:1101
+3ac9b83c2bbbb2fcbc863345314e3c8a2089cccb:.github/workflows/ci.yml:generic-api-key:1102
