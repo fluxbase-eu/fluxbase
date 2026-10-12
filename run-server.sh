@@ -32,8 +32,13 @@ echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
 echo ""
 
 # Run the server and capture its PID
-# -tags "ocr" enables Tesseract OCR support for PDF text extraction
-GOGC=50 go run -tags "ocr" cmd/fluxbase/main.go &
+# Go build tags: defaults to "ocr" (Tesseract OCR for PDF text extraction; needs
+# libtesseract + leptonica). `make dev-lite` sets BUILD_TAGS="" for a lite build
+# with no C media dependencies (OCR/vips features self-disable at runtime).
+BUILD_TAGS="${BUILD_TAGS-ocr}"
+TAGS_ARGS=()
+[ -n "$BUILD_TAGS" ] && TAGS_ARGS=(-tags "$BUILD_TAGS")
+GOGC=50 go run "${TAGS_ARGS[@]}" cmd/fluxbase/main.go &
 SERVER_PID=$!
 
 # Wait for the server process

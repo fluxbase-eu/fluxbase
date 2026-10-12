@@ -330,13 +330,13 @@ func TestAuthConfig_Validate(t *testing.T) {
 			name:    "empty jwt secret",
 			modify:  func(c *AuthConfig) { c.JWTSecret = "" },
 			wantErr: true,
-			errMsg:  "jwt_secret is required",
+			errMsg:  "FLUXBASE_AUTH_JWT_SECRET is required",
 		},
 		{
 			name:    "insecure default jwt secret",
 			modify:  func(c *AuthConfig) { c.JWTSecret = "your-secret-key-change-in-production" },
 			wantErr: true,
-			errMsg:  "please set a secure JWT secret",
+			errMsg:  "FLUXBASE_AUTH_JWT_SECRET is set to the insecure default placeholder",
 		},
 		{
 			name:    "zero jwt expiry",
@@ -558,7 +558,7 @@ func TestSecurityConfig_Validate(t *testing.T) {
 				SetupToken: "changeme",
 			},
 			wantErr: true,
-			errMsg:  "please set a secure setup token",
+			errMsg:  "FLUXBASE_SECURITY_SETUP_TOKEN is set to an insecure value",
 		},
 		{
 			name: "insecure default token - test",
@@ -566,7 +566,7 @@ func TestSecurityConfig_Validate(t *testing.T) {
 				SetupToken: "test",
 			},
 			wantErr: true,
-			errMsg:  "please set a secure setup token",
+			errMsg:  "FLUXBASE_SECURITY_SETUP_TOKEN is set to an insecure value",
 		},
 		{
 			name: "insecure default token - your-secret-setup-token-change-in-production",
@@ -574,7 +574,7 @@ func TestSecurityConfig_Validate(t *testing.T) {
 				SetupToken: "your-secret-setup-token-change-in-production",
 			},
 			wantErr: true,
-			errMsg:  "please set a secure setup token",
+			errMsg:  "FLUXBASE_SECURITY_SETUP_TOKEN is set to an insecure value",
 		},
 	}
 
