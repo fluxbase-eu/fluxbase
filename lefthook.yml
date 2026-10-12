@@ -28,7 +28,7 @@ pre-commit:
       glob: "*.go"
       run: |
         if ! command -v golangci-lint &> /dev/null; then
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.10.0
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.14.0
         fi
         # Scope matches the CI lint-go job (./internal/... ./cmd/... ./cli/...).
         # test/e2e is intentionally excluded: it compiles only with

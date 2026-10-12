@@ -1,7 +1,7 @@
 version: "2"
 
 run:
-  timeout: 5m
+  timeout: 12m
   tests: true
 
 linters:
@@ -10,11 +10,15 @@ linters:
     - errcheck
     - errorlint
     - govet
-    # - staticcheck  # Temporarily disabled due to golangci-lint v2.10.0 panic with external packages (fasthttp, css_parser)
+    # staticcheck was disabled after a golangci-lint v2.10.0 panic; v2.14.0
+    # runs clean under the Go 1.26.9/1.27 toolchains (re-enabled in #393).
+    - staticcheck
     - unused
   settings:
     errcheck:
       check-type-assertions: false
+      # check-blank stays off for now: enabling it surfaces ~449 blank-assignment
+      # findings across the tree (tracked for a mechanical ratchet in #393).
       check-blank: false
       exclude-functions:
         - (io.Closer).Close
@@ -33,8 +37,8 @@ linters:
         - fmt.Scan
     errorlint:
       errorf: true
-      comparison: false
-      asserts: false
+      comparison: true
+      asserts: true
       errorf-multi: true
   exclusions:
     rules:
