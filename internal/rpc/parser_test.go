@@ -221,7 +221,7 @@ SELECT 1;
 		annotations, _, err := ParseAnnotations(code)
 		require.NoError(t, err)
 		// InputSchema is nil/empty because the JSON didn't parse
-		assert.True(t, annotations.InputSchema == nil || len(annotations.InputSchema) == 0)
+		assert.Empty(t, annotations.InputSchema)
 	})
 
 	t.Run("balancedBraces helper", func(t *testing.T) {

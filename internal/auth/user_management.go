@@ -344,19 +344,18 @@ func (s *UserManagementService) InviteUser(ctx context.Context, req InviteUserRe
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// Add user to tenant if tenant_id is provided (for app users only)
+	// Add user to tenant if tenant_id is provided (for app users only).
+	// Best-effort: a failed membership insert must not fail the request — the
+	// user was created successfully and the admin can manually add them to the
+	// tenant later.
 	if userType == "app" && req.TenantID != "" && s.userRepo.db != nil {
-		_, err := s.userRepo.db.Exec(
+		_, _ = s.userRepo.db.Exec(
 			ctx,
 			`INSERT INTO platform.tenant_memberships (tenant_id, user_id, role)
 			 VALUES ($1::uuid, $2::uuid, 'tenant_member')
 			 ON CONFLICT (tenant_id, user_id) DO NOTHING`,
 			req.TenantID, user.ID,
 		)
-		if err != nil {
-			// Log error but don't fail - user was created successfully
-			// The admin can manually add them to the tenant later
-		}
 	}
 
 	// Try to send invitation email if email service is available and not skipped

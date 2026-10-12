@@ -167,7 +167,7 @@ func TestParseChatbotConfig_SupervisorWebTriggers(t *testing.T) {
 		code := `-- @fluxbase:web-search enabled
 `
 		cfg := ParseChatbotConfig(code)
-		if cfg.SupervisorWebTriggers != nil && len(cfg.SupervisorWebTriggers) != 0 {
+		if len(cfg.SupervisorWebTriggers) != 0 {
 			t.Errorf("expected nil/empty triggers, got %v", cfg.SupervisorWebTriggers)
 		}
 	})

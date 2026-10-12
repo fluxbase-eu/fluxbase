@@ -144,7 +144,7 @@ func TestApplyGraphBoost_NormalizesSalience(t *testing.T) {
 
 func TestGetDocumentsByEntity_MethodExists(t *testing.T) {
 	// Compile-time check that GetDocumentsByEntity exists on *KnowledgeGraph
-	var _ func(string) = func(entityID string) {
+	_ = func(entityID string) {
 		kg := &KnowledgeGraph{}
 		// This will compile because the method exists
 		_ = kg

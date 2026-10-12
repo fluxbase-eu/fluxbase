@@ -170,7 +170,7 @@ func extractMultilineAnnotationValue(code string, startRe *regexp.Regexp, initia
 		return initial
 	}
 	loc := startRe.FindStringSubmatchIndex(code)
-	if loc == nil || len(loc) < 4 {
+	if len(loc) < 4 {
 		return initial
 	}
 	// Submatch index layout: [fullStart, fullEnd, groupStart, groupEnd].

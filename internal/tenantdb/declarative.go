@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -188,7 +189,8 @@ func (s *DeclarativeService) PlanForTenant(ctx context.Context, tenant *Tenant) 
 	start := time.Now()
 	output, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return nil, fmt.Errorf("pgschema plan failed for tenant %s: %w: %s", tenant.Slug, err, string(exitErr.Stderr))
 		}
 		return nil, fmt.Errorf("pgschema plan failed for tenant %s: %w: %s", tenant.Slug, err, string(output))
@@ -262,7 +264,8 @@ func (s *DeclarativeService) ApplyTenantSchema(ctx context.Context, tenant *Tena
 
 	start := time.Now()
 	if _, err := cmd.Output(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Errorf("pgschema apply failed for tenant %s: %w: %s", tenant.Slug, err, string(exitErr.Stderr))
 		}
 		return fmt.Errorf("pgschema apply failed for tenant %s: %w", tenant.Slug, err)
@@ -364,7 +367,7 @@ func (s *DeclarativeService) GetTenantSchemaStatus(ctx context.Context, tenant *
 		LIMIT 1
 	`, tenant.ID).Scan(&lastFingerprint, &appliedAt)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return status, nil
 	}
 	if err != nil {
@@ -464,7 +467,7 @@ func (s *DeclarativeService) GetStoredSchemaContent(ctx context.Context, tenantS
 		FROM platform.tenant_schemas
 		WHERE tenant_slug = $1
 	`, tenantSlug).Scan(&schemaContent, &schemaFingerprint, &schemaUpdatedAt)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return "", "", time.Time{}, nil
 	}
 	if err != nil {
@@ -543,7 +546,8 @@ func (s *DeclarativeService) ApplyTenantSchemaFromContent(ctx context.Context, t
 
 	output, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Errorf("pgschema plan failed: %w: %s", err, string(exitErr.Stderr))
 		}
 		return fmt.Errorf("pgschema plan failed: %w", err)
@@ -583,7 +587,8 @@ func (s *DeclarativeService) ApplyTenantSchemaFromContent(ctx context.Context, t
 	applyCmd.Env = append(filteredChildEnv(), fmt.Sprintf("PGPASSWORD=%s", s.dbPassword))
 
 	if _, err := applyCmd.Output(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Errorf("pgschema apply failed: %w: %s", err, string(exitErr.Stderr))
 		}
 		return fmt.Errorf("pgschema apply failed: %w", err)
@@ -646,7 +651,8 @@ func (s *DeclarativeService) DumpTenantSchema(ctx context.Context, tenant *Tenan
 	cmd.Stdout = f
 
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Errorf("pgschema dump failed: %w: %s", err, string(exitErr.Stderr))
 		}
 		return fmt.Errorf("pgschema dump failed: %w", err)

@@ -20,7 +20,7 @@ func (m *LoggingModule) Init(ctx context.Context, registry *ServiceRegistry) err
 	cfg := registry.Config
 	db := registry.DB
 
-	if !(cfg.Logging.ConsoleEnabled || cfg.Logging.Backend != "") {
+	if !cfg.Logging.ConsoleEnabled && cfg.Logging.Backend == "" {
 		return nil
 	}
 

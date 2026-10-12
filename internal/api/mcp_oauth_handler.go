@@ -831,7 +831,7 @@ func (h *MCPOAuthHandler) renderConsentPage(c fiber.Ctx, client *mcpOAuthClient,
 
 	var scopeItems strings.Builder
 	for _, s := range scopes {
-		scopeItems.WriteString(fmt.Sprintf(`<li><code>%s</code></li>`, html.EscapeString(s)))
+		fmt.Fprintf(&scopeItems, `<li><code>%s</code></li>`, html.EscapeString(s))
 	}
 
 	page := fmt.Sprintf(`<!DOCTYPE html>

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -101,7 +102,7 @@ func (h *InternalSchemaHandler) DumpSchema(c fiber.Ctx) error {
 		File   string `json:"file"`   // Optional: dump a single schema to this file path
 		Schema string `json:"schema"` // Optional: dump a specific schema
 	}
-	if err := c.Bind().Body(&req); err != nil && err != fiber.ErrUnprocessableEntity {
+	if err := c.Bind().Body(&req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return SendBadRequest(c, "Invalid request body", ErrCodeInvalidBody)
 	}
 
@@ -175,7 +176,7 @@ func (h *InternalSchemaHandler) PlanSchema(c fiber.Ctx) error {
 	var req struct {
 		Schema string `json:"schema"` // Optional: plan a specific schema
 	}
-	if err := c.Bind().Body(&req); err != nil && err != fiber.ErrUnprocessableEntity {
+	if err := c.Bind().Body(&req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return SendBadRequest(c, "Invalid request body", ErrCodeInvalidBody)
 	}
 
@@ -222,7 +223,7 @@ func (h *InternalSchemaHandler) ApplySchema(c fiber.Ctx) error {
 		AutoApprove      bool   `json:"auto_approve"` // Accepted for compatibility; ApplyFiltered does not prompt
 		AllowDestructive bool   `json:"allow_destructive"`
 	}
-	if err := c.Bind().Body(&req); err != nil && err != fiber.ErrUnprocessableEntity {
+	if err := c.Bind().Body(&req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return SendBadRequest(c, "Invalid request body", ErrCodeInvalidBody)
 	}
 
@@ -321,7 +322,7 @@ func (h *InternalSchemaHandler) MigrateSchema(c fiber.Ctx) error {
 		// MigrationsDir is configured, which this handler never sets).
 		KeepOldMigrations *bool `json:"keep_old_migrations"`
 	}
-	if err := c.Bind().Body(&req); err != nil && err != fiber.ErrUnprocessableEntity {
+	if err := c.Bind().Body(&req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return SendBadRequest(c, "Invalid request body", ErrCodeInvalidBody)
 	}
 

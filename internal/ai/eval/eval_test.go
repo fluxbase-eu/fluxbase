@@ -64,7 +64,7 @@ func TestCheckRoute(t *testing.T) {
 
 	// Empty expectations → any route passes.
 	empty := Case{}
-	ok, reason = CheckRoute(empty, []string{"anything"})
+	ok, _ = CheckRoute(empty, []string{"anything"})
 	assert.True(t, ok)
 }
 

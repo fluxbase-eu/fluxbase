@@ -533,10 +533,11 @@ func TestRequireRole_JWTAuth(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
 			// Verify error response bodies
-			if tt.expectedStatus == fiber.StatusForbidden {
+			switch tt.expectedStatus {
+			case fiber.StatusForbidden:
 				body, _ := io.ReadAll(resp.Body)
 				assert.Contains(t, string(body), "Insufficient permissions")
-			} else if tt.expectedStatus == fiber.StatusUnauthorized {
+			case fiber.StatusUnauthorized:
 				body, _ := io.ReadAll(resp.Body)
 				assert.Contains(t, string(body), "Unauthorized")
 			}

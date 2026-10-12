@@ -198,12 +198,8 @@ func TestTruncateString_NegativeMaxLen_NoPanic(t *testing.T) {
 func TestTruncateString_ByteBasedNotRuneBased(t *testing.T) {
 	t.Parallel()
 	// "é" is 2 bytes (0xC3 0xA9). Truncating at 1 byte splits the rune.
+	// If the implementation were rune-aware, we'd get "é..." instead.
 	got := TruncateString("ééé", 1)
-	if got == "é..." {
-		// If the implementation were rune-aware, this is what we'd want.
-		// Currently we expect byte-splitting; record either way via the
-		// explicit assertion below.
-	}
 	// Pin current byte-based behavior explicitly.
 	want := "\xc3..."
 	if got != want {

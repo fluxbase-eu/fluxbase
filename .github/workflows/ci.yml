@@ -232,7 +232,7 @@ jobs:
         # Action adds module + build caches over the raw binary install.
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
-          version: v2.10.0
+          version: v2.14.0
           args: --timeout 10m ./internal/... ./cmd/... ./cli/...
 
       - name: Run golangci-lint (integration-tagged test tree)
@@ -241,7 +241,7 @@ jobs:
         # test runs.
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
-          version: v2.10.0
+          version: v2.14.0
           args: --build-tags integration --timeout 10m ./test/...
 
       - name: Install gofumpt

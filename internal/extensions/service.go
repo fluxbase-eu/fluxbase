@@ -12,9 +12,16 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/nimbleflux/fluxbase/internal/database"
 )
+
+// caser title-cases extension names for display. cases.NoLower keeps the
+// rest of each word untouched, matching the old strings.Title behavior
+// (which never lowercased subsequent letters).
+var caser = cases.Title(language.English, cases.NoLower)
 
 // isValidIdentifier checks if a string is a valid PostgreSQL identifier.
 // Thin wrapper over database.ValidIdentifier, which also enforces the
@@ -295,8 +302,7 @@ func (s *Service) GetExtensionStatus(ctx context.Context, name string) (*Extensi
 func (s *Service) GetExtensionStatusForTenant(ctx context.Context, name string, tenantID *string, tenantPool *pgxpool.Pool) (*ExtensionStatusResponse, error) {
 	filter := mustTenantFilter(tenantID, 2)
 	var isEnabled bool
-	var err error
-	err = database.WrapWithTenantAwareRole(ctx, s.db, tenantIDStr(tenantID), func(tx pgx.Tx) error {
+	err := database.WrapWithTenantAwareRole(ctx, s.db, tenantIDStr(tenantID), func(tx pgx.Tx) error {
 		if tenantID != nil {
 			return tx.QueryRow(ctx, fmt.Sprintf(`
 				SELECT COALESCE(
@@ -694,7 +700,7 @@ func (s *Service) SyncExtensionCatalog(ctx context.Context) (int, error) {
 	synced := 0
 	for _, e := range exts {
 		category := categoryForExtension(e.Name)
-		displayName := strings.Title(strings.ReplaceAll(e.Name, "_", " "))
+		displayName := caser.String(strings.ReplaceAll(e.Name, "_", " "))
 		var affected int64
 		err := database.WrapWithServiceRole(ctx, s.db, func(tx pgx.Tx) error {
 			tag, err := tx.Exec(ctx, `
