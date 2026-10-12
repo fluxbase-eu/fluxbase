@@ -104,7 +104,7 @@ func (sc *SecurityConfig) Validate() error {
 		}
 		for _, insecure := range insecureDefaults {
 			if sc.SetupToken == insecure {
-				return fmt.Errorf("please set a secure setup token (current value '%s' is insecure)", sc.SetupToken)
+				return fmt.Errorf("FLUXBASE_SECURITY_SETUP_TOKEN is set to an insecure value ('%s') — generate a secure token with: openssl rand -base64 32", sc.SetupToken)
 			}
 		}
 

@@ -51,17 +51,18 @@ services:
       FLUXBASE_DATABASE_DATABASE: ${POSTGRES_DB:-fluxbase}
       FLUXBASE_DATABASE_SSL_MODE: disable
 
-      # Authentication (CHANGE THIS!)
+      # Authentication (REQUIRED — no default: compose fails loudly if unset,
+      # instead of boot-looping on the blacklisted placeholder)
       # Generate with: openssl rand -base64 32
-      FLUXBASE_AUTH_JWT_SECRET: ${FLUXBASE_AUTH_JWT_SECRET:-your-secret-key-change-in-production}
+      FLUXBASE_AUTH_JWT_SECRET: ${FLUXBASE_AUTH_JWT_SECRET}
       FLUXBASE_AUTH_JWT_EXPIRY: 1h
       FLUXBASE_AUTH_REFRESH_EXPIRY: 2160h
       FLUXBASE_AUTH_SIGNUP_ENABLED: "true"
       # FLUXBASE_AUTH_ALLOW_USER_CLIENT_KEYS: "true"  # Allow users to create their own client keys
 
-      # Security - Admin Setup Token (REQUIRED)
+      # Security - Admin Setup Token (REQUIRED — no default: compose fails loudly if unset)
       # Generate with: openssl rand -base64 32
-      FLUXBASE_SECURITY_SETUP_TOKEN: ${FLUXBASE_SECURITY_SETUP_TOKEN:-change-me-in-production}
+      FLUXBASE_SECURITY_SETUP_TOKEN: ${FLUXBASE_SECURITY_SETUP_TOKEN}
 
       # Encryption Key (REQUIRED)
       # Fluxbase will not start without this key set.
