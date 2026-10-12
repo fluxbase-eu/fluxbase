@@ -4,7 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type { AddDocumentRequest, AddDocumentResponse, CreateKnowledgeBaseRequest, DeleteDocumentsByFilterRequest, DeleteDocumentsByFilterResponse, Entity, EntityRelationship, EntityType, FluxbaseError, FluxbaseResponse, KnowledgeBase, KnowledgeBaseDocument, KnowledgeBaseSummary, KnowledgeGraphData, SearchKnowledgeBaseRequest, SearchKnowledgeBaseResponse, UpdateDocumentRequest, UpdateKnowledgeBaseRequest, UploadDocumentResponse } from "./types";
+import type { AddDocumentRequest, AddDocumentResponse, ChatbotSummaryForKB, CreateKnowledgeBaseRequest, DeleteDocumentsByFilterRequest, DeleteDocumentsByFilterResponse, DocumentPermissionGrant, Entity, EntityRelationship, EntityType, FluxbaseError, FluxbaseResponse, GrantDocumentPermissionRequest, KBDebugSearchResponse, KnowledgeBase, KnowledgeBaseDocument, KnowledgeBaseSummary, KnowledgeGraphData, SearchKnowledgeBaseRequest, SearchKnowledgeBaseResponse, UpdateDocumentRequest, UpdateKnowledgeBaseRequest, UploadDocumentResponse } from "./types";
 
 /**
  * FluxbaseKnowledgeBase provides knowledge base management for RAG applications
@@ -359,6 +359,91 @@ export class FluxbaseKnowledgeBase {
       const data = await this.fetch.request<SearchKnowledgeBaseResponse>(
         `/api/v1/ai/knowledge-bases/${kbId}/search`,
         { method: "POST", body: request },
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  // ===========================================================================
+  // SHARING & PERMISSIONS
+  // ===========================================================================
+
+  /**
+   * Share a knowledge base with another user (owner only)
+   */
+  async share(
+    kbId: string,
+    request: GrantDocumentPermissionRequest,
+  ): Promise<FluxbaseResponse<DocumentPermissionGrant>> {
+    try {
+      const data = await this.fetch.request<DocumentPermissionGrant>(
+        `/api/v1/ai/knowledge-bases/${kbId}/share`,
+        { method: "POST", body: request },
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * List permissions granted on a knowledge base (owner only)
+   */
+  async listPermissions(kbId: string): Promise<FluxbaseResponse<DocumentPermissionGrant[]>> {
+    try {
+      const data = await this.fetch.get<DocumentPermissionGrant[]>(
+        `/api/v1/ai/knowledge-bases/${kbId}/permissions`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Revoke a user's permission on a knowledge base (owner only)
+   */
+  async revokePermission(kbId: string, userId: string): Promise<{ data: null; error: FluxbaseError | null }> {
+    try {
+      await this.fetch.delete(`/api/v1/ai/knowledge-bases/${kbId}/permissions/${userId}`);
+      return { data: null, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  // ===========================================================================
+  // DEBUG & CHATBOT LINKS
+  // ===========================================================================
+
+  /**
+   * Debug search returns the effective search options alongside results,
+   * useful for tuning hybrid search weights
+   */
+  async debugSearch(
+    kbId: string,
+    request: SearchKnowledgeBaseRequest,
+  ): Promise<FluxbaseResponse<KBDebugSearchResponse>> {
+    try {
+      const data = await this.fetch.request<KBDebugSearchResponse>(
+        `/api/v1/ai/knowledge-bases/${kbId}/debug-search`,
+        { method: "POST", body: request },
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * List chatbots linked to this knowledge base
+   */
+  async listChatbots(kbId: string): Promise<FluxbaseResponse<ChatbotSummaryForKB[]>> {
+    try {
+      const data = await this.fetch.get<ChatbotSummaryForKB[]>(
+        `/api/v1/ai/knowledge-bases/${kbId}/chatbots`,
       );
       return { data, error: null };
     } catch (error) {

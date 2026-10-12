@@ -10,6 +10,8 @@ import type {
   UpdateKnowledgeBaseRequest,
   AddDocumentRequest,
   SearchKnowledgeBaseRequest,
+  UpdateDocumentRequest,
+  DeleteDocumentsByFilterRequest,
 } from "@nimbleflux/fluxbase-sdk";
 
 /**
@@ -290,6 +292,189 @@ export function useKnowledgeGraph(kbId: string | null) {
       const { data, error } = await client.knowledgeBase.getKnowledgeGraph(kbId);
       if (error) throw error;
       return data;
+    },
+    enabled: !!kbId,
+  });
+}
+
+/**
+ * Hook to search entities in a knowledge base by name
+ */
+export function useSearchEntities(kbId: string | null, query: string | null) {
+  const client = useFluxbaseClient();
+
+  return useQuery({
+    queryKey: ["fluxbase", "knowledge-base", kbId, "entities-search", query],
+    queryFn: async () => {
+      if (!kbId || !query) return [];
+      const { data, error } = await client.knowledgeBase.searchEntities(kbId, query);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!kbId && !!query,
+  });
+}
+
+/**
+ * Hook to get the relationships of an entity
+ */
+export function useEntityRelationships(kbId: string | null, entityId: string | null) {
+  const client = useFluxbaseClient();
+
+  return useQuery({
+    queryKey: ["fluxbase", "knowledge-base", kbId, "entity-relationships", entityId],
+    queryFn: async () => {
+      if (!kbId || !entityId) return [];
+      const { data, error } = await client.knowledgeBase.getEntityRelationships(kbId, entityId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!kbId && !!entityId,
+  });
+}
+
+/**
+ * Hook to update a document (title, tags, metadata, content)
+ */
+export function useUpdateDocument() {
+  const client = useFluxbaseClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      kbId,
+      documentId,
+      updates,
+    }: {
+      kbId: string;
+      documentId: string;
+      updates: UpdateDocumentRequest;
+    }) => {
+      const { data, error } = await client.knowledgeBase.updateDocument(kbId, documentId, updates);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["fluxbase", "knowledge-base", variables.kbId, "documents"],
+      });
+    },
+  });
+}
+
+/**
+ * Hook to delete documents matching a filter
+ */
+export function useDeleteDocumentsByFilter() {
+  const client = useFluxbaseClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      kbId,
+      filter,
+    }: {
+      kbId: string;
+      filter: DeleteDocumentsByFilterRequest;
+    }) => {
+      const { data, error } = await client.knowledgeBase.deleteDocumentsByFilter(kbId, filter);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["fluxbase", "knowledge-base", variables.kbId, "documents"],
+      });
+    },
+  });
+}
+
+/**
+ * Hook to run a debug search (results plus effective search options)
+ */
+export function useKBDebugSearch(
+  kbId: string | null,
+  request: SearchKnowledgeBaseRequest | null,
+) {
+  const client = useFluxbaseClient();
+
+  return useQuery({
+    queryKey: ["fluxbase", "knowledge-base", kbId, "debug-search", request],
+    queryFn: async () => {
+      if (!kbId || !request) return null;
+      const { data, error } = await client.knowledgeBase.debugSearch(kbId, request);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!kbId && !!request,
+  });
+}
+
+/**
+ * Hook to share a knowledge base with another user (owner only)
+ */
+export function useShareKB() {
+  const client = useFluxbaseClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      kbId,
+      userId,
+      permission,
+    }: {
+      kbId: string;
+      userId: string;
+      permission: "viewer" | "editor" | "owner";
+    }) => {
+      const { data, error } = await client.knowledgeBase.share(kbId, {
+        user_id: userId,
+        permission,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["fluxbase", "knowledge-base", variables.kbId, "permissions"],
+      });
+    },
+  });
+}
+
+/**
+ * Hook to revoke a user's knowledge base permission (owner only)
+ */
+export function useRevokeKBPermission() {
+  const client = useFluxbaseClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ kbId, userId }: { kbId: string; userId: string }) => {
+      const { error } = await client.knowledgeBase.revokePermission(kbId, userId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["fluxbase", "knowledge-base", variables.kbId, "permissions"],
+      });
+    },
+  });
+}
+
+/**
+ * Hook to list chatbots linked to a knowledge base
+ */
+export function useKBLinkedChatbots(kbId: string | null) {
+  const client = useFluxbaseClient();
+
+  return useQuery({
+    queryKey: ["fluxbase", "knowledge-base", kbId, "chatbots"],
+    queryFn: async () => {
+      if (!kbId) return [];
+      const { data, error } = await client.knowledgeBase.listChatbots(kbId);
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!kbId,
   });

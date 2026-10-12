@@ -5085,3 +5085,252 @@ export interface DeprecateServiceKeyRequest {
   /** Grace period in hours before key is disabled */
   grace_period_hours?: number;
 }
+
+// ===========================================================================
+// AI ADMIN: METRICS, CONVERSATIONS, AUDIT, TABLES, SYNC CONFIGS, DOC PERMS
+// ===========================================================================
+
+/** Aggregated AI metrics (GET /api/v1/admin/ai/metrics) */
+export interface AIMetrics {
+  total_requests: number;
+  total_tokens: number;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  active_conversations: number;
+  total_conversations: number;
+  chatbot_stats: Array<{
+    chatbot_id: string;
+    chatbot_name: string;
+    requests: number;
+    tokens: number;
+    error_count: number;
+  }>;
+  provider_stats: Array<{
+    provider_id: string;
+    provider_name: string;
+    requests: number;
+    avg_latency_ms: number;
+  }>;
+  error_rate: number;
+  avg_response_time_ms: number;
+}
+
+/** Admin view of an AI conversation (GET /api/v1/admin/ai/conversations) */
+export interface AdminConversationSummary {
+  id: string;
+  chatbot_id: string;
+  chatbot_name: string;
+  user_id?: string;
+  user_email?: string;
+  session_id?: string;
+  title?: string;
+  status: string;
+  turn_count: number;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  created_at: string;
+  updated_at: string;
+  last_message_at?: string;
+}
+
+export interface AdminConversationListResponse {
+  conversations: AdminConversationSummary[];
+  total: number;
+  total_count: number;
+}
+
+export interface AdminConversationQuery {
+  chatbot_id?: string;
+  user_id?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** Message within an admin conversation view */
+export interface AdminMessageDetail {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  tool_call_id?: string;
+  tool_name?: string;
+  created_at: string;
+}
+
+export interface AdminMessagesResponse {
+  messages: AdminMessageDetail[];
+  total: number;
+}
+
+/** SQL audit log entry (GET /api/v1/admin/ai/audit) */
+export interface AuditLogEntry {
+  id: string;
+  chatbot_id?: string;
+  chatbot_name?: string;
+  conversation_id?: string;
+  message_id?: string;
+  user_id?: string;
+  user_email?: string;
+  generated_sql: string;
+  sanitized_sql?: string;
+  executed: boolean;
+  validation_passed?: boolean;
+  validation_errors?: string[];
+  success: boolean;
+  error_message?: string;
+  execution_duration_ms?: number;
+  created_at: string;
+}
+
+export interface AuditLogResponse {
+  entries: AuditLogEntry[];
+  total: number;
+  total_count?: number;
+}
+
+export interface AuditLogQuery {
+  chatbot_id?: string;
+  user_id?: string;
+  success?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/** Table available for knowledge base export (GET /api/v1/admin/ai/tables) */
+export interface ExportableTable {
+  schema: string;
+  table: string;
+  columns?: Array<{
+    name: string;
+    data_type: string;
+    nullable?: boolean;
+  }>;
+  row_estimate?: number;
+}
+
+export interface ExportableTablesResponse {
+  tables: ExportableTable[];
+}
+
+/** Request to export a table into a knowledge base as a document */
+export interface ExportTableToKBRequest {
+  knowledge_base_id: string;
+  columns?: string[];
+  include_sample_rows?: boolean;
+  sample_row_count?: number;
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+  /** Overrides the column marking per-user data (default "user_id" convention) */
+  user_id_column?: string;
+}
+
+export interface ExportTableToKBResponse {
+  document_id: string;
+  chunks_created?: number;
+  message?: string;
+}
+
+/** Table-to-KB sync configuration (periodic/sync-on-change exports) */
+export interface TableExportSyncConfig {
+  id: string;
+  knowledge_base_id: string;
+  schema_name: string;
+  table_name: string;
+  columns?: string[];
+  sync_mode: "manual" | "automatic";
+  sync_on_insert: boolean;
+  sync_on_update: boolean;
+  sync_on_delete: boolean;
+  debounce_seconds: number;
+  include_foreign_keys: boolean;
+  include_indexes: boolean;
+  last_sync_at?: string;
+  last_sync_status?: string;
+  last_sync_error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSyncConfigRequest {
+  schema_name: string;
+  table_name: string;
+  columns?: string[];
+  sync_mode?: "manual" | "automatic";
+  sync_on_insert?: boolean;
+  sync_on_update?: boolean;
+  sync_on_delete?: boolean;
+  debounce_seconds?: number;
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+}
+
+export interface UpdateSyncConfigRequest {
+  columns?: string[];
+  sync_mode?: "manual" | "automatic";
+  sync_on_insert?: boolean;
+  sync_on_update?: boolean;
+  sync_on_delete?: boolean;
+  debounce_seconds?: number;
+  include_foreign_keys?: boolean;
+  include_indexes?: boolean;
+}
+
+/** Per-document permission grant (admin) */
+export interface DocumentPermissionGrant {
+  id: string;
+  document_id: string;
+  user_id: string;
+  permission: "viewer" | "editor" | "owner";
+  granted_by: string;
+  granted_at: string;
+}
+
+export interface GrantDocumentPermissionRequest {
+  user_id: string;
+  permission: "viewer" | "editor" | "owner";
+}
+
+/** Vector capabilities (GET /api/v1/capabilities/vector) */
+export interface VectorCapabilities {
+  enabled: boolean;
+  pgvector_installed?: boolean;
+  pgvector_version?: string;
+  embedding_enabled?: boolean;
+  embedding_provider?: string;
+  embedding_model?: string;
+}
+
+// ===========================================================================
+// USER KNOWLEDGE BASE: PERMISSIONS, DEBUG SEARCH, CHATBOT LINKS
+// ===========================================================================
+
+/** KB-level permission grant (share) */
+export interface KBPermission {
+  id: string;
+  knowledge_base_id: string;
+  user_id: string;
+  permission: "viewer" | "editor" | "owner";
+  granted_by?: string;
+  granted_at: string;
+}
+
+/** Chatbot linked to a knowledge base (GET /ai/knowledge-bases/:id/chatbots) */
+export interface ChatbotSummaryForKB {
+  id: string;
+  name: string;
+  enabled?: boolean;
+  access_level?: string;
+  max_chunks?: number;
+  similarity_threshold?: number;
+}
+
+/** Debug search response: results plus the effective search options */
+export interface KBDebugSearchResponse {
+  query: string;
+  results: KnowledgeBaseSearchResult[];
+  result_count: number;
+  search_options?: Record<string, unknown>;
+  knowledge_base?: { id: string; name: string };
+  debug_info?: Record<string, unknown>;
+}
