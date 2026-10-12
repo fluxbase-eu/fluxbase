@@ -319,6 +319,10 @@ jobs:
       - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
 
+      - name: Run admin unit tests (vitest)
+        working-directory: ./admin
+        run: bun run test
+
       - name: Verify test file content (debug)
         working-directory: ./sdk
         run: |
@@ -967,6 +971,152 @@ jobs:
           SKIP_MIGRATIONS: "true"
         run: |
           go test -v -timeout=15m ./internal/middleware/... ./internal/api/...
+
+
+  # ===========================================================================
+  # Contract-drift: the committed TypeScript types in sdk/src/types-generated.ts
+  # must match the OpenAPI spec the Go server actually serves. Nothing checked
+  # the two halves against each other before, which let Go<->TS wire-shape
+  # drift reach runtime (issue #382). This job boots a fresh server with the
+  # same postgres + build steps as the Go jobs and runs
+  # scripts/check-contract-drift.sh against it (issue #408).
+  #
+  # Not in branch protection's required checks yet — add it once proven
+  # stable (flip by editing the GitHub ruleset, no workflow change needed).
+  # ===========================================================================
+  contract-drift:
+    name: Contract Drift (OpenAPI <-> TS types)
+    needs: changes
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.go == 'true' ||
+      needs.changes.outputs.sdk == 'true' ||
+      needs.changes.outputs.ci-config == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: ghcr.io/nimbleflux/fluxbase-postgres:${{ inputs.postgres_tag || '18' }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fluxbase_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Get dependencies
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.1
+
+      - name: Set up Node.js for embedded SDK generation
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.20.0"
+
+      - name: Generate embedded SDK for Jobs runtime
+        run: |
+          cd sdk
+          bun install --frozen-lockfile
+          bun run generate:embedded-sdk
+
+      - name: Create dist directory with placeholder for embed directive
+        run: |
+          mkdir -p internal/adminui/dist
+          echo '<!DOCTYPE html><html><head><title>Placeholder</title></head><body></body></html>' > internal/adminui/dist/index.html
+
+      - name: Create database and app user
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # Only roles + an empty database: the server runs its own migrations
+          # on boot, which is exactly the schema state the committed types
+          # were generated from.
+          psql -h localhost -U postgres -c "CREATE DATABASE fluxbase_drift;"
+          psql -h localhost -U postgres -d fluxbase_drift -c "CREATE USER fluxbase_app WITH PASSWORD 'fluxbase_app_password' LOGIN BYPASSRLS CREATEDB CREATEROLE;"
+          psql -h localhost -U postgres -d fluxbase_drift -c "GRANT ALL PRIVILEGES ON DATABASE fluxbase_drift TO fluxbase_app;"
+
+      - name: Build and start Go backend
+        env:
+          FLUXBASE_DATABASE_HOST: localhost
+          FLUXBASE_DATABASE_PORT: 5432
+          FLUXBASE_DATABASE_USER: fluxbase_app
+          FLUXBASE_DATABASE_PASSWORD: fluxbase_app_password
+          FLUXBASE_DATABASE_ADMIN_USER: postgres
+          FLUXBASE_DATABASE_ADMIN_PASSWORD: postgres
+          FLUXBASE_DATABASE_DATABASE: fluxbase_drift
+          FLUXBASE_SERVER_ADDRESS: ":8082"
+          FLUXBASE_BASE_URL: "http://localhost:8082"
+          FLUXBASE_ADMIN_ENABLED: "true"
+          FLUXBASE_AUTH_JWT_SECRET: Kx9vM2nR7pQ4wT8yB3fJ6hL0zA5cD1eG
+          FLUXBASE_ENCRYPTION_KEY: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+          FLUXBASE_SECURITY_SETUP_TOKEN: contract-drift-ci-setup-token-32-chars
+        run: |
+          go build -o /tmp/fluxbase-contract-drift cmd/fluxbase/main.go
+
+          GOGC=50 /tmp/fluxbase-contract-drift >> /tmp/fluxbase-contract-drift.log 2>&1 &
+
+          # Wait for the server to be ready (health check + bootstrap complete)
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8082/health > /dev/null 2>&1; then
+              SETUP_STATUS=$(curl -sf http://localhost:8082/api/v1/admin/setup/status 2>/dev/null || echo "")
+              if echo "$SETUP_STATUS" | grep -q '"needs_setup"'; then
+                echo "Go backend ready on :8082 (bootstrap complete)"
+                break
+              fi
+              echo "Health OK, waiting for bootstrap to finish..."
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "Backend failed to start within 120s"
+              cat /tmp/fluxbase-contract-drift.log
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Complete initial setup (full OpenAPI spec requires an admin JWT)
+        env:
+          SETUP_TOKEN: contract-drift-ci-setup-token-32-chars
+        run: |
+          TOKEN=$(curl -sf -X POST http://localhost:8082/api/v1/admin/setup \
+            -H "Content-Type: application/json" \
+            -d '{"setup_token":"'"$SETUP_TOKEN"'","email":"ci-drift@example.com","password":"CiDrift!2026x","name":"CI Drift"}' \
+            | jq -r '.access_token')
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to obtain admin token from /api/v1/admin/setup"
+            exit 1
+          fi
+          echo "CONTRACT_DRIFT_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Check contract drift
+        run: scripts/check-contract-drift.sh http://localhost:8082
+
+      - name: Upload server logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: contract-drift-server-logs
+          path: /tmp/fluxbase-contract-drift.log
+          retention-days: 7
 
   test-e2e-ui:
     name: Test E2E UI

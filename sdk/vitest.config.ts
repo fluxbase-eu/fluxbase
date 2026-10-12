@@ -19,7 +19,10 @@ export default defineConfig({
       reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'src/examples/**'],
+      // types-generated.ts is machine-generated from the served OpenAPI spec
+      // (scripts/check-contract-drift.sh) — no runtime code, nothing imports
+      // it, so it must not drag the coverage gate down.
+      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'src/examples/**', 'src/types-generated.ts'],
       thresholds: {
         statements: 60,
         branches: 60,
