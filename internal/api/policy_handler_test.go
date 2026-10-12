@@ -398,7 +398,7 @@ func TestUpdatePolicyRequest_Struct(t *testing.T) {
 }
 
 // =============================================================================
-// validIdentifierRegex Tests
+// isValidIdentifier (shared database.ValidIdentifier) Tests
 // =============================================================================
 
 func TestValidPolicyNameRegex(t *testing.T) {
@@ -425,13 +425,13 @@ func TestValidPolicyNameRegex(t *testing.T) {
 
 	for _, name := range validNames {
 		t.Run("valid: "+name, func(t *testing.T) {
-			assert.True(t, validIdentifierRegex.MatchString(name), "Expected %q to be valid", name)
+			assert.True(t, isValidIdentifier(name), "Expected %q to be valid", name)
 		})
 	}
 
 	for _, name := range invalidNames {
 		t.Run("invalid: "+name, func(t *testing.T) {
-			assert.False(t, validIdentifierRegex.MatchString(name), "Expected %q to be invalid", name)
+			assert.False(t, isValidIdentifier(name), "Expected %q to be invalid", name)
 		})
 	}
 }

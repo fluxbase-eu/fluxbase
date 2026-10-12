@@ -424,7 +424,7 @@ func BenchmarkTruncateQuery_Long(b *testing.B) {
 }
 
 // =============================================================================
-// quoteIdentifier Tests
+// QuoteIdentifier Tests
 // =============================================================================
 
 func TestQuoteIdentifier(t *testing.T) {
@@ -487,7 +487,7 @@ func TestQuoteIdentifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := quoteIdentifier(tt.identifier)
+			result := QuoteIdentifier(tt.identifier)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -497,7 +497,7 @@ func TestQuoteIdentifier_SQLInjectionPrevention(t *testing.T) {
 	t.Run("prevents basic injection", func(t *testing.T) {
 		// Attempt SQL injection via identifier
 		malicious := `users"; DROP TABLE users; --`
-		result := quoteIdentifier(malicious)
+		result := QuoteIdentifier(malicious)
 
 		// The result should be safely quoted, making injection impossible
 		assert.Equal(t, `"users""; DROP TABLE users; --"`, result)
@@ -506,7 +506,7 @@ func TestQuoteIdentifier_SQLInjectionPrevention(t *testing.T) {
 
 	t.Run("handles multiple injection attempts", func(t *testing.T) {
 		malicious := `"";--`
-		result := quoteIdentifier(malicious)
+		result := QuoteIdentifier(malicious)
 
 		// Embedded quotes should be doubled (2 quotes become 4, plus 2 wrapper quotes = 6 total)
 		assert.Equal(t, `""""";--"`, result)
@@ -516,14 +516,14 @@ func TestQuoteIdentifier_SQLInjectionPrevention(t *testing.T) {
 func BenchmarkQuoteIdentifier_Simple(b *testing.B) {
 	identifier := "users"
 	for i := 0; i < b.N; i++ {
-		_ = quoteIdentifier(identifier)
+		_ = QuoteIdentifier(identifier)
 	}
 }
 
 func BenchmarkQuoteIdentifier_WithQuotes(b *testing.B) {
 	identifier := `table"with"quotes`
 	for i := 0; i < b.N; i++ {
-		_ = quoteIdentifier(identifier)
+		_ = QuoteIdentifier(identifier)
 	}
 }
 

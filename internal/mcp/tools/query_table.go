@@ -546,7 +546,7 @@ func quoteSelectColumn(col string) string {
 	}
 	parts := strings.Split(col, ".")
 	for _, part := range parts {
-		if !identifierPattern.MatchString(part) {
+		if !isValidIdentifier(part) {
 			return ""
 		}
 	}

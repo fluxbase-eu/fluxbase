@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/nimbleflux/fluxbase/internal/config"
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 type TenantDatabaseInfo struct {
@@ -792,28 +793,14 @@ func sanitizeIdentifier(name string) string {
 		log.Error().Str("identifier", name).Msg("sanitizeIdentifier: rejected invalid identifier")
 		return `""`
 	}
-	// Use double quotes and escape any existing quotes
-	escaped := strings.ReplaceAll(name, `"`, `""`)
-	return fmt.Sprintf(`"%s"`, escaped)
+	return database.QuoteIdentifier(name)
 }
 
-// isValidIdentifier checks if a string is a valid PostgreSQL identifier
+// isValidIdentifier checks if a string is a valid PostgreSQL identifier.
+// Thin wrapper over database.ValidIdentifier (letter/underscore start, only
+// letters/digits/underscores, 63-byte limit).
 func isValidIdentifier(name string) bool {
-	if len(name) == 0 || len(name) > 63 {
-		return false
-	}
-	for i, r := range name {
-		if i == 0 {
-			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_') {
-				return false
-			}
-		} else {
-			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_') {
-				return false
-			}
-		}
-	}
-	return true
+	return database.ValidIdentifier(name)
 }
 
 // CreateBranchFromGitHubPR creates a branch for a GitHub PR

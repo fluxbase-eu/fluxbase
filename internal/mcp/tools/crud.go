@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -14,9 +13,12 @@ import (
 	"github.com/nimbleflux/fluxbase/internal/mcp"
 )
 
-// validIdentifierRegex validates SQL identifiers (table names, column names)
-// Allows alphanumeric characters, underscores, and must start with letter or underscore
-var validIdentifierRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+// isValidIdentifier validates SQL identifiers (table names, column names).
+// Thin wrapper over database.ValidIdentifier: alphanumeric characters and
+// underscores, starting with letter or underscore, at most 63 bytes.
+func isValidIdentifier(name string) bool {
+	return database.ValidIdentifier(name)
+}
 
 // validateAndQuoteReturning validates and sanitizes the RETURNING clause
 // to prevent SQL injection. Only allows "*" or comma-separated column names.
@@ -37,7 +39,7 @@ func validateAndQuoteReturning(returning string, tableInfo *database.TableInfo) 
 		}
 
 		// Validate the identifier format
-		if !validIdentifierRegex.MatchString(col) {
+		if !isValidIdentifier(col) {
 			return "", fmt.Errorf("invalid column name in returning clause: %s", col)
 		}
 
@@ -581,9 +583,10 @@ func (t *DeleteRecordTool) Execute(ctx context.Context, args map[string]any, aut
 
 // Helper functions
 
-// quoteIdentifier quotes a SQL identifier to prevent SQL injection
+// quoteIdentifier quotes a SQL identifier to prevent SQL injection.
+// Thin wrapper over database.QuoteIdentifier.
 func quoteIdentifier(name string) string {
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+	return database.QuoteIdentifier(name)
 }
 
 // columnExists checks if a column exists in the table

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -16,9 +15,6 @@ import (
 
 // Validation patterns for DDL operations
 var (
-	// identifierPattern matches valid PostgreSQL identifiers
-	identifierPattern = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-
 	// reservedKeywords that should not be used as identifiers
 	reservedKeywords = map[string]bool{
 		"user": true, "table": true, "column": true, "index": true,
@@ -62,7 +58,7 @@ func validateDDLIdentifier(name, entityType string) error {
 		return fmt.Errorf("%s name cannot exceed 63 characters", entityType)
 	}
 
-	if !identifierPattern.MatchString(name) {
+	if !isValidIdentifier(name) {
 		return fmt.Errorf("%s name must start with a letter or underscore and contain only letters, numbers, and underscores", entityType)
 	}
 

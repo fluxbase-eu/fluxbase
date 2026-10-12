@@ -16,19 +16,18 @@ import (
 	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
-// validIdentifierRegex ensures identifier names are safe PostgreSQL identifiers
-// Only allows: letters, digits, underscores, starting with letter or underscore
-var validIdentifierRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+// isValidIdentifier checks if a string is a valid PostgreSQL identifier.
+// Thin wrapper over database.ValidIdentifier, which also enforces the
+// 63-byte PostgreSQL identifier limit.
+func isValidIdentifier(s string) bool {
+	return database.ValidIdentifier(s)
+}
 
 // quoteIdentifier safely quotes a PostgreSQL identifier to prevent SQL injection.
 // It wraps the identifier in double quotes and escapes any embedded double quotes.
+// Thin wrapper over database.QuoteIdentifier.
 func quoteIdentifier(identifier string) string {
-	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
-}
-
-// isValidIdentifier checks if a string is a valid PostgreSQL identifier
-func isValidIdentifier(s string) bool {
-	return validIdentifierRegex.MatchString(s)
+	return database.QuoteIdentifier(identifier)
 }
 
 // requiredExtRegex matches PostgreSQL errors like:

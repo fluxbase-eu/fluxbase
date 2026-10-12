@@ -163,24 +163,23 @@ func TestIsValidIdentifier(t *testing.T) {
 }
 
 // =============================================================================
-// validIdentifierRegex Tests
+// isValidIdentifier (shared database.ValidIdentifier) Tests
 // =============================================================================
 
 func TestValidIdentifierRegex(t *testing.T) {
-	t.Run("regex pattern is correct", func(t *testing.T) {
-		// Pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+	t.Run("identifier pattern is correct", func(t *testing.T) {
+		// Pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$ (plus the 63-byte limit)
 		// Starts with letter or underscore
 		// Followed by zero or more letters, digits, or underscores
 
-		// Test the regex directly
-		assert.True(t, validIdentifierRegex.MatchString("a"))
-		assert.True(t, validIdentifierRegex.MatchString("_"))
-		assert.True(t, validIdentifierRegex.MatchString("abc123"))
-		assert.True(t, validIdentifierRegex.MatchString("_abc_123_"))
+		assert.True(t, isValidIdentifier("a"))
+		assert.True(t, isValidIdentifier("_"))
+		assert.True(t, isValidIdentifier("abc123"))
+		assert.True(t, isValidIdentifier("_abc_123_"))
 
-		assert.False(t, validIdentifierRegex.MatchString(""))
-		assert.False(t, validIdentifierRegex.MatchString("1abc"))
-		assert.False(t, validIdentifierRegex.MatchString("abc-def"))
+		assert.False(t, isValidIdentifier(""))
+		assert.False(t, isValidIdentifier("1abc"))
+		assert.False(t, isValidIdentifier("abc-def"))
 	})
 }
 

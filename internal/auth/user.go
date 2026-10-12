@@ -25,10 +25,10 @@ var (
 )
 
 // quoteIdentifier properly quotes a SQL identifier using double quotes
-// This prevents SQL injection when identifier names contain special characters
+// This prevents SQL injection when identifier names contain special characters.
+// Thin wrapper over database.QuoteIdentifier.
 func quoteIdentifier(identifier string) string {
-	escaped := strings.ReplaceAll(identifier, `"`, `""`)
-	return `"` + escaped + `"`
+	return database.QuoteIdentifier(identifier)
 }
 
 // quoteTableName quotes a schema.table reference

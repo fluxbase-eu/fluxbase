@@ -200,7 +200,7 @@ func validateIdentifier(name, entityType string) error {
 		return fmt.Errorf("%s name cannot exceed 63 characters", entityType)
 	}
 
-	if !validIdentifierRegex.MatchString(name) {
+	if !isValidIdentifier(name) {
 		return fmt.Errorf("%s name must start with a letter or underscore and contain only letters, numbers, and underscores", entityType)
 	}
 

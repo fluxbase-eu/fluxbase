@@ -5,25 +5,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
-// validIdentifierRegex ensures identifier names are safe PostgreSQL identifiers
-var validIdentifierRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-
-// quoteIdentifier safely quotes a PostgreSQL identifier to prevent SQL injection.
-func quoteIdentifier(identifier string) string {
-	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
+// isValidIdentifier checks if a string is a valid PostgreSQL identifier.
+// Thin wrapper over database.ValidIdentifier, which also enforces the
+// 63-byte PostgreSQL identifier limit.
+func isValidIdentifier(s string) bool {
+	return database.ValidIdentifier(s)
 }
 
-// isValidIdentifier checks if a string is a valid PostgreSQL identifier
-func isValidIdentifier(s string) bool {
-	return validIdentifierRegex.MatchString(s)
+// quoteIdentifier safely quotes a PostgreSQL identifier to prevent SQL injection.
+// Thin wrapper over database.QuoteIdentifier.
+func quoteIdentifier(identifier string) string {
+	return database.QuoteIdentifier(identifier)
 }
 
 // SubscriptionDB defines the database operations needed by SubscriptionManager.

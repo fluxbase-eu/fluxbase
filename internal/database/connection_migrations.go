@@ -333,9 +333,9 @@ func (c *Connection) grantRolesToRuntimeUser() error {
 		}
 
 		if exists {
-			// Use quoteIdentifier to prevent SQL injection (defense in depth)
+			// Use QuoteIdentifier to prevent SQL injection (defense in depth)
 			// Both role and user are quoted as PostgreSQL identifiers
-			query := fmt.Sprintf("GRANT %s TO %s", quoteIdentifier(role), quoteIdentifier(c.config.User))
+			query := fmt.Sprintf("GRANT %s TO %s", QuoteIdentifier(role), QuoteIdentifier(c.config.User))
 			_, err = adminConn.Exec(ctx, query)
 			if err != nil {
 				log.Warn().Err(err).Str("role", role).Str("user", c.config.User).Msg("Failed to grant role")
