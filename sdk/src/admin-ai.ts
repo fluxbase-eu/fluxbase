@@ -254,6 +254,8 @@ export class FluxbaseAdminAI {
   /**
    * List all AI providers
    *
+   * @param options - Optional request options, including an AbortSignal so
+   *   callers (e.g. TanStack Query) can cancel the request
    * @returns Promise resolving to { data, error } tuple with array of providers
    *
    * @example
@@ -264,7 +266,9 @@ export class FluxbaseAdminAI {
    * }
    * ```
    */
-  async listProviders(): Promise<{
+  async listProviders(options: {
+    signal?: AbortSignal | null;
+  } = {}): Promise<{
     data: AIProvider[] | null;
     error: Error | null;
   }> {
@@ -272,7 +276,7 @@ export class FluxbaseAdminAI {
       const response = await this.fetch.get<{
         providers: AIProvider[];
         count: number;
-      }>("/api/v1/admin/ai/providers");
+      }>("/api/v1/admin/ai/providers", { signal: options.signal });
       return { data: response.providers || [], error: null };
     } catch (error) {
       return { data: null, error: error as Error };
@@ -618,7 +622,7 @@ export class FluxbaseAdminAI {
    * const { data, error } = await client.admin.ai.listIntegrations({ integration_type: "web_search" })
    */
   async listIntegrations(
-    params?: { integration_type?: IntegrationType },
+    params?: { integration_type?: IntegrationType; signal?: AbortSignal | null },
   ): Promise<{
     data: ToolIntegration[] | null;
     error: Error | null;
@@ -630,7 +634,9 @@ export class FluxbaseAdminAI {
       const result = await this.fetch.get<{
         integrations: ToolIntegration[];
         count: number;
-      }>(`/api/v1/admin/ai/integrations${query}`);
+      }>(`/api/v1/admin/ai/integrations${query}`, {
+        signal: params?.signal,
+      });
       return { data: result.integrations || [], error: null };
     } catch (error) {
       return { data: null, error: error as Error };

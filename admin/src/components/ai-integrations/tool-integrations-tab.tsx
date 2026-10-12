@@ -61,7 +61,7 @@ export function ToolIntegrationsTab() {
 
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["ai-integrations", client.admin.ai],
-    queryFn: () => client.admin.ai.listIntegrations(),
+    queryFn: ({ signal }) => client.admin.ai.listIntegrations({ signal }),
     select: (res) => res.data ?? [],
   });
 

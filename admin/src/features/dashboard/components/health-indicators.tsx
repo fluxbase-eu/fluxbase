@@ -15,8 +15,8 @@ export function HealthIndicators() {
 
   const { data: health, isLoading } = useQuery({
     queryKey: ["health", client.admin],
-    queryFn: async () => {
-      const { data, error } = await client.admin.getHealth();
+    queryFn: async ({ signal }) => {
+      const { data, error } = await client.admin.getHealth({ signal });
       if (error) throw error;
       return data;
     },

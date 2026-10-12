@@ -308,6 +308,7 @@ describe("FluxbaseAdminAI", () => {
 
         expect(mockFetch.get).toHaveBeenCalledWith(
           "/api/v1/admin/ai/providers",
+          { signal: undefined },
         );
         expect(error).toBeNull();
         expect(data).toHaveLength(2);

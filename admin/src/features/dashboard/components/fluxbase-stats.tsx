@@ -10,8 +10,8 @@ export function FluxbaseStats() {
   // Fetch health status using SDK
   const { data: health, isLoading: isLoadingHealth } = useQuery({
     queryKey: ["health", client.admin],
-    queryFn: async () => {
-      const { data, error } = await client.admin.getHealth();
+    queryFn: async ({ signal }) => {
+      const { data, error } = await client.admin.getHealth({ signal });
       if (error) throw error;
       return data;
     },
@@ -21,8 +21,8 @@ export function FluxbaseStats() {
   // Fetch table count using SDK (uses unique key to avoid conflict with other table queries)
   const { data: tables, isLoading: isLoadingTables } = useQuery({
     queryKey: ["dashboard", "table-count", client.admin.ddl],
-    queryFn: async () => {
-      const response = await client.admin.ddl.listTables();
+    queryFn: async ({ signal }) => {
+      const response = await client.admin.ddl.listTables(undefined, { signal });
       return (
         response.tables.map(
           (t: { schema: string; name: string }) => `${t.schema}.${t.name}`,
@@ -35,9 +35,9 @@ export function FluxbaseStats() {
   // Fetch user count using SDK
   const { data: users } = useQuery({
     queryKey: ["users", "count", client.admin],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        const { data, error } = await client.admin.listUsers();
+        const { data, error } = await client.admin.listUsers({ signal });
         if (error) return 0;
         return data?.total || 0;
       } catch {

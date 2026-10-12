@@ -122,6 +122,34 @@ describe("QueryBuilder - Select Operations", () => {
     expect(fetch.lastUrl).toBe("/api/v1/tables/users");
   });
 
+  it("should thread an AbortSignal from execute() options to the fetch layer", async () => {
+    const controller = new AbortController();
+    const getSpy = vi.spyOn(fetch, "get");
+
+    await builder.select("*").execute({ signal: controller.signal });
+
+    expect(getSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ signal: controller.signal }),
+    );
+    getSpy.mockRestore();
+  });
+
+  it("should thread an AbortSignal through the count/getWithHeaders path", async () => {
+    const controller = new AbortController();
+    const spy = vi.spyOn(fetch, "getWithHeaders");
+
+    await builder
+      .select("*", { count: "exact", head: true })
+      .execute({ signal: controller.signal });
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ signal: controller.signal }),
+    );
+    spy.mockRestore();
+  });
+
   it("should select specific columns", async () => {
     await builder.select("id, name, email").execute();
     expect(fetch.lastUrl).toContain("select=id");

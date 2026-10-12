@@ -1016,11 +1016,13 @@ export class StorageBucket {
         params.set("prefix", prefix);
       }
 
-      if (options?.limit) {
+      // Explicit null/undefined checks: limit/offset of 0 are valid values
+      // and must still be sent (a falsy check silently dropped them)
+      if (options?.limit != null) {
         params.set("limit", String(options.limit));
       }
 
-      if (options?.offset) {
+      if (options?.offset != null) {
         params.set("offset", String(options.offset));
       }
 

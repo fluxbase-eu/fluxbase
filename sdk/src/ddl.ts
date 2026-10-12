@@ -182,9 +182,14 @@ export class DDLManager {
    * console.log(tablesBySchema)
    * ```
    */
-  async listTables(schema?: string): Promise<ListTablesResponse> {
+  async listTables(
+    schema?: string,
+    options?: { signal?: AbortSignal | null },
+  ): Promise<ListTablesResponse> {
     const params = schema ? `?schema=${encodeURIComponent(schema)}` : ''
-    return await this.fetch.get<ListTablesResponse>(`/api/v1/admin/ddl/tables${params}`)
+    return await this.fetch.get<ListTablesResponse>(`/api/v1/admin/ddl/tables${params}`, {
+      signal: options?.signal,
+    })
   }
 
   /**

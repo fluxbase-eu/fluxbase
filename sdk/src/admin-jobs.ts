@@ -232,8 +232,12 @@ export class FluxbaseAdminJobs {
       const params = new URLSearchParams();
       if (filters?.status) params.append("status", filters.status);
       if (filters?.namespace) params.append("namespace", filters.namespace);
-      if (filters?.limit) params.append("limit", filters.limit.toString());
-      if (filters?.offset) params.append("offset", filters.offset.toString());
+      // Explicit null/undefined checks: limit/offset of 0 are valid values
+      // and must still be sent (a falsy check silently dropped them)
+      if (filters?.limit != null)
+        params.append("limit", filters.limit.toString());
+      if (filters?.offset != null)
+        params.append("offset", filters.offset.toString());
       if (filters?.includeResult) params.append("include_result", "true");
 
       const queryString = params.toString();

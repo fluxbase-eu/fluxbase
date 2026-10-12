@@ -88,9 +88,9 @@ export function MetricsCards() {
   // Fetch active users (signed in today)
   const { data: activeUsers, isLoading: isLoadingUsers } = useQuery({
     queryKey: ["dashboard", "active-users", client.admin],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        const { data, error } = await client.admin.listUsers();
+        const { data, error } = await client.admin.listUsers({ signal });
         if (error) return 0;
 
         const today = new Date();
@@ -116,8 +116,8 @@ export function MetricsCards() {
   // Fetch database size (from health endpoint if available)
   const { data: health, isLoading: isLoadingHealth } = useQuery({
     queryKey: ["health", client.admin],
-    queryFn: async () => {
-      const { data, error } = await client.admin.getHealth();
+    queryFn: async ({ signal }) => {
+      const { data, error } = await client.admin.getHealth({ signal });
       if (error) throw error;
       return data;
     },

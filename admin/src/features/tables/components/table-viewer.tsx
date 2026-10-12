@@ -145,11 +145,11 @@ export function TableViewer({ tableName, schema }: TableViewerProps) {
   // Using SDK instead of axios to avoid AxiosError triggering logout in queryCache.onError
   const { data: countData } = useQuery<number>({
     queryKey: ["table-count", tableName, tableApiPath, fluxbaseClient],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const { count, error } = await fluxbaseClient
         .from(tableApiPath)
         .select("*", { count: "exact", head: true })
-        .execute();
+        .execute({ signal });
 
       if (error) throw error;
       return count ?? 0;

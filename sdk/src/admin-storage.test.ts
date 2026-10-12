@@ -41,8 +41,11 @@ describe("FluxbaseAdminStorage", () => {
 
         expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/storage/buckets");
         expect(error).toBeNull();
-        expect(data).toBeDefined();
-        expect(data!.buckets).toHaveLength(2);
+        // Unwrapped to the same array shape as storage.listBuckets()
+        expect(data).toEqual([
+          { name: "avatars", created_at: "2024-01-26T10:00:00Z" },
+          { name: "documents", created_at: "2024-01-26T11:00:00Z" },
+        ]);
       });
 
       it("should handle error", async () => {
@@ -53,6 +56,15 @@ describe("FluxbaseAdminStorage", () => {
         expect(data).toBeNull();
         expect(error).toBeDefined();
         expect(error!.message).toBe("Access denied");
+      });
+
+      it("should return an empty array when the server envelope is empty", async () => {
+        vi.mocked(mockFetch.get).mockResolvedValue({ buckets: [] });
+
+        const { data, error } = await storage.listBuckets();
+
+        expect(error).toBeNull();
+        expect(data).toEqual([]);
       });
     });
 
