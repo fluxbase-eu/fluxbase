@@ -47,6 +47,27 @@ resources:
     memory: 16Gi
 ```
 
+**Go runtime memory tuning**: set `GOMEMLIMIT` to a soft GC target ~10% below
+the container memory limit so the Go runtime GC works harder before the OOM
+killer does:
+
+```yaml
+# Kubernetes
+extraEnvVars:
+  - name: GOMEMLIMIT
+    value: 14Gi   # with resources.limits.memory: 16Gi
+```
+
+```bash
+# Docker / docker-compose (compose files default to GOMEMLIMIT=900MiB, mem_limit=1g)
+GOMEMLIMIT=14Gi FLUXBASE_MEM_LIMIT=16g docker compose up -d
+```
+
+Raise `GOGC` above the default 100 only if CPU is plentiful and you want a
+larger, cheaper heap; lower it to trade CPU for a smaller footprint. Leave
+both unset to let the Go runtime use its defaults (unbounded heap target,
+GOGC=100).
+
 ### Horizontal Scaling
 
 **When to use**: Long-term growth, high availability needs

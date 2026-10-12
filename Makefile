@@ -399,6 +399,13 @@ test-storage: ## Run storage tests only
 test-cli: ## Run CLI tests (unit + mock server, no external dependencies)
 	@./scripts/test-runner.sh go test -v -race -timeout=2m ./cli/...
 
+bench: ## Run Go benchmarks (realtime, webhook, functions, email)
+	@go test -run '^$$' -bench . -benchmem -benchtime 1s \
+		./internal/realtime/ ./internal/webhook/ ./internal/functions/ ./internal/email/
+
+loadtest: ## Generate HTTP load against a running server (URL=... PATHS=/livez,/health DURATION=30s C=8)
+	@go run ./scripts/loadtest -url "$(URL)" -paths "$(PATHS)" -duration "$(DURATION)" -c "$(C)"
+
 test-sdk: ## Run SDK tests (TypeScript)
 	@echo "${YELLOW}Running SDK tests...${NC}"
 	@cd sdk && unset NODE_OPTIONS && bun test -- src/admin.test.ts src/auth.test.ts src/management.test.ts src/ddl.test.ts src/impersonation.test.ts src/settings.test.ts src/oauth.test.ts
