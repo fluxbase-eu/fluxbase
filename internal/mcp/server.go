@@ -25,6 +25,7 @@ type Server struct {
 	tools     *ToolRegistry
 	resources *ResourceRegistry
 	db        *database.Connection // optional; enables the MCP audit trail
+	bus       *notificationBus     // server-initiated notifications to SSE GET streams
 }
 
 // NewServer creates a new MCP server
@@ -34,6 +35,7 @@ func NewServer(cfg *config.MCPConfig) *Server {
 		transport: NewTransport(),
 		tools:     NewToolRegistry(),
 		resources: NewResourceRegistry(),
+		bus:       newNotificationBus(),
 	}
 }
 

@@ -370,7 +370,7 @@ func TestHandler_handleGet(t *testing.T) {
 		assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
 	})
 
-	t.Run("returns not implemented for SSE stream", func(t *testing.T) {
+	t.Run("rejects unauthenticated SSE stream", func(t *testing.T) {
 		cfg := &config.MCPConfig{}
 		handler := NewHandler(cfg, nil)
 
@@ -384,7 +384,40 @@ func TestHandler_handleGet(t *testing.T) {
 		require.NoError(t, err)
 		defer func() { _ = resp.Body.Close() }()
 
-		assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	t.Run("accepts authenticated SSE stream and starts streaming", func(t *testing.T) {
+		cfg := &config.MCPConfig{}
+		handler := NewHandler(cfg, nil)
+
+		app := fiber.New()
+		// Simulate the auth middleware populating fiber locals.
+		app.Get("/", func(c fiber.Ctx) error {
+			c.Locals("auth_type", "pat")
+			uid := "user-1"
+			c.Locals("user_id", &uid)
+			c.Locals("user_role", "authenticated")
+			return handler.HandleGet(c)
+		})
+
+		// The stream is long-lived; the writer function runs after the handler
+		// returns. Verify via the subscriber count that the connection
+		// subscribed. fiber's app.Test would block on the infinite stream, so
+		// only the handler return path is exercised here; framing is covered
+		// by TestStreamNotifications.
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Accept", "text/event-stream")
+
+		// Run the request in the background; it never completes.
+		go func() {
+			_, _ = app.Test(req, fiber.TestConfig{Timeout: 100 * time.Millisecond, FailOnTimeout: false})
+		}()
+
+		// The subscription happens synchronously inside the handler.
+		assert.Eventually(t, func() bool {
+			return handler.Server().subscriberCount() == 1
+		}, 2*time.Second, 10*time.Millisecond)
 	})
 }
 
