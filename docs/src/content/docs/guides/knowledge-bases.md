@@ -615,7 +615,10 @@ Set the strategy globally (`ai.entity_extraction_strategy`) or per KB via the
 `entity_extraction_strategy` field (`""` inherits the global default):
 
 ```bash
-curl -X PATCH http://localhost:8080/api/v1/ai/knowledge-bases/<kb-id>   -H "Authorization: Bearer YOUR_TOKEN"   -H "Content-Type: application/json"   -d '{"entity_extraction_strategy": "hybrid"}'
+curl -X PATCH http://localhost:8080/api/v1/ai/knowledge-bases/<kb-id> \
+  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"entity_extraction_strategy": "hybrid"}'
 ```
 
 LLM extraction is billed through your chat provider — tune cost with

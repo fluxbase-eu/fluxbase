@@ -106,7 +106,8 @@ class AIModulesTest {
     @Test
     fun `getUsage GETs the usage route`() = runTest {
         val recording = RecordingHttp(
-            mockResponseBody = """{"requests":{"used":3,"limit":500},"tokens":{"used":100,"limit":100000},"resets_at":"2026-10-13T00:00:00Z"}""",
+            mockResponseBody =
+                """{"requests":{"used":3,"limit":500},"tokens":{"used":100,"limit":100000}}""",
         )
         val ai = FluxbaseAI(http(recording))
 

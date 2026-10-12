@@ -195,3 +195,6 @@ b0b144eb7ca6bb89a110cc31cfba3a4c8932c0d7:.github/workflows/ci.yml:generic-api-ke
 # requirements, so they are intentionally high-entropy; CI-only, never deployed.
 3ac9b83c2bbbb2fcbc863345314e3c8a2089cccb:.github/workflows/ci.yml:generic-api-key:1101
 3ac9b83c2bbbb2fcbc863345314e3c8a2089cccb:.github/workflows/ci.yml:generic-api-key:1102
+# PR feat/ai-quality-pack: placeholder Bearer token in the extraction-strategy
+# curl example (aligned to the house YOUR_SERVICE_ROLE_KEY style).
+d8e88b178cfb486b481d9edf22ebc82c87d1a41f:docs/src/content/docs/guides/knowledge-bases.md:curl-auth-header:618
