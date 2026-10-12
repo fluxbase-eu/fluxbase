@@ -13,4 +13,4 @@ Response type for operations that don't return data (void operations)
 
 | Property | Type |
 | ------ | ------ |
-| <a id="error"></a> `error` | `Error` \| `null` |
+| <a id="error"></a> `error` | [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null` |

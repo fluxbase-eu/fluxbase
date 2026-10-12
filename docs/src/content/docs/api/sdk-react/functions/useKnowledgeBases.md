@@ -5,10 +5,10 @@ prev: false
 title: "useKnowledgeBases"
 ---
 
-> **useKnowledgeBases**(): `UseQueryResult`\<`NoInfer`\<`KnowledgeBaseSummary`[]\>, `Error`\>
+> **useKnowledgeBases**(): `UseQueryResult`\<`KnowledgeBaseSummary`[], `Error`\>
 
 Hook to list all knowledge bases the user has access to
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`KnowledgeBaseSummary`[]\>, `Error`\>
+`UseQueryResult`\<`KnowledgeBaseSummary`[], `Error`\>

@@ -775,7 +775,7 @@ When enabled, adaptive trust skips CAPTCHA challenges for low-risk users based o
 
 | Variable                       | Description                  | Default | Example                     |
 | ------------------------------ | ---------------------------- | ------- | --------------------------- |
-| `FLUXBASE_AI_PROVIDER_TYPE`    | Provider type                | `""`    | `openai`, `azure`, `ollama` |
+| `FLUXBASE_AI_PROVIDER_TYPE`    | Provider type                | `""`    | `openai`, `azure`, `ollama`, `anthropic` |
 | `FLUXBASE_AI_PROVIDER_NAME`    | Display name for provider    | `""`    | `Default Provider`          |
 | `FLUXBASE_AI_PROVIDER_MODEL`   | Default model                | `""`    | `gpt-4-turbo`               |
 | `FLUXBASE_AI_DEFAULT_MODEL`    | Default AI model for chatbots | `gpt-4-turbo` | `gpt-4-turbo`, `gpt-4o` |
@@ -826,6 +826,23 @@ When enabled, adaptive trust skips CAPTCHA challenges for low-risk users based o
 | Variable                             | Description                             | Default                                                            | Example |
 | ------------------------------------ | --------------------------------------- | ------------------------------------------------------------------ | ------- |
 | `FLUXBASE_AI_SYNC_ALLOWED_IP_RANGES` | IP CIDR ranges allowed to sync chatbots | `["172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16", "127.0.0.0/8"]` | -       |
+
+**Retrieval Quality (Entity Extraction, Rerank, Response Cache):**
+
+| Variable                                 | Description                                 | Default           | Example                  |
+| ---------------------------------------- | ------------------------------------------- | ----------------- | ------------------------ |
+| `FLUXBASE_AI_ENTITY_EXTRACTION_STRATEGY` | Knowledge-graph entity extraction strategy  | `rules`           | `rules`, `llm`, `hybrid` |
+| `FLUXBASE_AI_ENTITY_EXTRACTION_MAX_TOKENS` | Max tokens per LLM extraction request     | `2000`            | `2000`                   |
+| `FLUXBASE_AI_ENTITY_EXTRACTION_MIN_TEXT_CHARS` | Skip the LLM below this text length   | `200`             | `200`                    |
+| `FLUXBASE_AI_ENTITY_EXTRACTION_TIMEOUT`  | Per-extraction-request timeout              | `60s`             | `60s`                    |
+| `FLUXBASE_AI_RERANK_ENABLED`             | Enable RAG reranking                        | `false`           | `true`                   |
+| `FLUXBASE_AI_RERANK_PROVIDER`            | Rerank provider                             | `llm`             | `llm`, `cohere`          |
+| `FLUXBASE_AI_RERANK_MODEL`               | Rerank model override                       | provider default  | `rerank-v3.5`            |
+| `FLUXBASE_AI_RERANK_API_KEY`             | Cohere API key                              | `""`              | `co_...`                 |
+| `FLUXBASE_AI_RERANK_BASE_URL`            | Cohere-compatible base URL override         | `""`              | `https://api.cohere.com` |
+| `FLUXBASE_AI_RERANK_TOP_N`               | Max results kept after reranking            | `10`              | `10`                     |
+| `FLUXBASE_AI_RERANK_TIMEOUT`             | Per-rerank-request timeout                  | `10s`             | `10s`                    |
+| `FLUXBASE_AI_RESPONSE_CACHE_TTL`         | Semantic response cache TTL (`0s` disables) | `1h`              | `1h`                     |
 
 ### Edge Functions
 

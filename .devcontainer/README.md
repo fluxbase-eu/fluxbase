@@ -7,7 +7,7 @@ This devcontainer provides a complete development environment for Fluxbase with 
 ### Languages & Runtimes
 
 - Go 1.26
-- Node.js 20
+- Node.js 24 (see `.nvmrc`)
 - PostgreSQL client
 - Redis client
 

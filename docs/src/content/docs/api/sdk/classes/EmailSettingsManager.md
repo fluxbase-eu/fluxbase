@@ -123,12 +123,19 @@ await client.admin.settings.email.enable()
 
 ### get()
 
-> **get**(): `Promise`\<[`EmailProviderSettings`](/api/sdk/interfaces/emailprovidersettings/)\>
+> **get**(`options?`): `Promise`\<[`EmailProviderSettings`](/api/sdk/interfaces/emailprovidersettings/)\>
 
 Get current email provider settings
 
 Returns the current email configuration. Sensitive values (passwords, client keys)
 are not returned - instead, boolean flags indicate whether they are set.
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `options` | \{ `signal?`: `AbortSignal` \| `null`; \} |
+| `options.signal?` | `AbortSignal` \| `null` |
 
 #### Returns
 
@@ -155,12 +162,19 @@ if (settings._overrides.provider?.is_overridden) {
 
 ### getForTenant()
 
-> **getForTenant**(): `Promise`\<[`TenantEmailProviderSettings`](/api/sdk/interfaces/tenantemailprovidersettings/)\>
+> **getForTenant**(`options?`): `Promise`\<[`TenantEmailProviderSettings`](/api/sdk/interfaces/tenantemailprovidersettings/)\>
 
 Get tenant-level email settings (resolved through cascade)
 
 Returns email settings resolved for the current tenant context,
 including source information for each field.
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `options` | \{ `signal?`: `AbortSignal` \| `null`; \} |
+| `options.signal?` | `AbortSignal` \| `null` |
 
 #### Returns
 
@@ -201,7 +215,7 @@ await client.admin.settings.email.setProvider('sendgrid')
 
 ### test()
 
-> **test**(`recipientEmail`): `Promise`\<[`TestEmailSettingsResponse`](/api/sdk/interfaces/testemailsettingsresponse/)\>
+> **test**(`provider`, `recipientEmail`): `Promise`\<[`TestEmailSettingsResponse`](/api/sdk/interfaces/testemailsettingsresponse/)\>
 
 Test email configuration by sending a test email
 
@@ -211,6 +225,7 @@ Sends a test email to verify that the current email configuration is working.
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
+| `provider` | `string` | Configured provider whose settings should be tested (e.g. `smtp`, `sendgrid`) |
 | `recipientEmail` | `string` | Email address to send the test email to |
 
 #### Returns
@@ -227,7 +242,7 @@ Error if email sending fails
 
 ```typescript
 try {
-  const result = await client.admin.settings.email.test('admin@yourapp.com')
+  const result = await client.admin.settings.email.test('smtp', 'admin@yourapp.com')
   console.log('Test email sent:', result.message)
 } catch (error) {
   console.error('Email configuration error:', error.message)

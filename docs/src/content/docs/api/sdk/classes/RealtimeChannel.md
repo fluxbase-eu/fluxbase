@@ -250,16 +250,26 @@ await channel.send({
 
 ### subscribe()
 
-> **subscribe**(`callback?`, `_timeout?`): `this`
+> **subscribe**(`callback?`, `timeout?`): `this`
 
 Subscribe to the channel
+
+The status callback is Supabase-compatible and ack-driven:
+- `SUBSCRIBED` fires when the **server acknowledges** the subscribe
+  message (an `ack` frame with `subscribed: true`), not merely when the
+  WebSocket transport opens.
+- `TIMED_OUT` fires when no acknowledgment arrives within `timeout`
+  milliseconds.
+- `CHANNEL_ERROR` fires when the connection fails or closes before the
+  server acknowledges the subscription.
+- `CLOSED` is reserved for explicit close and is not currently emitted.
 
 #### Parameters
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `callback?` | (`status`, `err?`) => `void` | Optional status callback (Supabase-compatible) |
-| `_timeout?` | `number` | Optional timeout in milliseconds (currently unused) |
+| `callback?` | [`RealtimeSubscribeStatusCallback`](/api/sdk/type-aliases/realtimesubscribestatuscallback/) | Optional status callback (Supabase-compatible) |
+| `timeout?` | `number` | Optional timeout in milliseconds to wait for the server's subscribe acknowledgment before `TIMED_OUT` is reported (default: 10000) |
 
 #### Returns
 

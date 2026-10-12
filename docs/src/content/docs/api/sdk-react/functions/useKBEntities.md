@@ -5,7 +5,7 @@ prev: false
 title: "useKBEntities"
 ---
 
-> **useKBEntities**(`kbId`, `type?`): `UseQueryResult`\<`NoInfer`\<`Entity`[]\>, `Error`\>
+> **useKBEntities**(`kbId`, `type?`): `UseQueryResult`\<`Entity`[], `Error`\>
 
 Hook to list entities in a knowledge base
 
@@ -18,4 +18,4 @@ Hook to list entities in a knowledge base
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`Entity`[]\>, `Error`\>
+`UseQueryResult`\<`Entity`[], `Error`\>

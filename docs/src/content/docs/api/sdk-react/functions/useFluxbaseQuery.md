@@ -5,7 +5,7 @@ prev: false
 title: "useFluxbaseQuery"
 ---
 
-> **useFluxbaseQuery**\<`T`\>(`buildQuery`, `options?`): `UseQueryResult`\<`NoInfer`\<`T`[]\>, `Error`\>
+> **useFluxbaseQuery**\<`T`\>(`buildQuery`, `options?`): `UseQueryResult`\<`T`[], `Error`\>
 
 Hook to execute a database query
 
@@ -24,7 +24,7 @@ Hook to execute a database query
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`T`[]\>, `Error`\>
+`UseQueryResult`\<`T`[], `Error`\>
 
 ## Example
 

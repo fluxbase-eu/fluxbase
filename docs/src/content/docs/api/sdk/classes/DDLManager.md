@@ -222,7 +222,7 @@ schemas.forEach(schema => {
 
 ### listTables()
 
-> **listTables**(`schema?`): `Promise`\<[`ListTablesResponse`](/api/sdk/interfaces/listtablesresponse/)\>
+> **listTables**(`schema?`, `options?`): `Promise`\<[`ListTablesResponse`](/api/sdk/interfaces/listtablesresponse/)\>
 
 List all tables in the database or a specific schema
 
@@ -235,6 +235,8 @@ are returned.
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `schema?` | `string` | Optional schema name to filter tables |
+| `options?` | \{ `signal?`: `AbortSignal` \| `null`; \} | - |
+| `options.signal?` | `AbortSignal` \| `null` | - |
 
 #### Returns
 

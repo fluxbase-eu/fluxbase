@@ -5,7 +5,7 @@ prev: false
 title: "useAuthConfig"
 ---
 
-> **useAuthConfig**(): `UseQueryResult`\<`NoInfer`\<`AuthConfig`\>, `Error`\>
+> **useAuthConfig**(): `UseQueryResult`\<`AuthConfig`, `Error`\>
 
 Hook to get the complete authentication configuration from the server
 
@@ -25,7 +25,7 @@ OAuth provider buttons.
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`AuthConfig`\>, `Error`\>
+`UseQueryResult`\<`AuthConfig`, `Error`\>
 
 Query result with authentication configuration
 

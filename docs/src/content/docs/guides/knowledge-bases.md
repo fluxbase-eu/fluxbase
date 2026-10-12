@@ -330,6 +330,23 @@ curl -X POST http://localhost:8080/api/v1/admin/ai/knowledge-bases/KB_ID/search 
   }'
 ```
 
+The user-facing endpoint (`POST /api/v1/ai/knowledge-bases/KB_ID/search`,
+viewer permission, per-user document isolation) accepts the same options:
+`query`, `limit`, `mode` (`semantic`/`keyword`/`hybrid`), `semantic_weight`,
+`threshold`, and `rerank`. Hybrid search fuses the semantic and keyword
+rankings with weighted reciprocal rank fusion (k=60); `threshold` filters on
+raw cosine similarity while the fusion decides ordering. `rerank` overrides
+the KB's `rerank_enabled` opt-in (requires a configured reranker, see below).
+
+### Reranking
+
+When a reranker is configured (`ai.rerank_enabled=true` with
+`ai.rerank_provider` of `llm` — listwise rerank via your chat provider — or
+`cohere` — the Cohere Rerank API), KB search results are re-ordered by a
+relevance model. Individual KBs opt out with `rerank_enabled=false`; a
+request-level `rerank` flag overrides the KB default. Rerank failures never
+fail a search — results fall back to the fusion ordering.
+
 ## Best Practices
 
 ### Document Quality
@@ -581,6 +598,29 @@ curl -X PUT http://localhost:8080/api/v1/admin/ai/knowledge-bases/<kb-id> \
 ```
 
 Disabling extraction on an existing KB does not remove entities already stored; delete and recreate the KB if you need a clean slate, or remove entities via SQL.
+
+### Extraction strategies
+
+By default extraction uses the rule-based (regex) extractor: free, fast, and
+tuned for developer/technical content. Two LLM-backed strategies are available
+for higher-fidelity graphs on prose content:
+
+| Strategy | Behavior |
+|----------|----------|
+| `rules` | Regex patterns only (default) |
+| `llm` | Model-backed extraction via the default chat provider; **falls back to rules automatically** if the provider fails, so ingestion never breaks |
+| `hybrid` | Both extractors run and the results are merged, deduped by canonical name (the LLM entity wins on conflicts) |
+
+Set the strategy globally (`ai.entity_extraction_strategy`) or per KB via the
+`entity_extraction_strategy` field (`""` inherits the global default):
+
+```bash
+curl -X PATCH http://localhost:8080/api/v1/ai/knowledge-bases/<kb-id>   -H "Authorization: Bearer YOUR_TOKEN"   -H "Content-Type: application/json"   -d '{"entity_extraction_strategy": "hybrid"}'
+```
+
+LLM extraction is billed through your chat provider — tune cost with
+`ai.entity_extraction_max_tokens` (per request) and
+`ai.entity_extraction_min_text_chars` (texts shorter than this skip the LLM).
 
 ## Graph-Boosted Retrieval
 

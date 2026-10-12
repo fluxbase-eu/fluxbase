@@ -631,6 +631,80 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 
 ---
 
+## AI Operations
+
+AI is a first-class subsystem: chatbots, LLM providers, knowledge bases
+(embeddings + RAG), reranking, and the semantic response cache. This section
+covers the operational basics; the feature guides cover configuration.
+
+### Health and status checks
+
+| Check | How |
+|-------|-----|
+| AI enabled + provider reachable | `GET /api/v1/admin/ai/providers` — check `enabled` and test via `POST /api/v1/admin/ai/integrations/{id}/test` for tool integrations |
+| Per-chatbot usage | `GET /api/v1/ai/usage/{chatbotId}` (per-user quota view) or `GET /api/v1/admin/ai/metrics` (instance-wide) |
+| Vector search capability | `GET /api/v1/capabilities/vector` — pgvector installed + embedding provider status |
+| KB processing backlog | `GET /api/v1/admin/ai/knowledge-bases/{id}/documents` — count documents in `pending`/`processing` status |
+
+### Provider outage
+
+1. Symptoms: `fluxbase_ai_chat_requests_total{status="error"}` climbing,
+   `fluxbase_ai_provider_requests_total{status="error"}` rising, chatbots
+   answering with stream errors.
+2. Check the provider status (OpenAI/Azure/Anthropic status pages, or your
+   Ollama host) and `GET /api/v1/admin/ai/providers`.
+3. Fail over: `PUT /api/v1/admin/ai/providers/{id}/default` to another
+   enabled provider — the chat path picks up provider changes without a
+   restart. Chatbots pinned to a specific provider (`provider_id` annotation)
+   must be re-pointed explicitly.
+4. Degraded-but-alive services: entity extraction and the LLM reranker fall
+   back to rules / original ordering automatically; no action needed.
+
+### Embedding / document backlog
+
+Documents process asynchronously. A growing `pending`/`processing` backlog
+usually means the embedding provider is rate-limiting or down:
+
+1. Check `fluxbase_ai_provider_latency_seconds` and provider error rates.
+2. Documents retry automatically (recovery sweep every 5 minutes, max 3
+   attempts, then fail terminally). Reprocess a failed document explicitly via
+   the admin document endpoints.
+3. OCR availability: OCR requires the full Docker image (Tesseract + poppler).
+   The `-lite` image logs a warning and self-disables OCR.
+
+### Knowledge base / RAG operations
+
+- Quotas: per-user KB quotas (`documents`, `chunks`, `storage`) are enforced
+  at document-add time; increases go through the quota admin endpoints.
+- Rerank behavior: when `ai.rerank_enabled` is true, KBs opt out via
+  `rerank_enabled=false`. Rerank errors never fail a search — check
+  `fluxbase_ai_rerank_requests_total{status="error"}` for provider problems.
+- Response cache: chatbots opt in via `@fluxbase:response-cache`. Entries
+  expire after `ai.response_cache_ttl` and are invalidated when a linked KB
+  document finishes processing. A wrong-but-cached answer is fixed by
+  reprocessing the source document (which invalidates) or by
+  restarting/re-tuning the TTL.
+
+### Audit and retention
+
+- SQL audit trail: `GET /api/v1/admin/ai/audit` (generated SQL, success,
+  validation errors).
+- Conversation/tool/retrieval logs live in the `ai` schema
+  (`query_audit_log`, `tool_audit_log`, `retrieval_log`, `conversations`,
+  `messages`); retention for AI logs is governed by
+  `FLUXBASE_LOGGING_AI_RETENTION_DAYS`.
+
+### Alert suggestions
+
+| Alert | Threshold |
+|-------|-----------|
+| AI chat error rate | `rate(fluxbase_ai_chat_requests_total{status="error"}[5m]) / rate(fluxbase_ai_chat_requests_total[5m]) > 0.1` |
+| Provider latency | `histogram_quantile(0.95, rate(fluxbase_ai_provider_latency_seconds_bucket[5m])) > 10` |
+| Rerank failures | `rate(fluxbase_ai_rerank_requests_total{status="error"}[10m]) > 0` (investigate, non-urgent) |
+| Response cache miss storm | `rate(fluxbase_ai_response_cache_misses_total[15m])` far above baseline with stable traffic — check invalidations/TTL |
+
+---
+
 ## Learn More
 
 - [Backup & Restore](/guides/backup-restore) - Disaster recovery procedures

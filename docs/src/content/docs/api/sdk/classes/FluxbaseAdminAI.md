@@ -28,7 +28,7 @@ Provides create, update, delete, sync, and monitoring operations
 
 ### clearEmbeddingProvider()
 
-> **clearEmbeddingProvider**(`id`): `Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **clearEmbeddingProvider**(`id`): `Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Clear the embedding provider assignment for a provider
 
@@ -40,7 +40,7 @@ Clear the embedding provider assignment for a provider
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -48,7 +48,7 @@ Promise resolving to { data, error } tuple
 
 ### createIntegration()
 
-> **createIntegration**(`request`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **createIntegration**(`request`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Create a new tool integration. api_key in config is encrypted at the
 storage layer; never appears in plaintext in API responses.
@@ -61,13 +61,13 @@ storage layer; never appears in plaintext in API responses.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### createProvider()
 
-> **createProvider**(`params`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **createProvider**(`params`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Create a new AI provider
 
@@ -84,15 +84,34 @@ Create a new AI provider
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created provider
 
 ***
 
+### createSyncConfig()
+
+> **createSyncConfig**(`kbId`, `request`): `Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Create a table export sync configuration for a knowledge base
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `request` | [`CreateSyncConfigRequest`](/api/sdk/interfaces/createsyncconfigrequest/) |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
 ### deleteChatbot()
 
-> **deleteChatbot**(`id`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **deleteChatbot**(`id`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a chatbot
 
@@ -104,7 +123,7 @@ Delete a chatbot
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -118,7 +137,7 @@ const { data, error } = await client.admin.ai.deleteChatbot('uuid')
 
 ### deleteIntegration()
 
-> **deleteIntegration**(`id`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **deleteIntegration**(`id`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a tool integration. Refuses to delete read-only integrations
 configured via env/YAML.
@@ -131,13 +150,13 @@ configured via env/YAML.
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### deleteProvider()
 
-> **deleteProvider**(`id`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **deleteProvider**(`id`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete an AI provider
 
@@ -149,15 +168,72 @@ Delete an AI provider
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
 ***
 
+### deleteSyncConfig()
+
+> **deleteSyncConfig**(`kbId`, `syncId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Delete a table export sync configuration
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `syncId` | `string` |
+
+#### Returns
+
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
+### exportTableToKB()
+
+> **exportTableToKB**(`schema`, `table`, `request`): `Promise`\<\{ `data`: [`ExportTableToKBResponse`](/api/sdk/interfaces/exporttabletokbresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Export a database table into a knowledge base as a document
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `schema` | `string` |
+| `table` | `string` |
+| `request` | [`ExportTableToKBRequest`](/api/sdk/interfaces/exporttabletokbrequest/) |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`ExportTableToKBResponse`](/api/sdk/interfaces/exporttabletokbresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
+### getAuditLog()
+
+> **getAuditLog**(`query?`): `Promise`\<\{ `data`: [`AuditLogResponse`](/api/sdk/interfaces/auditlogresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Get the AI SQL audit log (admin)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `query` | [`AuditLogQuery`](/api/sdk/interfaces/auditlogquery/) |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`AuditLogResponse`](/api/sdk/interfaces/auditlogresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
 ### getChatbot()
 
-> **getChatbot**(`id`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getChatbot**(`id`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get details of a specific chatbot
 
@@ -169,7 +245,7 @@ Get details of a specific chatbot
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with chatbot details
 
@@ -184,9 +260,30 @@ if (data) {
 
 ***
 
+### getConversationMessages()
+
+> **getConversationMessages**(`conversationId`, `query?`): `Promise`\<\{ `data`: [`AdminMessagesResponse`](/api/sdk/interfaces/adminmessagesresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Get all messages of a conversation (admin)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `conversationId` | `string` |
+| `query` | \{ `limit?`: `number`; `offset?`: `number`; \} |
+| `query.limit?` | `number` |
+| `query.offset?` | `number` |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`AdminMessagesResponse`](/api/sdk/interfaces/adminmessagesresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
 ### getIntegration()
 
-> **getIntegration**(`id`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getIntegration**(`id`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get a single tool integration by ID.
 
@@ -198,13 +295,31 @@ Get a single tool integration by ID.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
+### getMetrics()
+
+> **getMetrics**(): `Promise`\<\{ `data`: [`AIMetrics`](/api/sdk/interfaces/aimetrics/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Get aggregated AI metrics (requests, tokens, per-chatbot/provider stats)
+
+#### Returns
+
+`Promise`\<\{ `data`: [`AIMetrics`](/api/sdk/interfaces/aimetrics/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+#### Example
+
+```typescript
+const { data } = await client.admin.ai.getMetrics()
+```
 
 ***
 
 ### getProvider()
 
-> **getProvider**(`id`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getProvider**(`id`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get details of a specific AI provider
 
@@ -216,7 +331,7 @@ Get details of a specific AI provider
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with provider details
 
@@ -224,7 +339,7 @@ Promise resolving to { data, error } tuple with provider details
 
 ### getTableDetails()
 
-> **getTableDetails**(`schema`, `table`): `Promise`\<\{ `data`: [`TableDetails`](/api/sdk/interfaces/tabledetails/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getTableDetails**(`schema`, `table`): `Promise`\<\{ `data`: [`TableDetails`](/api/sdk/interfaces/tabledetails/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get detailed table information including columns
 
@@ -239,7 +354,7 @@ Use this to discover available columns before exporting.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`TableDetails`](/api/sdk/interfaces/tabledetails/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`TableDetails`](/api/sdk/interfaces/tabledetails/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with table details
 
@@ -255,9 +370,29 @@ if (data) {
 
 ***
 
+### grantDocumentPermission()
+
+> **grantDocumentPermission**(`kbId`, `documentId`, `request`): `Promise`\<\{ `data`: [`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Grant a user permission on a document (admin)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `documentId` | `string` |
+| `request` | [`GrantDocumentPermissionRequest`](/api/sdk/interfaces/grantdocumentpermissionrequest/) |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
 ### linkKnowledgeBase()
 
-> **linkKnowledgeBase**(`chatbotId`, `request`): `Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **linkKnowledgeBase**(`chatbotId`, `request`): `Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Link a knowledge base to a chatbot
 
@@ -270,7 +405,7 @@ Link a knowledge base to a chatbot
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with link details
 
@@ -289,7 +424,7 @@ const { data, error } = await client.admin.ai.linkKnowledgeBase('chatbot-uuid', 
 
 ### listChatbotKnowledgeBases()
 
-> **listChatbotKnowledgeBases**(`chatbotId`): `Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listChatbotKnowledgeBases**(`chatbotId`): `Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List knowledge bases linked to a chatbot
 
@@ -301,7 +436,7 @@ List knowledge bases linked to a chatbot
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with linked knowledge bases
 
@@ -318,7 +453,7 @@ if (data) {
 
 ### listChatbots()
 
-> **listChatbots**(`namespace?`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listChatbots**(`namespace?`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all chatbots (admin view)
 
@@ -330,7 +465,7 @@ List all chatbots (admin view)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of chatbot summaries
 
@@ -345,9 +480,46 @@ if (data) {
 
 ***
 
+### listConversations()
+
+> **listConversations**(`query?`): `Promise`\<\{ `data`: [`AdminConversationListResponse`](/api/sdk/interfaces/adminconversationlistresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+List AI conversations across all chatbots (admin)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `query` | [`AdminConversationQuery`](/api/sdk/interfaces/adminconversationquery/) |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`AdminConversationListResponse`](/api/sdk/interfaces/adminconversationlistresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
+### listDocumentPermissions()
+
+> **listDocumentPermissions**(`kbId`, `documentId`): `Promise`\<\{ `data`: [`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+List permissions granted on a document (admin)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `documentId` | `string` |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
 ### listIntegrations()
 
-> **listIntegrations**(`params?`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listIntegrations**(`params?`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List tool integrations, optionally filtered by integration_type.
 
@@ -355,12 +527,13 @@ List tool integrations, optionally filtered by integration_type.
 
 | Parameter | Type |
 | ------ | ------ |
-| `params?` | \{ `integration_type?`: [`IntegrationType`](/api/sdk/type-aliases/integrationtype/); \} |
+| `params?` | \{ `integration_type?`: [`IntegrationType`](/api/sdk/type-aliases/integrationtype/); `signal?`: `AbortSignal` \| `null`; \} |
 | `params.integration_type?` | [`IntegrationType`](/api/sdk/type-aliases/integrationtype/) |
+| `params.signal?` | `AbortSignal` \| `null` |
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 #### Example
 
@@ -372,13 +545,20 @@ const { data, error } = await client.admin.ai.listIntegrations({ integration_typ
 
 ### listProviders()
 
-> **listProviders**(): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listProviders**(`options?`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all AI providers
 
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `options` | \{ `signal?`: `AbortSignal` \| `null`; \} | Optional request options, including an AbortSignal so callers (e.g. TanStack Query) can cancel the request |
+| `options.signal?` | `AbortSignal` \| `null` | - |
+
 #### Returns
 
-`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of providers
 
@@ -393,9 +573,59 @@ if (data) {
 
 ***
 
+### listSyncConfigs()
+
+> **listSyncConfigs**(`kbId`): `Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+List table export sync configurations for a knowledge base
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
+### listTables()
+
+> **listTables**(): `Promise`\<\{ `data`: [`ExportableTable`](/api/sdk/interfaces/exportabletable/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+List tables available for knowledge base export
+
+#### Returns
+
+`Promise`\<\{ `data`: [`ExportableTable`](/api/sdk/interfaces/exportabletable/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
+### revokeDocumentPermission()
+
+> **revokeDocumentPermission**(`kbId`, `documentId`, `userId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Revoke a document permission (admin)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `documentId` | `string` |
+| `userId` | `string` |
+
+#### Returns
+
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
 ### setDefaultIntegration()
 
-> **setDefaultIntegration**(`id`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **setDefaultIntegration**(`id`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Mark an integration as the default for its integration_type within
 the current tenant. The server clears any prior default in the same
@@ -409,13 +639,13 @@ transaction.
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### setDefaultProvider()
 
-> **setDefaultProvider**(`id`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **setDefaultProvider**(`id`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Set a provider as the default provider
 
@@ -427,7 +657,7 @@ Set a provider as the default provider
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated provider
 
@@ -435,7 +665,7 @@ Promise resolving to { data, error } tuple with updated provider
 
 ### setEmbeddingProvider()
 
-> **setEmbeddingProvider**(`id`): `Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **setEmbeddingProvider**(`id`): `Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Set a provider as the embedding provider
 
@@ -447,7 +677,7 @@ Set a provider as the embedding provider
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `use_for_embeddings`: `boolean`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated provider
 
@@ -455,7 +685,7 @@ Promise resolving to { data, error } tuple with updated provider
 
 ### sync()
 
-> **sync**(`options?`): `Promise`\<\{ `data`: [`SyncChatbotsResult`](/api/sdk/interfaces/syncchatbotsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **sync**(`options?`): `Promise`\<\{ `data`: [`SyncChatbotsResult`](/api/sdk/interfaces/syncchatbotsresult/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Sync chatbots from filesystem or API payload
 
@@ -473,7 +703,7 @@ Requires service_role or admin authentication.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`SyncChatbotsResult`](/api/sdk/interfaces/syncchatbotsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`SyncChatbotsResult`](/api/sdk/interfaces/syncchatbotsresult/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
 
@@ -505,7 +735,7 @@ if (data) {
 
 ### testIntegration()
 
-> **testIntegration**(`id`): `Promise`\<\{ `data`: [`TestToolIntegrationResult`](/api/sdk/interfaces/testtoolintegrationresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **testIntegration**(`id`): `Promise`\<\{ `data`: [`TestToolIntegrationResult`](/api/sdk/interfaces/testtoolintegrationresult/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Test an integration by running a real "hello world" call against
 its provider. Stores last_tested_at + last_test_status + error
@@ -519,7 +749,7 @@ on the integration row so the admin UI can display health.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`TestToolIntegrationResult`](/api/sdk/interfaces/testtoolintegrationresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`TestToolIntegrationResult`](/api/sdk/interfaces/testtoolintegrationresult/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 #### Example
 
@@ -532,7 +762,7 @@ if (data?.status === "ok") { console.log("Tavily credentials verified") }
 
 ### toggleChatbot()
 
-> **toggleChatbot**(`id`, `enabled`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **toggleChatbot**(`id`, `enabled`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Enable or disable a chatbot
 
@@ -545,7 +775,7 @@ Enable or disable a chatbot
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated chatbot
 
@@ -557,9 +787,28 @@ const { data, error } = await client.admin.ai.toggleChatbot('uuid', true)
 
 ***
 
+### triggerSync()
+
+> **triggerSync**(`kbId`, `syncId`): `Promise`\<\{ `data`: [`ExportTableToKBResponse`](/api/sdk/interfaces/exporttabletokbresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Trigger a table export sync immediately
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `syncId` | `string` |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`ExportTableToKBResponse`](/api/sdk/interfaces/exporttabletokbresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+***
+
 ### unlinkKnowledgeBase()
 
-> **unlinkKnowledgeBase**(`chatbotId`, `knowledgeBaseId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **unlinkKnowledgeBase**(`chatbotId`, `knowledgeBaseId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Unlink a knowledge base from a chatbot
 
@@ -572,7 +821,7 @@ Unlink a knowledge base from a chatbot
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -586,7 +835,7 @@ const { data, error } = await client.admin.ai.unlinkKnowledgeBase('chatbot-uuid'
 
 ### updateChatbot()
 
-> **updateChatbot**(`id`, `updates`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **updateChatbot**(`id`, `updates`): `Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update a chatbot's configuration (partial update).
 
@@ -616,7 +865,7 @@ next request (limits are read fresh from the database per message).
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIChatbot`](/api/sdk/interfaces/aichatbot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with the updated chatbot
 
@@ -633,7 +882,7 @@ const { data, error } = await client.admin.ai.updateChatbot('uuid', {
 
 ### updateChatbotKnowledgeBase()
 
-> **updateChatbotKnowledgeBase**(`chatbotId`, `knowledgeBaseId`, `updates`): `Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **updateChatbotKnowledgeBase**(`chatbotId`, `knowledgeBaseId`, `updates`): `Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update a chatbot-knowledge base link
 
@@ -647,7 +896,7 @@ Update a chatbot-knowledge base link
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ChatbotKnowledgeBaseLink`](/api/sdk/interfaces/chatbotknowledgebaselink/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated link
 
@@ -665,7 +914,7 @@ const { data, error } = await client.admin.ai.updateChatbotKnowledgeBase(
 
 ### updateIntegration()
 
-> **updateIntegration**(`id`, `request`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **updateIntegration**(`id`, `request`): `Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update an existing tool integration. Passing config.api_key =
 "***masked***" preserves the existing encrypted value (useful when
@@ -680,13 +929,13 @@ the admin changes only the name and not the API key).
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ToolIntegration`](/api/sdk/interfaces/toolintegration/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### updateProvider()
 
-> **updateProvider**(`id`, `updates`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **updateProvider**(`id`, `updates`): `Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update an existing AI provider
 
@@ -703,6 +952,26 @@ Update an existing AI provider
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIProvider`](/api/sdk/interfaces/aiprovider/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated provider
+
+***
+
+### updateSyncConfig()
+
+> **updateSyncConfig**(`kbId`, `syncId`, `request`): `Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Update a table export sync configuration
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `syncId` | `string` |
+| `request` | [`UpdateSyncConfigRequest`](/api/sdk/interfaces/updatesyncconfigrequest/) |
+
+#### Returns
+
+`Promise`\<\{ `data`: [`TableExportSyncConfig`](/api/sdk/interfaces/tableexportsyncconfig/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>

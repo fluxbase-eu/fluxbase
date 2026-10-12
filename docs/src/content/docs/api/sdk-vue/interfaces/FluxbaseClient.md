@@ -481,7 +481,7 @@ const channel = client.channel('room-1', {
 
 ### removeChannel()
 
-> **removeChannel**(`channel`): `Promise`\<`"ok"` \| `"error"`\>
+> **removeChannel**(`channel`): `Promise`\<`"error"` \| `"ok"`\>
 
 Remove a realtime channel (Supabase-compatible)
 
@@ -493,7 +493,7 @@ Remove a realtime channel (Supabase-compatible)
 
 #### Returns
 
-`Promise`\<`"ok"` \| `"error"`\>
+`Promise`\<`"error"` \| `"ok"`\>
 
 Promise resolving to status
 

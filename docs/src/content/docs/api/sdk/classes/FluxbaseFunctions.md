@@ -30,7 +30,7 @@ For admin operations (create, update, delete, sync), use client.admin.functions
 
 ### get()
 
-> **get**(`name`): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **get**(`name`): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get details of a specific edge function
 
@@ -42,7 +42,7 @@ Get details of a specific edge function
 
 #### Returns
 
-`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with function metadata
 
@@ -59,7 +59,7 @@ if (data) {
 
 ### invoke()
 
-> **invoke**\<`T`\>(`functionName`, `options?`): `Promise`\<\{ `data`: `T` \| `null`; `error`: `Error` \| `null`; \}\>
+> **invoke**\<`T`\>(`functionName`, `options?`): `Promise`\<\{ `data`: `T` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Invoke an edge function
 
@@ -80,7 +80,7 @@ This method is fully compatible with Supabase's functions.invoke() API.
 
 #### Returns
 
-`Promise`\<\{ `data`: `T` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `T` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -115,13 +115,13 @@ const { data, error } = await client.functions.invoke('api-proxy', {
 
 ### list()
 
-> **list**(): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(): `Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all public edge functions
 
 #### Returns
 
-`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`EdgeFunction`](/api/sdk/interfaces/edgefunction/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of public functions
 

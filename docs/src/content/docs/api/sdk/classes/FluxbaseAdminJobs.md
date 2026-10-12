@@ -28,7 +28,7 @@ Provides create, update, delete, sync, and monitoring operations
 
 ### cancel()
 
-> **cancel**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **cancel**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Cancel a running or pending job
 
@@ -40,7 +40,7 @@ Cancel a running or pending job
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -54,7 +54,7 @@ const { data, error } = await client.admin.jobs.cancel('550e8400-e29b-41d4-a716-
 
 ### create()
 
-> **create**(`params`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
+> **create**(`params`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Create a new job function
 
@@ -71,7 +71,7 @@ Create a new job function
 
 #### Returns
 
-`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created job function
 
@@ -79,7 +79,7 @@ Promise resolving to { data, error } tuple with created job function
 
 ### delete()
 
-> **delete**(`namespace`, `name`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **delete**(`namespace`, `name`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a job function
 
@@ -92,7 +92,7 @@ Delete a job function
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -106,7 +106,7 @@ const { data, error } = await client.admin.jobs.delete('default', 'process-data'
 
 ### get()
 
-> **get**(`namespace`, `name`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
+> **get**(`namespace`, `name`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get details of a specific job function
 
@@ -119,7 +119,7 @@ Get details of a specific job function
 
 #### Returns
 
-`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job function metadata
 
@@ -136,7 +136,7 @@ if (data) {
 
 ### getJob()
 
-> **getJob**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getJob**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get details of a specific job (execution)
 
@@ -148,7 +148,7 @@ Get details of a specific job (execution)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job details
 
@@ -165,7 +165,7 @@ if (data) {
 
 ### getStats()
 
-> **getStats**(`namespace?`): `Promise`\<\{ `data`: `JobStats` \| `null`; `error`: `Error` \| `null`; \}\>
+> **getStats**(`namespace?`): `Promise`\<\{ `data`: `JobStats` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get job statistics
 
@@ -177,7 +177,7 @@ Get job statistics
 
 #### Returns
 
-`Promise`\<\{ `data`: `JobStats` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `JobStats` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job stats
 
@@ -194,7 +194,7 @@ if (data) {
 
 ### list()
 
-> **list**(`namespace?`): `Promise`\<\{ `data`: `JobFunction`[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(`namespace?`): `Promise`\<\{ `data`: `JobFunction`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all job functions (admin view)
 
@@ -206,7 +206,7 @@ List all job functions (admin view)
 
 #### Returns
 
-`Promise`\<\{ `data`: `JobFunction`[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `JobFunction`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of job functions
 
@@ -223,7 +223,7 @@ if (data) {
 
 ### listJobs()
 
-> **listJobs**(`filters?`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listJobs**(`filters?`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all jobs (executions) across all namespaces (admin view)
 
@@ -240,7 +240,7 @@ List all jobs (executions) across all namespaces (admin view)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of jobs
 
@@ -263,13 +263,13 @@ if (data) {
 
 ### listNamespaces()
 
-> **listNamespaces**(): `Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listNamespaces**(): `Promise`\<\{ `data`: `string`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all namespaces that have job functions
 
 #### Returns
 
-`Promise`\<\{ `data`: `string`[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `string`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of namespace strings
 
@@ -286,13 +286,13 @@ if (data) {
 
 ### listWorkers()
 
-> **listWorkers**(): `Promise`\<\{ `data`: `JobWorker`[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listWorkers**(): `Promise`\<\{ `data`: `JobWorker`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List active workers
 
 #### Returns
 
-`Promise`\<\{ `data`: `JobWorker`[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `JobWorker`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of workers
 
@@ -311,7 +311,7 @@ if (data) {
 
 ### retry()
 
-> **retry**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **retry**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Retry a failed job
 
@@ -323,7 +323,7 @@ Retry a failed job
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with new job
 
@@ -337,7 +337,7 @@ const { data, error } = await client.admin.jobs.retry('550e8400-e29b-41d4-a716-4
 
 ### sync()
 
-> **sync**(`options`): `Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
+> **sync**(`options`): `Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Sync multiple job functions to a namespace
 
@@ -355,7 +355,7 @@ Requires service_role or admin authentication.
 
 #### Returns
 
-`Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
 
@@ -390,7 +390,7 @@ if (data) {
 
 ### syncWithBundling()
 
-> **syncWithBundling**(`options`, `bundleOptions?`): `Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
+> **syncWithBundling**(`options`, `bundleOptions?`): `Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Sync job functions with automatic client-side bundling
 
@@ -406,7 +406,7 @@ before sending to the server. Requires esbuild as a peer dependency.
 
 #### Returns
 
-`Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `SyncJobsResult` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with sync results
 
@@ -427,7 +427,7 @@ const { data, error } = await client.admin.jobs.syncWithBundling({
 
 ### terminate()
 
-> **terminate**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **terminate**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Terminate a running job immediately
 
@@ -439,7 +439,7 @@ Terminate a running job immediately
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -453,7 +453,7 @@ const { data, error } = await client.admin.jobs.terminate('550e8400-e29b-41d4-a7
 
 ### update()
 
-> **update**(`namespace`, `name`, `updates`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
+> **update**(`namespace`, `name`, `updates`): `Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update an existing job function
 
@@ -470,7 +470,7 @@ Update an existing job function
 
 #### Returns
 
-`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `JobFunction` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated job function
 

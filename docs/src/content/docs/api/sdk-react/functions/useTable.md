@@ -5,7 +5,7 @@ prev: false
 title: "useTable"
 ---
 
-> **useTable**\<`T`\>(`table`, `buildQuery?`, `options?`): `UseQueryResult`\<`NoInfer`\<`T`[]\>, `Error`\>
+> **useTable**\<`T`\>(`table`, `buildQuery?`, `options?`): `UseQueryResult`\<`T`[], `Error`\>
 
 Hook for table queries with a simpler API
 
@@ -25,7 +25,7 @@ Hook for table queries with a simpler API
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`T`[]\>, `Error`\>
+`UseQueryResult`\<`T`[], `Error`\>
 
 ## Example
 

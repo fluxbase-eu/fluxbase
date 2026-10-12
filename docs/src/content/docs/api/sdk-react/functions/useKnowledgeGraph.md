@@ -5,7 +5,7 @@ prev: false
 title: "useKnowledgeGraph"
 ---
 
-> **useKnowledgeGraph**(`kbId`): `UseQueryResult`\<`NoInfer`\<`KnowledgeGraphData` \| `null`\>, `Error`\>
+> **useKnowledgeGraph**(`kbId`): `UseQueryResult`\<`KnowledgeGraphData` \| `null`, `Error`\>
 
 Hook to get the knowledge graph (entities + relationships)
 
@@ -17,4 +17,4 @@ Hook to get the knowledge graph (entities + relationships)
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`KnowledgeGraphData` \| `null`\>, `Error`\>
+`UseQueryResult`\<`KnowledgeGraphData` \| `null`, `Error`\>

@@ -52,6 +52,34 @@ DELETE request
 
 ***
 
+### fetchWithAuthRefresh()
+
+> **fetchWithAuthRefresh**(`path`, `init`, `isRetry?`): `Promise`\<`Response`\>
+
+Raw fetch with auth-refresh and error normalization for code paths that
+need the Response object directly (e.g. storage chunked uploads, blob
+downloads). On 401 it attempts a token refresh and retries once; on any
+non-ok response it throws a FluxbaseError carrying status/code/details.
+
+#### Parameters
+
+| Parameter | Type | Default value | Description |
+| ------ | ------ | ------ | ------ |
+| `path` | `string` | `undefined` | - |
+| `init` | \{ `body?`: `BodyInit` \| `null`; `headers?`: `Record`\<`string`, `string`\>; `method`: [`HttpMethod`](/api/sdk/type-aliases/httpmethod/); `signal?`: `AbortSignal` \| `null`; `skipAutoRefresh?`: `boolean`; \} | `undefined` | - |
+| `init.body?` | `BodyInit` \| `null` | `undefined` | - |
+| `init.headers?` | `Record`\<`string`, `string`\> | `undefined` | - |
+| `init.method` | [`HttpMethod`](/api/sdk/type-aliases/httpmethod/) | `undefined` | - |
+| `init.signal?` | `AbortSignal` \| `null` | `undefined` | - |
+| `init.skipAutoRefresh?` | `boolean` | `undefined` | Skip automatic token refresh on 401 |
+| `isRetry` | `boolean` | `false` | - |
+
+#### Returns
+
+`Promise`\<`Response`\>
+
+***
+
 ### get()
 
 > **get**\<`T`\>(`path`, `options?`): `Promise`\<`T`\>

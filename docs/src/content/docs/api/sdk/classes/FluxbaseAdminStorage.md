@@ -230,22 +230,26 @@ if (data) {
 
 ### listBuckets()
 
-> **listBuckets**(): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AdminListBucketsResponse`](/api/sdk/interfaces/adminlistbucketsresponse/)\>\>
+> **listBuckets**(): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AdminBucket`](/api/sdk/interfaces/adminbucket/)[]\>\>
 
 List all storage buckets
 
 #### Returns
 
-`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AdminListBucketsResponse`](/api/sdk/interfaces/adminlistbucketsresponse/)\>\>
+`Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`AdminBucket`](/api/sdk/interfaces/adminbucket/)[]\>\>
 
 List of buckets
+
+Returns the unwrapped bucket array — the same shape as
+`client.storage.listBuckets()` — instead of the raw `{ buckets }` server
+envelope.
 
 #### Example
 
 ```typescript
 const { data, error } = await admin.storage.listBuckets();
 if (data) {
-  console.log(`Found ${data.buckets.length} buckets`);
+  console.log(`Found ${data.length} buckets`);
 }
 ```
 

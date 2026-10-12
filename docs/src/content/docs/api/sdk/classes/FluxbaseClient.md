@@ -27,7 +27,7 @@ Create a new Fluxbase client instance
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
 | `fluxbaseUrl` | `string` | The URL of your Fluxbase instance |
-| `fluxbaseKey` | `string` | The anon key (JWT token with "anon" role). Generate using deploy/generate-keys.sh |
+| `fluxbaseKey` | `string` | The anon key (JWT token with "anon" role). Generate using scripts/generate-keys.sh |
 | `options?` | [`FluxbaseClientOptions`](/api/sdk/interfaces/fluxbaseclientoptions/) | Additional client configuration options |
 
 #### Returns

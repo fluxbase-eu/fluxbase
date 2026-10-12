@@ -512,9 +512,16 @@ Equal to
 
 ### execute()
 
-> **execute**(): `Promise`\<`PostgrestResponse`\<`T`\>\>
+> **execute**(`options?`): `Promise`\<`PostgrestResponse`\<`T`\>\>
 
 Execute the query and return results
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `options?` | \{ `signal?`: `AbortSignal` \| `null`; \} | Optional request options. `signal` allows caller-requested cancellation (e.g. TanStack Query's queryFn signal); when aborted, the promise rejects with an "AbortError" instead of the SDK's 408 timeout. |
+| `options.signal?` | `AbortSignal` \| `null` | - |
 
 #### Returns
 

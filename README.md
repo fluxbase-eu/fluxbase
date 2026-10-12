@@ -105,7 +105,7 @@ make lint-go      # Go linting
 make cli-install  # Build and install CLI
 ```
 
-See [CLAUDE.md](CLAUDE.md) for a detailed codebase guide and architecture overview.
+See [AGENTS.md](AGENTS.md) for a detailed codebase guide and architecture overview.
 
 ## Support
 
