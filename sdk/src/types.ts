@@ -3773,6 +3773,9 @@ export interface KnowledgeBase extends KnowledgeBaseSummary {
   chunk_strategy: string;
   source: string;
   created_by?: string;
+  entity_extraction_enabled?: boolean;
+  entity_extraction_strategy?: string;
+  rerank_enabled?: boolean;
 }
 
 /**
@@ -3782,11 +3785,23 @@ export interface CreateKnowledgeBaseRequest {
   name: string;
   namespace?: string;
   description?: string;
+  visibility?: "private" | "shared" | "public";
   embedding_model?: string;
   embedding_dimensions?: number;
   chunk_size?: number;
   chunk_overlap?: number;
   chunk_strategy?: string;
+  /** Toggle entity extraction for this KB (default true) */
+  entity_extraction_enabled?: boolean;
+  /** Entity extraction strategy: "rules", "llm", or "hybrid" (default inherits ai.entity_extraction_strategy) */
+  entity_extraction_strategy?: "rules" | "llm" | "hybrid" | "";
+  /** Opt this KB's results into reranking when a reranker is configured (default true) */
+  rerank_enabled?: boolean;
+  /** Permissions granted to users on creation */
+  initial_permissions?: Array<{
+    user_id: string;
+    permission: "viewer" | "editor" | "owner";
+  }>;
 }
 
 /**
@@ -3795,12 +3810,16 @@ export interface CreateKnowledgeBaseRequest {
 export interface UpdateKnowledgeBaseRequest {
   name?: string;
   description?: string;
+  visibility?: "private" | "shared" | "public";
   embedding_model?: string;
   embedding_dimensions?: number;
   chunk_size?: number;
   chunk_overlap?: number;
   chunk_strategy?: string;
   enabled?: boolean;
+  entity_extraction_enabled?: boolean;
+  entity_extraction_strategy?: "rules" | "llm" | "hybrid" | "";
+  rerank_enabled?: boolean;
 }
 
 /**
@@ -3922,8 +3941,16 @@ export interface KnowledgeBaseSearchResult {
  */
 export interface SearchKnowledgeBaseRequest {
   query: string;
-  max_chunks?: number;
+  /** Maximum number of chunks to return (default 10) */
+  limit?: number;
+  /** Search mode: "semantic", "keyword", or "hybrid" (default depends on endpoint) */
+  mode?: "semantic" | "keyword" | "hybrid";
+  /** Hybrid mode weighting for the semantic ranked list, 0-1 (keyword weight = 1 - semantic) */
+  semantic_weight?: number;
+  /** Minimum semantic similarity floor (cosine); 0 disables filtering */
   threshold?: number;
+  /** Re-order results with the configured reranker (overrides the KB's rerank_enabled) */
+  rerank?: boolean;
 }
 
 /**

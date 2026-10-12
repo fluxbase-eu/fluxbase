@@ -131,11 +131,11 @@ describe("FluxbaseAdminAI", () => {
           created_at: "2024-01-26T10:00:00Z",
         };
 
-        vi.mocked(mockFetch.put).mockResolvedValue(response);
+        vi.mocked(mockFetch.post).mockResolvedValue(response);
 
         const { data, error } = await ai.toggleChatbot("bot-1", true);
 
-        expect(mockFetch.put).toHaveBeenCalledWith(
+        expect(mockFetch.post).toHaveBeenCalledWith(
           "/api/v1/admin/ai/chatbots/bot-1/toggle",
           { enabled: true },
         );
@@ -152,7 +152,7 @@ describe("FluxbaseAdminAI", () => {
           created_at: "2024-01-26T10:00:00Z",
         };
 
-        vi.mocked(mockFetch.put).mockResolvedValue(response);
+        vi.mocked(mockFetch.post).mockResolvedValue(response);
 
         const { data, error } = await ai.toggleChatbot("bot-1", false);
 
@@ -160,7 +160,7 @@ describe("FluxbaseAdminAI", () => {
       });
 
       it("should handle error", async () => {
-        vi.mocked(mockFetch.put).mockRejectedValue(new Error("Update failed"));
+        vi.mocked(mockFetch.post).mockRejectedValue(new Error("Update failed"));
 
         const { data, error } = await ai.toggleChatbot("bot-1", true);
 

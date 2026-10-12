@@ -106,6 +106,10 @@ func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 		deps.DebugSearch = handler.DebugSearchMyKB
 	}
 
+	// User KB update/delete (editor/owner gated in the handler).
+	deps.UpdateKB = handler.UpdateMyKnowledgeBase
+	deps.DeleteKB = handler.DeleteMyKnowledgeBase
+
 	// Entity/graph routes — only populated when the handler has a knowledge graph.
 	if s.AI.KnowledgeGraph != nil {
 		deps.ListEntities = handler.ListMyEntities

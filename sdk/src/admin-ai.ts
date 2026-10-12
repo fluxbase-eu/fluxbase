@@ -96,7 +96,7 @@ export class FluxbaseAdminAI {
     enabled: boolean,
   ): Promise<{ data: AIChatbot | null; error: FluxbaseError | null }> {
     try {
-      const data = await this.fetch.put<AIChatbot>(
+      const data = await this.fetch.post<AIChatbot>(
         `/api/v1/admin/ai/chatbots/${id}/toggle`,
         { enabled },
       );
