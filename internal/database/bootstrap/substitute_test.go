@@ -90,12 +90,12 @@ func TestSubstituteAppUser_LongIdentifier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "GRANT ALL TO "+long, result)
 
-	// 64+ chars exceed MaxIdentifierLen and are rejected before reaching the
+	// 64 chars exceed MaxIdentifierLen and are rejected before reaching the
 	// database (defense in depth — PostgreSQL would reject them anyway).
 	long64 := strings.Repeat("a", 64)
 	_, err = SubstituteAppUser("GRANT ALL TO {{APP_USER}}", long64)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid database username")
+	assert.Contains(t, err.Error(), "at most 63 characters")
 }
 
 func TestSubstituteAppUser_RejectsInjectionVectors(t *testing.T) {

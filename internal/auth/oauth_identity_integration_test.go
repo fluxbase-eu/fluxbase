@@ -59,7 +59,6 @@ func createOAuthIdentity(t *testing.T, repo *auth.IdentityRepository, ctx contex
 // identity belonging to the user is deleted, other identities survive.
 func TestOAuth_UnlinkIdentity_Success_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	ctx, userID := signupIdentityUser(t, tc)
@@ -81,7 +80,6 @@ func TestOAuth_UnlinkIdentity_Success_Integration(t *testing.T) {
 // ID that does not exist.
 func TestOAuth_UnlinkIdentity_NotFound_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	ctx, userID := signupIdentityUser(t, tc)
@@ -97,7 +95,6 @@ func TestOAuth_UnlinkIdentity_NotFound_Integration(t *testing.T) {
 // the request reports not-found and the other user's link survives.
 func TestOAuth_UnlinkIdentity_OwnershipCheck_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	ctx, userA := signupIdentityUser(t, tc)
@@ -126,7 +123,6 @@ func TestOAuth_UnlinkIdentity_OwnershipCheck_Integration(t *testing.T) {
 // the user with zero identities.
 func TestOAuth_UnlinkIdentity_LastIdentity_Integration(t *testing.T) {
 	tc := e2e.NewIntegrationTestContextWithNamespace(t, "auth")
-	defer tc.Close()
 	defer tc.CleanupTestData()
 
 	ctx, userID := signupIdentityUser(t, tc)

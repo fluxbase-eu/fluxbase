@@ -755,7 +755,7 @@ The following source files contain the implementation details for the security f
 | File                                        | Purpose                                  |
 | ------------------------------------------- | ---------------------------------------- |
 | `internal/api/server.go`                    | Route registration and middleware chains |
-| `internal/middleware/clientkey_auth.go`     | Client key validation                    |
+| `internal/middleware/servicekey_auth.go`    | Client key validation                    |
 | `internal/auth/jwt.go`                      | JWT handling                             |
 | `internal/middleware/rls.go`                | Row-Level Security                       |
 | `internal/auth/scopes.go`                   | Scope definitions                        |
