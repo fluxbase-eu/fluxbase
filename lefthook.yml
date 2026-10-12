@@ -55,6 +55,10 @@ pre-commit:
 
     prettier:
       glob: "{admin,sdk,sdk-react,docs}/**/*.{ts,tsx,js,jsx,json,md,css}"
+      # types-generated.ts is committed as RAW generator output (see
+      # scripts/check-contract-drift.sh) — prettier must never reformat it.
+      exclude:
+        - sdk/src/types-generated\.ts
       run: |
         bunx prettier --write --no-config "{staged_files}"
         git add {staged_files}

@@ -184,3 +184,8 @@ ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_tes
 ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:generic-api-key:73
 ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:generic-api-key:74
 ea0ee463b33313e81650f3c70f0fd95ac2513943:internal/middleware/servicekey_auth_test.go:stripe-access-token:70
+
+# contract-drift CI job (#426): same test-constant JWT/encryption values the
+# test-e2e-ui job has used since the 2026-10-11 audit (fake CI-only secrets).
+b0b144eb7ca6bb89a110cc31cfba3a4c8932c0d7:.github/workflows/ci.yml:generic-api-key:1070
+b0b144eb7ca6bb89a110cc31cfba3a4c8932c0d7:.github/workflows/ci.yml:generic-api-key:1071

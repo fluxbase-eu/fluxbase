@@ -17,6 +17,7 @@
     "prepare": "command -v lefthook >/dev/null 2>&1 && lefthook install || true"
   },
   "devDependencies": {
+    "openapi-typescript": "^7.13.0",
     "picomatch": "^4.0.7"
   },
   "overrides": {
