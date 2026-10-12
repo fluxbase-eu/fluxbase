@@ -488,9 +488,11 @@ function KnowledgeBaseDetailPage() {
                               placeholder='Key'
                               value={field.key}
                               onChange={(e) => {
-                                const updated = [...newDocMetadata]
-                                updated[i].key = e.target.value
-                                setNewDocMetadata(updated)
+                                setNewDocMetadata(
+                                  newDocMetadata.map((f, j) =>
+                                    j === i ? { ...f, key: e.target.value } : f
+                                  )
+                                )
                               }}
                               className='flex-1'
                             />
@@ -498,9 +500,11 @@ function KnowledgeBaseDetailPage() {
                               placeholder='Value'
                               value={field.value}
                               onChange={(e) => {
-                                const updated = [...newDocMetadata]
-                                updated[i].value = e.target.value
-                                setNewDocMetadata(updated)
+                                setNewDocMetadata(
+                                  newDocMetadata.map((f, j) =>
+                                    j === i ? { ...f, value: e.target.value } : f
+                                  )
+                                )
                               }}
                               className='flex-1'
                             />
@@ -856,9 +860,11 @@ function KnowledgeBaseDetailPage() {
                       placeholder='Key'
                       value={field.key}
                       onChange={(e) => {
-                        const updated = [...editMetadata]
-                        updated[i].key = e.target.value
-                        setEditMetadata(updated)
+                        setEditMetadata(
+                          editMetadata.map((f, j) =>
+                            j === i ? { ...f, key: e.target.value } : f
+                          )
+                        )
                       }}
                       className='flex-1'
                     />
@@ -866,9 +872,11 @@ function KnowledgeBaseDetailPage() {
                       placeholder='Value'
                       value={field.value}
                       onChange={(e) => {
-                        const updated = [...editMetadata]
-                        updated[i].value = e.target.value
-                        setEditMetadata(updated)
+                        setEditMetadata(
+                          editMetadata.map((f, j) =>
+                            j === i ? { ...f, value: e.target.value } : f
+                          )
+                        )
                       }}
                       className='flex-1'
                     />

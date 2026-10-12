@@ -46,10 +46,12 @@ export function AppSidebar() {
   // Handle both AdminUser (metadata.name) and DashboardUser (full_name) types
   const user = storedUser
     ? {
-        name: isDashboardUser(storedUser)
-          ? storedUser.full_name || storedUser.email.split('@')[0]
-          : (storedUser.metadata?.name as string) ||
-            storedUser.email.split('@')[0],
+        name:
+          (isDashboardUser(storedUser)
+            ? storedUser.full_name
+            : (storedUser.metadata?.name as string)) ||
+          storedUser.email.split('@')[0] ||
+          storedUser.email,
         email: storedUser.email,
         avatar: isDashboardUser(storedUser)
           ? storedUser.avatar_url || ''

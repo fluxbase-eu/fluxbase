@@ -95,12 +95,16 @@ export function TableViewer({ tableName, schema }: TableViewerProps) {
   });
 
   const isView = tableInfo?.type === "view";
+  // Extract table name from the format "schema.table" or just use tableName
+  const tableOnlyName = tableName.includes(".")
+    ? (tableName.split(".")[1] ?? tableName)
+    : tableName;
   // Use schema/table format for REST API path to match backend expectations
   const tableApiPath =
     tableInfo?.rest_path ||
     (schema === "public"
-      ? tableInfo?.name || tableName.split(".")[1]
-      : `${schema}/${tableInfo?.name || tableName.split(".")[1]}`);
+      ? tableInfo?.name || tableOnlyName
+      : `${schema}/${tableInfo?.name || tableOnlyName}`);
 
   const {
     pagination,

@@ -399,8 +399,9 @@ export function EndpointBrowser({
                         )}
                         onClick={() => {
                           // Select the first endpoint (usually GET)
-                          if (uniqueEndpoints.length > 0) {
-                            onSelectEndpoint(uniqueEndpoints[0][1])
+                          const first = uniqueEndpoints[0];
+                          if (first) {
+                            onSelectEndpoint(first[1]);
                           }
                         }}
                       >

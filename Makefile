@@ -1,4 +1,4 @@
-.PHONY: help dev dev-full ensure-embed-placeholder ensure-embedded-sdk ensure-sdks build build-lite build-full clean fmt lint lint-go lint-typescript test migrate-up migrate-down migrate-create db-reset db-reset-full db-grants deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions viz-deps viz-deps-svg viz-internal viz-callgraph viz-callgraph-svg viz-uml viz-uml-api viz-uml-auth viz-module-deps viz-all test-cleanup test-cli
+.PHONY: help dev dev-lite dev-full ensure-embed-placeholder ensure-embedded-sdk ensure-sdks build build-lite build-full clean fmt lint lint-go lint-typescript test migrate-up migrate-down migrate-create db-reset db-reset-full db-grants deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions viz-deps viz-deps-svg viz-internal viz-callgraph viz-callgraph-svg viz-uml viz-uml-api viz-uml-auth viz-module-deps viz-all test-cleanup test-cli
 
 # Variables
 BINARY_NAME=fluxbase-server
@@ -85,15 +85,15 @@ ifeq ($(DATABASE_SSL_MODE),)
 	DATABASE_SSL_MODE := disable
 endif
 
-# Docker container name for postgres (for docker exec commands in db-reset)
-# In devcontainer: fluxbase-postgres-dev (default)
+# Docker container name for postgres (for docker exec commands in db-reset).
+# Auto-detected from running containers (matches fluxbase-postgres from
+# docker-compose.yml and fluxbase-postgres-dev from the devcontainer); falls
+# back to fluxbase-postgres-dev when nothing matches or docker is unavailable.
 # In CI: Not used (CI uses direct psql commands)
-# In local dev with custom compose: Set via POSTGRES_CONTAINER env var
 # Examples:
-#   make db-reset                                          # Uses fluxbase-postgres-dev
-#   POSTGRES_CONTAINER=my-postgres make db-reset           # Uses custom container
-#   POSTGRES_CONTAINER= fluxbase-postgres-dev make db-reset  # Explicit (same as default)
-POSTGRES_CONTAINER ?= fluxbase-postgres-dev
+#   make db-reset                                          # Auto-detected container
+#   POSTGRES_CONTAINER=my-postgres make db-reset           # Custom container
+POSTGRES_CONTAINER ?= $(shell docker ps --format '{{.Names}}' 2>/dev/null | grep -m1 'fluxbase.*postgres' || echo fluxbase-postgres-dev)
 
 # Colors for output
 GREEN=\033[0;32m
@@ -115,7 +115,7 @@ help: ## Show available commands
 	@echo "  make test-all       # Run ALL tests (backend + SDK + React + integration)"
 	@echo ""
 	@echo "${GREEN}All Commands:${NC}"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  ${GREEN}%-20s${NC} %s\\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  ${GREEN}%-20s${NC} %s\n", $$1, $$2}'
 
 dev: ## Fast dev: backend + frontend (skips admin build, uses Vite HMR at :5050)
 	@echo "${YELLOW}Starting Fluxbase development environment (fast mode)...${NC}"
@@ -184,6 +184,9 @@ ensure-sdks:
 	else \
 		echo "${GREEN}React SDK up to date, skipping build${NC}"; \
 	fi
+
+dev-lite: ## Fast dev WITHOUT OCR/vips (no C media deps required; features self-disable at runtime)
+	@$(MAKE) dev BUILD_TAGS=""
 
 dev-full: ## Full build + run (builds admin UI with type-check, slower)
 	@echo "${YELLOW}Starting Fluxbase with full admin UI build...${NC}"
@@ -272,7 +275,7 @@ lint-typescript: ## Lint all TypeScript packages (admin + SDKs, same as CI)
 	@echo "${GREEN}TypeScript linting complete!${NC}"
 
 test: ## Run all tests with race detector (short mode - skips slow tests, excludes e2e)
-	@FLUXBASE_LOG_LEVEL=info ./scripts/test-runner.sh go test -timeout 2m -v -race -short -cover $(shell go list ./... | grep -v '/test/e2e')
+	@./scripts/test-runner.sh go test -timeout 2m -v -race -short -cover $(shell go list ./... | grep -v '/test/e2e')
 
 test-cleanup: ## Clean up test resources (tables, secrets, keys, buckets) after running tests
 	@echo "${YELLOW}Cleaning up test resources...${NC}"
@@ -287,7 +290,7 @@ test-coverage: ## Run ALL tests (unit + e2e) with combined coverage (requires po
 	@echo "${YELLOW}[1/5] Running Go unit tests with coverage for code metrics (~30-60 seconds)...${NC}"
 	@echo "${BLUE}Note: Integration tests with service goroutines are skipped for accurate coverage metrics${NC}"
 	@echo ""
-	@FLUXBASE_LOG_LEVEL=info FLUXBASE_PARALLEL_TEST=true NO_COLOR=1 go test -v -timeout 30m -short -coverprofile=coverage.out -covermode=set $(shell go list ./... | grep -v "^github.com/nimbleflux/fluxbase/test/e2e$$") 2>&1 | tee /tmp/go-test-output.txt
+	@FLUXBASE_PARALLEL_TEST=true NO_COLOR=1 go test -v -timeout 30m -short -coverprofile=coverage.out -covermode=set $(shell go list ./... | grep -v "^github.com/nimbleflux/fluxbase/test/e2e$$") 2>&1 | tee /tmp/go-test-output.txt
 	@echo ""
 	@echo "${BLUE}Full test output written to: ${YELLOW}/tmp/go-test-output.txt${NC}"
 	@echo ""
@@ -324,7 +327,7 @@ test-coverage-unit: ## Run unit tests only with coverage (excludes e2e, faster f
 	@echo "${YELLOW}[1/3] Running Go unit tests with coverage (~30-60 seconds)...${NC}"
 	@echo "${BLUE}Watch for: '=== RUN TestName' lines showing test progress${NC}"
 	@echo ""
-	@FLUXBASE_LOG_LEVEL=info go test -v -short -timeout 5m -coverprofile=coverage.out -covermode=atomic $(shell go list ./... | grep -v '/test/e2e' | grep -v '/test$$') 2>&1 | tee /tmp/go-test-unit-output.txt
+	@go test -v -short -timeout 5m -coverprofile=coverage.out -covermode=atomic $(shell go list ./... | grep -v '/test/e2e' | grep -v '/test$$') 2>&1 | tee /tmp/go-test-unit-output.txt
 	@echo ""
 	@echo "${BLUE}Unit test output written to: ${YELLOW}/tmp/go-test-unit-output.txt${NC}"
 	@echo ""
@@ -344,7 +347,7 @@ test-coverage-unit: ## Run unit tests only with coverage (excludes e2e, faster f
 test-coverage-full: test-coverage ## Alias for test-coverage (now includes e2e by default)
 
 test-fast: ## Run all tests without race detector (faster, excludes e2e)
-	@FLUXBASE_LOG_LEVEL=info ./scripts/test-runner.sh go test -timeout 1m -v -short -cover $(shell go list ./... | grep -v '/test/e2e')
+	@./scripts/test-runner.sh go test -timeout 1m -v -short -cover $(shell go list ./... | grep -v '/test/e2e')
 
 test-setup-db: ## Apply bootstrap + declarative schemas to match CI pipeline setup
 	@echo "${YELLOW}Applying database schema for tests (matching CI pipeline)...${NC}"
@@ -451,13 +454,13 @@ test-all: ## Run ALL tests (backend + SDK + React + integration)
 	@echo "${YELLOW}[3/4] Building React SDK...${NC}"
 	@$(MAKE) test-sdk-react
 	@echo ""
-	@echo "${YELLOW}[4/4] Running Admin Integration Tests...${NC}"
+	@echo "${YELLOW}[4/4] Admin Integration Tests...${NC}"
 	@$(MAKE) test-integration
 	@echo ""
 	@echo "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 	@echo "${BLUE}║                      TEST SUMMARY                          ║${NC}"
 	@echo "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
-	@echo "${GREEN}✓ All test suites complete!${NC}"
+	@echo "${GREEN}✓ All runnable test suites complete!${NC} ${YELLOW}(admin integration: SKIPPED — no suite available)${NC}"
 
 deps: ## Install Go dependencies
 	@echo "${YELLOW}Installing dependencies...${NC}"
@@ -476,8 +479,7 @@ setup-dev: ## Set up development environment (first-time setup)
 	@echo "${GREEN}Development environment ready!${NC}"
 	@echo "${YELLOW}Next steps:${NC}"
 	@echo "  1. Configure your database in .env"
-	@echo "  2. Run: make migrate-up"
-	@echo "  3. Run: make dev"
+	@echo "  2. Run: make dev  (the database schema is applied automatically on startup)"
 
 install-hooks: ## Install git pre-commit hooks
 	@echo "${YELLOW}Installing git pre-commit hooks...${NC}"
@@ -530,11 +532,13 @@ db-reset: ## Reset database (preserves public, auth.users, platform.users, setup
 	@PGPASSWORD=$(DATABASE_ADMIN_PASSWORD) psql -h $(DATABASE_HOST) -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "DROP SCHEMA IF EXISTS rpc CASCADE;" || true
 	@PGPASSWORD=$(DATABASE_ADMIN_PASSWORD) psql -h $(DATABASE_HOST) -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "DROP SCHEMA IF EXISTS branching CASCADE;" || true
 	@echo "${YELLOW}Ensuring test users exist with correct permissions...${NC}"
-	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "DO \$$\$$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'fluxbase_app') THEN CREATE USER fluxbase_app WITH PASSWORD 'fluxbase_app_password' LOGIN CREATEDB BYPASSRLS; END IF; END \$$\$$;" || true
-	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "DO \$$\$$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'fluxbase_rls_test') THEN CREATE USER fluxbase_rls_test WITH PASSWORD 'fluxbase_rls_test_password' LOGIN; END IF; END \$$\$$;" || true
-	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "ALTER USER postgres WITH BYPASSRLS;" || true
-	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "ALTER USER postgres SET search_path TO public;" || true
-	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "ALTER USER fluxbase_app WITH BYPASSRLS;" || true
+	@# No `|| true` below: a wrong container name or failing statement must abort
+	@# here, not be swallowed before the success banner prints.
+	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "DO \$$\$$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'fluxbase_app') THEN CREATE USER fluxbase_app WITH PASSWORD 'fluxbase_app_password' LOGIN CREATEDB BYPASSRLS; END IF; END \$$\$$;"
+	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "DO \$$\$$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'fluxbase_rls_test') THEN CREATE USER fluxbase_rls_test WITH PASSWORD 'fluxbase_rls_test_password' LOGIN; END IF; END \$$\$$;"
+	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "ALTER USER postgres WITH BYPASSRLS;"
+	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "ALTER USER postgres SET search_path TO public;"
+	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "ALTER USER fluxbase_app WITH BYPASSRLS;"
 	@echo "${YELLOW}Running bootstrap...${NC}"
 	@echo "${BLUE}Database:${NC} $(DATABASE_ADMIN_USER)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
 	@PGPASSWORD=$(DATABASE_ADMIN_PASSWORD) psql -h $(DATABASE_HOST) -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -f internal/database/bootstrap/bootstrap.sql
@@ -554,8 +558,13 @@ db-reset: ## Reset database (preserves public, auth.users, platform.users, setup
 # Required because bootstrap.sql runs as the admin user via the Go server, so
 # `GRANT ... TO CURRENT_USER` lines never reach the app user. Both db-reset and
 # db-reset-full invoke this target so the database is left in a usable state.
+# The `|| true` on the statements below is deliberate: db-reset-full runs this
+# before bootstrap has recreated the schemas/roles, so grants on objects that
+# do not exist yet must be tolerated. The container check in the target body is
+# NOT tolerated — a wrong container name must fail loudly instead of no-oping.
 db-grants:
 	@echo "${YELLOW}Applying schema and table grants...${NC}"
+	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "SELECT 1;" >/dev/null
 	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "GRANT CREATE ON DATABASE $(DATABASE_NAME) TO fluxbase_app, fluxbase_rls_test;" || true
 	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "GRANT USAGE, CREATE ON SCHEMA app TO fluxbase_app, fluxbase_rls_test;" || true
 	@docker exec $(POSTGRES_CONTAINER) psql -U $(DATABASE_ADMIN_USER) -d $(DATABASE_NAME) -c "GRANT USAGE, CREATE ON SCHEMA auth TO fluxbase_app, fluxbase_rls_test;" || true

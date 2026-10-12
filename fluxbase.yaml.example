@@ -1,7 +1,7 @@
 # ==============================================================================
 # Fluxbase Complete Configuration Reference
 # ==============================================================================
-# This file contains ALL available configuration options with detailed documentation.
+# This file covers the most common configuration options with detailed documentation.
 # For a minimal quick-start configuration, see fluxbase.minimal.yaml.example
 #
 # All settings can be configured via environment variables using the prefix
@@ -549,7 +549,7 @@ graphql:
 # Model Context Protocol (MCP) Server Configuration
 # Enables AI assistants (Claude, etc.) to interact with your Fluxbase instance
 mcp:
-  enabled: true                        # FLUXBASE_MCP_ENABLED - Enable MCP server endpoint (disabled by default)
+  enabled: true                        # FLUXBASE_MCP_ENABLED - Enable MCP server endpoint (enabled by default)
   base_path: "/mcp"                     # FLUXBASE_MCP_BASE_PATH - MCP endpoint path
   session_timeout: "30m"                # FLUXBASE_MCP_SESSION_TIMEOUT - Session timeout
   max_message_size: 10485760            # FLUXBASE_MCP_MAX_MESSAGE_SIZE - Maximum message size (10MB)
@@ -571,7 +571,7 @@ mcp:
 # Database Branching Configuration
 # Create isolated database branches for development/testing
 branching:
-  enabled: false                        # FLUXBASE_BRANCHING_ENABLED - Enable database branching (disabled by default)
+  enabled: true                         # FLUXBASE_BRANCHING_ENABLED - Enable database branching (enabled by default)
   max_branches_per_user: 5              # FLUXBASE_BRANCHING_MAX_BRANCHES_PER_USER - Maximum branches per user
   max_total_branches: 50                # FLUXBASE_BRANCHING_MAX_TOTAL_BRANCHES - Maximum total branches
   default_data_clone_mode: "schema_only"  # FLUXBASE_BRANCHING_DEFAULT_DATA_CLONE_MODE - Default data clone mode (schema_only, full_clone, seed_data)
@@ -629,10 +629,10 @@ logging:
   # clickhouse_ttl_days: 30             # FLUXBASE_LOGGING_CLICKHOUSE_TTL_DAYS - Data retention TTL in days
 
   # TimescaleDB settings (when backend is "timescaledb" or "postgres-timescaledb")
-  # timescaledb_enabled: false           # FLUXBASE_LOGGING_TIMESTCALEDB_ENABLED - Enable TimescaleDB features
-  # timescaledb_compress: true          # FLUXBASE_LOGGING_TIMESTCALEDB_COMPRESS - Enable compression
-  # timescaledb_compress_after: "168h"   # FLUXBASE_LOGGING_TIMESTCALEDB_COMPRESS_AFTER - Compress data older than
-  # timescaledb_retain_after: "2160h"    # FLUXBASE_LOGGING_TIMESTCALEDB_RETAIN_AFTER - Drop chunks older than (90 days)
+  # timescaledb_enabled: false           # FLUXBASE_LOGGING_TIMESCALEDB_ENABLED - Enable TimescaleDB features
+  # timescaledb_compression: true        # FLUXBASE_LOGGING_TIMESCALEDB_COMPRESSION - Enable compression
+  # timescaledb_compress_after: "168h"   # FLUXBASE_LOGGING_TIMESCALEDB_COMPRESS_AFTER - Compress data older than
+  # timescaledb_retain_after: "2160h"    # FLUXBASE_LOGGING_TIMESCALEDB_RETAIN_AFTER - Drop chunks older than (90 days)
 
   # Loki settings (when backend is "loki")
   # loki_url: "http://localhost:3100"  # FLUXBASE_LOGGING_LOKI_URL - Loki push API URL (required)

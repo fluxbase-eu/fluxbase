@@ -49,7 +49,9 @@ export function HistoryItem({
                 !l.trim().startsWith("--") &&
                 !l.trim().startsWith("#"),
             )
-            ?.substring(0, 80) || history.query.split("\n")[0].substring(0, 80)}
+            ?.substring(0, 80) ||
+            history.query.split("\n")[0]?.substring(0, 80) ||
+            ""}
         </code>
       </div>
       <Button

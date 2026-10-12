@@ -22,9 +22,11 @@ export function HeadersEditor({ headers, onChange }: HeadersEditorProps) {
     field: "key" | "value",
     value: string,
   ) => {
-    const updated = [...headers];
-    updated[index][field] = value;
-    onChange(updated);
+    onChange(
+      headers.map((header, i) =>
+        i === index ? { ...header, [field]: value } : header,
+      ),
+    );
   };
 
   const removeHeader = (index: number) => {

@@ -103,11 +103,11 @@ type OAuthProviderConfig struct {
 // Validate validates auth configuration
 func (ac *AuthConfig) Validate() error {
 	if ac.JWTSecret == "" {
-		return fmt.Errorf("jwt_secret is required")
+		return fmt.Errorf("FLUXBASE_AUTH_JWT_SECRET is required — generate one with: openssl rand -base64 48")
 	}
 
 	if ac.JWTSecret == "your-secret-key-change-in-production" {
-		return fmt.Errorf("please set a secure JWT secret (current value is the default insecure value)")
+		return fmt.Errorf("FLUXBASE_AUTH_JWT_SECRET is set to the insecure default placeholder — generate a secure secret with: openssl rand -base64 48")
 	}
 
 	// Validate JWT secret length (should be at least 32 characters for security)
@@ -123,7 +123,7 @@ func (ac *AuthConfig) Validate() error {
 	// 4.5 bits/char ensures good character variety without being overly strict
 	minEntropyPerChar := 4.5
 	if entropy < minEntropyPerChar {
-		return fmt.Errorf("jwt_secret has insufficient entropy (%.2f bits < %.2f bits per character minimum). Generate a secure random secret: openssl rand -base64 32 | head -c 32", entropy, minEntropyPerChar)
+		return fmt.Errorf("FLUXBASE_AUTH_JWT_SECRET has insufficient entropy (%.2f bits < %.2f bits per character minimum). Generate a secure random secret: openssl rand -base64 32 | head -c 32", entropy, minEntropyPerChar)
 	}
 
 	// Validate expiry durations are positive

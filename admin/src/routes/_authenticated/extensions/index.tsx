@@ -182,10 +182,9 @@ function ExtensionsPage() {
   // Group extensions by category
   const extensionsByCategory = data?.extensions.reduce(
     (acc, ext) => {
-      if (!acc[ext.category]) {
-        acc[ext.category] = []
-      }
-      acc[ext.category].push(ext)
+      const list = acc[ext.category] ?? []
+      list.push(ext)
+      acc[ext.category] = list
       return acc
     },
     {} as Record<string, Extension[]>

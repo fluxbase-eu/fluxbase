@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/nimbleflux/fluxbase/internal/database"
@@ -26,12 +27,16 @@ func ctxForLogs(c fiber.Ctx) context.Context {
 // LoggingHandler handles logging-related API endpoints
 type LoggingHandler struct {
 	loggingService *logging.Service
+	// executions resolves the owning tenant of an execution record so
+	// tenant-scoped reads can be verified before logs are returned.
+	executions ExecutionTenantResolver
 }
 
 // NewLoggingHandler creates a new logging handler
-func NewLoggingHandler(loggingService *logging.Service) *LoggingHandler {
+func NewLoggingHandler(loggingService *logging.Service, executions ExecutionTenantResolver) *LoggingHandler {
 	return &LoggingHandler{
 		loggingService: loggingService,
+		executions:     executions,
 	}
 }
 
@@ -151,6 +156,7 @@ func (h *LoggingHandler) QueryLogs(c fiber.Ctx) error {
 // @Success 200 {object} ExecutionLogsResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /admin/logs/executions/{execution_id} [get]
 func (h *LoggingHandler) GetExecutionLogs(c fiber.Ctx) error {
@@ -163,6 +169,10 @@ func (h *LoggingHandler) GetExecutionLogs(c fiber.Ctx) error {
 		return SendMissingField(c, "execution_id")
 	}
 
+	if _, err := uuid.Parse(executionID); err != nil {
+		return SendInvalidID(c, "execution ID")
+	}
+
 	afterLine := 0
 	if afterLineStr := c.Query("after_line"); afterLineStr != "" {
 		if l, err := strconv.Atoi(afterLineStr); err == nil {
@@ -170,7 +180,31 @@ func (h *LoggingHandler) GetExecutionLogs(c fiber.Ctx) error {
 		}
 	}
 
-	entries, err := h.loggingService.GetExecutionLogs(middleware.CtxWithTenant(c), executionID, afterLine)
+	ctx := ctxForLogs(c)
+
+	// Tenant scoping: execution logs are keyed by execution ID only, so verify
+	// the execution belongs to the caller's tenant before returning them.
+	// Instance admins on the default tenant have a cross-tenant context
+	// (empty tenant) and bypass the check; a missing or non-matching owner
+	// resolves to 404 so existence is not disclosed across tenants.
+	callerTenant := database.TenantFromContext(ctx)
+	crossTenant := callerTenant == "" && middleware.IsInstanceAdminFromContext(c)
+	if !crossTenant {
+		if h.executions == nil {
+			log.Error().Msg("Execution tenant resolver not configured; denying tenant-scoped execution-log read")
+			return SendInternalError(c, "Internal error")
+		}
+		ownerTenant, found, err := h.executions.ExecutionTenant(ctx, executionID)
+		if err != nil {
+			log.Error().Err(err).Str("execution_id", executionID).Msg("Failed to resolve execution owner")
+			return SendInternalError(c, "Internal error")
+		}
+		if !found || ownerTenant == "" || ownerTenant != callerTenant {
+			return SendNotFound(c, "Execution not found")
+		}
+	}
+
+	entries, err := h.loggingService.GetExecutionLogs(ctx, executionID, afterLine)
 	if err != nil {
 		log.Error().Err(err).Str("execution_id", executionID).Msg("Failed to get execution logs")
 		return SendInternalError(c, "Internal error")

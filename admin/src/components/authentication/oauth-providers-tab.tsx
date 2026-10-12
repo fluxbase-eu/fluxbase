@@ -764,7 +764,7 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                         value={item.url}
                         onChange={(e) => {
                           const next = [...additionalRedirectUrls];
-                          next[index] = { ...next[index], url: e.target.value };
+                          next[index] = { ...item, url: e.target.value };
                           setAdditionalRedirectUrls(next);
                         }}
                         className="font-mono text-xs"
@@ -997,7 +997,7 @@ export function OAuthProvidersTab({ onProviderTest }: OAuthProvidersTabProps) {
                       value={item.url}
                       onChange={(e) => {
                         const next = [...editRedirectUrls];
-                        next[index] = { ...next[index], url: e.target.value };
+                        next[index] = { ...item, url: e.target.value };
                         setEditRedirectUrls(next);
                       }}
                       className="bg-muted font-mono text-xs"

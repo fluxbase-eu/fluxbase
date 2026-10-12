@@ -39,12 +39,21 @@ A lightweight, single-binary Backend-as-a-Service (BaaS) alternative to Supabase
 
 ### Prerequisites
 
-- [Go](https://go.dev/) 1.25+
+- [Go](https://go.dev/) 1.26.9+ (see `.tool-versions`)
 - [PostgreSQL](https://www.postgresql.org/) 16+ (with [pgvector](https://github.com/pgvector/pgvector))
-- [Node.js](https://nodejs.org/) 20+ / [Bun](https://bun.sh/) (for admin UI and SDKs)
+- [Node.js](https://nodejs.org/) 24 / [Bun](https://bun.sh/) (see `.nvmrc`; for admin UI and SDKs)
 - [Deno](https://deno.land/) (for edge functions runtime)
 
 ### Build & Run
+
+The fastest path is the Docker quick-start script, which generates the required
+secrets and starts the stack for you:
+
+```bash
+./scripts/quick-start.sh
+```
+
+To build and run from source instead:
 
 ```bash
 # Clone the repository
@@ -64,6 +73,11 @@ make dev
 > any C media dependencies, use `make build-lite`. See
 > [Building from Source](https://fluxbase.eu/getting-started/building-from-source/)
 > for full macOS/Linux instructions and troubleshooting.
+
+> **Linux note:** the default `ocr` build tag needs the same C libraries from
+> your package manager, e.g. `sudo apt install libtesseract-dev libleptonica-dev`
+> (Debian/Ubuntu) or `sudo dnf install tesseract-devel leptonica-devel` (Fedora).
+> Without them, use `make build-lite` / `make dev-lite`.
 
 For Docker-based deployment, see the [deployment guide](https://fluxbase.eu/deployment/overview/).
 

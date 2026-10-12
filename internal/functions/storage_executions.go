@@ -2,6 +2,7 @@ package functions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -89,6 +90,31 @@ func (s *Storage) CompleteExecution(ctx context.Context, id uuid.UUID, status st
 	}
 
 	return nil
+}
+
+// GetExecutionTenant returns the tenant that owns an execution record.
+// The lookup runs under the caller's tenant context (tenant-aware role plus
+// RLS), so under a tenant context only executions owned by that tenant are
+// visible; an empty tenant context (instance admin) can resolve any execution.
+// found is false when no visible record exists or the record has no tenant
+// owner (platform-level), which keeps tenant-scoped reads fail-closed.
+func (s *Storage) GetExecutionTenant(ctx context.Context, id uuid.UUID) (ownerTenant string, found bool, err error) {
+	var owner *string
+	err = s.WithTenant(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT tenant_id FROM functions.edge_executions WHERE id = $1`,
+			id).Scan(&owner)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("failed to get execution owner: %w", err)
+	}
+	if owner == nil {
+		return "", false, nil
+	}
+	return *owner, true, nil
 }
 
 // GetExecutions returns execution history for a function

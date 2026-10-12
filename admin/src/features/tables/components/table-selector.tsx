@@ -663,9 +663,13 @@ export function TableSelector({
                         placeholder="e.g., email, created_at, user_id"
                         value={column.name}
                         onChange={(e) => {
-                          const newColumns = [...columns];
-                          newColumns[index].name = e.target.value;
-                          setColumns(newColumns);
+                          setColumns(
+                            columns.map((c, i) =>
+                              i === index
+                                ? { ...c, name: e.target.value }
+                                : c,
+                            ),
+                          );
                         }}
                       />
                     </div>
@@ -676,9 +680,11 @@ export function TableSelector({
                       <Select
                         value={column.type}
                         onValueChange={(value) => {
-                          const newColumns = [...columns];
-                          newColumns[index].type = value;
-                          setColumns(newColumns);
+                          setColumns(
+                            columns.map((c, i) =>
+                              i === index ? { ...c, type: value } : c,
+                            ),
+                          );
                         }}
                       >
                         <SelectTrigger id={`column-type-${index}`}>
@@ -733,9 +739,13 @@ export function TableSelector({
                         placeholder="e.g., gen_random_uuid(), now(), 0"
                         value={column.defaultValue}
                         onChange={(e) => {
-                          const newColumns = [...columns];
-                          newColumns[index].defaultValue = e.target.value;
-                          setColumns(newColumns);
+                          setColumns(
+                            columns.map((c, i) =>
+                              i === index
+                                ? { ...c, defaultValue: e.target.value }
+                                : c,
+                            ),
+                          );
                         }}
                       />
                       <p className="text-muted-foreground text-xs">
@@ -752,12 +762,14 @@ export function TableSelector({
                             id={`column-pk-${index}`}
                             checked={column.primaryKey}
                             onCheckedChange={(checked) => {
-                              const newColumns = [...columns];
-                              newColumns[index].primaryKey = checked === true;
-                              if (checked) {
-                                newColumns[index].nullable = false;
-                              }
-                              setColumns(newColumns);
+                              setColumns(
+                                columns.map((c, i) => {
+                                  if (i !== index) return c;
+                                  return checked
+                                    ? { ...c, primaryKey: true, nullable: false }
+                                    : { ...c, primaryKey: false };
+                                }),
+                              );
                             }}
                           />
                           <Label
@@ -773,9 +785,13 @@ export function TableSelector({
                             checked={column.nullable}
                             disabled={column.primaryKey}
                             onCheckedChange={(checked) => {
-                              const newColumns = [...columns];
-                              newColumns[index].nullable = checked === true;
-                              setColumns(newColumns);
+                              setColumns(
+                                columns.map((c, i) =>
+                                  i === index
+                                    ? { ...c, nullable: checked === true }
+                                    : c,
+                                ),
+                              );
                             }}
                           />
                           <Label
@@ -1070,15 +1086,17 @@ export function TableSelector({
         handleConfirm={() => {
           if (deletingTableFull) {
             const [schema, table] = deletingTableFull.split(".");
-            deleteTableMutation.mutate(
-              { schema, table },
-              {
-                onSuccess: () => {
-                  setIsDeleteTableConfirmOpen(false);
-                  setDeletingTableFull(null);
+            if (schema && table) {
+              deleteTableMutation.mutate(
+                { schema, table },
+                {
+                  onSuccess: () => {
+                    setIsDeleteTableConfirmOpen(false);
+                    setDeletingTableFull(null);
+                  },
                 },
-              },
-            );
+              );
+            }
           }
         }}
       />
