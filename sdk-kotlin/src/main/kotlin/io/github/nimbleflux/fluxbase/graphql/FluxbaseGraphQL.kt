@@ -2,6 +2,7 @@ package io.github.nimbleflux.fluxbase.graphql
 
 import io.github.nimbleflux.fluxbase.FluxbaseResponse
 import io.github.nimbleflux.fluxbase.core.FluxbaseHttpClient
+import io.github.nimbleflux.fluxbase.core.encodeToJsonElement
 import io.github.nimbleflux.fluxbase.fluxbaseResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -49,7 +50,9 @@ class FluxbaseGraphQL(@PublishedApi internal val http: FluxbaseHttpClient) {
 
     /**
      * Execute a GraphQL query. POSTs `{query, variables}` to `/api/v1/graphql`.
-     * Port of `query()` / `execute()` in `graphql.ts`.
+     * Port of `query()` / `execute()` in `graphql.ts`. Variables encode as real
+     * JSON (lists as arrays, maps as objects, `@Serializable` dataclasses via
+     * their generated serializer).
      */
     suspend inline fun <reified T> query(
         query: String,
@@ -61,13 +64,7 @@ class FluxbaseGraphQL(@PublishedApi internal val http: FluxbaseHttpClient) {
             if (variables != null) {
                 put("variables", buildJsonObject {
                     variables.forEach { (k, v) ->
-                        when (v) {
-                            null -> put(k, kotlinx.serialization.json.JsonNull)
-                            is String -> put(k, v)
-                            is Number -> put(k, v)
-                            is Boolean -> put(k, v)
-                            else -> put(k, v.toString())
-                        }
+                        put(k, encodeToJsonElement(http.jsonInstance, v))
                     }
                 })
             }
