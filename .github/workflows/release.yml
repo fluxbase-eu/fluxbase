@@ -943,11 +943,15 @@ jobs:
     name: Publish CLI (Cross-Platform)
     needs: [get-version, create-release]
     if: always() && inputs.publish_binaries && needs.create-release.result == 'success'
-    # Uploads assets to the GitHub release
+    # Same permission set as publish-binaries: attestations: write persists
+    # the provenance (missing it = "Resource not accessible by integration").
     permissions:
       contents: write
       id-token: write
+      attestations: write
     strategy:
+      # One failed leg must not cancel the others — each uploads independently.
+      fail-fast: false
       matrix:
         include:
           - goos: darwin
@@ -1701,8 +1705,8 @@ jobs:
           # re-published. Both the POM and the JAR must exist to skip; if only
           # some exist, the version must be deleted before re-releasing.
           BASE_URL="https://maven.pkg.github.com/${{ github.repository }}/io/github/nimbleflux/fluxbase-kotlin/${VERSION}"
-          POM_CODE=$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$BASE_URL/fluxbase-kotlin-${VERSION}.pom")
-          JAR_CODE=$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$BASE_URL/fluxbase-kotlin-${VERSION}.jar")
+          POM_CODE=$(curl -sL -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$BASE_URL/fluxbase-kotlin-${VERSION}.pom")  # -L: GitHub Packages 302-redirects valid artifacts
+          JAR_CODE=$(curl -sL -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$BASE_URL/fluxbase-kotlin-${VERSION}.jar")
           if [ "$POM_CODE" = "200" ] && [ "$JAR_CODE" = "200" ]; then
             echo "fluxbase-kotlin ${VERSION} already published — skipping (idempotent re-run)"
             exit 0
