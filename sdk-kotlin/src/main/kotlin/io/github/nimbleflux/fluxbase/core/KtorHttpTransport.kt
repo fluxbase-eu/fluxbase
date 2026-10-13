@@ -12,12 +12,8 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.readRawBytes
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.serializerOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 
 /**
  * Ktor-backed [HttpTransport] — the production HTTP implementation for JVM/Android.
@@ -150,39 +146,10 @@ class KtorHttpTransport(
 
     /**
      * Convert an arbitrary Kotlin object to a [kotlinx.serialization.json.JsonElement].
-     * Handles Maps, Lists, primitives, and passes pre-built [JsonElement] bodies
-     * through untouched (RPC bodies are built as JsonObjects by the caller —
-     * re-wrapping their leaves via `toString()` would corrupt booleans into
-     * "false" strings and quote string values, which servers reject). Mirrors
-     * how the TS SDK passes plain JS objects through `JSON.stringify`. Note:
-     * binary payloads are NOT routed through here — [rawRequest] sends
-     * [ByteArray] verbatim.
+     * Delegates to the shared [encodeToJsonElement] in `JsonEncoding.kt`; kept as a
+     * member so existing call sites and tests are unaffected. Note: binary payloads
+     * are NOT routed through here — [rawRequest] sends [ByteArray] verbatim.
      */
-    internal fun encodeToJsonElement(value: Any?): kotlinx.serialization.json.JsonElement = when (value) {
-        null -> kotlinx.serialization.json.JsonNull
-        is kotlinx.serialization.json.JsonElement -> value
-        is String -> kotlinx.serialization.json.JsonPrimitive(value)
-        is Number -> kotlinx.serialization.json.JsonPrimitive(value)
-        is Boolean -> kotlinx.serialization.json.JsonPrimitive(value)
-        is Map<*, *> -> buildJsonObject {
-            value.forEach { (k, v) -> put(k.toString(), encodeToJsonElement(v)) }
-        }
-        is List<*> -> kotlinx.serialization.json.buildJsonArray {
-            value.forEach { add(encodeToJsonElement(it)) }
-        }
-        else -> {
-            // @Serializable dataclasses encode via their generated serializer —
-            // previously they fell through to JsonPrimitive(toString()), which
-            // sent a JSON string of the toString instead of the object.
-            @OptIn(kotlinx.serialization.InternalSerializationApi::class)
-            @Suppress("UNCHECKED_CAST")
-            val serializer =
-                value::class.serializerOrNull() as? kotlinx.serialization.KSerializer<Any>
-            if (serializer != null) {
-                json.encodeToJsonElement(serializer, value)
-            } else {
-                kotlinx.serialization.json.JsonPrimitive(value.toString())
-            }
-        }
-    }
+    internal fun encodeToJsonElement(value: Any?): kotlinx.serialization.json.JsonElement =
+        encodeToJsonElement(json, value)
 }

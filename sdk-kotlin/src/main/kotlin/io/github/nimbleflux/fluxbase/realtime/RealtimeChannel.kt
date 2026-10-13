@@ -20,6 +20,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import io.github.nimbleflux.fluxbase.core.encodeToJsonElement
 
 /**
  * A realtime channel — one WebSocket connection to `/realtime?token=<jwt>` that
@@ -249,7 +250,7 @@ class RealtimeChannel(
         transport.send(json.encodeToString(JsonObject.serializer(), obj))
     }
 
-    /** Broadcast a message on this channel. */
+    /** Broadcast a message on this channel. Payload values encode as real JSON. */
     suspend fun broadcast(event: String, payload: Map<String, Any?>) {
         send(buildJsonObject {
             put("type", "broadcast")
@@ -257,12 +258,7 @@ class RealtimeChannel(
             put("event", event)
             put("payload", Json.encodeToJsonElement(JsonObject.serializer(), buildJsonObject {
                 payload.forEach { (k, v) ->
-                    when (v) {
-                        is String -> put(k, v)
-                        is Number -> put(k, v)
-                        is Boolean -> put(k, v)
-                        else -> put(k, v.toString())
-                    }
+                    put(k, encodeToJsonElement(json, v))
                 }
             }))
         })
