@@ -789,11 +789,15 @@ jobs:
     name: Publish Binaries
     needs: [get-version, create-release]
     if: always() && inputs.publish_binaries && needs.create-release.result == 'success'
-    # Uploads assets to the GitHub release; id-token: write attests SLSA
-    # provenance for the archives (parity with the container images).
+    # Uploads assets to the GitHub release; id-token + attestations: write
+    # attest SLSA provenance for the archives (parity with the containers):
+    # id-token mints the OIDC identity, attestations persists the attestation
+    # to the repo attestation store ("Resource not accessible by integration"
+    # without it), contents uploads the assets.
     permissions:
       contents: write
       id-token: write
+      attestations: write
     strategy:
       matrix:
         include:
