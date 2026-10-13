@@ -1297,6 +1297,15 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     if: inputs.publish_npm_sdk
+    # Trusted publishing (npm OIDC): the job's OIDC token is exchanged for a
+    # short-lived publish credential — there is no NPM_TOKEN secret to
+    # rotate or expire. Each package must list release.yml as its Trusted
+    # Publisher on npmjs.com (repo nimbleflux/fluxbase); repository.url in
+    # every package.json must match this repo. npm attaches provenance
+    # attestations automatically. See RELEASING.md.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -1309,7 +1318,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24.20.0"
-          registry-url: "https://registry.npmjs.org"
+          # No registry-url: it exists to write a token auth line into
+          # .npmrc, which would shadow OIDC trusted publishing.
 
       - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
@@ -1344,7 +1354,6 @@ jobs:
 
           npm publish --access public --tag "$DIST_TAG"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.get-version.outputs.version }}
           IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -1354,6 +1363,15 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     if: inputs.publish_npm_sdk
+    # Trusted publishing (npm OIDC): the job's OIDC token is exchanged for a
+    # short-lived publish credential — there is no NPM_TOKEN secret to
+    # rotate or expire. Each package must list release.yml as its Trusted
+    # Publisher on npmjs.com (repo nimbleflux/fluxbase); repository.url in
+    # every package.json must match this repo. npm attaches provenance
+    # attestations automatically. See RELEASING.md.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -1366,7 +1384,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24.20.0"
-          registry-url: "https://registry.npmjs.org"
+          # No registry-url: it exists to write a token auth line into
+          # .npmrc, which would shadow OIDC trusted publishing.
 
       - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
@@ -1410,7 +1429,6 @@ jobs:
 
           npm publish --access public --tag "$DIST_TAG"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.get-version.outputs.version }}
           IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -1420,6 +1438,15 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     if: inputs.publish_npm_sdk
+    # Trusted publishing (npm OIDC): the job's OIDC token is exchanged for a
+    # short-lived publish credential — there is no NPM_TOKEN secret to
+    # rotate or expire. Each package must list release.yml as its Trusted
+    # Publisher on npmjs.com (repo nimbleflux/fluxbase); repository.url in
+    # every package.json must match this repo. npm attaches provenance
+    # attestations automatically. See RELEASING.md.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -1432,7 +1459,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24.20.0"
-          registry-url: "https://registry.npmjs.org"
+          # No registry-url: it exists to write a token auth line into
+          # .npmrc, which would shadow OIDC trusted publishing.
 
       - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
@@ -1476,7 +1504,6 @@ jobs:
 
           npm publish --access public --tag "$DIST_TAG"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.get-version.outputs.version }}
           IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -1486,6 +1513,15 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     if: inputs.publish_npm_sdk
+    # Trusted publishing (npm OIDC): the job's OIDC token is exchanged for a
+    # short-lived publish credential — there is no NPM_TOKEN secret to
+    # rotate or expire. Each package must list release.yml as its Trusted
+    # Publisher on npmjs.com (repo nimbleflux/fluxbase); repository.url in
+    # every package.json must match this repo. npm attaches provenance
+    # attestations automatically. See RELEASING.md.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -1498,7 +1534,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24.20.0"
-          registry-url: "https://registry.npmjs.org"
+          # No registry-url: it exists to write a token auth line into
+          # .npmrc, which would shadow OIDC trusted publishing.
 
       - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
@@ -1542,7 +1579,6 @@ jobs:
 
           npm publish --access public --tag "$DIST_TAG"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.get-version.outputs.version }}
           IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -1552,6 +1588,15 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     if: inputs.publish_npm_sdk
+    # Trusted publishing (npm OIDC): the job's OIDC token is exchanged for a
+    # short-lived publish credential — there is no NPM_TOKEN secret to
+    # rotate or expire. Each package must list release.yml as its Trusted
+    # Publisher on npmjs.com (repo nimbleflux/fluxbase); repository.url in
+    # every package.json must match this repo. npm attaches provenance
+    # attestations automatically. See RELEASING.md.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -1564,7 +1609,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24.20.0"
-          registry-url: "https://registry.npmjs.org"
+          # No registry-url: it exists to write a token auth line into
+          # .npmrc, which would shadow OIDC trusted publishing.
 
       - name: Install dependencies (workspace)
         run: bun install --frozen-lockfile
@@ -1608,7 +1654,6 @@ jobs:
 
           npm publish --access public --tag "$DIST_TAG"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.get-version.outputs.version }}
           IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
           DRY_RUN: ${{ inputs.dry_run }}

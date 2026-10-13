@@ -60,7 +60,7 @@ Component toggles (all default on, except postgres images):
 | `publish_binaries`  | `fluxbase-server` tarballs (linux amd64/arm64, full OCR/vips feature set, SLSA-provenance attested) + `fluxbase` CLI (linux/darwin/windows) |
 | `publish_docker`    | `ghcr.io/nimbleflux/fluxbase[:ver|-lite]` multi-arch, cosign-signed, SBOM + provenance |
 | `publish_docs`      | `ghcr.io/nimbleflux/fluxbase-docs`                                       |
-| `publish_npm_sdk`   | `@nimbleflux/fluxbase-sdk{,-react,-svelte,-next,-vue}`                   |
+| `publish_npm_sdk`   | `@nimbleflux/fluxbase-sdk{,-react,-svelte,-next,-vue}` (OIDC trusted publishing) |
 | `publish_kotlin_sdk`| `io.github.nimbleflux:fluxbase-kotlin` to GitHub Packages                |
 | `publish_go_module` | pkg.go.dev indexing ping                                                 |
 | `publish_helm`      | Chart to `oci://ghcr.io/nimbleflux/charts` + gh-pages index              |
@@ -68,6 +68,14 @@ Component toggles (all default on, except postgres images):
 
 Stable releases additionally move the rolling tags (`latest`, `major`,
 `major.minor`, npm `latest` dist-tag); RCs get `rc` tags/dist-tags only.
+
+**npm publishing is tokenless.** The SDK packages publish via npm OIDC
+trusted publishing — the job's `id-token: write` exchange mints a
+short-lived credential, so there is no `NPM_TOKEN` secret to renew, and
+npm attaches provenance attestations automatically. Prerequisites, per
+package on npmjs.com (Settings → Trusted Publisher): owner `nimbleflux`,
+repo `fluxbase`, workflow `release.yml`. `repository.url` in each SDK
+`package.json` must keep matching this repo, or the OIDC exchange fails.
 
 ## Failure recovery
 
