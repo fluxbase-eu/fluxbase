@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
+	"github.com/nimbleflux/fluxbase/internal/buildinfo"
 	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/nimbleflux/fluxbase/internal/middleware"
@@ -127,7 +128,7 @@ func (h *Handler) HandleHealth(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":          "healthy",
 		"protocolVersion": MCPVersion,
-		"serverVersion":   FluxbaseVersion,
+		"serverVersion":   buildinfo.Version(),
 	})
 }
 

@@ -1,10 +1,10 @@
-.PHONY: help dev dev-lite dev-full ensure-embed-placeholder ensure-embedded-sdk ensure-sdks build build-lite build-full clean fmt lint lint-go lint-typescript test migrate-up migrate-down migrate-create db-reset db-reset-full db-grants deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions viz-deps viz-deps-svg viz-internal viz-callgraph viz-callgraph-svg viz-uml viz-uml-api viz-uml-auth viz-module-deps viz-all test-cleanup test-cli
+.PHONY: release-check release-notes help dev dev-lite dev-full ensure-embed-placeholder ensure-embedded-sdk ensure-sdks build build-lite build-full clean fmt lint lint-go lint-typescript test migrate-up migrate-down migrate-create db-reset db-reset-full db-grants deps setup-dev install-hooks uninstall-hooks docs docs-build docs-check-links version docker-build docker-push release cli cli-install cli-completions viz-deps viz-deps-svg viz-internal viz-callgraph viz-callgraph-svg viz-uml viz-uml-api viz-uml-auth viz-module-deps viz-all test-cleanup test-cli
 
 # Variables
 BINARY_NAME=fluxbase-server
 CLI_BINARY_NAME=fluxbase
-MAIN_PATH=cmd/fluxbase/main.go
-CLI_MAIN_PATH=cli/main.go
+MAIN_PATH=./cmd/fluxbase
+CLI_MAIN_PATH=./cli
 
 # Go build tags. Default enables Tesseract OCR (needs libtesseract + leptonica).
 # Override to suit your host:
@@ -13,11 +13,15 @@ CLI_MAIN_PATH=cli/main.go
 # See: docs/src/content/docs/getting-started/building-from-source.md
 BUILD_TAGS ?= ocr
 
-# Version variables
+# Version variables. LDFLAGS stamps internal/buildinfo (the single version
+# home for server, CLI, and MCP); unstamped dev builds self-identify via
+# runtime/debug. VERSION is updated by `make bump-*` / scripts/set-version.sh
+# and by the release workflow — never hand-edit the other version copies.
 VERSION := $(shell cat VERSION)
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(BUILD_DATE)
+BUILDINFO_PKG := github.com/nimbleflux/fluxbase/internal/buildinfo
+LDFLAGS := -s -w -X $(BUILDINFO_PKG).version=$(VERSION) -X $(BUILDINFO_PKG).commit=$(COMMIT) -X $(BUILDINFO_PKG).buildDate=$(BUILD_DATE)
 
 # Docker variables
 DOCKER_REGISTRY ?= ghcr.io
@@ -256,7 +260,7 @@ fmt: ## Format Go code with gofumpt (stricter than gofmt)
 
 lint: ## Run golangci-lint with all enabled linters
 	@echo "${YELLOW}Running golangci-lint...${NC}"
-	@command -v golangci-lint >/dev/null 2>&1 || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.10.0
+	@command -v golangci-lint >/dev/null 2>&1 || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.14.0
 	@golangci-lint run --timeout 10m ./...
 	@echo "${GREEN}Linting complete!${NC}"
 
@@ -747,47 +751,64 @@ docker-push: docker-build-production ## Push Docker image to registry (FLAVOR=fu
 	@docker push $(DOCKER_IMAGE):latest$(FLAVOR_SUFFIX)
 	@echo "${GREEN}Docker images pushed!${NC}"
 
-# Bump targets update ONLY the VERSION file. Compose image defaults, the Helm
-# Chart appVersion, and SDK package.json versions are updated by the release
-# workflow (update-version-files job); keeping copies in sync here drifted
-# (and the old `sed -i ''` edits were BSD-only, failing on GNU sed).
-bump-patch: ## Bump patch version (2026.9.2 -> 2026.9.3)
-	@echo "${YELLOW}Bumping patch version...${NC}"
+# Every version-carrying file is written by scripts/set-version.sh — the
+# same script the release workflow runs. `make bump-*` is a full sync, not
+# a VERSION-only edit, so the tree can never sit half-updated (the CI
+# `version-drift` job enforces exactly this invariant).
+bump-patch: ## Bump patch version everywhere (2026.9.10 -> 2026.9.11)
 	@NEW_VERSION=$$(echo $(VERSION) | awk -F. '{$$3 = $$3 + 1;} 1' | sed 's/ /./g'); \
-	echo $$NEW_VERSION > VERSION; \
-	echo "${GREEN}Version bumped to $$NEW_VERSION${NC}"
+	bash scripts/set-version.sh $${NEW_VERSION// /}
 
-bump-minor: ## Bump minor version (2026.9.2 -> 2027.0.0)
-	@echo "${YELLOW}Bumping minor version...${NC}"
+bump-minor: ## Bump minor version everywhere (2026.9.10 -> 2026.10.0)
 	@NEW_VERSION=$$(echo $(VERSION) | awk -F. '{$$2 = $$2 + 1; $$3 = 0;} 1' | sed 's/ /./g'); \
-	echo $$NEW_VERSION > VERSION; \
-	echo "${GREEN}Version bumped to $$NEW_VERSION${NC}"
+	bash scripts/set-version.sh $${NEW_VERSION// /}
 
-bump-major: ## Bump major version (2026.9.2 -> 2027.9.2)
-	@echo "${YELLOW}Bumping major version...${NC}"
-	@NEW_VERSION=$$(echo $(VERSION) | awk -F. '{$$1 = $$1 + 1; $$2 = 0; $$3 = 0;} 1' | sed 's/ /./g'); \
-	echo $$NEW_VERSION > VERSION; \
-	echo "${GREEN}Version bumped to $$NEW_VERSION${NC}"
+bump-major: ## Bump major version everywhere (2026.9.10 -> 2027.1.0)
+	@NEW_VERSION=$$(echo $(VERSION) | awk -F. '{$$1 = $$1 + 1; $$2 = 1; $$3 = 0;} 1' | sed 's/ /./g'); \
+	bash scripts/set-version.sh $${NEW_VERSION// /}
 
-release-tag: ## Create and push git tag for current version
-	@echo "${YELLOW}Creating release tag v$(VERSION)...${NC}"
-	@git tag -a v$(VERSION) -m "Release v$(VERSION)"
-	@git push origin v$(VERSION)
-	@echo "${GREEN}Tag v$(VERSION) created and pushed${NC}"
+# The ONE release path. Tags are created by CI, never by hand: pushing a tag
+# yourself does nothing (the workflow no longer listens to tag pushes), while
+# this target dispatches the Release workflow and streams its progress.
+#   make release              -> release candidate (default)
+#   make release TYPE=stable  -> stable release
+#   make release DRY_RUN=true -> full rehearsal, publishes nothing
+# Runs the same pre-flight checks CI would run (scripts/release-check.sh)
+# before spending a dispatch.
+TYPE ?= rc
+release: ## Cut a release via CI: make release [TYPE=rc|stable] [DRY_RUN=true]
+	@case "$(TYPE)" in rc|stable) ;; *) echo "Unknown TYPE '$(TYPE)' (use rc or stable)"; exit 2;; esac
+	@if [ "$(DRY_RUN)" = "true" ]; then \
+		EXTRA="-f dry_run=true"; \
+	else \
+		EXTRA=""; \
+	fi; \
+	bash scripts/release-check.sh || exit 1; \
+	echo "${BLUE}Dispatching release (type=$(TYPE), dry_run=$(DRY_RUN))...${NC}"; \
+	gh workflow run release.yml --ref $$(git branch --show-current) \
+		-f release_type=$(TYPE) $$EXTRA; \
+	sleep 3; \
+	RUN_ID=$$(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId'); \
+	SLUG=$$(git remote get-url origin 2>/dev/null | sed -E 's#.*github.com[:/]##; s#\.git$$##'); \
+	echo "${GREEN}Release run started: https://github.com/$$SLUG/actions/runs/$$RUN_ID${NC}"; \
+	gh run watch $$RUN_ID --exit-status \
+		&& echo "${GREEN}✓ Release pipeline finished${NC}" \
+		|| echo "${YELLOW}Release pipeline did not finish clean — see the run above (failed jobs can be safely re-run)${NC}"
 
-release: ## Create a new release (test, build, tag, push)
-	@echo "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-	@echo "${BLUE}║               Creating Release v$(VERSION)                     ║${NC}"
-	@echo "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
-	@echo ""
-	@$(MAKE) test
-	@$(MAKE) build
-	@$(MAKE) docker-build-production
-	@$(MAKE) docker-push
-	@$(MAKE) release-tag
-	@echo ""
-	@echo "${GREEN}✓ Release v$(VERSION) complete!${NC}"
-	@echo "${YELLOW}Next: Create GitHub release with binaries${NC}"
+release-check: ## Run release pre-flight gates locally (same checks CI enforces)
+	@bash scripts/release-check.sh
+
+GIT_CLIFF_VERSION ?= v2.14.2
+release-notes: ## Preview next-release notes locally (git-cliff, same generator as CI)
+	@if ! command -v git-cliff > /dev/null 2>&1; then \
+		echo "git-cliff not found; installing $(GIT_CLIFF_VERSION)..."; \
+		curl -sSfL "https://github.com/orhun/git-cliff/releases/download/$(GIT_CLIFF_VERSION)/git-cliff-$(GIT_CLIFF_VERSION:v%=%)-$$(uname -m)-unknown-linux-gnu.tar.gz" | tar -xz -C /tmp; \
+		sudo install /tmp/git-cliff-$(GIT_CLIFF_VERSION:v%=%)-$$(uname -m)-unknown-linux-gnu/git-cliff /usr/local/bin/git-cliff; \
+	fi
+	@FROM_TAG=$$(gh release list --exclude-drafts --exclude-pre-releases -L 100 --json tagName -q '.[].tagName' 2>/dev/null | sort -V | tail -n1); \
+	FROM_TAG=$${FROM_TAG:-$$(git tag -l 'v*' | grep -v '\-rc\.' | sort -V | tail -n1)}; \
+	echo "Notes since $${FROM_TAG:-repo start}:"; \
+	GH_TOKEN=$$(gh auth token 2>/dev/null) git-cliff --config cliff.toml --unreleased "$${FROM_TAG:+$$FROM_TAG..}HEAD"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CLI COMMANDS
@@ -796,7 +817,7 @@ release: ## Create a new release (test, build, tag, push)
 cli: ## Build the Fluxbase CLI tool
 	@echo "${YELLOW}Building ${CLI_BINARY_NAME} v$(VERSION)...${NC}"
 	@mkdir -p build/
-	@go build -ldflags="-X github.com/nimbleflux/fluxbase/cli/cmd.Version=$(VERSION) -X github.com/nimbleflux/fluxbase/cli/cmd.Commit=$(COMMIT) -X github.com/nimbleflux/fluxbase/cli/cmd.BuildDate=$(BUILD_DATE)" -o build/${CLI_BINARY_NAME} ${CLI_MAIN_PATH}
+	@go build -ldflags="$(LDFLAGS)" -o build/${CLI_BINARY_NAME} ${CLI_MAIN_PATH}
 	@echo "${GREEN}CLI build complete: build/${CLI_BINARY_NAME}${NC}"
 
 cli-install: cli ## Build and install CLI to /usr/local/bin
@@ -816,11 +837,11 @@ cli-completions: cli ## Generate shell completion scripts
 cli-cross-compile: ## Cross-compile CLI for multiple platforms
 	@echo "${YELLOW}Cross-compiling CLI for multiple platforms...${NC}"
 	@mkdir -p build/dist
-	@GOOS=darwin GOARCH=amd64 go build -ldflags="-X github.com/nimbleflux/fluxbase/cli/cmd.Version=$(VERSION)" -o build/dist/fluxbase-darwin-amd64 ${CLI_MAIN_PATH}
-	@GOOS=darwin GOARCH=arm64 go build -ldflags="-X github.com/nimbleflux/fluxbase/cli/cmd.Version=$(VERSION)" -o build/dist/fluxbase-darwin-arm64 ${CLI_MAIN_PATH}
-	@GOOS=linux GOARCH=amd64 go build -ldflags="-X github.com/nimbleflux/fluxbase/cli/cmd.Version=$(VERSION)" -o build/dist/fluxbase-linux-amd64 ${CLI_MAIN_PATH}
-	@GOOS=linux GOARCH=arm64 go build -ldflags="-X github.com/nimbleflux/fluxbase/cli/cmd.Version=$(VERSION)" -o build/dist/fluxbase-linux-arm64 ${CLI_MAIN_PATH}
-	@GOOS=windows GOARCH=amd64 go build -ldflags="-X github.com/nimbleflux/fluxbase/cli/cmd.Version=$(VERSION)" -o build/dist/fluxbase-windows-amd64.exe ${CLI_MAIN_PATH}
+	@GOOS=darwin GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o build/dist/fluxbase-darwin-amd64 ${CLI_MAIN_PATH}
+	@GOOS=darwin GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o build/dist/fluxbase-darwin-arm64 ${CLI_MAIN_PATH}
+	@GOOS=linux GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o build/dist/fluxbase-linux-amd64 ${CLI_MAIN_PATH}
+	@GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o build/dist/fluxbase-linux-arm64 ${CLI_MAIN_PATH}
+	@GOOS=windows GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o build/dist/fluxbase-windows-amd64.exe ${CLI_MAIN_PATH}
 	@echo "${GREEN}Cross-compilation complete! Binaries in build/dist/${NC}"
 
 # ═══════════════════════════════════════════════════════════════════════════════

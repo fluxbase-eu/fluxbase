@@ -26,6 +26,12 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Single source of truth for the linter version in CI. The Makefile
+  # (`make lint`) and lefthook pin the same version for their installer
+  # one-liners — Renovate updates all three together (regexManagers).
+  GOLANGCI_LINT_VERSION: v2.14.0
+
 jobs:
   changes:
     name: Detect Changes
@@ -42,6 +48,7 @@ jobs:
       ci-config: ${{ steps.filter.outputs.ci-config }}
       code-any: ${{ steps.filter.outputs.code-any }}
       ocr-go: ${{ steps.filter.outputs.ocr-go }}
+      version-files: ${{ steps.filter.outputs.version-files }}
     steps:
       - uses: actions/checkout@v7
 
@@ -142,6 +149,25 @@ jobs:
             ci-config:
               - '.github/workflows/**'
               - '.github/actions/**'
+            version-files:
+              # Every file scripts/set-version.sh writes (plus the script and
+              # its inputs). Gates the version-drift job.
+              - 'VERSION'
+              - 'deploy/helm/fluxbase/Chart.yaml'
+              - 'deploy/helm/fluxbase/values.yaml'
+              - 'deploy/docker-compose.yml'
+              - 'deploy/docker-compose.minimal.yaml'
+              - 'deploy/.env.example'
+              - 'sdk/package.json'
+              - 'sdk-react/package.json'
+              - 'sdk-svelte/package.json'
+              - 'sdk-next/package.json'
+              - 'sdk-vue/package.json'
+              - 'admin/package.json'
+              - 'bun.lock'
+              - 'docs/src/content/docs/cli/installation.md'
+              - 'postgres/versions.json'
+              - 'scripts/set-version.sh'
             code-any:
               - '**.go'
               - 'go.mod'
@@ -232,7 +258,7 @@ jobs:
         # Action adds module + build caches over the raw binary install.
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
-          version: v2.14.0
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: --timeout 10m ./internal/... ./cmd/... ./cli/...
 
       - name: Run golangci-lint (integration-tagged test tree)
@@ -241,7 +267,7 @@ jobs:
         # test runs.
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
-          version: v2.14.0
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: --build-tags integration --timeout 10m ./test/...
 
       - name: Install gofumpt
@@ -1177,6 +1203,47 @@ jobs:
           path: /tmp/fluxbase-contract-drift.log
           retention-days: 7
 
+  # ===========================================================================
+  # Version drift: the version is duplicated across VERSION, Chart.yaml, the
+  # compose fallbacks, .env.example, the SDK package.jsons, the docs install
+  # pin, and the Helm postgres pin. scripts/set-version.sh is the single
+  # writer for all of them (used by `make bump-*` locally and by the release
+  # workflow). This job re-applies the LATEST RELEASE TAG's version to a
+  # clean tree: on a healthy tree that is a no-op, because the release
+  # workflow's version-bump commit already left the tree in exactly that
+  # state. Hand-edits to any copy (or missed syncs) fail here with the fix
+  # spelled out — same philosophy as contract-drift above.
+  # ===========================================================================
+  version-drift:
+    name: Version Drift (set-version.sh idempotence)
+    needs: changes
+    # Always on main (the release commit must be verified); on PRs only when
+    # a version-carrying file changed — an always-on gate would fail every
+    # open PR right after each release, until the PR merges main.
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.version-files == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # tags: the expected tree state is "matches latest release tag"
+
+      - name: Check version-file consistency
+        run: |
+          # The expected tree state is "self-consistent at the NEWEST of the
+          # VERSION file and the latest release tag": normally they are equal,
+          # but in a release window the bump commit lands before (or, if a
+          # release is re-cut, after) the tag, so the tree is legitimately one
+          # step ahead. A tree that lags the tag, or mixed copies, still fail.
+          git fetch --tags --force
+          LATEST_TAG_VERSION=$(git tag -l 'v*' | sort -V | tail -n1 | sed 's/^v//')
+          [ -n "$LATEST_TAG_VERSION" ] || LATEST_TAG_VERSION=$(cat VERSION)
+          TARGET=$(printf '%s\n%s\n' "$(cat VERSION)" "$LATEST_TAG_VERSION" | sort -V | tail -n1)
+          echo "Re-applying version ${TARGET} to a clean tree"
+          scripts/set-version.sh "$TARGET" --check
+
   test-e2e-ui:
     name: Test E2E UI
     needs: changes
@@ -1547,7 +1614,7 @@ jobs:
           mkdir -p dist
           output_name="fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}"
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          go build -ldflags="-s -w -X main.Version=dev-${GITHUB_SHA::8} -X main.Commit=${GITHUB_SHA} -X main.BuildDate=${BUILD_DATE}" -o "dist/${output_name}" cmd/fluxbase/main.go
+          go build -ldflags="-s -w -X github.com/nimbleflux/fluxbase/internal/buildinfo.version=dev-${GITHUB_SHA::8} -X github.com/nimbleflux/fluxbase/internal/buildinfo.commit=${GITHUB_SHA} -X github.com/nimbleflux/fluxbase/internal/buildinfo.buildDate=${BUILD_DATE}" -o "dist/${output_name}" ./cmd/fluxbase
 
       - name: Build CLI binary
         env:
@@ -1556,7 +1623,7 @@ jobs:
         run: |
           output_name="fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}"
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          go build -ldflags="-s -w -X github.com/nimbleflux/fluxbase/cli/cmd.Version=dev-${GITHUB_SHA::8} -X github.com/nimbleflux/fluxbase/cli/cmd.Commit=${GITHUB_SHA} -X github.com/nimbleflux/fluxbase/cli/cmd.BuildDate=${BUILD_DATE}" -o "dist/${output_name}" cli/main.go
+          go build -ldflags="-s -w -X github.com/nimbleflux/fluxbase/internal/buildinfo.version=dev-${GITHUB_SHA::8} -X github.com/nimbleflux/fluxbase/internal/buildinfo.commit=${GITHUB_SHA} -X github.com/nimbleflux/fluxbase/internal/buildinfo.buildDate=${BUILD_DATE}" -o "dist/${output_name}" ./cli
 
       - name: Upload server artifacts
         uses: actions/upload-artifact@v7

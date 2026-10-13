@@ -49,11 +49,21 @@ Scope with the affected area (`ai`, `sdk`, `mcp`, `api`, `storage`, `ci`, …).
   `./gradlew test` in `sdk-kotlin/`.
 - E2E: see `test/README.md` for the full suite and environment requirements.
 
-## Changelog
+## Changelog & releases
 
-User-facing changes should add an entry under **Unreleased** in
-[CHANGELOG.md](CHANGELOG.md) (Keep a Changelog format). Release versions are
-cut from the `VERSION` file; release commits are tagged `vYYYY.M.D`.
+CHANGELOG.md and GitHub release notes are **generated from the
+conventional-commit history** by [git-cliff](https://git-cliff.org)
+(`cliff.toml`) at release time — do not hand-edit release sections, and do
+not add "Unreleased" entries. Your job is the commit message: follow
+[Conventional Commits](https://www.conventionalcommits.org) (enforced by
+lefthook) and mark breaking changes with `!` or a `BREAKING CHANGE:` footer;
+they surface automatically in the notes.
+
+Releases are cut from `main` via the Release workflow — `make release`
+(TYPE=rc|stable, DRY_RUN=true to rehearse). The workflow derives the next
+CalVer tag, generates the notes, and publishes everything. The full runbook
+is in [RELEASING.md](RELEASING.md); preview notes locally with
+`make release-notes`.
 
 ## Code style
 

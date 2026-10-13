@@ -55,6 +55,26 @@
       "matchStrings": ["ARG\\s+PGSCHEMA_VERSION=(?<currentValue>[0-9.]+)"],
       "depNameTemplate": "pgplex/pgschema",
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "Update pinned golangci-lint version (Makefile + lefthook + CI must stay in lockstep)",
+      "fileMatch": ["^Makefile$", "^lefthook\\.yml$", "^\\.github/workflows/[^/]+\\.ya?ml$"],
+      "matchStrings": [
+        "golangci/golangci-lint/HEAD/install\\.sh \\| sh -s -- -b [^ ]+ v(?<currentValue>[0-9.]+)",
+        "golangci-lint-version:\\s*v?(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "golangci/golangci-lint",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "Update pinned git-cliff version (release notes generator; Makefile + release.yml)",
+      "fileMatch": ["^Makefile$", "^\\.github/workflows/[^/]+\\.ya?ml$"],
+      "matchStrings": [
+        "GIT_CLIFF_VERSION \\?= v(?<currentValue>[0-9.]+)",
+        "GIT_CLIFF_VERSION:\\s*v(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "orhun/git-cliff",
+      "datasourceTemplate": "github-releases"
     }
   ],
   "packageRules": [

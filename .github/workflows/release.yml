@@ -2,20 +2,12 @@ name: Release
 
 # This workflow handles all release types: stable releases and release candidates (RC)
 #
-# Triggers:
-#   1. Manual workflow_dispatch - Create a new release by specifying bump type
-#   2. GitHub release published - Automatically publish when a release is created via UI
-#   3. Tag push (v*) - Automatically publish when a version tag is pushed
-#   Note: Version file updates (VERSION, Chart.yaml, compose defaults, SDK
-#   package.json) are committed back to the source branch on workflow_dispatch
-#   only; tag-push/release triggers publish artifacts without editing files.
-#
-# How to create a release:
-#   1. Go to Actions → Release → Run workflow
-#   2. Select branch (usually 'main')
-#   3. Choose release_type: stable or rc
-#   4. Select which components to publish (all enabled by default)
-#   5. Click "Run workflow"
+# Trigger:
+#   Manual workflow_dispatch ONLY — this workflow is the single release entry
+#   point. It creates the annotated tag itself, so pushing a tag by hand does
+#   nothing (and can no longer race this pipeline or re-create the old
+#   "stray branch named after a tag" bug). See RELEASING.md for the runbook,
+#   or run `make release TYPE=rc|stable` from main.
 #
 # Version is automatically calculated based on last release:
 #   - stable → rc/stable: New release (YYYY.MM.N with incremented iteration)
@@ -28,8 +20,9 @@ name: Release
 #   - v2026.01.1-rc.3 + rc → v2026.01.1-rc.4 (continue RC series)
 #   - v2026.01.1-rc.5 + stable → v2026.01.1 (promote to stable)
 #
-# Component Toggles (workflow_dispatch only):
-#   - Publish binaries: Build and publish Go binaries for multiple platforms
+# Component Toggles:
+#   - Publish binaries: Build and publish Go binaries (server: linux amd64+arm64
+#     with OCR/vips; CLI: linux/darwin/windows) + SLSA provenance attestations
 #   - Publish Docker image: Build and push the main Fluxbase Docker image
 #   - Publish docs Docker image: Build and push the documentation site image
 #   - Publish NPM SDK packages: Publish TypeScript and React SDK packages to NPM
@@ -37,8 +30,19 @@ name: Release
 #   - Publish Go module: Notify pkg.go.dev to index the new Go module version
 #   - Publish Helm chart: Package and publish Helm chart to GHCR and GitHub Pages
 #   - Publish Postgres images: Build and push fluxbase-postgres images for all supported versions
-#   Note: For release/tag push triggers, all components are published
 #   Note: CLI binaries are always published as part of "Publish binaries"
+#
+# Dry runs:
+#   Set dry_run=true to rehearse the full release with zero side effects:
+#   everything is built and verified, binaries land as workflow artifacts,
+#   images are loaded locally, and nothing is tagged, pushed, or published.
+#
+# Reliability model:
+#   - Every publish step is idempotent: after a partial failure, re-run the
+#     failed jobs from the Actions UI and already-published pieces are skipped.
+#   - Post-release smoke tests can FAIL the run and open a `release-blocker`
+#     issue, which gates the next release via pre-release-checks.
+#   - skip_validation is rejected outright for stable releases.
 #
 # RC Release behavior:
 #   - Version format: vYYYY.MM.N-rc.N (e.g., v2026.01.1-rc.1, v2026.01.1-rc.2)
@@ -57,12 +61,6 @@ name: Release
 #   - All artifacts published normally
 
 on:
-  # Trigger on releases, tag pushes, or manual workflow dispatch
-  release:
-    types: [published]
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       release_type:
@@ -114,15 +112,27 @@ on:
         type: boolean
         default: false
       skip_validation:
-        description: "Skip pre-release validation (use with caution)"
+        description: "Skip pre-release validation (RC only; rejected for stable)"
         required: false
         type: boolean
         default: false
       generate_ai_notes:
-        description: "Generate AI-assisted release notes with AI"
+        description: "Prepend an optional AI summary to the generated release notes"
         required: false
         type: boolean
-        default: true
+        default: false
+      dry_run:
+        description: "Rehearse the release: build and verify everything, publish nothing"
+        required: false
+        type: boolean
+        default: false
+
+# One release at a time: concurrent dispatches would race on tag creation,
+# version-file commits to the source branch, and the gh-pages Helm index.
+# Queued runs (not cancelled) preserve release ordering.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 # Least privilege: default is read-only; each job that writes something
 # (releases/tags/git pushes, GHCR images, cosign signing) grants exactly what
@@ -150,142 +160,120 @@ jobs:
           # Fetch all tags from remote to ensure we have the latest state
           git fetch --tags --force
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Get latest tag (sorted by version, not by commit date)
-            LATEST_TAG=$(git tag -l 'v*' | sort -V | tail -n1)
-            LATEST_TAG=${LATEST_TAG:-v0.0.0}
-            LATEST_VERSION=${LATEST_TAG#v}
+          # Get latest tag (sorted by version, not by commit date)
+          LATEST_TAG=$(git tag -l 'v*' | sort -V | tail -n1)
+          LATEST_TAG=${LATEST_TAG:-v0.0.0}
+          LATEST_VERSION=${LATEST_TAG#v}
 
-            # Parse version components - support both SemVer (for migration) and CalVer
-            if [[ "$LATEST_VERSION" =~ ^([0-9]{4})\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$ ]]; then
-              # CalVer format: YYYY.MM.N[-rc.N]
-              YEAR="${BASH_REMATCH[1]}"
-              MONTH="${BASH_REMATCH[2]}"
-              ITERATION="${BASH_REMATCH[3]}"
-              RC_NUM="${BASH_REMATCH[5]:-0}"
-              IS_CALVER=true
-            elif [[ "$LATEST_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$ ]]; then
-              # SemVer format (for migration from 0.0.1 to CalVer)
-              # Treat as if it's old version, force new CalVer
-              IS_CALVER=false
-            else
-              # Fallback for malformed versions
-              IS_CALVER=false
+          # Parse version components - support both SemVer (for migration) and CalVer
+          if [[ "$LATEST_VERSION" =~ ^([0-9]{4})\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$ ]]; then
+            # CalVer format: YYYY.MM.N[-rc.N]
+            YEAR="${BASH_REMATCH[1]}"
+            MONTH="${BASH_REMATCH[2]}"
+            ITERATION="${BASH_REMATCH[3]}"
+            RC_NUM="${BASH_REMATCH[5]:-0}"
+            IS_CALVER=true
+          elif [[ "$LATEST_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$ ]]; then
+            # SemVer format (for migration from 0.0.1 to CalVer)
+            # Treat as if it's old version, force new CalVer
+            IS_CALVER=false
+          else
+            # Fallback for malformed versions
+            IS_CALVER=false
+          fi
+
+          # Determine new version based on last release type and desired release type
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+
+          # Get current date for CalVer
+          CURRENT_YEAR=$(date +%Y)
+          CURRENT_MONTH=$(date +%-m)  # %-m removes leading zero (1-12)
+
+          # Determine if we should continue existing RC series or start fresh
+          if [[ "$LATEST_VERSION" =~ -rc\.([0-9]+)$ ]]; then
+            LAST_IS_RC=true
+            RC_NUM="${BASH_REMATCH[1]}"
+          else
+            LAST_IS_RC=false
+            RC_NUM=0
+          fi
+
+          # Auto-deduce version_type based on last release and desired release
+          if [ "$LAST_IS_RC" = true ] && [ "$RELEASE_TYPE" = "rc" ]; then
+            # rc → rc: Continue same RC series (increment RC number)
+            BASE_YEAR="$YEAR"
+            BASE_MONTH="$MONTH"
+            BASE_ITERATION="$ITERATION"
+            MODE="continue_rc"
+
+            # Check if stable version of this base already exists
+            # If so, we need to start a new RC series for the next iteration
+            if git rev-parse "v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}" >/dev/null 2>&1; then
+              echo "Stable version v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION} already exists, incrementing iteration"
+              BASE_ITERATION="$((BASE_ITERATION + 1))"
+              MODE="new"
             fi
-
-            # Determine new version based on last release type and desired release type
-            RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-
-            # Get current date for CalVer
-            CURRENT_YEAR=$(date +%Y)
-            CURRENT_MONTH=$(date +%-m)  # %-m removes leading zero (1-12)
-
-            # Determine if we should continue existing RC series or start fresh
-            if [[ "$LATEST_VERSION" =~ -rc\.([0-9]+)$ ]]; then
-              LAST_IS_RC=true
-              RC_NUM="${BASH_REMATCH[1]}"
+          elif [ "$LAST_IS_RC" = true ] && [ "$RELEASE_TYPE" = "stable" ]; then
+            # rc → stable: Promote RC to stable
+            # Check if RC is from a previous month - if so, start fresh with current month
+            if [ "$IS_CALVER" = true ] && ([ "$YEAR" -ne "$CURRENT_YEAR" ] || [ "$MONTH" -ne "$CURRENT_MONTH" ]); then
+              # RC is from a different month, start fresh with current date
+              echo "RC is from a different month ($YEAR.$MONTH), starting fresh with current month"
+              BASE_YEAR="$CURRENT_YEAR"
+              BASE_MONTH="$CURRENT_MONTH"
+              BASE_ITERATION="1"
+              MODE="new"
             else
-              LAST_IS_RC=false
-              RC_NUM=0
-            fi
-
-            # Auto-deduce version_type based on last release and desired release
-            if [ "$LAST_IS_RC" = true ] && [ "$RELEASE_TYPE" = "rc" ]; then
-              # rc → rc: Continue same RC series (increment RC number)
+              # Same month: promote RC to stable
               BASE_YEAR="$YEAR"
               BASE_MONTH="$MONTH"
               BASE_ITERATION="$ITERATION"
-              MODE="continue_rc"
+              MODE="promote_rc"
 
-              # Check if stable version of this base already exists
-              # If so, we need to start a new RC series for the next iteration
+              # Check if stable version already exists
               if git rev-parse "v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}" >/dev/null 2>&1; then
                 echo "Stable version v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION} already exists, incrementing iteration"
                 BASE_ITERATION="$((BASE_ITERATION + 1))"
                 MODE="new"
               fi
-            elif [ "$LAST_IS_RC" = true ] && [ "$RELEASE_TYPE" = "stable" ]; then
-              # rc → stable: Promote RC to stable
-              # Check if RC is from a previous month - if so, start fresh with current month
-              if [ "$IS_CALVER" = true ] && ([ "$YEAR" -ne "$CURRENT_YEAR" ] || [ "$MONTH" -ne "$CURRENT_MONTH" ]); then
-                # RC is from a different month, start fresh with current date
-                echo "RC is from a different month ($YEAR.$MONTH), starting fresh with current month"
-                BASE_YEAR="$CURRENT_YEAR"
-                BASE_MONTH="$CURRENT_MONTH"
-                BASE_ITERATION="1"
-                MODE="new"
-              else
-                # Same month: promote RC to stable
-                BASE_YEAR="$YEAR"
-                BASE_MONTH="$MONTH"
-                BASE_ITERATION="$ITERATION"
-                MODE="promote_rc"
-
-                # Check if stable version already exists
-                if git rev-parse "v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}" >/dev/null 2>&1; then
-                  echo "Stable version v${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION} already exists, incrementing iteration"
-                  BASE_ITERATION="$((BASE_ITERATION + 1))"
-                  MODE="new"
-                fi
-              fi
-            else
-              # stable → rc OR stable → stable: Start new release (increment iteration)
-              # Use numeric comparison (-eq) to handle leading zeros correctly
-              if [ "$IS_CALVER" = true ] && [ "$YEAR" -eq "$CURRENT_YEAR" ] && [ "$MONTH" -eq "$CURRENT_MONTH" ]; then
-                # Same month: increment iteration
-                BASE_ITERATION="$((ITERATION + 1))"
-                BASE_YEAR="$YEAR"
-                BASE_MONTH="$MONTH"
-              else
-                # Different month or no CalVer: start fresh with current date
-                BASE_YEAR="$CURRENT_YEAR"
-                BASE_MONTH="$CURRENT_MONTH"
-                BASE_ITERATION="1"
-              fi
-              MODE="new"
             fi
-
-            # Apply release type
-            if [ "$RELEASE_TYPE" = "rc" ]; then
-              if [ "$MODE" = "continue_rc" ]; then
-                # Continue existing RC series: increment RC number
-                NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}-rc.$((RC_NUM + 1))"
-              else
-                # Start new RC series
-                NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}-rc.1"
-              fi
-              IS_PRERELEASE="true"
-            else
-              # Stable release
-              NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}"
-              IS_PRERELEASE="false"
-            fi
-
-            VERSION="v${NEW_VERSION}"
-            echo "tag_name=${VERSION}" >> $GITHUB_OUTPUT
-            echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-            echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
-
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            IS_PRERELEASE="${{ github.event.release.prerelease }}"
-            echo "tag_name=${VERSION}" >> $GITHUB_OUTPUT
-            echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
-            echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
-
           else
-            # Tag push
-            VERSION="${GITHUB_REF#refs/tags/}"
-            # Determine if prerelease based on version string
-            if [[ "$VERSION" =~ -rc\. ]] || [[ "$VERSION" =~ -alpha ]] || [[ "$VERSION" =~ -beta ]]; then
-              IS_PRERELEASE="true"
+            # stable → rc OR stable → stable: Start new release (increment iteration)
+            # Use numeric comparison (-eq) to handle leading zeros correctly
+            if [ "$IS_CALVER" = true ] && [ "$YEAR" -eq "$CURRENT_YEAR" ] && [ "$MONTH" -eq "$CURRENT_MONTH" ]; then
+              # Same month: increment iteration
+              BASE_ITERATION="$((ITERATION + 1))"
+              BASE_YEAR="$YEAR"
+              BASE_MONTH="$MONTH"
             else
-              IS_PRERELEASE="false"
+              # Different month or no CalVer: start fresh with current date
+              BASE_YEAR="$CURRENT_YEAR"
+              BASE_MONTH="$CURRENT_MONTH"
+              BASE_ITERATION="1"
             fi
-            echo "tag_name=${VERSION}" >> $GITHUB_OUTPUT
-            echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
-            echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+            MODE="new"
           fi
+
+          # Apply release type
+          if [ "$RELEASE_TYPE" = "rc" ]; then
+            if [ "$MODE" = "continue_rc" ]; then
+              # Continue existing RC series: increment RC number
+              NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}-rc.$((RC_NUM + 1))"
+            else
+              # Start new RC series
+              NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}-rc.1"
+            fi
+            IS_PRERELEASE="true"
+          else
+            # Stable release
+            NEW_VERSION="${BASE_YEAR}.${BASE_MONTH}.${BASE_ITERATION}"
+            IS_PRERELEASE="false"
+          fi
+
+          VERSION="v${NEW_VERSION}"
+          echo "tag_name=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
 
   # ===========================================================================
   # PRE-RELEASE VALIDATION
@@ -294,7 +282,9 @@ jobs:
     name: Pre-release Validation
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && !inputs.skip_validation
+    # Always runs on dispatch: this is where skip_validation abuse is rejected.
+    # Stable releases can NEVER skip validation; RCs may.
+    if: github.event_name == 'workflow_dispatch'
     # gh run list (actions: read) and gh issue list (issues: read)
     permissions:
       contents: read
@@ -303,7 +293,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Enforce skip_validation policy
+        env:
+          SKIP_VALIDATION: ${{ inputs.skip_validation }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          if [ "$SKIP_VALIDATION" != "true" ]; then
+            echo "Full validation enabled"
+            exit 0
+          fi
+          if [ "$RELEASE_TYPE" = "stable" ]; then
+            echo "::error::skip_validation is not allowed for stable releases. Cut an RC first (or run with validation)."
+            exit 1
+          fi
+          echo "skip_validation allowed for RC release"
+
       - name: Check CI workflow status
+        if: ${{ !inputs.skip_validation }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -354,6 +360,7 @@ jobs:
           echo "✅ CI validation passed"
 
       - name: Check for blocking issues
+        if: ${{ !inputs.skip_validation }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -373,6 +380,7 @@ jobs:
           echo "✅ No release blockers found"
 
       - name: Check security vulnerabilities
+        if: ${{ !inputs.skip_validation }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -397,33 +405,32 @@ jobs:
     name: Generate Changelog
     needs: get-version
     runs-on: ubuntu-latest
-    # gh pr list (pull-requests: read) + gh release list (contents: read)
+    # Release notes are generated deterministically from the conventional
+    # commit history with git-cliff (config: cliff.toml). The optional AI
+    # summary is garnish: it is off by default and ANY failure simply omits
+    # it — it can never alter or block the release.
     permissions:
       contents: read
-      pull-requests: read
-    # Runs for ALL trigger types (workflow_dispatch, tag push, release
-    # published): create-release and the publish jobs below require its
-    # outputs, so gating it on dispatch alone silently skipped binaries on
-    # tag-push/release triggers. Idempotent for release-published events:
-    # create-release skips tag/release creation when they already exist.
     outputs:
       changelog: ${{ steps.changelog.outputs.changelog }}
       ai_summary: ${{ steps.ai_summary.outputs.summary }}
+    env:
+      GIT_CLIFF_VERSION: v2.14.2
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Get previous stable tag
-        id: prev_tag
+      - name: Determine notes range
+        id: range
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Anchor on the last PUBLISHED stable release, not just the last git tag.
-          # A tag-only "skipped" release (e.g. v2026.7.3, created as a tag but never
-          # published as a GitHub Release) would otherwise make the notes start at that
-          # tag and silently drop its commits. Anchoring on published releases rolls
-          # those commits into the next real release's notes.
+          # Anchor stable notes on the last PUBLISHED stable release, not just
+          # the last git tag: a tag-only "skipped" release (e.g. v2026.7.3,
+          # created as a tag but never published) would otherwise cut the range
+          # early and silently drop its commits. Anchoring on published
+          # releases rolls those commits into the next real release's notes.
           PREV_TAG=$(gh release list --exclude-drafts --exclude-pre-releases -L 100 \
             --json tagName -q '.[].tagName' | sort -V | tail -n1)
 
@@ -435,105 +442,89 @@ jobs:
             # If no previous stable tag, use first commit
             PREV_TAG=$(git rev-list --max-parents=0 HEAD)
           fi
-          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
-          echo "Previous published stable tag: $PREV_TAG"
 
-      - name: Generate changelog from commits and PRs
-        id: changelog
+          # RC series notes are incremental: continue from the previous RC of
+          # the same version series when one exists, so rc.2 doesn't repeat
+          # everything rc.1 already listed.
+          FROM_TAG="$PREV_TAG"
+          VERSION="${{ needs.get-version.outputs.version }}"
+          if [[ "$VERSION" =~ ^([0-9]{4}\.[0-9]+\.[0-9]+)-rc\.[0-9]+$ ]]; then
+            SERIES="${BASH_REMATCH[1]}"
+            LAST_RC=$(git tag -l "v${SERIES}-rc.*" | sort -V | tail -n1)
+            if [ -n "$LAST_RC" ] && [ "$LAST_RC" != "v${VERSION}" ]; then
+              FROM_TAG="$LAST_RC"
+            fi
+          fi
+
+          echo "from_tag=$FROM_TAG" >> $GITHUB_OUTPUT
+          echo "Notes range: ${FROM_TAG}..HEAD"
+
+      - name: Install git-cliff
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }} # cliff enriches entries when available
         run: |
-          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
+          curl -sSfL \
+            "https://github.com/orhun/git-cliff/releases/download/${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION#v}-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C /tmp
+          sudo install /tmp/git-cliff-${GIT_CLIFF_VERSION#v}/git-cliff /usr/local/bin/git-cliff
+          git-cliff --version
 
-          echo "Generating changelog since $PREV_TAG..."
+      - name: Generate release notes
+        id: changelog
+        run: |
+          TAG="${{ needs.get-version.outputs.tag_name }}"
+          FROM_TAG="${{ steps.range.outputs.from_tag }}"
+          mkdir -p .release-notes
 
-          # Create changelog file
-          cat > /tmp/changelog.md << 'CHANGELOG_HEADER'
-          ## What's Changed
+          # Deterministic body notes: conventional-commit groups since FROM_TAG.
+          git-cliff --config cliff.toml --unreleased --tag "$TAG" "${FROM_TAG}..HEAD" > .release-notes/notes.md
 
-          CHANGELOG_HEADER
+          # Fully regenerated CHANGELOG.md (entire tagged history plus this
+          # release). update-version-files commits it via the artifact below.
+          git-cliff --config cliff.toml --tag "$TAG" -o .release-notes/CHANGELOG.md
 
-          # Get merged PRs since last tag
-          echo "### Pull Requests" >> /tmp/changelog.md
-          echo "" >> /tmp/changelog.md
-
-          # Get PRs merged since the previous tag's date
-          PREV_DATE=$(git log -1 --format=%cI "$PREV_TAG" 2>/dev/null || echo "2020-01-01T00:00:00Z")
-
-          gh pr list \
-            --state merged \
-            --base main \
-            --search "merged:>$PREV_DATE" \
-            --json number,title,author,labels \
-            --jq '.[] | "- \(.title) (#\(.number)) @\(.author.login)"' >> /tmp/changelog.md 2>/dev/null || true
-
-          echo "" >> /tmp/changelog.md
-
-          # Group commits by type
-          echo "### Commits" >> /tmp/changelog.md
-          echo "" >> /tmp/changelog.md
-
-          # Features
-          FEATURES=$(git log "$PREV_TAG"..HEAD --oneline --grep="^feat" --grep="^feature" --grep="^add" 2>/dev/null | head -20)
-          if [ -n "$FEATURES" ]; then
-            echo "**Features:**" >> /tmp/changelog.md
-            echo "$FEATURES" | sed 's/^/- /' >> /tmp/changelog.md
-            echo "" >> /tmp/changelog.md
+          if [ ! -s .release-notes/notes.md ]; then
+            printf '## What'"'"'s Changed\n\n- Maintenance and internal improvements\n' > .release-notes/notes.md
           fi
 
-          # Bug fixes
-          FIXES=$(git log "$PREV_TAG"..HEAD --oneline --grep="^fix" --grep="^bug" 2>/dev/null | head -20)
-          if [ -n "$FIXES" ]; then
-            echo "**Bug Fixes:**" >> /tmp/changelog.md
-            echo "$FIXES" | sed 's/^/- /' >> /tmp/changelog.md
-            echo "" >> /tmp/changelog.md
-          fi
+          {
+            echo "changelog<<CHANGELOG_EOF"
+            cat .release-notes/notes.md
+            echo "CHANGELOG_EOF"
+          } >> $GITHUB_OUTPUT
 
-          # Other changes
-          echo "**Other Changes:**" >> /tmp/changelog.md
-          git log "$PREV_TAG"..HEAD --oneline --invert-grep --grep="^feat" --grep="^fix" --grep="^chore" 2>/dev/null | head -10 | sed 's/^/- /' >> /tmp/changelog.md || true
-          echo "" >> /tmp/changelog.md
+          echo "---- release notes ----"
+          cat .release-notes/notes.md
 
-          # Stats
-          echo "### Stats" >> /tmp/changelog.md
-          echo "" >> /tmp/changelog.md
-          COMMIT_COUNT=$(git rev-list "$PREV_TAG"..HEAD --count 2>/dev/null || echo "0")
-          CONTRIBUTOR_COUNT=$(git log "$PREV_TAG"..HEAD --format='%ae' 2>/dev/null | sort -u | wc -l || echo "0")
-          echo "- **$COMMIT_COUNT** commits" >> /tmp/changelog.md
-          echo "- **$CONTRIBUTOR_COUNT** contributors" >> /tmp/changelog.md
+      - name: Upload regenerated CHANGELOG.md
+        uses: actions/upload-artifact@v5
+        with:
+          name: changelog-full
+          path: .release-notes/CHANGELOG.md
+          retention-days: 1
+          if-no-files-found: error
 
-          # Output changelog (escape for GitHub Actions)
-          CHANGELOG=$(cat /tmp/changelog.md)
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "Changelog generated:"
-          cat /tmp/changelog.md
-
-      - name: Generate AI summary with Groq
+      - name: Generate AI summary (optional garnish)
         id: ai_summary
         if: inputs.generate_ai_notes
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          # Check if API key is set
+          # Garnish, never load-bearing: any failure leaves the summary empty
+          # and the release notes stay purely deterministic. The model is a
+          # repo variable (Settings → Variables → groq_model) because Groq
+          # decommissions models regularly; the default is updated only when
+          # needed — no discovery loops that can silently pick junk.
+          set +e
           if [ -z "$GROQ_API_KEY" ]; then
             echo "::warning::GROQ_API_KEY secret is not set, skipping AI summary"
-            echo "summary=This release includes bug fixes, improvements, and new features. See the changelog below for details." >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
-          VERSION="${{ needs.get-version.outputs.version }}"
-
-          # Get commit messages for summary
+          PREV_TAG="${{ steps.range.outputs.from_tag }}"
           COMMITS=$(git log "$PREV_TAG"..HEAD --oneline 2>/dev/null | head -50)
-
-          # Get changed files summary
           CHANGED_FILES=$(git diff --stat "$PREV_TAG"..HEAD 2>/dev/null | tail -1)
 
-          # Create prompt
           cat > /tmp/prompt.txt << PROMPT_EOF
           Summarize these commits for a release changelog.
 
@@ -553,32 +544,11 @@ jobs:
           Write the summary now (1-2 sentences only):
           PROMPT_EOF
 
-          # Groq decommissions models regularly (llama-3.3-70b-versatile was
-          # shut down for non-Enterprise tiers on 2026-08-16 and has 404ed
-          # since). Discover what this API key can actually use and pick a
-          # preferred model instead of hard-coding one that breaks again.
-          AVAILABLE_MODELS=$(curl -sf https://api.groq.com/openai/v1/models \
-            -H "Authorization: Bearer $GROQ_API_KEY" | jq -r '.data[].id' || true)
-          MODEL=""
-          for candidate in openai/gpt-oss-120b openai/gpt-oss-20b moonshotai/kimi-k2-instruct meta-llama/llama-4-scout-17b-16e-instruct; do
-            if echo "$AVAILABLE_MODELS" | grep -qx "$candidate"; then
-              MODEL="$candidate"
-              break
-            fi
-          done
-          # Preference list exhausted or discovery failed: take any chat model.
-          if [ -z "$MODEL" ]; then
-            MODEL=$(echo "$AVAILABLE_MODELS" | grep -vE 'whisper|tts|guard|embed' | head -n1)
-          fi
-          if [ -z "$MODEL" ]; then
-            echo "::warning::No usable Groq model for this API key, skipping AI summary"
-            echo "summary=This release includes bug fixes, improvements, and new features. See the changelog below for details." >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          MODEL="${{ vars.groq_model }}"
+          MODEL="${MODEL:-openai/gpt-oss-120b}"
           echo "Using Groq model: $MODEL"
 
-          # Call Groq API (OpenAI-compatible) and capture both response and HTTP status
-          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" https://api.groq.com/openai/v1/chat/completions \
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 60 https://api.groq.com/openai/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GROQ_API_KEY" \
             -d "{
@@ -589,43 +559,26 @@ jobs:
                 \"content\": $(cat /tmp/prompt.txt | jq -Rs .)
               }]
             }")
-
-          # Extract HTTP status code (last line) and response body
           HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n1)
           RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
 
-          echo "API Response Status: $HTTP_STATUS"
-
-          # Check for successful response
           if [ "$HTTP_STATUS" != "200" ]; then
-            echo "::warning::Groq API returned status $HTTP_STATUS"
-            echo "Response: $RESPONSE_BODY"
-            echo "summary=This release includes bug fixes, improvements, and new features. See the changelog below for details." >> $GITHUB_OUTPUT
+            echo "::warning::Groq API returned status $HTTP_STATUS; omitting AI summary"
             exit 0
           fi
 
-          # Extract the summary from the response (OpenAI format)
           SUMMARY=$(echo "$RESPONSE_BODY" | jq -r '.choices[0].message.content // empty')
-
           if [ -z "$SUMMARY" ]; then
-            echo "::warning::Could not extract summary from API response"
-            echo "Response: $RESPONSE_BODY"
-            echo "summary=This release includes bug fixes, improvements, and new features. See the changelog below for details." >> $GITHUB_OUTPUT
+            echo "::warning::Could not extract summary from API response; omitting AI summary"
             exit 0
           fi
 
           echo "AI Summary: $SUMMARY"
-
-          # Output summary
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          echo "$SUMMARY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Fallback summary if AI disabled
-        id: fallback_summary
-        if: "!inputs.generate_ai_notes"
-        run: |
-          echo "summary=This release includes bug fixes, improvements, and new features. See the changelog below for details." >> $GITHUB_OUTPUT
+          {
+            echo "summary<<SUMMARY_EOF"
+            echo "$SUMMARY"
+            echo "SUMMARY_EOF"
+          } >> $GITHUB_OUTPUT
 
   # ===========================================================================
   # CREATE RELEASE
@@ -647,15 +600,17 @@ jobs:
           fetch-depth: 0
 
       - name: Create and push tag (if not exists)
+        if: ${{ !inputs.dry_run }}
         run: |
           TAG_NAME="${{ needs.get-version.outputs.tag_name }}"
 
           # Fetch all tags from remote to ensure we have the latest state
           git fetch --tags --force
 
-          # Check if tag already exists
+          # Check if tag already exists (e.g. after a re-run following a
+          # partial failure — this step is safe to repeat)
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Tag $TAG_NAME already exists (created by release event or manually). Skipping tag creation."
+            echo "Tag $TAG_NAME already exists. Skipping tag creation."
           else
             echo "Creating tag $TAG_NAME..."
             git config user.name "github-actions[bot]"
@@ -665,6 +620,7 @@ jobs:
           fi
 
       - name: Create GitHub Release with changelog (if not exists)
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           AI_SUMMARY: ${{ needs.generate-changelog.outputs.ai_summary }}
@@ -678,7 +634,7 @@ jobs:
           VERSION="${{ needs.get-version.outputs.version }}"
           TAG="${{ needs.get-version.outputs.tag_name }}"
 
-          # Check if release already exists
+          # Check if release already exists (idempotent on re-run)
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists. Skipping release creation."
           else
@@ -686,8 +642,10 @@ jobs:
 
             # Build release notes using environment variables to avoid shell injection issues
             {
-              printf '%s\n' "$AI_SUMMARY"
-              echo ''
+              if [ -n "$AI_SUMMARY" ]; then
+                printf '%s\n' "$AI_SUMMARY"
+                echo ''
+              fi
               printf '%s\n' "$CHANGELOG"
               echo ''
               echo '## Installation'
@@ -712,6 +670,11 @@ jobs:
               echo "curl -fsSL https://raw.githubusercontent.com/nimbleflux/fluxbase/main/install-cli.sh | bash -s -- ${TAG}"
               echo '```'
               echo ''
+              echo '**Server binary (tarball):** the \`fluxbase-server\` binaries build with the same'
+              echo 'OCR and image-transform features as the Docker \`full\` image and link glibc.'
+              echo 'Install \`libvips\`, \`tesseract\` and \`ffmpeg\` on the host at runtime, or prefer'
+              echo 'the Docker image, which bundles them.'
+              echo ''
               echo '---'
               echo '*Release automatically generated by GitHub Actions*'
             } > /tmp/release_notes.md
@@ -722,17 +685,37 @@ jobs:
               $PRERELEASE_FLAG
           fi
 
+      - name: Dry-run summary
+        if: inputs.dry_run
+        env:
+          CHANGELOG: ${{ needs.generate-changelog.outputs.changelog }}
+        run: |
+          {
+            echo "## 🏃 Dry run — nothing was tagged, released, or published"
+            echo
+            echo "Proposed tag: \`${{ needs.get-version.outputs.tag_name }}\`"
+            echo
+            printf '%s\n' "$CHANGELOG"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   update-version-files:
     name: Update version in config files
-    needs: get-version
+    # Serialized after create-release so the tag exists before the bump
+    # commit lands on the branch: CI's version-drift job anchors on the
+    # latest tag, and it must never see the bump commit while the matching
+    # tag is still in flight.
+    needs: [get-version, generate-changelog, create-release]
     runs-on: ubuntu-latest
     # Commits and pushes version bumps to the source branch
     permissions:
       contents: write
-    # workflow_dispatch ONLY: this job edits and pushes version files. On tag
-    # pushes it used to check out the tag and `git push origin HEAD:<tag>`,
-    # creating a stray branch named after the tag. Version bumps belong on the
-    # source branch, which workflow_dispatch provides via github.ref_name.
+    # workflow_dispatch ONLY: this job edits and pushes version files. It used
+    # to run on tag-push triggers too, checking out the tag and running
+    # `git push origin HEAD:<tag>` — creating a stray branch named after the
+    # tag. The workflow is dispatch-only now; this job-level guard keeps it
+    # that way even if another trigger is ever re-added. Version bumps belong
+    # on the source branch, which workflow_dispatch provides via ref_name.
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -748,98 +731,69 @@ jobs:
         with:
           node-version: "24.20.0"
 
-      - name: Update version in files
+      - name: Download regenerated CHANGELOG.md
+        uses: actions/download-artifact@v8
+        with:
+          name: changelog-full
+          path: .release-notes
+
+      - name: Apply version to files
+        env:
+          VERSION: ${{ needs.get-version.outputs.version }}
         run: |
-          VERSION=${{ needs.get-version.outputs.version }}
-          TAG=${{ needs.get-version.outputs.tag_name }}
-          IS_PRERELEASE=${{ needs.get-version.outputs.is_prerelease }}
-
-          # Update VERSION file (only for stable releases)
-          if [ "$IS_PRERELEASE" = "false" ]; then
-            echo "${VERSION}" > VERSION
-          fi
-
-          # Update Helm Chart
-          sed -i "s/^appVersion:.*/appVersion: \"${VERSION}\"/" deploy/helm/fluxbase/Chart.yaml
-
-          # Update Docker Compose default version (only for stable releases)
-          # Update the fallback version in compose files and .env.example
-          if [ "$IS_PRERELEASE" = "false" ]; then
-            # Update fallback version in docker-compose files
-            sed -i "s|\${FLUXBASE_VERSION:-[^}]*}|\${FLUXBASE_VERSION:-${VERSION}}|g" deploy/docker-compose.yml
-            sed -i "s|\${FLUXBASE_VERSION:-[^}]*}|\${FLUXBASE_VERSION:-${VERSION}}|g" deploy/docker-compose.minimal.yaml
-            # Update commented example in .env.example
-            sed -i "s|# FLUXBASE_VERSION=.*|# FLUXBASE_VERSION=${VERSION}|g" deploy/.env.example
-          fi
-
-          # Update CLI installation docs with new version
-          sed -i "s#install-cli.sh | bash -s -- v[0-9.]*-*[a-z0-9.]*#install-cli.sh | bash -s -- ${TAG}#g" docs/src/content/docs/cli/installation.md
-
-          # Update NPM package versions using jq
-          jq --arg version "$VERSION" '.version = $version' sdk/package.json > sdk/package.json.tmp
-          mv sdk/package.json.tmp sdk/package.json
-
-          jq --arg version "$VERSION" '.version = $version' sdk-react/package.json > sdk-react/package.json.tmp
-          mv sdk-react/package.json.tmp sdk-react/package.json
-
-          # Update sdk-react peerDependencies to reference the new SDK version
-          jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' sdk-react/package.json > sdk-react/package.json.tmp
-          mv sdk-react/package.json.tmp sdk-react/package.json
-
-          # Update sdk-svelte package version + peerDependency
-          jq --arg version "$VERSION" '.version = $version' sdk-svelte/package.json > sdk-svelte/package.json.tmp
-          mv sdk-svelte/package.json.tmp sdk-svelte/package.json
-          jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' sdk-svelte/package.json > sdk-svelte/package.json.tmp
-          mv sdk-svelte/package.json.tmp sdk-svelte/package.json
-
-          # Update sdk-next package version + peerDependency
-          jq --arg version "$VERSION" '.version = $version' sdk-next/package.json > sdk-next/package.json.tmp
-          mv sdk-next/package.json.tmp sdk-next/package.json
-          jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' sdk-next/package.json > sdk-next/package.json.tmp
-          mv sdk-next/package.json.tmp sdk-next/package.json
-
-          # Update sdk-vue package version + peerDependency
-          jq --arg version "$VERSION" '.version = $version' sdk-vue/package.json > sdk-vue/package.json.tmp
-          mv sdk-vue/package.json.tmp sdk-vue/package.json
-          jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' sdk-vue/package.json > sdk-vue/package.json.tmp
-          mv sdk-vue/package.json.tmp sdk-vue/package.json
-
-          # Update bun lock file from root (handles workspace properly)
-          bun install
+          # One script is the single source of truth for every file that
+          # carries a version — the same script `make bump-*` runs locally.
+          scripts/set-version.sh "$VERSION"
+          cp .release-notes/CHANGELOG.md CHANGELOG.md
 
       - name: Commit version updates
+        if: ${{ !inputs.dry_run }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add VERSION
-          git add deploy/helm/fluxbase/Chart.yaml
-          git add deploy/docker-compose*.yml
-          git add deploy/.env.example
-          git add sdk/package.json bun.lock
-          git add sdk-react/package.json
-          git add sdk-svelte/package.json
-          git add sdk-next/package.json
-          git add sdk-vue/package.json
-          git add admin/package.json
-          git add docs/src/content/docs/cli/installation.md
+          git add VERSION CHANGELOG.md \
+            deploy/helm/fluxbase/Chart.yaml deploy/helm/fluxbase/values.yaml \
+            deploy/docker-compose.yml deploy/docker-compose.minimal.yaml deploy/.env.example \
+            sdk/package.json sdk-react/package.json sdk-svelte/package.json \
+            sdk-next/package.json sdk-vue/package.json admin/package.json \
+            bun.lock docs/src/content/docs/cli/installation.md
 
           if git diff --staged --quiet; then
-            echo "No version changes to commit"
+            echo "No version changes to commit (idempotent re-run)"
           else
             git commit -m "chore: Update version to ${{ needs.get-version.outputs.version }} in deployment files"
-            # workflow_dispatch only (see job-level if): github.ref_name is the
-            # source branch the workflow was dispatched on.
+            # main may have moved while this release ran; rebase so the push
+            # can't fail on a non-fast-forward mid-release.
+            git pull --rebase origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi
+
+      - name: Dry run — show what would be committed
+        if: inputs.dry_run
+        run: |
+          git add VERSION CHANGELOG.md \
+            deploy/helm/fluxbase/Chart.yaml deploy/helm/fluxbase/values.yaml \
+            deploy/docker-compose.yml deploy/docker-compose.minimal.yaml deploy/.env.example \
+            sdk/package.json sdk-react/package.json sdk-svelte/package.json \
+            sdk-next/package.json sdk-vue/package.json admin/package.json \
+            bun.lock docs/src/content/docs/cli/installation.md
+          echo "## Dry run — version file changes (not committed)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+          git diff --staged --stat >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          git reset -q
+          echo "(dry run: nothing committed)"
 
   publish-binaries:
     name: Publish Binaries
     needs: [get-version, create-release]
-    if: always() && (github.event_name != 'workflow_dispatch' || inputs.publish_binaries) && needs.create-release.result == 'success'
-    # Uploads assets to the GitHub release
+    if: always() && inputs.publish_binaries && needs.create-release.result == 'success'
+    # Uploads assets to the GitHub release; id-token: write attests SLSA
+    # provenance for the archives (parity with the container images).
     permissions:
       contents: write
+      id-token: write
     strategy:
       matrix:
         include:
@@ -851,6 +805,9 @@ jobs:
             runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
+    env:
+      VERSION: ${{ needs.get-version.outputs.version }}
+      COMMIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v7
 
@@ -894,22 +851,29 @@ jobs:
       - name: Install native dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips-dev
+          # Same dev packages the Dockerfile full builder installs, so the
+          # server tarballs have feature parity with the Docker full image
+          # (OCR via tesseract, image transforms via libvips).
+          sudo apt-get install -y libvips-dev libtesseract-dev libleptonica-dev
 
       - name: Build server binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
         run: |
-          VERSION=${{ needs.get-version.outputs.version }}
-          output_name="fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}"
-          go build -ldflags="-s -w -X main.Version=${VERSION}" -o "${output_name}" cmd/fluxbase/main.go
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          output_name="fluxbase-server-${GOOS}-${GOARCH}"
+          # Feature parity with the Docker "full" image
+          go build -tags "ocr vips" \
+            -ldflags="-s -w -X github.com/nimbleflux/fluxbase/internal/buildinfo.version=${VERSION} -X github.com/nimbleflux/fluxbase/internal/buildinfo.commit=${COMMIT_SHA} -X github.com/nimbleflux/fluxbase/internal/buildinfo.buildDate=${BUILD_DATE}" \
+            -o "${output_name}" ./cmd/fluxbase
 
           # Create checksums
           sha256sum "${output_name}" > "${output_name}.sha256"
 
           # Create tar.gz for non-Windows
-          if [ "${{ matrix.goos }}" != "windows" ]; then
+          if [ "${GOOS}" != "windows" ]; then
             tar -czf "${output_name}.tar.gz" "${output_name}"
             sha256sum "${output_name}.tar.gz" > "${output_name}.tar.gz.sha256"
           else
@@ -924,15 +888,16 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          VERSION=${{ needs.get-version.outputs.version }}
-          output_name="fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}"
-          go build -ldflags="-s -w -X github.com/nimbleflux/fluxbase/cli/cmd.Version=${VERSION} -X github.com/nimbleflux/fluxbase/cli/cmd.Commit=${{ github.sha }} -X github.com/nimbleflux/fluxbase/cli/cmd.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o "${output_name}" cli/main.go
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          output_name="fluxbase-${GOOS}-${GOARCH}"
+          go build -ldflags="-s -w -X github.com/nimbleflux/fluxbase/internal/buildinfo.version=${VERSION} -X github.com/nimbleflux/fluxbase/internal/buildinfo.commit=${COMMIT_SHA} -X github.com/nimbleflux/fluxbase/internal/buildinfo.buildDate=${BUILD_DATE}" \
+            -o "${output_name}" ./cli
 
           # Create checksums
           sha256sum "${output_name}" > "${output_name}.sha256"
 
           # Create tar.gz for non-Windows
-          if [ "${{ matrix.goos }}" != "windows" ]; then
+          if [ "${GOOS}" != "windows" ]; then
             tar -czf "${output_name}.tar.gz" "${output_name}"
             sha256sum "${output_name}.tar.gz" > "${output_name}.tar.gz.sha256"
           else
@@ -941,22 +906,43 @@ jobs:
             sha256sum "${output_name}.zip" > "${output_name}.zip.sha256"
           fi
 
+      - name: Attest build provenance
+        if: ${{ !inputs.dry_run }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.*
+
       - name: Upload Release Assets
+        if: ${{ !inputs.dry_run }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.get-version.outputs.tag_name }} \
             fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}* \
             fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}* \
             --clobber
 
+      - name: Upload build artifacts (dry run)
+        if: inputs.dry_run
+        uses: actions/upload-artifact@v7
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            fluxbase-server-${{ matrix.goos }}-${{ matrix.goarch }}*
+            fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}*
+          retention-days: 7
+          if-no-files-found: error
+
   publish-cli-cross-platform:
     name: Publish CLI (Cross-Platform)
     needs: [get-version, create-release]
-    if: always() && (github.event_name != 'workflow_dispatch' || inputs.publish_binaries) && needs.create-release.result == 'success'
+    if: always() && inputs.publish_binaries && needs.create-release.result == 'success'
     # Uploads assets to the GitHub release
     permissions:
       contents: write
+      id-token: write
     strategy:
       matrix:
         include:
@@ -971,6 +957,9 @@ jobs:
             runner: ubuntu-latest
 
     runs-on: ${{ matrix.runner }}
+    env:
+      VERSION: ${{ needs.get-version.outputs.version }}
+      COMMIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v7
 
@@ -985,38 +974,58 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          VERSION=${{ needs.get-version.outputs.version }}
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            output_name="fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          if [ "${GOOS}" = "windows" ]; then
+            output_name="fluxbase-${GOOS}-${GOARCH}.exe"
           else
-            output_name="fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}"
+            output_name="fluxbase-${GOOS}-${GOARCH}"
           fi
-          go build -ldflags="-s -w -X github.com/nimbleflux/fluxbase/cli/cmd.Version=${VERSION} -X github.com/nimbleflux/fluxbase/cli/cmd.Commit=${{ github.sha }} -X github.com/nimbleflux/fluxbase/cli/cmd.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o "${output_name}" cli/main.go
+          go build -ldflags="-s -w -X github.com/nimbleflux/fluxbase/internal/buildinfo.version=${VERSION} -X github.com/nimbleflux/fluxbase/internal/buildinfo.commit=${COMMIT_SHA} -X github.com/nimbleflux/fluxbase/internal/buildinfo.buildDate=${BUILD_DATE}" \
+            -o "${output_name}" ./cli
 
           # Create checksums
           sha256sum "${output_name}" > "${output_name}.sha256"
 
           # Create archive
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip "fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.zip" "${output_name}"
-            sha256sum "fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.zip" > "fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.zip.sha256"
+          if [ "${GOOS}" = "windows" ]; then
+            zip "fluxbase-${GOOS}-${GOARCH}.zip" "${output_name}"
+            sha256sum "fluxbase-${GOOS}-${GOARCH}.zip" > "fluxbase-${GOOS}-${GOARCH}.zip.sha256"
           else
-            tar -czf "fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" "${output_name}"
-            sha256sum "fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" > "fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz.sha256"
+            tar -czf "fluxbase-${GOOS}-${GOARCH}.tar.gz" "${output_name}"
+            sha256sum "fluxbase-${GOOS}-${GOARCH}.tar.gz" > "fluxbase-${GOOS}-${GOARCH}.tar.gz.sha256"
           fi
 
+      - name: Attest build provenance
+        if: ${{ !inputs.dry_run }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+
       - name: Upload Release Assets
+        if: ${{ !inputs.dry_run }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.get-version.outputs.tag_name }} \
             fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}* \
             --clobber
 
+      - name: Upload build artifacts (dry run)
+        if: inputs.dry_run
+        uses: actions/upload-artifact@v7
+        with:
+          name: binaries-cli-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            fluxbase-${{ matrix.goos }}-${{ matrix.goarch }}*
+          retention-days: 7
+          if-no-files-found: error
+
   publish-docker-arch:
     name: Build Docker Image (${{ matrix.flavor }} / ${{ matrix.arch }})
     needs: get-version
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_docker
+    if: inputs.publish_docker
     # packages: write → GHCR push; id-token: write → cosign keyless signing
     permissions:
       contents: read
@@ -1054,6 +1063,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
+        if: ${{ !inputs.dry_run }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -1067,11 +1077,14 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/${{ matrix.arch }}
-          push: true
+          push: ${{ !inputs.dry_run }}
+          # Dry runs load the image into the local daemon and boot it once —
+          # the built image is verified without ever being pushed.
+          load: ${{ inputs.dry_run }}
           # SLSA provenance (max detail) + SBOM attestation pushed alongside
           # the image so consumers can verify the build supply chain.
-          provenance: mode=max
-          sbom: true
+          provenance: ${{ inputs.dry_run && 'false' || 'mode=max' }}
+          sbom: ${{ !inputs.dry_run }}
           # full is the default image (unsuffixed arch tag); lite uses -lite.
           # --target selects the runtime stage; FLAVOR selects the go-builder config.
           target: ${{ matrix.flavor == 'lite' && 'runtime-lite' || 'runtime-full' }}
@@ -1084,10 +1097,25 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.flavor }}-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.flavor }}-${{ matrix.arch }}
 
+      - name: Verify the loaded image starts (dry run)
+        if: inputs.dry_run
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ needs.get-version.outputs.version }}${{ matrix.flavor == 'lite' && '-lite' || '' }}-${{ matrix.arch }}
+        run: |
+          echo "Booting $IMAGE --version against the locally loaded image"
+          OUT=$(docker run --rm "$IMAGE" --version)
+          echo "$OUT"
+          echo "$OUT" | grep -q "${{ needs.get-version.outputs.version }}" || {
+            echo "::error::Image reported an unexpected version: $OUT"
+            exit 1
+          }
+
       - name: Install cosign
+        if: ${{ !inputs.dry_run }}
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
 
       - name: Sign the pushed image (keyless)
+        if: ${{ !inputs.dry_run }}
         # Signs by digest so the signature is bound to the exact image that was
         # just pushed; verify with `cosign verify ghcr.io/<repo>@<digest>`.
         env:
@@ -1098,10 +1126,12 @@ jobs:
   publish-docker-manifest:
     name: Create Docker Multi-arch Manifest (${{ matrix.flavor }})
     needs: [get-version, publish-docker-arch]
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_docker
+    if: always() && inputs.publish_docker && !inputs.dry_run && needs.publish-docker-arch.result == 'success'
+    # id-token: write → cosign keyless signing of the merged index
     permissions:
       contents: read
       packages: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -1149,18 +1179,35 @@ jobs:
       - name: Create and push multi-arch manifest
         env:
           FLAVOR_SUFFIX: ${{ matrix.flavor == 'lite' && '-lite' || '' }}
+          VERSION: ${{ needs.get-version.outputs.version }}
         run: |
           for TAG in ${{ steps.tags.outputs.tags }}; do
             docker buildx imagetools create -t "$TAG" \
-              "ghcr.io/${{ github.repository }}:${{ needs.get-version.outputs.version }}${FLAVOR_SUFFIX}-amd64" \
-              "ghcr.io/${{ github.repository }}:${{ needs.get-version.outputs.version }}${FLAVOR_SUFFIX}-arm64"
+              "ghcr.io/${{ github.repository }}:${VERSION}${FLAVOR_SUFFIX}-amd64" \
+              "ghcr.io/${{ github.repository }}:${VERSION}${FLAVOR_SUFFIX}-arm64"
           done
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign the multi-arch manifest (keyless)
+        # The per-arch images are signed in publish-docker-arch; consumers
+        # normally pull the merged index (e.g. :latest), so the index digest
+        # must be signed too or signature verification fails on the manifest.
+        env:
+          FLAVOR_SUFFIX: ${{ matrix.flavor == 'lite' && '-lite' || '' }}
+          VERSION: ${{ needs.get-version.outputs.version }}
+        run: |
+          INDEX="ghcr.io/${{ github.repository }}:${VERSION}${FLAVOR_SUFFIX}"
+          DIGEST=$(docker buildx imagetools inspect "$INDEX" --format '{{.Manifest.Digest}}')
+          echo "Signing index $INDEX@${DIGEST}"
+          cosign sign --yes "ghcr.io/${{ github.repository }}@${DIGEST}"
 
   publish-docs-image:
     name: Build and Push Documentation Image
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_docs
+    if: inputs.publish_docs
     # packages: write → GHCR push; id-token: write → cosign keyless signing
     permissions:
       contents: read
@@ -1198,6 +1245,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
+        if: ${{ !inputs.dry_run }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -1224,18 +1272,21 @@ jobs:
           context: .
           file: Dockerfile.docs
           platforms: linux/amd64
-          push: true
-          provenance: mode=max
-          sbom: true
+          push: ${{ !inputs.dry_run }}
+          load: ${{ inputs.dry_run }}
+          provenance: ${{ inputs.dry_run && 'false' || 'mode=max' }}
+          sbom: ${{ !inputs.dry_run }}
           tags: ${{ steps.meta-docs.outputs.tags }}
           labels: ${{ steps.meta-docs.outputs.labels }}
           cache-from: type=gha,scope=docs
           cache-to: type=gha,mode=max,scope=docs
 
       - name: Install cosign
+        if: ${{ !inputs.dry_run }}
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
 
       - name: Sign the pushed docs image (keyless)
+        if: ${{ !inputs.dry_run }}
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
@@ -1245,7 +1296,7 @@ jobs:
     name: Publish TypeScript SDK to NPM
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_npm_sdk
+    if: inputs.publish_npm_sdk
     steps:
       - uses: actions/checkout@v7
 
@@ -1271,24 +1322,38 @@ jobs:
         working-directory: ./sdk
         run: |
           # Update version in package.json directly using jq
-          VERSION="${{ needs.get-version.outputs.version }}"
           jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
 
-          # Use 'rc' tag for pre-releases, 'latest' for stable releases
-          if [ "${{ needs.get-version.outputs.is_prerelease }}" = "true" ]; then
-            npm publish --access public --tag rc
-          else
-            npm publish --access public --tag latest
+          # Use 'rc' dist-tag for pre-releases, 'latest' for stable releases
+          DIST_TAG=$([ "$IS_PRERELEASE" = "true" ] && echo rc || echo latest)
+
+          # Dry runs stop here: everything above validated the build output.
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[dry-run] would publish $(jq -r .name package.json)@${VERSION} (dist-tag: ${DIST_TAG})"
+            npm publish --dry-run --access public --tag "$DIST_TAG" > /dev/null
+            exit 0
           fi
+
+          # Idempotent on re-run: skip if this exact version is already on
+          # npm (e.g. published by the attempt that partially failed).
+          if [ "$(npm view "$(jq -r .name package.json)@${VERSION}" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "$(jq -r .name package.json)@${VERSION} already published — skipping (idempotent re-run)"
+            exit 0
+          fi
+
+          npm publish --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.get-version.outputs.version }}
+          IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
+          DRY_RUN: ${{ inputs.dry_run }}
 
   publish-npm-sdk-react:
     name: Publish React SDK to NPM
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_npm_sdk
+    if: inputs.publish_npm_sdk
     steps:
       - uses: actions/checkout@v7
 
@@ -1326,20 +1391,35 @@ jobs:
           jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
 
-          # Use 'rc' tag for pre-releases, 'latest' for stable releases
-          if [ "${{ needs.get-version.outputs.is_prerelease }}" = "true" ]; then
-            npm publish --access public --tag rc
-          else
-            npm publish --access public --tag latest
+          # Use 'rc' dist-tag for pre-releases, 'latest' for stable releases
+          DIST_TAG=$([ "$IS_PRERELEASE" = "true" ] && echo rc || echo latest)
+
+          # Dry runs stop here: everything above validated the build output.
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[dry-run] would publish $(jq -r .name package.json)@${VERSION} (dist-tag: ${DIST_TAG})"
+            npm publish --dry-run --access public --tag "$DIST_TAG" > /dev/null
+            exit 0
           fi
+
+          # Idempotent on re-run: skip if this exact version is already on
+          # npm (e.g. published by the attempt that partially failed).
+          if [ "$(npm view "$(jq -r .name package.json)@${VERSION}" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "$(jq -r .name package.json)@${VERSION} already published — skipping (idempotent re-run)"
+            exit 0
+          fi
+
+          npm publish --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.get-version.outputs.version }}
+          IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
+          DRY_RUN: ${{ inputs.dry_run }}
 
   publish-npm-sdk-svelte:
     name: Publish Svelte SDK to NPM
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_npm_sdk
+    if: inputs.publish_npm_sdk
     steps:
       - uses: actions/checkout@v7
 
@@ -1377,20 +1457,35 @@ jobs:
           jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
 
-          # Use 'rc' tag for pre-releases, 'latest' for stable releases
-          if [ "${{ needs.get-version.outputs.is_prerelease }}" = "true" ]; then
-            npm publish --access public --tag rc
-          else
-            npm publish --access public --tag latest
+          # Use 'rc' dist-tag for pre-releases, 'latest' for stable releases
+          DIST_TAG=$([ "$IS_PRERELEASE" = "true" ] && echo rc || echo latest)
+
+          # Dry runs stop here: everything above validated the build output.
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[dry-run] would publish $(jq -r .name package.json)@${VERSION} (dist-tag: ${DIST_TAG})"
+            npm publish --dry-run --access public --tag "$DIST_TAG" > /dev/null
+            exit 0
           fi
+
+          # Idempotent on re-run: skip if this exact version is already on
+          # npm (e.g. published by the attempt that partially failed).
+          if [ "$(npm view "$(jq -r .name package.json)@${VERSION}" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "$(jq -r .name package.json)@${VERSION} already published — skipping (idempotent re-run)"
+            exit 0
+          fi
+
+          npm publish --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.get-version.outputs.version }}
+          IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
+          DRY_RUN: ${{ inputs.dry_run }}
 
   publish-npm-sdk-next:
     name: Publish Next.js SDK to NPM
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_npm_sdk
+    if: inputs.publish_npm_sdk
     steps:
       - uses: actions/checkout@v7
 
@@ -1428,20 +1523,35 @@ jobs:
           jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
 
-          # Use 'rc' tag for pre-releases, 'latest' for stable releases
-          if [ "${{ needs.get-version.outputs.is_prerelease }}" = "true" ]; then
-            npm publish --access public --tag rc
-          else
-            npm publish --access public --tag latest
+          # Use 'rc' dist-tag for pre-releases, 'latest' for stable releases
+          DIST_TAG=$([ "$IS_PRERELEASE" = "true" ] && echo rc || echo latest)
+
+          # Dry runs stop here: everything above validated the build output.
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[dry-run] would publish $(jq -r .name package.json)@${VERSION} (dist-tag: ${DIST_TAG})"
+            npm publish --dry-run --access public --tag "$DIST_TAG" > /dev/null
+            exit 0
           fi
+
+          # Idempotent on re-run: skip if this exact version is already on
+          # npm (e.g. published by the attempt that partially failed).
+          if [ "$(npm view "$(jq -r .name package.json)@${VERSION}" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "$(jq -r .name package.json)@${VERSION} already published — skipping (idempotent re-run)"
+            exit 0
+          fi
+
+          npm publish --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.get-version.outputs.version }}
+          IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
+          DRY_RUN: ${{ inputs.dry_run }}
 
   publish-npm-sdk-vue:
     name: Publish Vue SDK to NPM
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_npm_sdk
+    if: inputs.publish_npm_sdk
     steps:
       - uses: actions/checkout@v7
 
@@ -1479,20 +1589,35 @@ jobs:
           jq --arg version "^$VERSION" '.peerDependencies."@nimbleflux/fluxbase-sdk" = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
 
-          # Use 'rc' tag for pre-releases, 'latest' for stable releases
-          if [ "${{ needs.get-version.outputs.is_prerelease }}" = "true" ]; then
-            npm publish --access public --tag rc
-          else
-            npm publish --access public --tag latest
+          # Use 'rc' dist-tag for pre-releases, 'latest' for stable releases
+          DIST_TAG=$([ "$IS_PRERELEASE" = "true" ] && echo rc || echo latest)
+
+          # Dry runs stop here: everything above validated the build output.
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[dry-run] would publish $(jq -r .name package.json)@${VERSION} (dist-tag: ${DIST_TAG})"
+            npm publish --dry-run --access public --tag "$DIST_TAG" > /dev/null
+            exit 0
           fi
+
+          # Idempotent on re-run: skip if this exact version is already on
+          # npm (e.g. published by the attempt that partially failed).
+          if [ "$(npm view "$(jq -r .name package.json)@${VERSION}" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "$(jq -r .name package.json)@${VERSION} already published — skipping (idempotent re-run)"
+            exit 0
+          fi
+
+          npm publish --access public --tag "$DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.get-version.outputs.version }}
+          IS_PRERELEASE: ${{ needs.get-version.outputs.is_prerelease }}
+          DRY_RUN: ${{ inputs.dry_run }}
 
   publish-kotlin-sdk:
     name: Publish Kotlin SDK to GitHub Packages
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_kotlin_sdk
+    if: inputs.publish_kotlin_sdk
     permissions:
       packages: write
     steps:
@@ -1516,13 +1641,27 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew publishAllPublicationsToGprRepository -Pversion="${{ needs.get-version.outputs.version }}"
+          VERSION: ${{ needs.get-version.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          # Idempotent on re-run: GitHub Packages rejects a duplicate Maven
+          # version, so check for the POM first and skip if it exists.
+          POM_URL="https://maven.pkg.github.com/${{ github.repository }}/io/github/nimbleflux/fluxbase-kotlin/${VERSION}/fluxbase-kotlin-${VERSION}.pom"
+          if [ "$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$POM_URL")" = "200" ]; then
+            echo "fluxbase-kotlin ${VERSION} already published — skipping (idempotent re-run)"
+            exit 0
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[dry-run] detekt/test/build passed; would publish fluxbase-kotlin ${VERSION} to GitHub Packages"
+            exit 0
+          fi
+          ./gradlew publishAllPublicationsToGprRepository -Pversion="${VERSION}"
 
   publish-go-module:
     name: Publish Go Module
     needs: get-version
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_go_module
+    if: inputs.publish_go_module && !inputs.dry_run
     steps:
       - uses: actions/checkout@v7
 
@@ -1533,11 +1672,13 @@ jobs:
 
       - name: Publish Go module
         run: |
-          # Go modules are automatically available when tagged
-          echo "Go module published at github.com/nimbleflux/fluxbase@${{ needs.get-version.outputs.tag_name }}"
-
-          # Update pkg.go.dev
-          curl "https://proxy.golang.org/github.com/nimbleflux/fluxbase/@v/${{ needs.get-version.outputs.tag_name }}.info"
+          # Go modules are automatically available when tagged; this only
+          # pokes pkg.go.dev so the new version is indexed promptly. A slow
+          # or failing proxy must never fail the release.
+          echo "Go module available at github.com/nimbleflux/fluxbase@${{ needs.get-version.outputs.tag_name }}"
+          curl -sfS --max-time 30 \
+            "https://proxy.golang.org/github.com/nimbleflux/fluxbase/@v/${{ needs.get-version.outputs.tag_name }}.info" \
+            || echo "::warning::pkg.go.dev indexing ping failed (non-fatal); it will catch up on its own"
 
   publish-helm-chart:
     name: Publish Helm Chart to GHCR
@@ -1556,10 +1697,13 @@ jobs:
     # Publish Helm chart for all releases (stable and RC) unless disabled in workflow_dispatch
     if: |
       always() &&
-      (github.event_name != 'workflow_dispatch' || inputs.publish_helm) &&
+      inputs.publish_helm &&
       (needs.update-version-files.result == 'success' || needs.update-version-files.result == 'skipped') &&
       (needs.publish-postgres-manifests.result == 'success' || needs.publish-postgres-manifests.result == 'skipped') &&
       (needs.update-postgres-version.result == 'success' || needs.update-postgres-version.result == 'skipped')
+    env:
+      VERSION: ${{ needs.get-version.outputs.version }}
+      CHART_REF: ghcr.io/${{ github.repository_owner }}/charts/fluxbase
     steps:
       - uses: actions/checkout@v7
         with:
@@ -1575,12 +1719,12 @@ jobs:
           version: "latest"
 
       - name: Log in to GitHub Container Registry
+        if: ${{ !inputs.dry_run }}
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Update Chart version
         run: |
-          VERSION=${{ needs.get-version.outputs.version }}
           sed -i "s/^version:.*/version: ${VERSION}/" deploy/helm/fluxbase/Chart.yaml
           sed -i "s/^appVersion:.*/appVersion: \"${VERSION}\"/" deploy/helm/fluxbase/Chart.yaml
 
@@ -1601,8 +1745,20 @@ jobs:
           helm package deploy/helm/fluxbase
 
       - name: Push Helm chart to GHCR
+        if: ${{ !inputs.dry_run }}
         run: |
-          helm push fluxbase-${{ needs.get-version.outputs.version }}.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
+          # Idempotent on re-run: skip if this chart version was already
+          # pushed to the OCI registry by a partially failed attempt.
+          if helm show chart "${CHART_REF}" --version "${VERSION}" > /dev/null 2>&1; then
+            echo "Chart ${CHART_REF}:${VERSION} already published — skipping (idempotent re-run)"
+            exit 0
+          fi
+          helm push fluxbase-${VERSION}.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
+
+      - name: Dry run — chart packaged
+        if: inputs.dry_run
+        run: |
+          echo "[dry-run] chart fluxbase-${VERSION}.tgz packaged; would push to oci://ghcr.io/${{ github.repository_owner }}/charts and update the gh-pages index"
 
       - name: Generate Helm repository index
         run: |
@@ -1611,6 +1767,7 @@ jobs:
           helm repo index .helm-repo --url https://${{ github.repository_owner }}.github.io/fluxbase
 
       - name: Commit and push index to gh-pages
+        if: ${{ !inputs.dry_run }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -1649,7 +1806,7 @@ jobs:
   get-postgres-versions:
     name: Get Postgres Versions
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
+    if: inputs.publish_postgres && !inputs.dry_run
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -1665,7 +1822,7 @@ jobs:
   publish-postgres-amd64:
     name: Build Postgres Image (AMD64)
     needs: [get-version, get-postgres-versions]
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
+    if: inputs.publish_postgres && !inputs.dry_run
     runs-on: ubuntu-latest
     # packages: write → GHCR push; id-token: write → cosign keyless signing
     permissions:
@@ -1716,7 +1873,7 @@ jobs:
   publish-postgres-arm64:
     name: Build Postgres Image (ARM64)
     needs: [get-version, get-postgres-versions]
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
+    if: inputs.publish_postgres && !inputs.dry_run
     runs-on: ubuntu-24.04-arm
     # packages: write → GHCR push; id-token: write → cosign keyless signing
     permissions:
@@ -1773,7 +1930,7 @@ jobs:
         publish-postgres-amd64,
         publish-postgres-arm64,
       ]
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
+    if: inputs.publish_postgres && !inputs.dry_run
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1828,7 +1985,7 @@ jobs:
     name: Update Postgres version in Helm values
     needs: [get-postgres-versions, publish-postgres-manifests]
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.publish_postgres
+    if: inputs.publish_postgres && !inputs.dry_run
     # Commits and pushes the values.yaml bump
     permissions:
       contents: write
@@ -1888,11 +2045,17 @@ jobs:
         publish-npm-sdk-vue,
       ]
     runs-on: ubuntu-latest
-    # Edits the release body with smoke-test results → contents: write
+    # Edits the release body with smoke-test results (contents: write) and
+    # opens a release-blocker issue when the smoke tests fail (issues: write)
+    # — pre-release-checks refuses to release while such an issue is open,
+    # so a broken publish always gates the NEXT release.
     permissions:
       contents: write
+      issues: write
+    # Skipped on dry runs: the publish-docker-arch dry-run jobs already boot
+    # the locally built images, and nothing was published to smoke-test.
     if: |
-      always() &&
+      always() && !inputs.dry_run &&
       (needs.publish-docker-manifest.result == 'success' || needs.publish-docker-manifest.result == 'skipped') &&
       (needs.publish-npm-sdk.result == 'success' || needs.publish-npm-sdk.result == 'skipped')
     steps:
@@ -1908,184 +2071,194 @@ jobs:
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
           IMAGE="ghcr.io/${{ github.repository }}:${VERSION}"
-
-          echo "Testing Docker image (full/default): $IMAGE"
-
-          # Pull the image (validates it exists and is accessible)
-          docker pull "$IMAGE"
-
-          # Run basic health check
-          docker run --rm "$IMAGE" --version || echo "Version check completed"
-
-          echo "✅ Docker image (full) smoke test passed"
-
-          # Also verify the lite variant was published.
           LITE_IMAGE="ghcr.io/${{ github.repository }}:${VERSION}-lite"
-          echo "Testing Docker image (lite): $LITE_IMAGE"
-          docker pull "$LITE_IMAGE"
-          docker run --rm "$LITE_IMAGE" --version || echo "Version check completed"
-          echo "✅ Docker image (lite) smoke test passed"
+
+          for IMG in "$IMAGE" "$LITE_IMAGE"; do
+            echo "Testing Docker image: $IMG"
+            docker pull "$IMG"
+
+            OUT=$(docker run --rm "$IMG" --version)
+            echo "$OUT"
+            if ! echo "$OUT" | grep -q "$VERSION"; then
+              echo "::error::$IMG did not report version $VERSION — got: $OUT"
+              exit 1
+            fi
+          done
+
+          echo "✅ Docker image smoke tests passed (full + lite)"
 
       - name: Test NPM SDK installation
         if: needs.publish-npm-sdk.result == 'success'
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
+          PACKAGE="@nimbleflux/fluxbase-sdk"
 
-          echo "Testing NPM SDK installation: @nimbleflux/fluxbase-sdk@${VERSION}"
+          mkdir -p /tmp/sdk-test && cd /tmp/sdk-test
+          npm init -y > /dev/null
 
-          # Create a temp directory for testing
-          mkdir -p /tmp/sdk-test
-          cd /tmp/sdk-test
-
-          # Initialize npm project
-          npm init -y
-
-          # Wait a moment for NPM registry to propagate
-          sleep 10
-
-          # Try to install the SDK (with retries for propagation delay)
+          # Registry propagation delay after publish; retry a few times.
+          INSTALLED=0
           for i in 1 2 3; do
-            if npm install @nimbleflux/fluxbase-sdk@${VERSION}; then
-              echo "✅ SDK installed successfully"
+            sleep 10
+            if npm install "${PACKAGE}@${VERSION}" > /tmp/sdk-install.log 2>&1; then
+              INSTALLED=1
               break
-            else
-              echo "Attempt $i failed, retrying in 30s..."
-              sleep 30
             fi
+            echo "Attempt $i failed, retrying in 30s..."
+            cat /tmp/sdk-install.log
+            sleep 30
           done
 
-          # Verify the package is installed
-          if [ -d "node_modules/@nimbleflux/fluxbase-sdk" ]; then
-            echo "✅ NPM SDK smoke test passed"
-            npm list @nimbleflux/fluxbase-sdk
-          else
-            echo "::warning::SDK installation verification failed"
+          if [ "$INSTALLED" != "1" ]; then
+            echo "::error::${PACKAGE}@${VERSION} could not be installed after 3 attempts"
+            exit 1
           fi
+
+          echo "✅ NPM SDK smoke test passed"
+          npm list "${PACKAGE}"
 
       - name: Test NPM React SDK installation
         if: needs.publish-npm-sdk-react.result == 'success'
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
+          PACKAGE="@nimbleflux/fluxbase-sdk-react"
 
-          echo "Testing NPM React SDK installation: @nimbleflux/fluxbase-sdk-react@${VERSION}"
-
-          # Create a temp directory for testing
-          mkdir -p /tmp/sdk-react-test
-          cd /tmp/sdk-react-test
-
-          # Initialize npm project
-          npm init -y
-
-          # Wait a moment for NPM registry to propagate
-          sleep 10
-
+          mkdir -p /tmp/sdk-react-test && cd /tmp/sdk-react-test
+          npm init -y > /dev/null
           # Install React as peer dependency first
-          npm install react@19
+          npm install react@19 > /dev/null 2>&1
 
-          # Try to install the React SDK (with retries for propagation delay)
+          INSTALLED=0
           for i in 1 2 3; do
-            if npm install @nimbleflux/fluxbase-sdk-react@${VERSION}; then
-              echo "✅ React SDK installed successfully"
+            sleep 10
+            if npm install "${PACKAGE}@${VERSION}" > /tmp/sdk-install.log 2>&1; then
+              INSTALLED=1
               break
-            else
-              echo "Attempt $i failed, retrying in 30s..."
-              sleep 30
             fi
+            echo "Attempt $i failed, retrying in 30s..."
+            cat /tmp/sdk-install.log
+            sleep 30
           done
 
-          # Verify the package is installed
-          if [ -d "node_modules/@nimbleflux/fluxbase-sdk-react" ]; then
-            echo "✅ NPM React SDK smoke test passed"
-            npm list @nimbleflux/fluxbase-sdk-react
-          else
-            echo "::warning::React SDK installation verification failed"
+          if [ "$INSTALLED" != "1" ]; then
+            echo "::error::${PACKAGE}@${VERSION} could not be installed after 3 attempts"
+            exit 1
           fi
+
+          echo "✅ NPM React SDK smoke test passed"
+          npm list "${PACKAGE}"
 
       - name: Test NPM Svelte SDK installation
         if: needs.publish-npm-sdk-svelte.result == 'success'
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
+          PACKAGE="@nimbleflux/fluxbase-sdk-svelte"
 
-          echo "Testing NPM Svelte SDK installation: @nimbleflux/fluxbase-sdk-svelte@${VERSION}"
+          mkdir -p /tmp/sdk-svelte-test && cd /tmp/sdk-svelte-test
+          npm init -y > /dev/null
 
-          mkdir -p /tmp/sdk-svelte-test
-          cd /tmp/sdk-svelte-test
-          npm init -y
-          sleep 10
-
+          INSTALLED=0
           for i in 1 2 3; do
-            if npm install @nimbleflux/fluxbase-sdk-svelte@${VERSION}; then
-              echo "✅ Svelte SDK installed successfully"
+            sleep 10
+            if npm install "${PACKAGE}@${VERSION}" > /tmp/sdk-install.log 2>&1; then
+              INSTALLED=1
               break
-            else
-              echo "Attempt $i failed, retrying in 30s..."
-              sleep 30
             fi
+            echo "Attempt $i failed, retrying in 30s..."
+            cat /tmp/sdk-install.log
+            sleep 30
           done
 
-          if [ -d "node_modules/@nimbleflux/fluxbase-sdk-svelte" ]; then
-            echo "✅ NPM Svelte SDK smoke test passed"
-            npm list @nimbleflux/fluxbase-sdk-svelte
-          else
-            echo "::warning::Svelte SDK installation verification failed"
+          if [ "$INSTALLED" != "1" ]; then
+            echo "::error::${PACKAGE}@${VERSION} could not be installed after 3 attempts"
+            exit 1
           fi
+
+          echo "✅ NPM Svelte SDK smoke test passed"
+          npm list "${PACKAGE}"
 
       - name: Test NPM Next.js SDK installation
         if: needs.publish-npm-sdk-next.result == 'success'
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
+          PACKAGE="@nimbleflux/fluxbase-sdk-next"
 
-          echo "Testing NPM Next.js SDK installation: @nimbleflux/fluxbase-sdk-next@${VERSION}"
+          mkdir -p /tmp/sdk-next-test && cd /tmp/sdk-next-test
+          npm init -y > /dev/null
 
-          mkdir -p /tmp/sdk-next-test
-          cd /tmp/sdk-next-test
-          npm init -y
-          sleep 10
-
+          INSTALLED=0
           for i in 1 2 3; do
-            if npm install @nimbleflux/fluxbase-sdk-next@${VERSION}; then
-              echo "✅ Next.js SDK installed successfully"
+            sleep 10
+            if npm install "${PACKAGE}@${VERSION}" > /tmp/sdk-install.log 2>&1; then
+              INSTALLED=1
               break
-            else
-              echo "Attempt $i failed, retrying in 30s..."
-              sleep 30
             fi
+            echo "Attempt $i failed, retrying in 30s..."
+            cat /tmp/sdk-install.log
+            sleep 30
           done
 
-          if [ -d "node_modules/@nimbleflux/fluxbase-sdk-next" ]; then
-            echo "✅ NPM Next.js SDK smoke test passed"
-            npm list @nimbleflux/fluxbase-sdk-next
-          else
-            echo "::warning::Next.js SDK installation verification failed"
+          if [ "$INSTALLED" != "1" ]; then
+            echo "::error::${PACKAGE}@${VERSION} could not be installed after 3 attempts"
+            exit 1
           fi
+
+          echo "✅ NPM Next.js SDK smoke test passed"
+          npm list "${PACKAGE}"
 
       - name: Test NPM Vue SDK installation
         if: needs.publish-npm-sdk-vue.result == 'success'
         run: |
           VERSION="${{ needs.get-version.outputs.version }}"
+          PACKAGE="@nimbleflux/fluxbase-sdk-vue"
 
-          echo "Testing NPM Vue SDK installation: @nimbleflux/fluxbase-sdk-vue@${VERSION}"
+          mkdir -p /tmp/sdk-vue-test && cd /tmp/sdk-vue-test
+          npm init -y > /dev/null
 
-          mkdir -p /tmp/sdk-vue-test
-          cd /tmp/sdk-vue-test
-          npm init -y
-          sleep 10
-
+          INSTALLED=0
           for i in 1 2 3; do
-            if npm install @nimbleflux/fluxbase-sdk-vue@${VERSION}; then
-              echo "✅ Vue SDK installed successfully"
+            sleep 10
+            if npm install "${PACKAGE}@${VERSION}" > /tmp/sdk-install.log 2>&1; then
+              INSTALLED=1
               break
-            else
-              echo "Attempt $i failed, retrying in 30s..."
-              sleep 30
             fi
+            echo "Attempt $i failed, retrying in 30s..."
+            cat /tmp/sdk-install.log
+            sleep 30
           done
 
-          if [ -d "node_modules/@nimbleflux/fluxbase-sdk-vue" ]; then
-            echo "✅ NPM Vue SDK smoke test passed"
-            npm list @nimbleflux/fluxbase-sdk-vue
+          if [ "$INSTALLED" != "1" ]; then
+            echo "::error::${PACKAGE}@${VERSION} could not be installed after 3 attempts"
+            exit 1
+          fi
+
+          echo "✅ NPM Vue SDK smoke test passed"
+          npm list "${PACKAGE}"
+
+      - name: Open release-blocker issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.get-version.outputs.tag_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="Release smoke test failed for ${TAG}"
+          BODY="The post-release smoke tests failed for \`${TAG}\`.
+
+          While this issue is open, \`pre-release-checks\` refuses to cut the next release.
+
+          Run: ${RUN_URL}
+
+          Fix, re-run the failed jobs to complete the release, then close this issue."
+
+          # One open blocker per release tag: comment on the existing issue
+          # instead of piling up duplicates across re-runs.
+          EXISTING=$(gh issue list --label release-blocker --state open \
+            --json number,title --jq ".[] | select(.title == \"${TITLE}\") | .number" | head -n1)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Smoke test failed again: ${RUN_URL}"
           else
-            echo "::warning::Vue SDK installation verification failed"
+            gh issue create --label release-blocker --title "$TITLE" --body "$BODY"
           fi
 
       - name: Report smoke test results

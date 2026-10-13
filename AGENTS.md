@@ -517,6 +517,12 @@ Git pre-commit hooks automatically run:
 - **TypeScript**: ESLint must pass
 - **Tests**: Coverage thresholds enforced (25% overall)
 - **Build**: Cross-platform builds (Linux/amd64 + Linux/arm64)
+- **Releasing**: exclusively via the Release workflow (`.github/workflows/release.yml`) —
+  runbook in [RELEASING.md](RELEASING.md); `make release [TYPE=rc|stable] [DRY_RUN=true]`,
+  never hand-push `v*` tags. Release notes/CHANGELOG.md are generated from
+  conventional commits (`cliff.toml`) — don't hand-edit release sections.
+  All version-carrying files are written only by `scripts/set-version.sh`
+  (`make bump-*` locally); CI's `version-drift` job fails hand-edited copies.
 
 ## Patterns
 

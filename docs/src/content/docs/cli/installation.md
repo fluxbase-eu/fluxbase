@@ -81,7 +81,7 @@ Move-Item -Path "fluxbase-windows-amd64.exe" -Destination "C:\Program Files\Flux
 
 ### From Source
 
-If you have Go 1.25+ installed, you can build the CLI from source:
+If you have Go 1.26+ installed, you can build the CLI from source:
 
 ```bash
 # Clone the repository
@@ -103,10 +103,13 @@ fluxbase version
 Expected output:
 
 ```
-fluxbase version 0.0.1
-commit: abc1234
-built: 2024-01-15T10:30:00Z
+Fluxbase CLI 2026.9.10
+Commit: 527ef930fac62cf49fad3ed9b057762cc8172169
+Build Date: 2026-09-25T12:00:00Z
 ```
+
+(Release binaries carry the real version; builds from source without
+ldflags report the module version and VCS revision instead.)
 
 ## Updating
 

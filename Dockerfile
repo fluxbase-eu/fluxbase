@@ -143,9 +143,9 @@ RUN set -eux; \
     CGO_ENABLED=1 GOOS=linux go build \
       -tags "$BUILD_TAGS" \
       -ldflags="-w -s \
-        -X main.Version=${VERSION} \
-        -X main.Commit=${COMMIT} \
-        -X main.BuildDate=${BUILD_DATE}" \
+        -X github.com/nimbleflux/fluxbase/internal/buildinfo.version=${VERSION} \
+        -X github.com/nimbleflux/fluxbase/internal/buildinfo.commit=${COMMIT} \
+        -X github.com/nimbleflux/fluxbase/internal/buildinfo.buildDate=${BUILD_DATE}" \
       -o fluxbase-server \
       ./cmd/fluxbase
 

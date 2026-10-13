@@ -53,7 +53,7 @@ Install these regardless of which build mode you choose:
 
 | Tool | Version | Why | Install |
 | --- | --- | --- | --- |
-| [Go](https://go.dev/dl/) | 1.25+ | Build the server and CLI | `brew install go` / [downloads](https://go.dev/dl/) |
+| [Go](https://go.dev/dl/) | 1.26+ | Build the server and CLI | `brew install go` / [downloads](https://go.dev/dl/) |
 | [Bun](https://bun.sh/) (or Node.js 20+) | latest | Admin UI + embedded SDKs | `brew install bun` |
 | [Deno](https://deno.land/) | latest | Edge functions runtime | `brew install deno` |
 | [PostgreSQL](https://www.postgresql.org/) | 16+ with [pgvector](https://github.com/pgvector/pgvector) | Target database | `brew install postgresql@16` |
