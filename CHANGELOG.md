@@ -37,6 +37,12 @@ hand-edit release sections. See RELEASING.md for the release process.
 
 - **ci:** Scope gitleaks allowlist to the contract-drift fixture values (#434) @bartcode
 
+- **release:** Grant attestations:write for binary provenance @bartcode
+
+- **test:** Don't keep idle spare connections in the auth test pool @bartcode
+
+- **release:** Detect half-published Kotlin versions instead of 409ing (#437) @bartcode
+
 
 ### CI
 
@@ -88,6 +94,8 @@ hand-edit release sections. See RELEASING.md for the release process.
 - **lint:** Golangci-lint v2.14 + re-enable staticcheck and full errorlint (#425) @bartcode
 
 - **ci:** Retry transient lychee 503s; ignore contract-drift fixture fingerprints (#432) @bartcode
+
+- Update version to 2026.10.1 in deployment files @github-actions[bot]
 
 - Update version to 2026.10.1 in deployment files @github-actions[bot]
 
