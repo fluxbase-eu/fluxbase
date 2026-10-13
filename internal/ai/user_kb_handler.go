@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/nimbleflux/fluxbase/internal/middleware"
@@ -14,6 +16,12 @@ type UserKnowledgeBaseHandler struct {
 	processor      *DocumentProcessor
 	storageService *storage.Service
 	textExtractor  *TextExtractor
+	reranker       Reranker
+}
+
+// SetReranker wires an optional reranker into the user search endpoints.
+func (h *UserKnowledgeBaseHandler) SetReranker(r Reranker) {
+	h.reranker = r
 }
 
 // NewUserKnowledgeBaseHandler creates a new user KB handler
@@ -235,6 +243,80 @@ func (h *UserKnowledgeBaseHandler) RevokePermission(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to revoke permission",
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// UpdateMyKnowledgeBase updates a KB the user owns or has editor permission on
+// PATCH /api/v1/ai/knowledge-bases/:id
+func (h *UserKnowledgeBaseHandler) UpdateMyKnowledgeBase(c fiber.Ctx) error {
+	ctx := middleware.CtxWithTenant(c)
+	userID := middleware.GetUserID(c)
+	kbID := c.Params("id")
+
+	hasPermission, err := h.storage.CheckKBPermission(ctx, kbID, userID, string(KBPermissionEditor))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to check permission",
+		})
+	}
+	if !hasPermission {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Editor permission required",
+		})
+	}
+
+	var req UpdateKnowledgeBaseRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	kb, err := h.storage.UpdateKnowledgeBaseByID(ctx, kbID, req)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid entity_extraction_strategy") {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update knowledge base",
+		})
+	}
+	if kb == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Knowledge base not found",
+		})
+	}
+
+	return c.JSON(kb)
+}
+
+// DeleteMyKnowledgeBase deletes a KB the user owns
+// DELETE /api/v1/ai/knowledge-bases/:id
+func (h *UserKnowledgeBaseHandler) DeleteMyKnowledgeBase(c fiber.Ctx) error {
+	ctx := middleware.CtxWithTenant(c)
+	userID := middleware.GetUserID(c)
+	kbID := c.Params("id")
+
+	kb, err := h.storage.GetKnowledgeBase(ctx, kbID)
+	if err != nil || kb == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Knowledge base not found",
+		})
+	}
+	if kb.OwnerID == nil || *kb.OwnerID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Only owner can delete knowledge base",
+		})
+	}
+
+	if err := h.storage.DeleteKnowledgeBase(ctx, kbID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete knowledge base",
 		})
 	}
 

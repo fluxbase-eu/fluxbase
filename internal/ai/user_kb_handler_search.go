@@ -55,10 +55,33 @@ func (h *UserKnowledgeBaseHandler) SearchMyKB(c fiber.Ctx) error {
 		Filter: &MetadataFilter{UserID: &userID, IncludeGlobal: true},
 	}
 
-	// If processor has embedding service, use hybrid search
-	if h.processor != nil && h.processor.embeddingService != nil {
-		embedding, err := h.processor.embeddingService.EmbedSingle(ctx, req.Query, "")
-		if err == nil && len(embedding) > 0 {
+	// Request-level search options (aligned with the admin search endpoint).
+	// "semantic"/"hybrid" require an embedding service; fall back to keyword
+	// when unavailable.
+	switch req.Mode {
+	case "semantic", "hybrid":
+		if h.processor != nil && h.processor.embeddingService != nil {
+			if embedding, err := h.processor.embeddingService.EmbedSingle(ctx, req.Query, ""); err == nil && len(embedding) > 0 {
+				opts.QueryEmbedding = embedding
+				opts.Mode = SearchModeHybrid
+				if req.Mode == "semantic" {
+					opts.SemanticWeight = 1.0
+				} else {
+					opts.SemanticWeight = 0.7
+				}
+			}
+		}
+	}
+	if req.SemanticWeight > 0 {
+		opts.SemanticWeight = req.SemanticWeight
+	}
+	if req.Threshold > 0 {
+		opts.Threshold = req.Threshold
+	}
+
+	// If processor has embedding service and no explicit keyword mode, use hybrid search
+	if opts.Mode == SearchModeKeyword && req.Mode == "" && h.processor != nil && h.processor.embeddingService != nil {
+		if embedding, err := h.processor.embeddingService.EmbedSingle(ctx, req.Query, ""); err == nil && len(embedding) > 0 {
 			opts.QueryEmbedding = embedding
 			opts.Mode = SearchModeHybrid
 			opts.SemanticWeight = 0.7
@@ -71,6 +94,19 @@ func (h *UserKnowledgeBaseHandler) SearchMyKB(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Search failed",
 		})
+	}
+
+	// Optional rerank: request flag overrides the KB's rerank_enabled opt-in.
+	if h.reranker != nil && len(results) > 1 {
+		shouldRerank := false
+		if req.Rerank != nil {
+			shouldRerank = *req.Rerank
+		} else if kb, kbErr := h.storage.GetKnowledgeBase(ctx, kbID); kbErr == nil && kb != nil {
+			shouldRerank = kb.RerankEnabled
+		}
+		if shouldRerank {
+			results = rerankResults(ctx, h.reranker, req.Query, results, req.Limit, nil)
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -167,8 +203,12 @@ func (h *UserKnowledgeBaseHandler) DebugSearchMyKB(c fiber.Ctx) error {
 	})
 }
 
-// SearchRequest represents a search request
+// SearchRequest represents a search request for the user KB search endpoint
 type SearchRequest struct {
-	Query string `json:"query"`
-	Limit int    `json:"limit,omitempty"`
+	Query          string  `json:"query"`
+	Limit          int     `json:"limit,omitempty"`
+	Mode           string  `json:"mode,omitempty"`            // "semantic", "keyword", or "hybrid" (default: hybrid when embeddings available, else keyword)
+	SemanticWeight float64 `json:"semantic_weight,omitempty"` // For hybrid mode: 0-1, default 0.7
+	Threshold      float64 `json:"threshold,omitempty"`       // Minimum semantic similarity, default 0 (no floor)
+	Rerank         *bool   `json:"rerank,omitempty"`          // Override KB rerank opt-in (requires a configured reranker)
 }

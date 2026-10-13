@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
@@ -352,6 +354,24 @@ func setDefaults() {
 	viper.SetDefault("ai.ocr_enabled", true)              // Enabled by default (will gracefully degrade if Tesseract not installed)
 	viper.SetDefault("ai.ocr_provider", "tesseract")      // Default OCR provider
 	viper.SetDefault("ai.ocr_languages", []string{"eng"}) // Default to English
+
+	// AI Entity Extraction defaults (knowledge graph quality)
+	viper.SetDefault("ai.entity_extraction_strategy", "rules") // rules (regex, default) | llm | hybrid
+	viper.SetDefault("ai.entity_extraction_max_tokens", 2000)  // Max tokens per LLM extraction request
+	viper.SetDefault("ai.entity_extraction_min_text_chars", 200)
+	viper.SetDefault("ai.entity_extraction_timeout", "60s")
+
+	// AI Rerank defaults (RAG retrieval quality)
+	viper.SetDefault("ai.rerank_enabled", false)  // Disabled by default
+	viper.SetDefault("ai.rerank_provider", "llm") // llm (default chat provider) | cohere
+	viper.SetDefault("ai.rerank_model", "")       // Empty = provider default
+	viper.SetDefault("ai.rerank_api_key", "")
+	viper.SetDefault("ai.rerank_base_url", "")
+	viper.SetDefault("ai.rerank_top_n", 10)
+	viper.SetDefault("ai.rerank_timeout", "10s")
+
+	// AI Response Cache defaults
+	viper.SetDefault("ai.response_cache_ttl", time.Hour) // 0s disables globally
 
 	// RPC defaults
 	viper.SetDefault("rpc.enabled", true)           // Enabled by default (controlled by feature flag at runtime)

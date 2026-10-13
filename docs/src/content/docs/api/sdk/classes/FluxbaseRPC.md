@@ -45,7 +45,7 @@ const { data: status } = await fluxbase.rpc.getStatus(asyncResult.execution_id);
 
 ### getLogs()
 
-> **getLogs**(`executionId`, `afterLine?`): `Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **getLogs**(`executionId`, `afterLine?`): `Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get execution logs (for debugging and monitoring)
 
@@ -58,7 +58,7 @@ Get execution logs (for debugging and monitoring)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution logs
 
@@ -75,7 +75,7 @@ for (const log of logs) {
 
 ### getStatus()
 
-> **getStatus**(`executionId`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getStatus**(`executionId`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get execution status (for async invocations or checking history)
 
@@ -87,7 +87,7 @@ Get execution status (for async invocations or checking history)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution details
 
@@ -106,7 +106,7 @@ if (data.status === 'completed') {
 
 ### invoke()
 
-> **invoke**\<`T`\>(`name`, `params?`, `options?`): `Promise`\<\{ `data`: [`RPCInvokeResponse`](/api/sdk/interfaces/rpcinvokeresponse/)\<`T`\> \| `null`; `error`: `Error` \| `null`; \}\>
+> **invoke**\<`T`\>(`name`, `params?`, `options?`): `Promise`\<\{ `data`: [`RPCInvokeResponse`](/api/sdk/interfaces/rpcinvokeresponse/)\<`T`\> \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Invoke an RPC procedure
 
@@ -126,7 +126,7 @@ Invoke an RPC procedure
 
 #### Returns
 
-`Promise`\<\{ `data`: [`RPCInvokeResponse`](/api/sdk/interfaces/rpcinvokeresponse/)\<`T`\> \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`RPCInvokeResponse`](/api/sdk/interfaces/rpcinvokeresponse/)\<`T`\> \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with invocation response
 
@@ -151,7 +151,7 @@ console.log(asyncData.execution_id); // Use to poll status
 
 ### list()
 
-> **list**(`namespace?`): `Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(`namespace?`): `Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List available RPC procedures (public, enabled)
 
@@ -163,7 +163,7 @@ List available RPC procedures (public, enabled)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`RPCProcedureSummary`](/api/sdk/interfaces/rpcproceduresummary/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of procedure summaries
 
@@ -171,7 +171,7 @@ Promise resolving to { data, error } tuple with array of procedure summaries
 
 ### waitForCompletion()
 
-> **waitForCompletion**(`executionId`, `options?`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **waitForCompletion**(`executionId`, `options?`): `Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Poll for execution completion with exponential backoff
 
@@ -188,7 +188,7 @@ Poll for execution completion with exponential backoff
 
 #### Returns
 
-`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`RPCExecution`](/api/sdk/interfaces/rpcexecution/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to final execution state
 

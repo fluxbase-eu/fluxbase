@@ -24,6 +24,199 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get AI audit log
+         * @description Generated-SQL audit trail for AI chatbot queries.
+         */
+        get: operations["ai_admin_audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List AI conversations */
+        get: operations["ai_admin_conversations_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get AI conversation messages */
+        get: operations["ai_admin_conversation_messages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/knowledge-bases/{id}/sync-configs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List sync configs */
+        get: operations["ai_admin_sync_config_list"];
+        put?: never;
+        /** Create sync config */
+        post: operations["ai_admin_sync_config_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/knowledge-bases/{id}/sync-configs/{syncId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete sync config */
+        delete: operations["ai_admin_sync_config_delete"];
+        options?: never;
+        head?: never;
+        /** Update sync config */
+        patch: operations["ai_admin_sync_config_update"];
+        trace?: never;
+    };
+    "/api/v1/admin/ai/knowledge-bases/{id}/sync-configs/{syncId}/trigger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger sync */
+        post: operations["ai_admin_sync_config_trigger"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/knowledge-bases/{kb_id}/documents/{doc_id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List document permissions */
+        get: operations["ai_admin_doc_perm_list"];
+        put?: never;
+        /** Grant document permission */
+        post: operations["ai_admin_doc_perm_grant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/knowledge-bases/{kb_id}/documents/{doc_id}/permissions/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke document permission */
+        delete: operations["ai_admin_doc_perm_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get AI metrics */
+        get: operations["ai_admin_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List exportable tables */
+        get: operations["ai_admin_tables_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/tables/{schema}/{table}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Export table to knowledge base */
+        post: operations["ai_admin_table_export"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/auth/sessions": {
         parameters: {
             query?: never;
@@ -546,6 +739,51 @@ export interface paths {
          * @description Update conversation (e.g., title)
          */
         patch: operations["ai_conversation_update"];
+        trace?: never;
+    };
+    "/api/v1/ai/knowledge-bases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get knowledge base */
+        get: operations["ai_kb_user_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete knowledge base
+         * @description Delete a knowledge base the caller owns. Removes all documents and chunks.
+         */
+        delete: operations["ai_kb_user_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update knowledge base
+         * @description Update a knowledge base the caller owns or has editor permission on.
+         */
+        patch: operations["ai_kb_user_update"];
+        trace?: never;
+    };
+    "/api/v1/ai/knowledge-bases/{id}/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search knowledge base
+         * @description Hybrid (reciprocal rank fusion) search with optional reranking. Per-user isolation applies.
+         */
+        post: operations["ai_kb_user_search"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/auth/account": {
@@ -3384,6 +3622,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AIMetrics: {
+            active_conversations?: number;
+            avg_response_time_ms?: number;
+            error_rate?: number;
+            total_completion_tokens?: number;
+            total_conversations?: number;
+            total_prompt_tokens?: number;
+            total_requests?: number;
+            total_tokens?: number;
+        };
         APIKey: {
             /** Format: date-time */
             created_at?: string;
@@ -3575,6 +3823,64 @@ export interface components {
             started_at?: string;
             status?: string;
         };
+        KBSearchRequest: {
+            limit?: number;
+            /** @enum {string} */
+            mode?: string;
+            query: string;
+            rerank?: boolean;
+            semantic_weight?: number;
+            threshold?: number;
+        };
+        KBSearchResult: {
+            chunk_id?: string;
+            content?: string;
+            document_id?: string;
+            document_title?: string;
+            knowledge_base_name?: string;
+            similarity?: number;
+        };
+        KnowledgeBase: {
+            chunk_overlap?: number;
+            chunk_size?: number;
+            chunk_strategy?: string;
+            /** Format: date-time */
+            created_at?: string;
+            description?: string;
+            document_count?: number;
+            embedding_dimensions?: number;
+            embedding_model?: string;
+            enabled?: boolean;
+            entity_extraction_enabled?: boolean;
+            /** @enum {string} */
+            entity_extraction_strategy?: string;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            namespace?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            rerank_enabled?: boolean;
+            total_chunks?: number;
+            /** Format: date-time */
+            updated_at?: string;
+            /** @enum {string} */
+            visibility?: string;
+        };
+        KnowledgeBaseDocument: {
+            chunks_count?: number;
+            content?: string;
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            knowledge_base_id?: string;
+            mime_type?: string;
+            source_type?: string;
+            /** @enum {string} */
+            status?: string;
+            tags?: string[];
+            title?: string;
+        };
         MCPResource: {
             allow_env?: boolean;
             allow_net?: boolean;
@@ -3737,6 +4043,22 @@ export interface components {
             requests?: number;
             /** Format: date-time */
             timestamp?: string;
+        };
+        TableExportSyncConfig: {
+            debounce_seconds?: number;
+            /** Format: uuid */
+            id?: string;
+            include_foreign_keys?: boolean;
+            include_indexes?: boolean;
+            /** Format: uuid */
+            knowledge_base_id?: string;
+            schema_name?: string;
+            /** @enum {string} */
+            sync_mode?: string;
+            sync_on_delete?: boolean;
+            sync_on_insert?: boolean;
+            sync_on_update?: boolean;
+            table_name?: string;
         };
         TokenResponse: {
             access_token: string;
@@ -4501,6 +4823,363 @@ export interface operations {
         responses: {
             /** @description Switching Protocols - WebSocket connection established */
             101: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_audit: {
+        parameters: {
+            query?: {
+                chatbot_id?: string;
+                user_id?: string;
+                success?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Audit log entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_conversations_list: {
+        parameters: {
+            query?: {
+                chatbot_id?: string;
+                user_id?: string;
+                status?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversations with total count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_conversation_messages: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Messages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_sync_config_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sync configs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableExportSyncConfig"][];
+                };
+            };
+        };
+    };
+    ai_admin_sync_config_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    columns?: string[];
+                    debounce_seconds?: number;
+                    include_foreign_keys?: boolean;
+                    include_indexes?: boolean;
+                    schema_name?: string;
+                    /** @enum {string} */
+                    sync_mode?: string;
+                    sync_on_delete?: boolean;
+                    sync_on_insert?: boolean;
+                    sync_on_update?: boolean;
+                    table_name?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created sync config */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableExportSyncConfig"];
+                };
+            };
+        };
+    };
+    ai_admin_sync_config_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                syncId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_sync_config_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                syncId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    columns?: string[];
+                    debounce_seconds?: number;
+                    include_foreign_keys?: boolean;
+                    include_indexes?: boolean;
+                    schema_name?: string;
+                    /** @enum {string} */
+                    sync_mode?: string;
+                    sync_on_delete?: boolean;
+                    sync_on_insert?: boolean;
+                    sync_on_update?: boolean;
+                    table_name?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated sync config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableExportSyncConfig"];
+                };
+            };
+        };
+    };
+    ai_admin_sync_config_trigger: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                syncId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sync result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_doc_perm_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kb_id: string;
+                doc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Permission grants */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_doc_perm_grant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kb_id: string;
+                doc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    permission: string;
+                    /** Format: uuid */
+                    user_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Permission granted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_doc_perm_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kb_id: string;
+                doc_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Permission revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_metrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aggregated AI metrics */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIMetrics"];
+                };
+            };
+        };
+    };
+    ai_admin_tables_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tables available for knowledge base export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_admin_table_export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schema: string;
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    columns?: string[];
+                    include_foreign_keys?: boolean;
+                    include_indexes?: boolean;
+                    include_sample_rows?: boolean;
+                    /** Format: uuid */
+                    knowledge_base_id: string;
+                    sample_row_count?: number;
+                    user_id_column?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Export result with document id */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5351,6 +6030,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Conversation"];
+                };
+            };
+        };
+    };
+    ai_kb_user_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Knowledge base */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeBase"];
+                };
+            };
+        };
+    };
+    ai_kb_user_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Knowledge base deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only owner can delete */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Knowledge base not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_kb_user_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    chunk_overlap?: number;
+                    chunk_size?: number;
+                    chunk_strategy?: string;
+                    description?: string;
+                    enabled?: boolean;
+                    entity_extraction_enabled?: boolean;
+                    /** @enum {string} */
+                    entity_extraction_strategy?: string;
+                    name?: string;
+                    rerank_enabled?: boolean;
+                    /** @enum {string} */
+                    visibility?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated knowledge base */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeBase"];
+                };
+            };
+            /** @description Editor permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Knowledge base not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ai_kb_user_search: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KBSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Search results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        count?: number;
+                        results?: components["schemas"]["KBSearchResult"][];
+                    };
                 };
             };
         };

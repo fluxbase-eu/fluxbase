@@ -25,7 +25,7 @@ title: "FluxbaseStorage"
 
 ### createBucket()
 
-> **createBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `name`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **createBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `name`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Create a new bucket
 
@@ -37,13 +37,13 @@ Create a new bucket
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `name`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `name`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### deleteBucket()
 
-> **deleteBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **deleteBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a bucket
 
@@ -55,13 +55,13 @@ Delete a bucket
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### emptyBucket()
 
-> **emptyBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **emptyBucket**(`bucketName`): `Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Empty a bucket (delete all files)
 
@@ -73,7 +73,7 @@ Empty a bucket (delete all files)
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `message`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
@@ -97,7 +97,7 @@ Get a reference to a storage bucket
 
 ### getBucket()
 
-> **getBucket**(`bucketName`): `Promise`\<\{ `data`: `Bucket` \| `null`; `error`: `Error` \| `null`; \}\>
+> **getBucket**(`bucketName`): `Promise`\<\{ `data`: `Bucket` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get bucket details
 
@@ -109,25 +109,25 @@ Get bucket details
 
 #### Returns
 
-`Promise`\<\{ `data`: `Bucket` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `Bucket` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### listBuckets()
 
-> **listBuckets**(): `Promise`\<\{ `data`: `object`[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listBuckets**(): `Promise`\<\{ `data`: `object`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all buckets
 
 #### Returns
 
-`Promise`\<\{ `data`: `object`[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `object`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### updateBucketSettings()
 
-> **updateBucketSettings**(`bucketName`, `settings`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **updateBucketSettings**(`bucketName`, `settings`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update bucket settings (RLS - requires admin or service key)
 
@@ -140,4 +140,4 @@ Update bucket settings (RLS - requires admin or service key)
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>

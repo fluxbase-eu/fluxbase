@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,8 +43,8 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 				embedding_model, embedding_dimensions,
 				chunk_size, chunk_overlap, chunk_strategy,
 				enabled, source, created_by, visibility, owner_id,
-				entity_extraction_enabled
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+				entity_extraction_enabled, entity_extraction_strategy, rerank_enabled
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 			RETURNING created_at, updated_at
 		`
 
@@ -53,7 +54,7 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBase(ctx context.Context, kb *Know
 			kb.EmbeddingModel, kb.EmbeddingDimensions,
 			kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
 			kb.Enabled, kb.Source, kb.CreatedBy, kb.Visibility, kb.OwnerID,
-			kb.EntityExtractionEnabled,
+			kb.EntityExtractionEnabled, kb.EntityExtractionStrategy, kb.RerankEnabled,
 		).Scan(&kb.CreatedAt, &kb.UpdatedAt)
 	})
 }
@@ -69,7 +70,8 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 				chunk_size, chunk_overlap, chunk_strategy,
 				enabled, document_count, total_chunks,
 				source, created_by, created_at, updated_at,
-				visibility, owner_id, entity_extraction_enabled
+				visibility, owner_id, entity_extraction_enabled,
+				COALESCE(entity_extraction_strategy, ''), rerank_enabled
 			FROM ai.knowledge_bases
 			WHERE id = $1
 			  AND (tenant_id = $2 OR ($2 IS NULL AND tenant_id IS NULL))
@@ -82,6 +84,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBase(ctx context.Context, id string) 
 			&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
 			&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
 			&kb.Visibility, &kb.OwnerID, &kb.EntityExtractionEnabled,
+			&kb.EntityExtractionStrategy, &kb.RerankEnabled,
 		)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -104,7 +107,8 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBaseByName(ctx context.Context, name,
 				chunk_size, chunk_overlap, chunk_strategy,
 				enabled, document_count, total_chunks,
 				source, created_by, created_at, updated_at, visibility,
-				entity_extraction_enabled
+				entity_extraction_enabled,
+				COALESCE(entity_extraction_strategy, ''), rerank_enabled
 			FROM ai.knowledge_bases
 			WHERE name = $1 AND namespace = $2
 			  AND (tenant_id = $3 OR ($3 IS NULL AND tenant_id IS NULL))
@@ -117,6 +121,7 @@ func (s *KnowledgeBaseStorage) GetKnowledgeBaseByName(ctx context.Context, name,
 			&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
 			&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt, &kb.Visibility,
 			&kb.EntityExtractionEnabled,
+			&kb.EntityExtractionStrategy, &kb.RerankEnabled,
 		)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -139,7 +144,8 @@ func (s *KnowledgeBaseStorage) ListKnowledgeBases(ctx context.Context, namespace
 				chunk_size, chunk_overlap, chunk_strategy,
 				enabled, document_count, total_chunks,
 				source, created_by, created_at, updated_at,
-				entity_extraction_enabled
+				entity_extraction_enabled,
+				COALESCE(entity_extraction_strategy, ''), rerank_enabled
 			FROM ai.knowledge_bases
 			WHERE (tenant_id = $1 OR ($1 IS NULL AND tenant_id IS NULL))
 			  AND ($2 = '' OR namespace = $2)
@@ -162,6 +168,7 @@ func (s *KnowledgeBaseStorage) ListKnowledgeBases(ctx context.Context, namespace
 				&kb.Enabled, &kb.DocumentCount, &kb.TotalChunks,
 				&kb.Source, &kb.CreatedBy, &kb.CreatedAt, &kb.UpdatedAt,
 				&kb.EntityExtractionEnabled,
+				&kb.EntityExtractionStrategy, &kb.RerankEnabled,
 			); err != nil {
 				log.Warn().Err(err).Msg("Failed to scan knowledge base row")
 				continue
@@ -195,6 +202,8 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 				created_by = $11,
 				owner_id = $12,
 				entity_extraction_enabled = $13,
+				entity_extraction_strategy = $14,
+				rerank_enabled = $15,
 				updated_at = NOW()
 			WHERE id = $1
 			RETURNING updated_at
@@ -206,7 +215,7 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBase(ctx context.Context, kb *Know
 			kb.EmbeddingModel, kb.EmbeddingDimensions,
 			kb.ChunkSize, kb.ChunkOverlap, kb.ChunkStrategy,
 			kb.Enabled, kb.Visibility, kb.CreatedBy, kb.OwnerID,
-			kb.EntityExtractionEnabled,
+			kb.EntityExtractionEnabled, kb.EntityExtractionStrategy, kb.RerankEnabled,
 		).Scan(&kb.UpdatedAt)
 	})
 }
@@ -285,6 +294,19 @@ func (s *KnowledgeBaseStorage) CreateKnowledgeBaseFromRequest(ctx context.Contex
 	} else {
 		kb.EntityExtractionEnabled = true
 	}
+	if req.EntityExtractionStrategy != "" {
+		if !IsValidExtractionStrategy(req.EntityExtractionStrategy) {
+			return nil, fmt.Errorf("invalid entity_extraction_strategy %q: must be one of rules, llm, hybrid", req.EntityExtractionStrategy)
+		}
+		kb.EntityExtractionStrategy = strings.ToLower(strings.TrimSpace(req.EntityExtractionStrategy))
+	}
+
+	// Rerank participation defaults to true; explicit false opts out.
+	if req.RerankEnabled != nil {
+		kb.RerankEnabled = *req.RerankEnabled
+	} else {
+		kb.RerankEnabled = true
+	}
 
 	if err := s.CreateKnowledgeBase(ctx, kb); err != nil {
 		return nil, err
@@ -338,6 +360,16 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBaseByID(ctx context.Context, id s
 	if req.EntityExtractionEnabled != nil {
 		kb.EntityExtractionEnabled = *req.EntityExtractionEnabled
 	}
+	if req.EntityExtractionStrategy != nil {
+		trimmed := strings.ToLower(strings.TrimSpace(*req.EntityExtractionStrategy))
+		if !IsValidExtractionStrategy(trimmed) {
+			return nil, fmt.Errorf("invalid entity_extraction_strategy %q: must be one of rules, llm, hybrid", *req.EntityExtractionStrategy)
+		}
+		kb.EntityExtractionStrategy = trimmed
+	}
+	if req.RerankEnabled != nil {
+		kb.RerankEnabled = *req.RerankEnabled
+	}
 
 	if err := s.UpdateKnowledgeBase(ctx, kb); err != nil {
 		return nil, err
@@ -349,6 +381,31 @@ func (s *KnowledgeBaseStorage) UpdateKnowledgeBaseByID(ctx context.Context, id s
 // ListAllKnowledgeBases lists all knowledge bases (no filtering)
 func (s *KnowledgeBaseStorage) ListAllKnowledgeBases(ctx context.Context) ([]KnowledgeBase, error) {
 	return s.ListKnowledgeBases(ctx, "", false)
+}
+
+// ChatbotRerankEnabled reports whether any enabled knowledge base linked to
+// the chatbot has opted in to reranking (kb.rerank_enabled) — a single
+// EXISTS query used by the RAG path to decide whether to rerank.
+func (s *KnowledgeBaseStorage) ChatbotRerankEnabled(ctx context.Context, chatbotID string) (bool, error) {
+	var enabled bool
+	err := s.WithTenant(ctx, func(tx pgx.Tx) error {
+		query := `
+			SELECT EXISTS (
+				SELECT 1
+				FROM ai.chatbot_knowledge_bases ckb
+				JOIN ai.knowledge_bases kb ON kb.id = ckb.knowledge_base_id
+				WHERE ckb.chatbot_id = $1
+				  AND ckb.enabled = true
+				  AND kb.enabled = true
+				  AND kb.rerank_enabled = true
+			)
+		`
+		return tx.QueryRow(ctx, query, chatbotID).Scan(&enabled)
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to check chatbot rerank opt-in: %w", err)
+	}
+	return enabled, nil
 }
 
 // UpdateChatbotKnowledgeBaseOptions represents options for updating a link

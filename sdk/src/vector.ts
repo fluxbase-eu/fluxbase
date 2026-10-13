@@ -4,7 +4,7 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type { EmbedRequest, EmbedResponse, FluxbaseError, FluxbaseResponse, VectorSearchOptions, VectorSearchResult } from "./types";
+import type { EmbedRequest, EmbedResponse, FluxbaseError, FluxbaseResponse, VectorCapabilities, VectorSearchOptions, VectorSearchResult } from "./types";
 
 /**
  * FluxbaseVector provides vector search functionality using pgvector
@@ -127,6 +127,19 @@ export class FluxbaseVector {
       );
 
       return { data: response, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Get vector search capabilities (pgvector availability, embedding
+   * provider/model). Admin callers receive extended details.
+   */
+  async getCapabilities(): Promise<FluxbaseResponse<VectorCapabilities>> {
+    try {
+      const data = await this.fetch.get<VectorCapabilities>("/api/v1/capabilities/vector");
+      return { data, error: null };
     } catch (error) {
       return { data: null, error: error as FluxbaseError };
     }

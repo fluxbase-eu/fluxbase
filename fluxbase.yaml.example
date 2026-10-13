@@ -464,7 +464,7 @@ ai:
   # AI Provider Configuration (Optional - defaults to database-configured providers)
   # When configured here, the provider becomes read-only in the dashboard
   # and takes precedence over database providers
-  # provider_type: ""                   # FLUXBASE_AI_PROVIDER_TYPE - Provider type (openai, azure, ollama)
+  # provider_type: ""                   # FLUXBASE_AI_PROVIDER_TYPE - Provider type (openai, azure, ollama, anthropic)
   # provider_name: ""                   # FLUXBASE_AI_PROVIDER_NAME - Provider display name
   # provider_model: ""                  # FLUXBASE_AI_PROVIDER_MODEL - Model name
 
@@ -513,6 +513,39 @@ ai:
   # Available Tesseract language codes (install additional language packs as needed):
   # - eng (English), deu (German), nld (Dutch), fra (French), spa (Spanish), ita (Italian)
   # - por (Portuguese), rus (Russian), chi_sim (Chinese Simplified), jpn (Japanese), kor (Korean)
+
+  # Entity Extraction Configuration (knowledge graph quality)
+  # Strategy used to extract entities/relationships from KB documents:
+  #   rules  - regex/rule-based only (free, fast, default)
+  #   llm    - model-backed extraction (uses the default chat provider; falls
+  #            back to rules automatically if the provider fails)
+  #   hybrid - both merged, deduped by canonical name
+  # Can be overridden per knowledge base via entity_extraction_strategy.
+  entity_extraction_strategy: "rules"   # FLUXBASE_AI_ENTITY_EXTRACTION_STRATEGY - rules | llm | hybrid
+  entity_extraction_max_tokens: 2000    # FLUXBASE_AI_ENTITY_EXTRACTION_MAX_TOKENS - Max tokens per LLM extraction request
+  entity_extraction_min_text_chars: 200 # FLUXBASE_AI_ENTITY_EXTRACTION_MIN_TEXT_CHARS - Skip the LLM below this text length
+  entity_extraction_timeout: "60s"      # FLUXBASE_AI_ENTITY_EXTRACTION_TIMEOUT - Per-extraction-request timeout
+
+  # Rerank Configuration (RAG retrieval quality)
+  # When enabled, retrieved chunks are re-ordered by a relevance model:
+  #   llm    - listwise rerank via the default chat provider (no extra vendor)
+  #   cohere - Cohere Rerank API (requires rerank_api_key)
+  # Individual knowledge bases can opt out via rerank_enabled=false.
+  rerank_enabled: false                 # FLUXBASE_AI_RERANK_ENABLED - Enable reranking
+  rerank_provider: "llm"                # FLUXBASE_AI_RERANK_PROVIDER - llm | cohere
+  rerank_model: ""                      # FLUXBASE_AI_RERANK_MODEL - Model override (cohere default: rerank-v3.5)
+  rerank_api_key: ""                    # FLUXBASE_AI_RERANK_API_KEY - Cohere API key
+  rerank_base_url: ""                   # FLUXBASE_AI_RERANK_BASE_URL - Optional base URL override (cohere)
+  rerank_top_n: 10                      # FLUXBASE_AI_RERANK_TOP_N - Max results kept after reranking
+  rerank_timeout: "10s"                 # FLUXBASE_AI_RERANK_TIMEOUT - Per-rerank-request timeout
+
+  # Semantic Response Cache
+  # Opt-in per chatbot via the @fluxbase:response-cache annotation. Caches
+  # single-turn question/answer pairs and serves them on exact or
+  # near-duplicate (cosine >= 0.95) question match. Entries expire after this
+  # TTL and are invalidated when a linked knowledge base document changes.
+  # Set to "0s" to disable globally.
+  response_cache_ttl: "1h"              # FLUXBASE_AI_RESPONSE_CACHE_TTL
 
 # RPC Procedures Configuration
 rpc:

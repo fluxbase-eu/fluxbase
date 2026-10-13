@@ -5,10 +5,10 @@ prev: false
 title: "useStorageBuckets"
 ---
 
-> **useStorageBuckets**(): `UseQueryResult`\<`NoInfer`\<`object`[]\>, `Error`\>
+> **useStorageBuckets**(): `UseQueryResult`\<`object`[], `Error`\>
 
 Hook to manage buckets
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`object`[]\>, `Error`\>
+`UseQueryResult`\<`object`[], `Error`\>

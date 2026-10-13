@@ -288,6 +288,16 @@ The MCP server implements JSON-RPC 2.0 with the following methods:
 }
 ```
 
+### Server-Initiated Notifications
+
+A `GET /mcp` request with `Accept: text/event-stream` (same auth as POST)
+opens a long-lived SSE stream. The server pushes JSON-RPC notifications over
+this stream — currently `notifications/tools/list_changed` and
+`notifications/resources/list_changed` when custom tools or resources are
+reloaded — so connected clients know to re-fetch their tool/resource lists.
+Keep-alive comments are sent every 30 seconds; the stream ends when the
+client disconnects.
+
 ## Security
 
 - All database operations respect Row Level Security (RLS) policies when using Client Keys or OAuth

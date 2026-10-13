@@ -26,7 +26,7 @@ title: "StorageBucket"
 
 ### abortResumableUpload()
 
-> **abortResumableUpload**(`sessionId`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **abortResumableUpload**(`sessionId`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Abort an in-progress resumable upload
 
@@ -38,13 +38,13 @@ Abort an in-progress resumable upload
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### copy()
 
-> **copy**(`fromPath`, `toPath`): `Promise`\<\{ `data`: `unknown`; `error`: `Error` \| `null`; \}\>
+> **copy**(`fromPath`, `toPath`): `Promise`\<\{ `data`: `unknown`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Copy a file to a new path
 
@@ -57,7 +57,7 @@ Copy a file to a new path
 
 #### Returns
 
-`Promise`\<\{ `data`: `unknown`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `unknown`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -65,7 +65,7 @@ Promise resolving to { data, error } tuple
 
 ### createSignedUrl()
 
-> **createSignedUrl**(`path`, `options?`): `Promise`\<\{ `data`: \{ `signedUrl`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **createSignedUrl**(`path`, `options?`): `Promise`\<\{ `data`: \{ `signedUrl`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Create a signed URL for temporary access to a file
 Optionally include image transformation parameters
@@ -79,7 +79,7 @@ Optionally include image transformation parameters
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `signedUrl`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `signedUrl`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 #### Example
 
@@ -111,7 +111,7 @@ const { data, error } = await storage.from('images').createSignedUrl('photo.jpg'
 
 #### Call Signature
 
-> **download**(`path`): `Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
+> **download**(`path`): `Promise`\<\{ `data`: `Blob` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Download a file from the bucket
 
@@ -123,7 +123,7 @@ Download a file from the bucket
 
 ##### Returns
 
-`Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `Blob` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ##### Example
 
@@ -139,7 +139,7 @@ console.log(`File size: ${data.size} bytes`);
 
 #### Call Signature
 
-> **download**(`path`, `options`): `Promise`\<\{ `data`: [`StreamDownloadData`](/api/sdk/interfaces/streamdownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **download**(`path`, `options`): `Promise`\<\{ `data`: [`StreamDownloadData`](/api/sdk/interfaces/streamdownloaddata/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Download a file from the bucket
 
@@ -155,7 +155,7 @@ Download a file from the bucket
 
 ##### Returns
 
-`Promise`\<\{ `data`: [`StreamDownloadData`](/api/sdk/interfaces/streamdownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`StreamDownloadData`](/api/sdk/interfaces/streamdownloaddata/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ##### Example
 
@@ -171,7 +171,7 @@ console.log(`File size: ${data.size} bytes`);
 
 #### Call Signature
 
-> **download**(`path`, `options`): `Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
+> **download**(`path`, `options`): `Promise`\<\{ `data`: `Blob` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Download a file from the bucket
 
@@ -187,7 +187,7 @@ Download a file from the bucket
 
 ##### Returns
 
-`Promise`\<\{ `data`: `Blob` \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `Blob` \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ##### Example
 
@@ -205,7 +205,7 @@ console.log(`File size: ${data.size} bytes`);
 
 ### downloadResumable()
 
-> **downloadResumable**(`path`, `options?`): `Promise`\<\{ `data`: [`ResumableDownloadData`](/api/sdk/interfaces/resumabledownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **downloadResumable**(`path`, `options?`): `Promise`\<\{ `data`: [`ResumableDownloadData`](/api/sdk/interfaces/resumabledownloaddata/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Download a file with resumable chunked downloads for large files.
 Returns a ReadableStream that abstracts the chunking internally.
@@ -225,7 +225,7 @@ Features:
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ResumableDownloadData`](/api/sdk/interfaces/resumabledownloaddata/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ResumableDownloadData`](/api/sdk/interfaces/resumabledownloaddata/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 A ReadableStream and file size (consumer doesn't need to know about chunking)
 
@@ -270,7 +270,7 @@ Get a public URL for a file
 
 ### getResumableUploadStatus()
 
-> **getResumableUploadStatus**(`sessionId`): `Promise`\<\{ `data`: [`ChunkedUploadSession`](/api/sdk/interfaces/chunkeduploadsession/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getResumableUploadStatus**(`sessionId`): `Promise`\<\{ `data`: [`ChunkedUploadSession`](/api/sdk/interfaces/chunkeduploadsession/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get the status of a resumable upload session
 
@@ -282,7 +282,7 @@ Get the status of a resumable upload session
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ChunkedUploadSession`](/api/sdk/interfaces/chunkeduploadsession/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ChunkedUploadSession`](/api/sdk/interfaces/chunkeduploadsession/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
@@ -327,7 +327,7 @@ const url = storage.from('images').getTransformUrl('photo.jpg', {
 
 ### list()
 
-> **list**(`pathOrOptions?`, `maybeOptions?`): `Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(`pathOrOptions?`, `maybeOptions?`): `Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List files in the bucket
 Supports both Supabase-style list(path, options) and Fluxbase-style list(options)
@@ -341,13 +341,13 @@ Supports both Supabase-style list(path, options) and Fluxbase-style list(options
 
 #### Returns
 
-`Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### listShares()
 
-> **listShares**(`path`): `Promise`\<\{ `data`: `FileShare`[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listShares**(`path`): `Promise`\<\{ `data`: `FileShare`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List users a file is shared with (RLS)
 
@@ -359,13 +359,13 @@ List users a file is shared with (RLS)
 
 #### Returns
 
-`Promise`\<\{ `data`: `FileShare`[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `FileShare`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### move()
 
-> **move**(`fromPath`, `toPath`): `Promise`\<\{ `data`: `unknown`; `error`: `Error` \| `null`; \}\>
+> **move**(`fromPath`, `toPath`): `Promise`\<\{ `data`: `unknown`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Move a file to a new path
 
@@ -378,7 +378,7 @@ Move a file to a new path
 
 #### Returns
 
-`Promise`\<\{ `data`: `unknown`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `unknown`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -386,7 +386,7 @@ Promise resolving to { data, error } tuple
 
 ### remove()
 
-> **remove**(`paths`): `Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **remove**(`paths`): `Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Remove files from the bucket
 
@@ -398,13 +398,13 @@ Remove files from the bucket
 
 #### Returns
 
-`Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`FileObject`](/api/sdk/interfaces/fileobject/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### revokeShare()
 
-> **revokeShare**(`path`, `userId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **revokeShare**(`path`, `userId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Revoke file access from a user (RLS)
 
@@ -417,13 +417,13 @@ Revoke file access from a user (RLS)
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### share()
 
-> **share**(`path`, `options`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **share**(`path`, `options`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Share a file with another user (RLS)
 
@@ -436,13 +436,13 @@ Share a file with another user (RLS)
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### upload()
 
-> **upload**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **upload**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Upload a file to the bucket
 
@@ -456,13 +456,13 @@ Upload a file to the bucket
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### uploadLargeFile()
 
-> **uploadLargeFile**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **uploadLargeFile**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Upload a large file using streaming for reduced memory usage.
 This is a convenience method that converts a File or Blob to a stream.
@@ -477,7 +477,7 @@ This is a convenience method that converts a File or Blob to a stream.
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 #### Example
 
@@ -495,7 +495,7 @@ const { data, error } = await storage
 
 ### uploadResumable()
 
-> **uploadResumable**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **uploadResumable**(`path`, `file`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Upload a large file with resumable chunked uploads.
 
@@ -515,7 +515,7 @@ Features:
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Upload result with file info
 
@@ -542,7 +542,7 @@ const { data, error } = await storage.from('uploads').uploadResumable('large.zip
 
 ### uploadStream()
 
-> **uploadStream**(`path`, `stream`, `size`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **uploadStream**(`path`, `stream`, `size`, `options?`): `Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Upload a file using streaming for reduced memory usage.
 This method bypasses FormData buffering and streams data directly to the server.
@@ -559,7 +559,7 @@ Ideal for large files where memory efficiency is important.
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `fullPath`: `string`; `id`: `string`; `path`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 #### Example
 

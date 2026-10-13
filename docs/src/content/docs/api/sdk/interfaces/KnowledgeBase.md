@@ -25,9 +25,12 @@ Knowledge base full details
 | <a id="embedding_dimensions"></a> `embedding_dimensions` | `number` | - |
 | <a id="embedding_model"></a> `embedding_model` | `string` | [`KnowledgeBaseSummary`](/api/sdk/interfaces/knowledgebasesummary/).[`embedding_model`](/api/sdk/interfaces/knowledgebasesummary/#embedding_model) |
 | <a id="enabled"></a> `enabled` | `boolean` | [`KnowledgeBaseSummary`](/api/sdk/interfaces/knowledgebasesummary/).[`enabled`](/api/sdk/interfaces/knowledgebasesummary/#enabled) |
+| <a id="entity_extraction_enabled"></a> `entity_extraction_enabled?` | `boolean` | - |
+| <a id="entity_extraction_strategy"></a> `entity_extraction_strategy?` | `string` | - |
 | <a id="id"></a> `id` | `string` | [`KnowledgeBaseSummary`](/api/sdk/interfaces/knowledgebasesummary/).[`id`](/api/sdk/interfaces/knowledgebasesummary/#id) |
 | <a id="name"></a> `name` | `string` | [`KnowledgeBaseSummary`](/api/sdk/interfaces/knowledgebasesummary/).[`name`](/api/sdk/interfaces/knowledgebasesummary/#name) |
 | <a id="namespace"></a> `namespace` | `string` | [`KnowledgeBaseSummary`](/api/sdk/interfaces/knowledgebasesummary/).[`namespace`](/api/sdk/interfaces/knowledgebasesummary/#namespace) |
+| <a id="rerank_enabled"></a> `rerank_enabled?` | `boolean` | - |
 | <a id="source"></a> `source` | `string` | - |
 | <a id="total_chunks"></a> `total_chunks` | `number` | [`KnowledgeBaseSummary`](/api/sdk/interfaces/knowledgebasesummary/).[`total_chunks`](/api/sdk/interfaces/knowledgebasesummary/#total_chunks) |
 | <a id="updated_at"></a> `updated_at` | `string` | [`KnowledgeBaseSummary`](/api/sdk/interfaces/knowledgebasesummary/).[`updated_at`](/api/sdk/interfaces/knowledgebasesummary/#updated_at) |

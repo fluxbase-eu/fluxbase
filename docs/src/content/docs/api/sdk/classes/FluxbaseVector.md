@@ -74,6 +74,19 @@ const { data } = await client.vector.embed({
 
 ***
 
+### getCapabilities()
+
+> **getCapabilities**(): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`VectorCapabilities`](/api/sdk/interfaces/vectorcapabilities/)\>\>
+
+Get vector search capabilities (pgvector availability, embedding
+provider/model). Admin callers receive extended details.
+
+#### Returns
+
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`VectorCapabilities`](/api/sdk/interfaces/vectorcapabilities/)\>\>
+
+***
+
 ### search()
 
 > **search**\<`T`\>(`options`): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`VectorSearchResult`](/api/sdk/interfaces/vectorsearchresult/)\<`T`\>\>\>

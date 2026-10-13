@@ -21,6 +21,9 @@ type DocumentProcessor struct {
 	entityExtractor  EntityExtractor
 	knowledgeGraph   *KnowledgeGraph
 	quotaService     *QuotaService
+	// onDocumentProcessed fires after a document indexes successfully.
+	// Used to invalidate dependent caches (e.g. the response cache).
+	onDocumentProcessed func(kbID string)
 }
 
 // maxDocumentProcessingAttempts caps automatic retries of a failing document
@@ -140,6 +143,19 @@ func (p *DocumentProcessor) ProcessDocument(ctx context.Context, doc *Document, 
 	// Mark document as indexed
 	if err := p.storage.MarkDocumentIndexed(ctx, doc.ID); err != nil {
 		return fmt.Errorf("failed to mark document indexed: %w", err)
+	}
+
+	// Notify dependents (cache invalidation). Best-effort: a panic in a hook
+	// must not fail an otherwise-successful processing run.
+	if p.onDocumentProcessed != nil {
+		func() {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Error().Interface("panic", rec).Str("kb_id", doc.KnowledgeBaseID).Msg("Panic in document-processed hook - recovered")
+				}
+			}()
+			p.onDocumentProcessed(doc.KnowledgeBaseID)
+		}()
 	}
 
 	log.Info().Str("doc_id", doc.ID).Int("chunks_created", len(chunks)).Msg("Document processing complete")
@@ -652,6 +668,13 @@ func (p *DocumentProcessor) SetQuotaService(qs *QuotaService) {
 	p.quotaService = qs
 }
 
+// SetDocumentProcessedHook registers a callback fired after a document
+// indexes successfully (with the KB's ID). Used to invalidate caches that
+// depend on KB content, e.g. the chatbot response cache.
+func (p *DocumentProcessor) SetDocumentProcessedHook(hook func(kbID string)) {
+	p.onDocumentProcessed = hook
+}
+
 // AddDocument adds a document to a knowledge base and processes it
 func (p *DocumentProcessor) AddDocument(ctx context.Context, kbID string, req CreateDocumentRequest, userID *string) (*Document, error) {
 	// Get knowledge base config
@@ -743,6 +766,7 @@ func (p *DocumentProcessor) extractAndStoreEntities(ctx context.Context, doc *Do
 
 	// Use the entity extractor to get entities, relationships, and document-entity links
 	result, err := p.entityExtractor.ExtractEntitiesWithRelationships(
+		ctx,
 		doc.Content,
 		doc.KnowledgeBaseID,
 		doc.ID,

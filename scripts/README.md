@@ -1,4 +1,7 @@
-# Database Setup Scripts
+# Fluxbase Scripts
+
+Helper scripts for development, testing, and operations. Each script
+documents its own flags in its header comment.
 
 ## setup-dev-user.sql
 
@@ -88,3 +91,66 @@ make uninstall-hooks
 - Auto-formats Go code
 - Reduces failed CI pipeline runs
 - Provides fast feedback during development
+
+## Operational Scripts
+
+### backup.sh
+
+Creates backups of both the PostgreSQL database (`pg_dump`, custom format) and
+storage files. See the header of the script for the full flag list and the
+[backup & restore guide](../docs/src/content/docs/guides/backup-restore.md).
+
+### restore.sh
+
+Restores Fluxbase database and storage from backups produced by `backup.sh`.
+Pair with the backup & restore guide above.
+
+### quick-start.sh
+
+Generates required secrets (JWT, encryption key) and optionally starts
+Fluxbase against the local Docker PostgreSQL. The fastest path to a running
+instance outside Docker Compose.
+
+### smoke-test.sh
+
+Verifies a running Fluxbase stack actually works (health, auth, REST CRUD,
+storage). Brings nothing up itself — pair it with
+`deploy/docker-compose.smoke.yml`; CI uses the same pairing.
+
+### start-e2e-ui.sh
+
+Starts the Playwright admin-UI E2E environment: a Go backend on `:8082`
+against the `fluxbase_playwright` database plus the admin UI dev server.
+
+### test-runner.sh
+
+Detailed test-summary runner used by the Makefile `test` targets. Prefer
+`make test`; call this directly only when you want the richer output format.
+
+### check-contract-drift.sh
+
+Compares the OpenAPI spec served by a running Fluxbase server against the
+committed `sdk/src/types-generated.ts` and regenerates the file with
+`--update`. CI's `contract-drift` job runs it against a fresh boot; see the
+script header for the admin-token environment variables.
+
+### generate-migration-service-key.sh + create-migration-service-key.sql
+
+Generates a secure random service key and inserts it into the database for
+schema-migration use. The SQL file is the standalone variant; the shell
+script wires generation + insertion together.
+
+### viz-architecture.sh / viz-workflows.sh
+
+Generate dependency-graph diagrams of the codebase (Go call graph via
+`go mod`/package analysis) for architecture review. Output lands in the
+working directory; not part of CI.
+
+### loadtest/
+
+`main.go` is a minimal stdlib-only HTTP load generator used for memory and
+throughput baselines (see the memory-baseline notes in AGENTS.md):
+
+```bash
+go run ./scripts/loadtest -url http://localhost:8080     -duration 60s -concurrency 50 -path /health
+```

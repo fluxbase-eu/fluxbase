@@ -39,6 +39,17 @@ data class VectorSearchResult(
     val model: String? = null,
 )
 
+/** Vector search capabilities. Admin callers receive extended details. */
+@Serializable
+data class VectorCapabilities(
+    val enabled: Boolean = false,
+    @SerialName("pgvector_installed") val pgVectorInstalled: Boolean? = null,
+    @SerialName("pgvector_version") val pgVectorVersion: String? = null,
+    @SerialName("embedding_enabled") val embeddingEnabled: Boolean? = null,
+    @SerialName("embedding_provider") val embeddingProvider: String? = null,
+    @SerialName("embedding_model") val embeddingModel: String? = null,
+)
+
 /**
  * Vector embedding and similarity search module — port of `FluxbaseVector`
  * from `sdk/src/vector.ts`.
@@ -78,6 +89,7 @@ class FluxbaseVector(@PublishedApi internal val http: FluxbaseHttpClient) {
         matchThreshold: Double? = null,
         matchCount: Int? = null,
         select: String? = null,
+        filters: Map<String, String>? = null,
     ): FluxbaseResponse<VectorSearchResult> = fluxbaseResponse {
         val body = buildJsonObject {
             put("table", table)
@@ -90,7 +102,17 @@ class FluxbaseVector(@PublishedApi internal val http: FluxbaseHttpClient) {
             matchThreshold?.let { put("match_threshold", it) }
             matchCount?.let { put("match_count", it) }
             select?.let { put("select", it) }
+            filters?.let { fs ->
+                put("filters", kotlinx.serialization.json.buildJsonObject {
+                    fs.forEach { (k, v) -> put(k, kotlinx.serialization.json.JsonPrimitive(v)) }
+                })
+            }
         }
         http.post("/api/v1/vector/search", body)
+    }
+
+    /** GET `/api/v1/capabilities/vector` — pgvector availability and embedding info. */
+    suspend fun getCapabilities(): FluxbaseResponse<VectorCapabilities> = fluxbaseResponse {
+        http.get("/api/v1/capabilities/vector")
     }
 }

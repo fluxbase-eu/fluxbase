@@ -83,6 +83,9 @@ func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 	default:
 		handler = ai.NewUserKnowledgeBaseHandler(s.AI.KBStorage)
 	}
+	if s.AI.Reranker != nil {
+		handler.SetReranker(s.AI.Reranker)
+	}
 
 	deps.ListKBs = handler.ListMyKnowledgeBases
 	deps.CreateKB = handler.CreateMyKnowledgeBase
@@ -102,6 +105,10 @@ func (s *Server) buildKnowledgeBaseRouteDeps() *routes.KnowledgeBaseDeps {
 		deps.SearchKB = handler.SearchMyKB
 		deps.DebugSearch = handler.DebugSearchMyKB
 	}
+
+	// User KB update/delete (editor/owner gated in the handler).
+	deps.UpdateKB = handler.UpdateMyKnowledgeBase
+	deps.DeleteKB = handler.DeleteMyKnowledgeBase
 
 	// Entity/graph routes — only populated when the handler has a knowledge graph.
 	if s.AI.KnowledgeGraph != nil {

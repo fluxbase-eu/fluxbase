@@ -69,7 +69,7 @@ Permanently deletes a user and all associated data
 | Parameter | Type | Default value | Description |
 | ------ | ------ | ------ | ------ |
 | `userId` | `string` | `undefined` | User ID to delete |
-| `type` | `"app"` \| `"dashboard"` | `"app"` | User type ('app' or 'dashboard') |
+| `type` | `"app"` \| `"platform"` | `"app"` | User type ('app' or 'platform') |
 
 #### Returns
 
@@ -88,9 +88,16 @@ console.log('User deleted');
 
 ### getHealth()
 
-> **getHealth**(): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`HealthResponse`](/api/sdk/interfaces/healthresponse/)\>\>
+> **getHealth**(`options?`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<[`HealthResponse`](/api/sdk/interfaces/healthresponse/)\>\>
 
 Get system health status
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `options` | \{ `signal?`: `AbortSignal` \| `null`; \} | Optional request options, including an AbortSignal so callers (e.g. TanStack Query) can cancel the request |
+| `options.signal?` | `AbortSignal` \| `null` | - |
 
 #### Returns
 
@@ -159,7 +166,7 @@ Fetch a single user's details by their user ID
 | Parameter | Type | Default value | Description |
 | ------ | ------ | ------ | ------ |
 | `userId` | `string` | `undefined` | User ID to fetch |
-| `type` | `"app"` \| `"dashboard"` | `"app"` | User type ('app' or 'dashboard') |
+| `type` | `"app"` \| `"platform"` | `"app"` | User type ('app' or 'platform') |
 
 #### Returns
 
@@ -173,10 +180,10 @@ User details with metadata
 // Get an app user
 const user = await admin.getUserById('user-123');
 
-// Get a dashboard user
-const dashboardUser = await admin.getUserById('admin-456', 'dashboard');
-console.log('User email:', dashboardUser.email);
-console.log('Last login:', dashboardUser.last_login_at);
+// Get a platform user
+const platformUser = await admin.getUserById('admin-456', 'platform');
+console.log('User email:', platformUser.email);
+console.log('Last sign in:', platformUser.last_sign_in);
 ```
 
 ***
@@ -194,7 +201,7 @@ Creates a new user and optionally sends an invitation email
 | Parameter | Type | Default value | Description |
 | ------ | ------ | ------ | ------ |
 | `request` | [`InviteUserRequest`](/api/sdk/interfaces/inviteuserrequest/) | `undefined` | User invitation details |
-| `type` | `"app"` \| `"dashboard"` | `"app"` | User type ('app' or 'dashboard') |
+| `type` | `"app"` \| `"platform"` | `"app"` | User type ('app' or 'platform') |
 
 #### Returns
 
@@ -246,6 +253,7 @@ const result = await admin.listUsers({
   exclude_admins: true,
   search: 'john',
   limit: 50,
+  offset: 100,
   type: 'app'
 });
 ```
@@ -373,7 +381,7 @@ Generates a new password for the user and optionally sends it via email
 | Parameter | Type | Default value | Description |
 | ------ | ------ | ------ | ------ |
 | `userId` | `string` | `undefined` | User ID |
-| `type` | `"app"` \| `"dashboard"` | `"app"` | User type ('app' or 'dashboard') |
+| `type` | `"app"` \| `"platform"` | `"app"` | User type ('app' or 'platform') |
 
 #### Returns
 
@@ -458,7 +466,7 @@ Changes a user's role
 | ------ | ------ | ------ | ------ |
 | `userId` | `string` | `undefined` | User ID |
 | `role` | `string` | `undefined` | New role |
-| `type` | `"app"` \| `"dashboard"` | `"app"` | User type ('app' or 'dashboard') |
+| `type` | `"app"` \| `"platform"` | `"app"` | User type ('app' or 'platform') |
 
 #### Returns
 

@@ -5,7 +5,7 @@ prev: false
 title: "isFluxbaseError"
 ---
 
-> **isFluxbaseError**\<`T`\>(`response`): `response is { data: null; error: Error }`
+> **isFluxbaseError**\<`T`\>(`response`): `response is { data: null; error: FluxbaseError }`
 
 Type guard to check if a FluxbaseResponse is an error response
 
@@ -23,7 +23,7 @@ Type guard to check if a FluxbaseResponse is an error response
 
 ## Returns
 
-`response is { data: null; error: Error }`
+`response is { data: null; error: FluxbaseError }`
 
 true if the response is an error (data is null, error is not null)
 
@@ -33,7 +33,7 @@ true if the response is an error (data is null, error is not null)
 const result = await client.auth.signIn(credentials)
 
 if (isFluxbaseError(result)) {
-  // TypeScript knows: result.error is Error, result.data is null
+  // TypeScript knows: result.error is FluxbaseError, result.data is null
   console.error('Sign in failed:', result.error.message)
   return
 }

@@ -181,7 +181,7 @@ export {
 export { useRPCList, useInvokeRPC } from "./use-rpc";
 
 // Vector hooks
-export { useVectorEmbed, useVectorSearch } from "./use-vector";
+export { useVectorEmbed, useVectorSearch, useVectorCapabilities } from "./use-vector";
 
 // Secrets hooks
 export { useSecrets, useCreateSecret, useUpdateSecret, useDeleteSecret } from "./use-secrets";
@@ -200,9 +200,32 @@ export {
   useConversations,
   useConversation,
   useDeleteConversation,
+  useUpdateConversation,
+  useUsage,
   useAIChat,
   type ChatMessage,
 } from "./use-ai";
+
+// Admin AI hooks
+export {
+  useAdminAIMetrics,
+  useAdminAIConversations,
+  useAdminAIConversationMessages,
+  useAdminAIAuditLog,
+  useAdminExportableTables,
+  useAdminExportTableToKB,
+  useAdminSyncConfigs,
+  useAdminCreateSyncConfig,
+  useAdminUpdateSyncConfig,
+  useAdminDeleteSyncConfig,
+  useAdminTriggerSync,
+  useAdminGrantDocumentPermission,
+  useAdminDocumentPermissions,
+  useAdminRevokeDocumentPermission,
+  useAdminAIChatbots,
+  useAdminAIProviders,
+  useAdminAIIntegrations,
+} from "./use-admin-ai";
 
 // Knowledge Base hooks
 export {
@@ -214,10 +237,18 @@ export {
   useKBDocuments,
   useAddDocument,
   useUploadDocument,
+  useUpdateDocument,
   useDeleteDocument,
+  useDeleteDocumentsByFilter,
   useKBSearch,
+  useKBDebugSearch,
   useKBEntities,
+  useSearchEntities,
+  useEntityRelationships,
   useKnowledgeGraph,
+  useShareKB,
+  useRevokeKBPermission,
+  useKBLinkedChatbots,
 } from "./use-knowledge-base";
 
 // Re-export types from SDK

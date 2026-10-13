@@ -31,7 +31,7 @@ use client.admin.jobs
 
 ### cancel()
 
-> **cancel**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+> **cancel**(`jobId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Cancel a pending or running job
 
@@ -43,7 +43,7 @@ Cancel a pending or running job
 
 #### Returns
 
-`Promise`\<\{ `data`: `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple
 
@@ -61,7 +61,7 @@ if (!error) {
 
 ### get()
 
-> **get**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **get**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get status and details of a specific job
 
@@ -73,7 +73,7 @@ Get status and details of a specific job
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with job details
 
@@ -94,7 +94,7 @@ if (job) {
 
 ### getLogs()
 
-> **getLogs**(`jobId`, `afterLine?`): `Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **getLogs**(`jobId`, `afterLine?`): `Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get execution logs for a job
 
@@ -110,7 +110,7 @@ owned by the authenticated user (unless using service_role).
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ExecutionLog`](/api/sdk/interfaces/executionlog/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with execution logs
 
@@ -145,7 +145,7 @@ const channel = client.realtime
 
 ### list()
 
-> **list**(`filters?`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(`filters?`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List jobs submitted by the current user
 
@@ -162,7 +162,7 @@ List jobs submitted by the current user
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of jobs
 
@@ -188,7 +188,7 @@ const { data: page } = await client.jobs.list({
 
 ### retry()
 
-> **retry**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **retry**(`jobId`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Retry a failed job
 
@@ -202,7 +202,7 @@ Creates a new job execution with the same parameters
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with new job
 
@@ -220,7 +220,7 @@ if (newJob) {
 
 ### submit()
 
-> **submit**(`jobName`, `payload?`, `options?`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **submit**(`jobName`, `payload?`, `options?`): `Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Submit a new job for execution
 
@@ -238,7 +238,7 @@ Submit a new job for execution
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Job`](/api/sdk/interfaces/job/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with submitted job details
 

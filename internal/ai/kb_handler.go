@@ -25,6 +25,13 @@ type KnowledgeBaseHandler struct {
 	tableExporter  *TableExporter
 	knowledgeGraph *KnowledgeGraph
 	syncService    *TableExportSyncService
+	reranker       Reranker
+}
+
+// SetReranker wires an optional reranker into the search endpoints. nil (the
+// default) disables reranking regardless of KB opt-in flags.
+func (h *KnowledgeBaseHandler) SetReranker(r Reranker) {
+	h.reranker = r
 }
 
 // NewKnowledgeBaseHandler creates a new knowledge base handler

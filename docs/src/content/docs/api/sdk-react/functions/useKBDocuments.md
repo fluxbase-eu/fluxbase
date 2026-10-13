@@ -5,7 +5,7 @@ prev: false
 title: "useKBDocuments"
 ---
 
-> **useKBDocuments**(`kbId`): `UseQueryResult`\<`NoInfer`\<`KnowledgeBaseDocument`[]\>, `Error`\>
+> **useKBDocuments**(`kbId`): `UseQueryResult`\<`KnowledgeBaseDocument`[], `Error`\>
 
 Hook to list documents in a knowledge base
 
@@ -17,4 +17,4 @@ Hook to list documents in a knowledge base
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`KnowledgeBaseDocument`[]\>, `Error`\>
+`UseQueryResult`\<`KnowledgeBaseDocument`[], `Error`\>

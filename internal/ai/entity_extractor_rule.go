@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"regexp"
 	"strings"
 	"unicode"
@@ -8,10 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// EntityExtractor extracts entities from text
+// EntityExtractor extracts entities from text. Implementations must be safe
+// for concurrent use.
 type EntityExtractor interface {
-	ExtractEntities(text string, kbID string) (*EntityExtractionResult, error)
-	ExtractEntitiesWithRelationships(text string, kbID string, documentID string) (*EntityExtractionResult, error)
+	ExtractEntities(ctx context.Context, text string, kbID string) (*EntityExtractionResult, error)
+	ExtractEntitiesWithRelationships(ctx context.Context, text string, kbID string, documentID string) (*EntityExtractionResult, error)
 }
 
 // RuleBasedExtractor uses regex patterns and rules to extract entities
@@ -94,7 +96,7 @@ func buildEntityPatterns() map[EntityType][]*regexp.Regexp {
 }
 
 // ExtractEntities extracts entities from text using rule-based patterns
-func (r *RuleBasedExtractor) ExtractEntities(text string, kbID string) (*EntityExtractionResult, error) {
+func (r *RuleBasedExtractor) ExtractEntities(ctx context.Context, text string, kbID string) (*EntityExtractionResult, error) {
 	result := &EntityExtractionResult{
 		Entities:         []Entity{},
 		Relationships:    []EntityRelationship{},
@@ -169,8 +171,8 @@ func toCanonicalName(name string) string {
 }
 
 // ExtractEntitiesWithRelationships extracts entities and attempts to find relationships
-func (r *RuleBasedExtractor) ExtractEntitiesWithRelationships(text string, kbID string, documentID string) (*EntityExtractionResult, error) {
-	result, err := r.ExtractEntities(text, kbID)
+func (r *RuleBasedExtractor) ExtractEntitiesWithRelationships(ctx context.Context, text string, kbID string, documentID string) (*EntityExtractionResult, error) {
+	result, err := r.ExtractEntities(ctx, text, kbID)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +181,7 @@ func (r *RuleBasedExtractor) ExtractEntitiesWithRelationships(text string, kbID 
 	result.Relationships = r.inferRelationships(text, kbID, result.Entities)
 
 	// Create document-entity mentions
-	result.DocumentEntities = r.createDocumentEntities(documentID, result.Entities, text)
+	result.DocumentEntities = buildDocumentEntities(documentID, result.Entities, text)
 
 	return result, nil
 }
@@ -250,8 +252,9 @@ func (r *RuleBasedExtractor) inferRelationships(text string, kbID string, entiti
 	return relationships
 }
 
-// createDocumentEntities creates document-entity mention records
-func (r *RuleBasedExtractor) createDocumentEntities(documentID string, entities []Entity, text string) []DocumentEntity {
+// buildDocumentEntities creates document-entity mention records. Package-level
+// so both the rule-based and LLM extractors produce identical mention data.
+func buildDocumentEntities(documentID string, entities []Entity, text string) []DocumentEntity {
 	var docEntities []DocumentEntity
 
 	for _, entity := range entities {

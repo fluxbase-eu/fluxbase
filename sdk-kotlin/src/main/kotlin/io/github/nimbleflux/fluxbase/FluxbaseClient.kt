@@ -71,6 +71,10 @@ class FluxbaseClient internal constructor(
     val graphql: io.github.nimbleflux.fluxbase.graphql.FluxbaseGraphQL,
     /** Vector embedding + similarity search. */
     val vector: io.github.nimbleflux.fluxbase.vector.FluxbaseVector,
+    /** AI chatbots, conversations, usage. */
+    val ai: io.github.nimbleflux.fluxbase.ai.FluxbaseAI,
+    /** Knowledge bases: documents, hybrid search, knowledge graph. */
+    val knowledgeBase: io.github.nimbleflux.fluxbase.knowledgebase.FluxbaseKnowledgeBase,
     /** Database branching (admin). */
     val branching: io.github.nimbleflux.fluxbase.branching.FluxbaseBranching,
     /** Multi-tenancy management (admin). */
@@ -184,6 +188,8 @@ class FluxbaseClient internal constructor(
             val rpc = io.github.nimbleflux.fluxbase.rpc.FluxbaseRpc(http)
             val graphql = io.github.nimbleflux.fluxbase.graphql.FluxbaseGraphQL(http)
             val vector = io.github.nimbleflux.fluxbase.vector.FluxbaseVector(http)
+            val ai = io.github.nimbleflux.fluxbase.ai.FluxbaseAI(http)
+            val knowledgeBase = io.github.nimbleflux.fluxbase.knowledgebase.FluxbaseKnowledgeBase(http)
             val branching = io.github.nimbleflux.fluxbase.branching.FluxbaseBranching(http)
             val tenant = io.github.nimbleflux.fluxbase.tenant.FluxbaseTenant(http)
             val management = io.github.nimbleflux.fluxbase.management.FluxbaseManagement(http)
@@ -192,7 +198,8 @@ class FluxbaseClient internal constructor(
                 trustSslCertificates = options.trustSslCertificates,
                 http = http, auth = auth, functions = functions, jobs = jobs,
                 secrets = secrets, settings = settings, storage = storage, rpc = rpc,
-                graphql = graphql, vector = vector, branching = branching, tenant = tenant,
+                graphql = graphql, vector = vector, ai = ai,
+                knowledgeBase = knowledgeBase, branching = branching, tenant = tenant,
                 management = management,
             )
         }

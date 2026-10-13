@@ -242,6 +242,26 @@ type Manager struct {
 	mu              sync.RWMutex
 	registeredTools map[string]*DynamicToolHandler      // key: tool name
 	registeredRes   map[string]*DynamicResourceProvider // key: resource URI
+
+	// notifier emits server-initiated MCP notifications (e.g.
+	// notifications/tools/list_changed) after registry mutations. Optional:
+	// nil until SetNotifier is called.
+	notifier func(method string, params any)
+}
+
+// SetNotifier wires the server's notification broadcaster so MCP clients
+// holding an SSE GET stream learn about tool/resource changes. Optional.
+func (m *Manager) SetNotifier(notify func(method string, params any)) {
+	m.notifier = notify
+}
+
+// notifyChanged emits a list-changed notification for tools or resources.
+// Safe to call with a nil notifier and while holding m.mu (the broadcaster
+// is non-blocking).
+func (m *Manager) notifyChanged(method string) {
+	if m.notifier != nil {
+		m.notifier(method, nil)
+	}
 }
 
 // NewManager creates a new Manager instance.
@@ -315,6 +335,7 @@ func (m *Manager) RegisterTool(tool *CustomTool) error {
 	m.registeredTools[tool.Name] = handler
 
 	log.Debug().Str("tool", tool.Name).Msg("Registered custom MCP tool")
+	m.notifyChanged(mcp.NotificationToolsListChanged)
 	return nil
 }
 
@@ -327,6 +348,7 @@ func (m *Manager) UnregisterTool(toolName string) {
 		m.toolRegistry.Unregister(handler.Name())
 		delete(m.registeredTools, toolName)
 		log.Debug().Str("tool", toolName).Msg("Unregistered custom MCP tool")
+		m.notifyChanged(mcp.NotificationToolsListChanged)
 	}
 }
 
@@ -347,6 +369,7 @@ func (m *Manager) RegisterResource(resource *CustomResource) error {
 	m.registeredRes[resource.URI] = provider
 
 	log.Debug().Str("resource", resource.URI).Msg("Registered custom MCP resource")
+	m.notifyChanged(mcp.NotificationResourcesListChanged)
 	return nil
 }
 
@@ -359,6 +382,7 @@ func (m *Manager) UnregisterResource(resourceURI string) {
 		m.resourceRegistry.Unregister(provider.URI())
 		delete(m.registeredRes, resourceURI)
 		log.Debug().Str("resource", resourceURI).Msg("Unregistered custom MCP resource")
+		m.notifyChanged(mcp.NotificationResourcesListChanged)
 	}
 }
 

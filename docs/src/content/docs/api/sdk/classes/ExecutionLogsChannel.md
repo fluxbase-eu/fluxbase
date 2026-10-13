@@ -60,7 +60,7 @@ channel.onLog((log) => {
 
 ### subscribe()
 
-> **subscribe**(`callback?`): `this`
+> **subscribe**(`callback?`, `timeout?`): `this`
 
 Subscribe to execution logs
 
@@ -68,7 +68,8 @@ Subscribe to execution logs
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `callback?` | (`status`, `err?`) => `void` | Optional status callback |
+| `callback?` | [`RealtimeSubscribeStatusCallback`](/api/sdk/type-aliases/realtimesubscribestatuscallback/) | Optional status callback (Supabase-compatible). Fires SUBSCRIBED when the server acknowledges the subscribe_logs message, TIMED_OUT when the acknowledgment does not arrive within the timeout, and CHANNEL_ERROR when the connection fails before the acknowledgment. |
+| `timeout?` | `number` | - |
 
 #### Returns
 

@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bufio"
 	"strings"
 	"sync"
 	"time"
@@ -96,6 +97,10 @@ type Handler struct {
 	config      *config.MCPConfig
 	db          *database.Connection
 	rateLimiter *rateLimiter
+	// ssePingInterval is the keep-alive comment cadence for SSE GET
+	// streams. Defaults to ssePingInterval; shortened in tests so teardown
+	// paths don't wait 30s for the next write.
+	ssePing time.Duration
 }
 
 // NewHandler creates a new MCP HTTP handler
@@ -105,6 +110,7 @@ func NewHandler(cfg *config.MCPConfig, db *database.Connection) *Handler {
 		config:      cfg,
 		db:          db,
 		rateLimiter: newRateLimiter(cfg.RateLimitPerMin),
+		ssePing:     ssePingInterval,
 	}
 	// Enable the durable MCP audit trail when a database is available
 	h.server.SetDB(db)
@@ -146,13 +152,7 @@ func (h *Handler) HandlePost(c fiber.Ctx) error {
 	authCtx := ExtractAuthContext(c)
 
 	// Check rate limit using client key or user ID as the key
-	rateLimitKey := authCtx.ClientKeyID
-	if rateLimitKey == "" && authCtx.UserID != nil && *authCtx.UserID != "" {
-		rateLimitKey = *authCtx.UserID
-	}
-	if rateLimitKey == "" {
-		rateLimitKey = c.IP() // Fallback to IP for anonymous requests
-	}
+	rateLimitKey := rateLimitKeyFor(authCtx, c)
 	if !h.rateLimiter.allow(rateLimitKey) {
 		log.Warn().
 			Str("client_key", rateLimitKey).
@@ -185,7 +185,14 @@ func (h *Handler) HandlePost(c fiber.Ctx) error {
 	return h.sendJSONResponse(c, response)
 }
 
-// HandleGet handles GET requests for SSE stream initiation
+// ssePingInterval keeps intermediary proxies from closing an idle
+// notification stream.
+const ssePingInterval = 30 * time.Second
+
+// HandleGet handles GET requests as long-lived SSE streams carrying
+// server-initiated JSON-RPC notifications (e.g. notifications/tools/
+// list_changed when a custom tool is reloaded). Same auth as POST; the
+// stream ends when the client disconnects.
 func (h *Handler) HandleGet(c fiber.Ctx) error {
 	// Check if client accepts SSE
 	accept := c.Get("Accept")
@@ -195,11 +202,91 @@ func (h *Handler) HandleGet(c fiber.Ctx) error {
 		})
 	}
 
-	// For now, we don't support server-initiated notifications
-	// This would be implemented with a long-lived SSE connection
-	return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
-		"error": "Server-initiated notifications not yet implemented",
+	// Same auth as POST: middleware populates the auth context.
+	authCtx := ExtractAuthContext(c)
+	if !authCtx.IsAuthenticated() {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Authentication required",
+		})
+	}
+
+	// A long-lived connection consumes a rate-limit slot like any request.
+	if !h.rateLimiter.allow(rateLimitKeyFor(authCtx, c)) {
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+			"error": "Rate limit exceeded. Please try again later.",
+		})
+	}
+
+	notifications, cancel := h.server.bus.Subscribe()
+
+	c.Set(fiber.HeaderContentType, "text/event-stream")
+	c.Set(fiber.HeaderCacheControl, "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("X-Accel-Buffering", "no") // disable nginx buffering
+
+	// fasthttp keeps the request context alive for the duration of the body
+	// stream writer, so capturing it here is safe; the fiber.Ctx itself is
+	// not (it recycles when this handler returns).
+	requestCtx := c.RequestCtx()
+
+	requestCtx.SetBodyStreamWriter(func(w *bufio.Writer) {
+		defer cancel()
+		streamNotifications(w, notifications, requestCtx.Done(), h.ssePing)
 	})
+
+	return nil
+}
+
+// streamNotifications writes the SSE framing for one notification stream:
+// a connected comment, one "event: message" frame per notification, and
+// keep-alive ping comments on the ticker. Returns when the client goes away
+// (done), the subscription is cancelled (channel closed), or a write fails.
+func streamNotifications(w *bufio.Writer, notifications <-chan []byte, done <-chan struct{}, pingInterval time.Duration) {
+	if _, err := w.WriteString(": connected\n\n"); err != nil {
+		return
+	}
+	if err := w.Flush(); err != nil {
+		return
+	}
+
+	ticker := time.NewTicker(pingInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			return
+		case data, ok := <-notifications:
+			if !ok {
+				return
+			}
+			if _, err := w.WriteString("event: message\ndata: " + string(data) + "\n\n"); err != nil {
+				return
+			}
+			if err := w.Flush(); err != nil {
+				return
+			}
+		case <-ticker.C:
+			if _, err := w.WriteString(": ping\n\n"); err != nil {
+				return
+			}
+			if err := w.Flush(); err != nil {
+				return
+			}
+		}
+	}
+}
+
+// rateLimitKeyFor resolves the rate-limit key for a request: client key,
+// user ID, then IP (mirrors the POST path).
+func rateLimitKeyFor(authCtx *AuthContext, c fiber.Ctx) string {
+	if authCtx.ClientKeyID != "" {
+		return authCtx.ClientKeyID
+	}
+	if authCtx.UserID != nil && *authCtx.UserID != "" {
+		return *authCtx.UserID
+	}
+	return c.IP()
 }
 
 // sendJSONResponse sends a JSON-RPC response

@@ -109,9 +109,29 @@ const { data, error } = await client.knowledgeBase.create({
 
 ***
 
+### debugSearch()
+
+> **debugSearch**(`kbId`, `request`): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`KBDebugSearchResponse`](/api/sdk/interfaces/kbdebugsearchresponse/)\>\>
+
+Debug search returns the effective search options alongside results,
+useful for tuning hybrid search weights
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `request` | [`SearchKnowledgeBaseRequest`](/api/sdk/interfaces/searchknowledgebaserequest/) |
+
+#### Returns
+
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`KBDebugSearchResponse`](/api/sdk/interfaces/kbdebugsearchresponse/)\>\>
+
+***
+
 ### delete()
 
-> **delete**(`id`): `Promise`\<\{ `data`: `boolean`; `error`: `Error` \| `null`; \}\>
+> **delete**(`id`): `Promise`\<\{ `data`: `boolean`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a knowledge base
 
@@ -123,13 +143,13 @@ Delete a knowledge base
 
 #### Returns
 
-`Promise`\<\{ `data`: `boolean`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `boolean`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
 ### deleteDocument()
 
-> **deleteDocument**(`kbId`, `docId`): `Promise`\<\{ `data`: `boolean`; `error`: `Error` \| `null`; \}\>
+> **deleteDocument**(`kbId`, `docId`): `Promise`\<\{ `data`: `boolean`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a document
 
@@ -142,7 +162,7 @@ Delete a document
 
 #### Returns
 
-`Promise`\<\{ `data`: `boolean`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `boolean`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
@@ -259,6 +279,24 @@ const { data, error } = await client.knowledgeBase.list()
 
 ***
 
+### listChatbots()
+
+> **listChatbots**(`kbId`): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`ChatbotSummaryForKB`](/api/sdk/interfaces/chatbotsummaryforkb/)[]\>\>
+
+List chatbots linked to this knowledge base
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+
+#### Returns
+
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`ChatbotSummaryForKB`](/api/sdk/interfaces/chatbotsummaryforkb/)[]\>\>
+
+***
+
 ### listDocuments()
 
 > **listDocuments**(`kbId`): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`KnowledgeBaseDocument`](/api/sdk/interfaces/knowledgebasedocument/)[]\>\>
@@ -293,6 +331,43 @@ List entities in a knowledge base
 #### Returns
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`AIEntity`](/api/sdk/interfaces/aientity/)[]\>\>
+
+***
+
+### listPermissions()
+
+> **listPermissions**(`kbId`): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/)[]\>\>
+
+List permissions granted on a knowledge base (owner only)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+
+#### Returns
+
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/)[]\>\>
+
+***
+
+### revokePermission()
+
+> **revokePermission**(`kbId`, `userId`): `Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
+
+Revoke a user's permission on a knowledge base (owner only)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `userId` | `string` |
+
+#### Returns
+
+`Promise`\<\{ `data`: `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 ***
 
@@ -348,6 +423,25 @@ Search entities by name
 #### Returns
 
 `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`AIEntity`](/api/sdk/interfaces/aientity/)[]\>\>
+
+***
+
+### share()
+
+> **share**(`kbId`, `request`): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/)\>\>
+
+Share a knowledge base with another user (owner only)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `kbId` | `string` |
+| `request` | [`GrantDocumentPermissionRequest`](/api/sdk/interfaces/grantdocumentpermissionrequest/) |
+
+#### Returns
+
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<[`DocumentPermissionGrant`](/api/sdk/interfaces/documentpermissiongrant/)\>\>
 
 ***
 

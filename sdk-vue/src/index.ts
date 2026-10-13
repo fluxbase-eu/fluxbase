@@ -4,9 +4,9 @@
  * Vue/Nuxt composables and SSR cookie storage for Fluxbase, built on the core
  * `@nimbleflux/fluxbase-sdk`.
  *
- * This is a scaffold: it provides the SSR-auth foundation (cookie storage,
- * provide/inject composable). Full reactive composables (like the React/Svelte
- * hooks) are a follow-on.
+ * Provides the SSR-auth foundation (cookie storage, provide/inject
+ * composable) plus AI composables (chatbots, conversations, knowledge-base
+ * search, vector search) as thin reactive wrappers over the core SDK.
  */
 
 export {
@@ -19,5 +19,15 @@ export {
   FLUXBASE_CLIENT_KEY,
   useFluxbaseClient,
 } from "./composables";
+
+export {
+  useFluxbaseAIChatbots,
+  useFluxbaseAIConversations,
+  useFluxbaseAIUsage,
+  useFluxbaseKnowledgeBases,
+  useFluxbaseKBSearch,
+  useFluxbaseVectorSearch,
+  useFluxbaseVectorCapabilities,
+} from "./ai";
 
 export type { FluxbaseClient, StorageAdapter } from "@nimbleflux/fluxbase-sdk";

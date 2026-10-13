@@ -69,6 +69,9 @@ type AIHandlers struct {
 	// integrations (Web Search via Tavily, URL fetch). May be nil when
 	// AI is disabled — wrapIntegrationHandler guards against that.
 	Integrations *integrations.Handler
+	// Reranker re-orders KB search results by relevance. May be nil when
+	// reranking is disabled (ai.rerank_enabled=false).
+	Reranker ai.Reranker
 }
 
 // wrapIntegrationHandler returns a fiber.Handler that delegates to the

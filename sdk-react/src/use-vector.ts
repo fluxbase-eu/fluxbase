@@ -3,7 +3,7 @@
  * Provides hooks for vector embedding and similarity search
  */
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useFluxbaseClient } from "./context";
 import type { EmbedRequest, VectorSearchOptions } from "@nimbleflux/fluxbase-sdk";
 
@@ -48,6 +48,23 @@ export function useVectorSearch() {
   return useMutation({
     mutationFn: async (options: VectorSearchOptions) => {
       const { data, error } = await client.vector.search(options);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/**
+ * Hook to get vector search capabilities (pgvector availability,
+ * embedding provider/model). Admin callers receive extended details.
+ */
+export function useVectorCapabilities() {
+  const client = useFluxbaseClient();
+
+  return useQuery({
+    queryKey: ["fluxbase", "vector", "capabilities"],
+    queryFn: async () => {
+      const { data, error } = await client.vector.getCapabilities();
       if (error) throw error;
       return data;
     },

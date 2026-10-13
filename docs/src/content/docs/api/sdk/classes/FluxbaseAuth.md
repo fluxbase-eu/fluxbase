@@ -80,6 +80,40 @@ if (data?.captcha_required) {
 
 ***
 
+### deleteAccount()
+
+> **deleteAccount**(`request?`): `Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`null`\>\>
+
+Delete the current user's account (self-service account deletion)
+
+Permanently deletes the authenticated account. On success the local
+session is cleared so the SDK stops sending the revoked access token.
+Unlike signOut(), a failed request (e.g. wrong password) keeps the
+session intact since the account still exists.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `request?` | [`DeleteAccountRequest`](/api/sdk/interfaces/deleteaccountrequest/) | Optional body with the current password. Required when the account has a password credential; OAuth-only accounts may omit it. |
+
+#### Returns
+
+`Promise`\<[`FluxbaseResponse`](/api/sdk/type-aliases/fluxbaseresponse/)\<`null`\>\>
+
+Promise resolving to { data: null, error: null } on success
+
+#### Example
+
+```typescript
+const { error } = await client.auth.deleteAccount({ password: 'current-password' })
+if (!error) {
+  // Account deleted; redirect away from the settings page
+}
+```
+
+***
+
 ### disable2FA()
 
 > **disable2FA**(`password`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`TwoFactorDisableResponse`\>\>
@@ -787,19 +821,6 @@ Returns { user, session } if successful, or SignInWith2FAResponse if 2FA is requ
 
 ***
 
-### signInAnonymously()
-
-> **signInAnonymously**(): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
-
-Sign in anonymously
-Creates a temporary anonymous user session
-
-#### Returns
-
-`Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
-
-***
-
 ### signInWithIdToken()
 
 > **signInWithIdToken**(`credentials`): `Promise`\<[`FluxbaseAuthResponse`](/api/sdk/type-aliases/fluxbaseauthresponse/)\>
@@ -1045,13 +1066,14 @@ Update the current user (Supabase-compatible)
 > **verify2FA**(`request`): `Promise`\<[`DataResponse`](/api/sdk/type-aliases/dataresponse/)\<`TwoFactorLoginResponse`\>\>
 
 Verify 2FA code during login (Supabase-compatible)
-Call this after signIn returns requires_2fa: true
+Call this after signIn returns requires_2fa: true, passing the
+mfa_token from that response.
 
 #### Parameters
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `request` | [`TwoFactorVerifyRequest`](/api/sdk/interfaces/twofactorverifyrequest/) | User ID and TOTP code |
+| `request` | [`TwoFactorVerifyRequest`](/api/sdk/interfaces/twofactorverifyrequest/) | MFA token from the sign-in response and the TOTP code |
 
 #### Returns
 

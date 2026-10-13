@@ -5,10 +5,10 @@ prev: false
 title: "useUser"
 ---
 
-> **useUser**(): `UseQueryResult`\<`NoInfer`\<[`User`](/api/sdk-react/interfaces/user/) \| `null`\>, `Error`\>
+> **useUser**(): `UseQueryResult`\<[`User`](/api/sdk-react/interfaces/user/) \| `null`, `Error`\>
 
 Hook to get the current user
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<[`User`](/api/sdk-react/interfaces/user/) \| `null`\>, `Error`\>
+`UseQueryResult`\<[`User`](/api/sdk-react/interfaces/user/) \| `null`, `Error`\>

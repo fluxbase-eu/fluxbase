@@ -168,7 +168,7 @@ func TestGetMyResource_Found_ReturnsResource(t *testing.T) {
 
 - Add API endpoint to `docs/src/content/docs/api/http/index.md`
 - Add guide to `docs/src/content/docs/guides/` if it's a new feature
-- Update `CLAUDE.md` if it changes configuration or architecture
+- Update `AGENTS.md` if it changes configuration or architecture
 
 ## Related Documentation
 

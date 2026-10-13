@@ -196,6 +196,12 @@ func (m *MCPModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 	m.Handlers.CustomManager = custom.NewManager(customStorage, customExecutor, toolRegistry, resourceRegistry)
 	m.Handlers.CustomHandler = NewCustomMCPHandler(customStorage, m.Handlers.CustomManager, &cfg.MCP)
 
+	// Custom tool/resource (un)registration notifies SSE clients holding a
+	// GET stream so they refetch tools/resources (MCP list_changed).
+	if m.Handlers.Handler != nil {
+		m.Handlers.CustomManager.SetNotifier(m.Handlers.Handler.Server().SendNotification)
+	}
+
 	loadCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := m.Handlers.CustomManager.LoadAndRegisterAll(loadCtx); err != nil {

@@ -12,7 +12,7 @@ func TestRuleExtractor_ExtractPersons(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "Dr. John Smith and Mr. Jane Doe met with CEO Mary Johnson"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Entities)
 
@@ -27,7 +27,7 @@ func TestRuleExtractor_ExtractPersons(t *testing.T) {
 		// Use a name with 3+ capitalized words to match the pattern
 		text := "Dr. Martin Luther King Jr. visited Silicon Valley"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 
 		// Should find Dr. Martin Luther King Jr. (3+ words with title)
@@ -44,7 +44,7 @@ func TestRuleExtractor_ExtractOrganizations(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "Apple Inc and Microsoft Corp announced a partnership"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Entities)
 
@@ -56,7 +56,7 @@ func TestRuleExtractor_ExtractOrganizations(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "Google and Amazon are leading cloud providers"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Entities)
 
@@ -70,7 +70,7 @@ func TestRuleExtractor_ExtractLocations(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "The conference was held in San Francisco and New York"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Entities)
 
@@ -82,7 +82,7 @@ func TestRuleExtractor_ExtractLocations(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "The company has offices in California and Texas"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Entities)
 
@@ -96,7 +96,7 @@ func TestRuleExtractor_ExtractProducts(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "The new iPhone and MacBook Pro were released alongside iOS 18"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Entities)
 
@@ -127,7 +127,7 @@ func TestExtractEntitiesWithRelationships(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "John Smith works at Google"
 
-		result, err := extractor.ExtractEntitiesWithRelationships(text, "kb-test-1", "doc-1")
+		result, err := extractor.ExtractEntitiesWithRelationships(t.Context(), text, "kb-test-1", "doc-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Relationships)
 
@@ -146,7 +146,7 @@ func TestExtractEntitiesWithRelationships(t *testing.T) {
 		extractor := NewRuleBasedExtractor()
 		text := "Steve Jobs founded Apple Inc"
 
-		result, err := extractor.ExtractEntitiesWithRelationships(text, "kb-test-1", "doc-1")
+		result, err := extractor.ExtractEntitiesWithRelationships(t.Context(), text, "kb-test-1", "doc-1")
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.Relationships)
 
@@ -168,10 +168,10 @@ func TestCreateDocumentEntities(t *testing.T) {
 		text := "Google is a company. Google was founded in California."
 		documentID := "doc-test-1"
 
-		result, err := extractor.ExtractEntities(text, "kb-test-1")
+		result, err := extractor.ExtractEntities(t.Context(), text, "kb-test-1")
 		require.NoError(t, err)
 
-		docEntities := extractor.createDocumentEntities(documentID, result.Entities, text)
+		docEntities := buildDocumentEntities(documentID, result.Entities, text)
 		assert.NotEmpty(t, docEntities)
 
 		// Find the Google entity (entity order is non-deterministic due to map iteration)

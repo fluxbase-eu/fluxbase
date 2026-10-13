@@ -47,7 +47,7 @@ const { data, error } = await client.admin.serviceKeys.rotate('key-id')
 
 ### create()
 
-> **create**(`request`): `Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **create**(`request`): `Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Create a new service key
 
@@ -61,7 +61,7 @@ The full key value is only returned once - store it securely!
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Created key with full key value
 
@@ -85,7 +85,7 @@ if (data) {
 
 ### delete()
 
-> **delete**(`id`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **delete**(`id`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a service key permanently
 
@@ -97,7 +97,7 @@ Delete a service key permanently
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Success or error
 
@@ -111,7 +111,7 @@ const { error } = await client.admin.serviceKeys.delete('key-id')
 
 ### deprecate()
 
-> **deprecate**(`id`, `request?`): `Promise`\<\{ `data`: \{ `deprecated_at`: `string`; `grace_period_ends_at`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **deprecate**(`id`, `request?`): `Promise`\<\{ `data`: \{ `deprecated_at`: `string`; `grace_period_ends_at`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Deprecate a service key (graceful rotation)
 
@@ -126,7 +126,7 @@ Marks the key for removal but keeps it active during grace period.
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `deprecated_at`: `string`; `grace_period_ends_at`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `deprecated_at`: `string`; `grace_period_ends_at`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Deprecation details
 
@@ -143,7 +143,7 @@ const { data, error } = await client.admin.serviceKeys.deprecate('key-id', {
 
 ### disable()
 
-> **disable**(`id`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **disable**(`id`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Disable a service key (temporarily)
 
@@ -155,7 +155,7 @@ Disable a service key (temporarily)
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Success or error
 
@@ -169,7 +169,7 @@ const { error } = await client.admin.serviceKeys.disable('key-id')
 
 ### enable()
 
-> **enable**(`id`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **enable**(`id`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Enable a disabled service key
 
@@ -181,7 +181,7 @@ Enable a disabled service key
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Success or error
 
@@ -195,7 +195,7 @@ const { error } = await client.admin.serviceKeys.enable('key-id')
 
 ### get()
 
-> **get**(`id`): `Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **get**(`id`): `Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get a service key by ID
 
@@ -207,7 +207,7 @@ Get a service key by ID
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Service key details
 
@@ -221,7 +221,7 @@ const { data, error } = await client.admin.serviceKeys.get('key-id')
 
 ### getRevocationHistory()
 
-> **getRevocationHistory**(`id`): `Promise`\<\{ `data`: \{ `id`: `string`; `name`: `string`; `revocation_reason`: `string`; `revoked_at`: `string`; `revoked_by`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+> **getRevocationHistory**(`id`): `Promise`\<\{ `data`: \{ `id`: `string`; `name`: `string`; `revocation_reason`: `string`; `revoked_at`: `string`; `revoked_by`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get revocation history for a service key
 
@@ -233,7 +233,7 @@ Get revocation history for a service key
 
 #### Returns
 
-`Promise`\<\{ `data`: \{ `id`: `string`; `name`: `string`; `revocation_reason`: `string`; `revoked_at`: `string`; `revoked_by`: `string`; \} \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: \{ `id`: `string`; `name`: `string`; `revocation_reason`: `string`; `revoked_at`: `string`; `revoked_by`: `string`; \} \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Revocation history
 
@@ -247,13 +247,13 @@ const { data, error } = await client.admin.serviceKeys.getRevocationHistory('key
 
 ### list()
 
-> **list**(): `Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(): `Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all service keys
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List of service keys
 
@@ -267,7 +267,7 @@ const { data, error } = await client.admin.serviceKeys.list()
 
 ### revoke()
 
-> **revoke**(`id`, `request?`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **revoke**(`id`, `request?`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Revoke a service key permanently (emergency)
 
@@ -282,7 +282,7 @@ Use for immediate revocation when a key is compromised.
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Success or error
 
@@ -298,7 +298,7 @@ const { error } = await client.admin.serviceKeys.revoke('key-id', {
 
 ### rotate()
 
-> **rotate**(`id`): `Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **rotate**(`id`): `Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Rotate a service key (create replacement)
 
@@ -313,7 +313,7 @@ The new key is returned with its full value.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ServiceKeyWithKey`](/api/sdk/interfaces/servicekeywithkey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 New key with full key value
 
@@ -332,7 +332,7 @@ if (data) {
 
 ### update()
 
-> **update**(`id`, `request`): `Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **update**(`id`, `request`): `Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update a service key
 
@@ -345,7 +345,7 @@ Update a service key
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ServiceKey`](/api/sdk/interfaces/servicekey/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Updated key
 

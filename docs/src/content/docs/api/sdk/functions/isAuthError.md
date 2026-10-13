@@ -5,7 +5,7 @@ prev: false
 title: "isAuthError"
 ---
 
-> **isAuthError**(`response`): `response is { data: null; error: Error }`
+> **isAuthError**(`response`): `response is { data: null; error: FluxbaseError }`
 
 Type guard to check if an auth response is an error
 
@@ -17,7 +17,7 @@ Type guard to check if an auth response is an error
 
 ## Returns
 
-`response is { data: null; error: Error }`
+`response is { data: null; error: FluxbaseError }`
 
 true if the auth operation failed
 

@@ -30,7 +30,7 @@ for development, testing, and preview environments.
 
 ### create()
 
-> **create**(`name`, `options?`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **create**(`name`, `options?`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Create a new database branch
 
@@ -43,7 +43,7 @@ Create a new database branch
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with created branch
 
@@ -78,7 +78,7 @@ const { data } = await client.branching.create('debug-issue-456', {
 
 ### delete()
 
-> **delete**(`idOrSlug`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **delete**(`idOrSlug`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a database branch
 
@@ -93,7 +93,7 @@ Cannot delete the main branch.
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { error } (null on success)
 
@@ -142,7 +142,7 @@ if (!exists) {
 
 ### get()
 
-> **get**(`idOrSlug`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **get**(`idOrSlug`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get a specific branch by ID or slug
 
@@ -154,7 +154,7 @@ Get a specific branch by ID or slug
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with branch details
 
@@ -172,7 +172,7 @@ const { data } = await client.branching.get('123e4567-e89b-12d3-a456-42661417400
 
 ### getActivity()
 
-> **getActivity**(`idOrSlug`, `limit?`): `Promise`\<\{ `data`: `BranchActivity`[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **getActivity**(`idOrSlug`, `limit?`): `Promise`\<\{ `data`: `BranchActivity`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get activity log for a branch
 
@@ -185,7 +185,7 @@ Get activity log for a branch
 
 #### Returns
 
-`Promise`\<\{ `data`: `BranchActivity`[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `BranchActivity`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with activity entries
 
@@ -209,7 +209,7 @@ const { data } = await client.branching.getActivity('feature/add-auth', 100)
 
 ### getPoolStats()
 
-> **getPoolStats**(): `Promise`\<\{ `data`: `BranchPoolStats`[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **getPoolStats**(): `Promise`\<\{ `data`: `BranchPoolStats`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get connection pool statistics for all branches
 
@@ -217,7 +217,7 @@ This is useful for monitoring and debugging branch connections.
 
 #### Returns
 
-`Promise`\<\{ `data`: `BranchPoolStats`[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: `BranchPoolStats`[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with pool stats
 
@@ -237,7 +237,7 @@ if (data) {
 
 ### list()
 
-> **list**(`options?`): `Promise`\<\{ `data`: [`ListBranchesResponse`](/api/sdk/interfaces/listbranchesresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **list**(`options?`): `Promise`\<\{ `data`: [`ListBranchesResponse`](/api/sdk/interfaces/listbranchesresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List all database branches
 
@@ -249,7 +249,7 @@ List all database branches
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ListBranchesResponse`](/api/sdk/interfaces/listbranchesresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ListBranchesResponse`](/api/sdk/interfaces/listbranchesresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with branches list
 
@@ -276,7 +276,7 @@ const { data } = await client.branching.list({ limit: 10, offset: 20 })
 
 ### reset()
 
-> **reset**(`idOrSlug`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **reset**(`idOrSlug`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Reset a branch to its parent state
 
@@ -291,7 +291,7 @@ to match the parent branch. Cannot reset the main branch.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with reset branch
 
@@ -310,7 +310,7 @@ if (data) {
 
 ### waitForReady()
 
-> **waitForReady**(`idOrSlug`, `options?`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **waitForReady**(`idOrSlug`, `options?`): `Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Wait for a branch to be ready
 
@@ -327,7 +327,7 @@ Polls the branch status until it reaches 'ready' or an error state.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`Branch`](/api/sdk/interfaces/branch/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with ready branch
 

@@ -70,7 +70,7 @@ FluxbaseAIChat instance
 
 ### deleteConversation()
 
-> **deleteConversation**(`id`): `Promise`\<\{ `error`: `Error` \| `null`; \}\>
+> **deleteConversation**(`id`): `Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Delete a conversation
 
@@ -82,7 +82,7 @@ Delete a conversation
 
 #### Returns
 
-`Promise`\<\{ `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { error } (null on success)
 
@@ -99,7 +99,7 @@ if (!error) {
 
 ### getChatbot()
 
-> **getChatbot**(`id`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getChatbot**(`id`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get details of a specific chatbot
 
@@ -111,7 +111,7 @@ Get details of a specific chatbot
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with chatbot details
 
@@ -119,7 +119,7 @@ Promise resolving to { data, error } tuple with chatbot details
 
 ### getConversation()
 
-> **getConversation**(`id`): `Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getConversation**(`id`): `Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get a single conversation with all messages
 
@@ -131,7 +131,7 @@ Get a single conversation with all messages
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with conversation detail
 
@@ -149,7 +149,7 @@ if (data) {
 
 ### getUsage()
 
-> **getUsage**(`chatbotId`): `Promise`\<\{ `data`: [`AIDailyQuotaSnapshot`](/api/sdk/interfaces/aidailyquotasnapshot/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **getUsage**(`chatbotId`): `Promise`\<\{ `data`: [`AIDailyQuotaSnapshot`](/api/sdk/interfaces/aidailyquotasnapshot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Get the current user's daily quota for a chatbot (Ask 2).
 
@@ -168,7 +168,7 @@ the `onDone` callback's third argument.
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIDailyQuotaSnapshot`](/api/sdk/interfaces/aidailyquotasnapshot/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIDailyQuotaSnapshot`](/api/sdk/interfaces/aidailyquotasnapshot/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } with the quota snapshot
 
@@ -186,7 +186,7 @@ if (data) {
 
 ### listChatbots()
 
-> **listChatbots**(`namespace?`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+> **listChatbots**(`namespace?`): `Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List available chatbots (public, enabled)
 
@@ -198,7 +198,7 @@ List available chatbots (public, enabled)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIChatbotSummary`](/api/sdk/interfaces/aichatbotsummary/)[] \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with array of chatbot summaries
 
@@ -206,7 +206,7 @@ Promise resolving to { data, error } tuple with array of chatbot summaries
 
 ### listConversations()
 
-> **listConversations**(`options?`): `Promise`\<\{ `data`: [`ListConversationsResult`](/api/sdk/interfaces/listconversationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **listConversations**(`options?`): `Promise`\<\{ `data`: [`ListConversationsResult`](/api/sdk/interfaces/listconversationsresult/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 List the authenticated user's conversations
 
@@ -218,7 +218,7 @@ List the authenticated user's conversations
 
 #### Returns
 
-`Promise`\<\{ `data`: [`ListConversationsResult`](/api/sdk/interfaces/listconversationsresult/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`ListConversationsResult`](/api/sdk/interfaces/listconversationsresult/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with conversations
 
@@ -239,7 +239,7 @@ const { data, error } = await ai.listConversations({ limit: 20, offset: 0 })
 
 ### lookupChatbot()
 
-> **lookupChatbot**(`name`): `Promise`\<\{ `data`: [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **lookupChatbot**(`name`): `Promise`\<\{ `data`: [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Lookup a chatbot by name with smart namespace resolution
 
@@ -256,7 +256,7 @@ Resolution logic:
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIChatbotLookupResponse`](/api/sdk/interfaces/aichatbotlookupresponse/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with lookup result
 
@@ -276,7 +276,7 @@ if (data?.chatbot) {
 
 ### updateConversation()
 
-> **updateConversation**(`id`, `updates`): `Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
+> **updateConversation**(`id`, `updates`): `Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Update a conversation (currently supports title update only)
 
@@ -289,7 +289,7 @@ Update a conversation (currently supports title update only)
 
 #### Returns
 
-`Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: `Error` \| `null`; \}\>
+`Promise`\<\{ `data`: [`AIUserConversationDetail`](/api/sdk/interfaces/aiuserconversationdetail/) \| `null`; `error`: [`FluxbaseError`](/api/sdk/interfaces/fluxbaseerror/) \| `null`; \}\>
 
 Promise resolving to { data, error } tuple with updated conversation
 

@@ -297,6 +297,7 @@ Available metadata annotations:
 | `@fluxbase:max-iterations`           | Max tool-call iterations per turn                                  | `5`                       |
 | `@fluxbase:show-reasoning`           | Expose the agent's reasoning steps to the user                     | `false`                   |
 | `@fluxbase:intent-rules`             | JSON array of keyword → required/forbidden table/tool rules        | `[]`                      |
+| `@fluxbase:response-cache`           | Serve single-turn questions from the semantic response cache        | `false`                   |
 
 ### Reasoning Mode
 
@@ -308,6 +309,27 @@ The `@fluxbase:reasoning-mode` annotation controls how the chatbot uses tools:
 - **`none`** — no `think` step; tools may be called directly. Faster but less reliable for multi-step questions.
 
 Combine with `@fluxbase:max-iterations` (tool-call rounds, default `5`) and `@fluxbase:show-reasoning true` to surface the planning steps in the streamed response.
+
+### Response Cache
+
+Chatbots that answer frequently-repeated questions can serve those answers
+from a semantic cache instead of paying LLM cost and latency every time:
+
+```
+* @fluxbase:response-cache true
+```
+
+- Only **single-turn** questions are cached or served (multi-turn context
+  would make cache keys unreliable), and only plain-text answers — turns that
+  used tools (SQL, web search) are never cached because their correctness
+  depends on data fetched at answer time.
+- A cache hit requires an exact question match or a near-duplicate (cosine
+  ≥ 0.95) within the same chatbot and model. Clients see `cached: true` on
+  the `done` event.
+- Entries expire after `ai.response_cache_ttl` (default `1h`; `0s` disables
+  globally) and are invalidated for every linked chatbot when a knowledge
+  base document finishes processing, so grounded answers never go stale. The
+  cache also requires an embedding provider to be configured.
 
 ### Intent Rules
 

@@ -195,15 +195,15 @@ func (s *KnowledgeBaseStorage) LogRetrieval(ctx context.Context, log *RetrievalL
 			INSERT INTO ai.retrieval_log (
 				id, chatbot_id, conversation_id, knowledge_base_id, user_id,
 				query_text, query_embedding_model, chunks_retrieved,
-				chunk_ids, similarity_scores, retrieval_duration_ms
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+				chunk_ids, similarity_scores, retrieval_duration_ms, rerank_duration_ms
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		`
 
 		_, err := tx.Exec(
 			ctx, query,
 			log.ID, log.ChatbotID, log.ConversationID, log.KnowledgeBaseID, log.UserID,
 			log.QueryText, log.QueryEmbeddingModel, log.ChunksRetrieved,
-			log.ChunkIDs, log.SimilarityScores, log.RetrievalDurationMs,
+			log.ChunkIDs, log.SimilarityScores, log.RetrievalDurationMs, log.RerankDurationMs,
 		)
 		return err
 	})

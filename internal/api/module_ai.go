@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -76,6 +77,7 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 	var aiConversations *ai.ConversationManager
 	var aiMetrics *observability.Metrics
 	var knowledgeBaseHandler *ai.KnowledgeBaseHandler
+	var reranker ai.Reranker
 	var kbStorage *ai.KnowledgeBaseStorage
 	var knowledgeGraph *ai.KnowledgeGraph
 	var docProcessor *ai.DocumentProcessor
@@ -97,7 +99,60 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 			embeddingService = vectorHandler.GetEmbeddingService()
 		}
 
+		// Semantic response cache store: opt-in per chatbot via the
+		// @fluxbase:response-cache annotation; entries expire after
+		// ai.response_cache_ttl and are invalidated when a linked KB
+		// document changes. Shared by the chat path and the document
+		// processor invalidation hook below.
+		var responseCacheStore *ai.ResponseCacheStore
+		if cfg.AI.ResponseCacheTTL > 0 && embeddingService != nil {
+			responseCacheStore = ai.NewResponseCacheStore(db)
+			responseCacheStore.StartPurgeSweeper(context.Background(), time.Hour)
+			log.Info().Dur("ttl", cfg.AI.ResponseCacheTTL).Msg("Response cache enabled")
+		}
+
+		// Reranker: optional relevance re-ordering of retrieved chunks.
+		// Provider "llm" reuses the default chat provider; "cohere" calls the
+		// Cohere Rerank API. Per-KB opt-out via kb.rerank_enabled.
+		if cfg.AI.RerankEnabled {
+			switch strings.ToLower(strings.TrimSpace(cfg.AI.RerankProvider)) {
+			case "cohere":
+				reranker = ai.NewCohereReranker(ai.CohereRerankerConfig{
+					APIKey:  cfg.AI.RerankAPIKey,
+					Model:   cfg.AI.RerankModel,
+					BaseURL: cfg.AI.RerankBaseURL,
+					Timeout: cfg.AI.RerankTimeout,
+				})
+			default: // "llm"
+				reranker = ai.NewLLMReranker(ai.LLMRerankerConfig{
+					Resolve: func(ctx context.Context) (ai.Provider, error) {
+						record, err := aiStorage.GetEffectiveDefaultProvider(ctx)
+						if err != nil {
+							return nil, err
+						}
+						if record == nil {
+							return nil, nil
+						}
+						return ai.NewProvider(ai.ProviderConfig{
+							Name:        record.Name,
+							DisplayName: record.DisplayName,
+							Type:        ai.ProviderType(record.ProviderType),
+							Config:      record.Config,
+						})
+					},
+					Model: cfg.AI.RerankModel,
+				})
+			}
+			log.Info().Str("provider", reranker.Provider()).Int("top_n", cfg.AI.RerankTopN).Msg("Reranker enabled")
+		}
+
 		aiChatHandler = ai.NewChatHandler(db, aiStorage, aiConversations, aiMetrics, &cfg.AI, embeddingService, loggingSvc)
+		if reranker != nil {
+			aiChatHandler.SetReranker(reranker, cfg.AI.RerankTopN)
+		}
+		if responseCacheStore != nil {
+			aiChatHandler.SetResponseCache(responseCacheStore)
+		}
 
 		// Wire integrations storage into the chat handler so the supervisor's
 		// Web Agent can resolve Tavily credentials at turn start.
@@ -144,8 +199,40 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 
 		quotaService := ai.NewQuotaService(kbStorage)
 
-		entityExtractor := ai.NewRuleBasedExtractor()
-		log.Info().Msg("Entity extractor initialized")
+		// Entity extraction: strategy dispatch (rules/llm/hybrid) per KB.
+		// The LLM extractor resolves the effective default provider at
+		// extraction time so admin provider changes apply without a restart.
+		ruleExtractor := ai.NewRuleBasedExtractor()
+		var entityExtractor ai.EntityExtractor = ruleExtractor
+		strategy := strings.ToLower(strings.TrimSpace(cfg.AI.EntityExtractionStrategy))
+		if strategy == "" {
+			strategy = ai.ExtractionStrategyRules
+		}
+		extractionLLM := ai.NewLLMExtractor(ai.LLMExtractorConfig{
+			Resolve: func(ctx context.Context) (ai.Provider, error) {
+				record, err := aiStorage.GetEffectiveDefaultProvider(ctx)
+				if err != nil {
+					return nil, err
+				}
+				if record == nil {
+					return nil, nil
+				}
+				return ai.NewProvider(ai.ProviderConfig{
+					Name:        record.Name,
+					DisplayName: record.DisplayName,
+					Type:        ai.ProviderType(record.ProviderType),
+					Config:      record.Config,
+				})
+			},
+			MaxTokens:    cfg.AI.EntityExtractionMaxTokens,
+			MinTextChars: cfg.AI.EntityExtractionMinTextChars,
+			Timeout:      cfg.AI.EntityExtractionTimeout,
+		})
+		entityExtractor = ai.NewStrategyEntityExtractor(ruleExtractor, extractionLLM, kbStorage, strategy)
+		log.Info().Str("default_strategy", strategy).Msg("Entity extractor initialized")
+
+		// The chat handler's RAG path reuses the strategy-aware extractor.
+		aiChatHandler.SetEntityExtractor(entityExtractor)
 
 		if vectorHandler != nil && vectorHandler.GetEmbeddingService() != nil {
 			docProcessor = ai.NewDocumentProcessor(kbStorage, vectorHandler.GetEmbeddingService(), entityExtractor, knowledgeGraph)
@@ -160,6 +247,18 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 			docProcessor.StartProcessingSweeper(context.Background(), 5*time.Minute)
 		}
 
+		// Invalidate response-cache entries when a linked KB's content
+		// changes, so cached grounded answers never go stale.
+		if responseCacheStore != nil && docProcessor != nil {
+			docProcessor.SetDocumentProcessedHook(func(kbID string) {
+				invalidateCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				if err := responseCacheStore.InvalidateForKnowledgeBase(invalidateCtx, kbID); err != nil {
+					log.Warn().Err(err).Str("kb_id", kbID).Msg("Failed to invalidate response cache for KB")
+				}
+			})
+		}
+
 		if ocrService != nil && ocrService.IsEnabled() {
 			knowledgeBaseHandler = ai.NewKnowledgeBaseHandlerWithOCR(kbStorage, docProcessor, ocrService)
 		} else {
@@ -167,6 +266,9 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 		}
 		if storageSvc != nil {
 			knowledgeBaseHandler.SetStorageService(storageSvc)
+		}
+		if reranker != nil {
+			knowledgeBaseHandler.SetReranker(reranker)
 		}
 
 		tableExporter := ai.NewTableExporter(db, docProcessor, knowledgeGraph, kbStorage)
@@ -185,6 +287,7 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 			Bool("processing_enabled", docProcessor != nil).
 			Bool("ocr_enabled", ocrService != nil && ocrService.IsEnabled()).
 			Bool("entity_extraction_enabled", true).
+			Str("entity_extraction_strategy", strategy).
 			Bool("table_export_enabled", true).
 			Bool("sync_enabled", true).
 			Msg("Knowledge base handler initialized")
@@ -217,6 +320,7 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 		VectorHandler:   vectorHandler,
 		Internal:        internalAIHandler,
 		Integrations:    integrationsHandler,
+		Reranker:        reranker,
 	}
 	m.Quota = &QuotaHandlers{Handler: quotaHandler}
 

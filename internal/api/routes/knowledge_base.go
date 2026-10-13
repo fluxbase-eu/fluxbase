@@ -12,6 +12,8 @@ type KnowledgeBaseDeps struct {
 	ListKBs          fiber.Handler
 	CreateKB         fiber.Handler
 	GetKB            fiber.Handler
+	UpdateKB         fiber.Handler
+	DeleteKB         fiber.Handler
 	ShareKB          fiber.Handler
 	ListPermissions  fiber.Handler
 	RevokePermission fiber.Handler
@@ -48,6 +50,19 @@ func BuildKnowledgeBaseRoutes(deps *KnowledgeBaseDeps) *RouteGroup {
 		{Method: "POST", Path: "/api/v1/ai/knowledge-bases/:id/share", Handler: deps.ShareKB, Summary: "Share knowledge base", Auth: AuthRequired},
 		{Method: "GET", Path: "/api/v1/ai/knowledge-bases/:id/permissions", Handler: deps.ListPermissions, Summary: "List KB permissions", Auth: AuthRequired},
 		{Method: "DELETE", Path: "/api/v1/ai/knowledge-bases/:id/permissions/:user_id", Handler: deps.RevokePermission, Summary: "Revoke KB permission", Auth: AuthRequired},
+	}
+
+	// KB update/delete at the user path. nil when the handler wasn't built
+	// with a processor — same availability rules as the document routes.
+	if deps.UpdateKB != nil {
+		routes = append(routes,
+			Route{Method: "PATCH", Path: "/api/v1/ai/knowledge-bases/:id", Handler: deps.UpdateKB, Summary: "Update knowledge base", Auth: AuthRequired},
+		)
+	}
+	if deps.DeleteKB != nil {
+		routes = append(routes,
+			Route{Method: "DELETE", Path: "/api/v1/ai/knowledge-bases/:id", Handler: deps.DeleteKB, Summary: "Delete knowledge base", Auth: AuthRequired},
+		)
 	}
 
 	if deps.ListDocuments != nil {

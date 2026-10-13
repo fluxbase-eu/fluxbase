@@ -5,7 +5,7 @@ prev: false
 title: "useImpersonationSessions"
 ---
 
-> **useImpersonationSessions**(`options?`): `UseQueryResult`\<`NoInfer`\<`ListImpersonationSessionsResponse`\>, `Error`\>
+> **useImpersonationSessions**(`options?`): `UseQueryResult`\<`ListImpersonationSessionsResponse`, `Error`\>
 
 Hook to list impersonation sessions (audit trail)
 
@@ -17,4 +17,4 @@ Hook to list impersonation sessions (audit trail)
 
 ## Returns
 
-`UseQueryResult`\<`NoInfer`\<`ListImpersonationSessionsResponse`\>, `Error`\>
+`UseQueryResult`\<`ListImpersonationSessionsResponse`, `Error`\>

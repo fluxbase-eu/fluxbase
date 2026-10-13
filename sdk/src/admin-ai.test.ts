@@ -131,11 +131,11 @@ describe("FluxbaseAdminAI", () => {
           created_at: "2024-01-26T10:00:00Z",
         };
 
-        vi.mocked(mockFetch.put).mockResolvedValue(response);
+        vi.mocked(mockFetch.post).mockResolvedValue(response);
 
         const { data, error } = await ai.toggleChatbot("bot-1", true);
 
-        expect(mockFetch.put).toHaveBeenCalledWith(
+        expect(mockFetch.post).toHaveBeenCalledWith(
           "/api/v1/admin/ai/chatbots/bot-1/toggle",
           { enabled: true },
         );
@@ -152,7 +152,7 @@ describe("FluxbaseAdminAI", () => {
           created_at: "2024-01-26T10:00:00Z",
         };
 
-        vi.mocked(mockFetch.put).mockResolvedValue(response);
+        vi.mocked(mockFetch.post).mockResolvedValue(response);
 
         const { data, error } = await ai.toggleChatbot("bot-1", false);
 
@@ -160,7 +160,7 @@ describe("FluxbaseAdminAI", () => {
       });
 
       it("should handle error", async () => {
-        vi.mocked(mockFetch.put).mockRejectedValue(new Error("Update failed"));
+        vi.mocked(mockFetch.post).mockRejectedValue(new Error("Update failed"));
 
         const { data, error } = await ai.toggleChatbot("bot-1", true);
 
@@ -845,6 +845,245 @@ describe("FluxbaseAdminAI", () => {
         expect(data).toBeNull();
         expect(error).toBeDefined();
       });
+    });
+  });
+});
+
+describe("FluxbaseAdminAI — AI operations surface", () => {
+  let ai: FluxbaseAdminAI;
+  let mockFetch: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFetch = {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn(),
+    };
+    ai = new FluxbaseAdminAI(mockFetch as unknown as FluxbaseFetch);
+  });
+
+  describe("getMetrics()", () => {
+    it("should fetch aggregated AI metrics", async () => {
+      const metrics = {
+        total_requests: 42,
+        total_tokens: 1200,
+        total_prompt_tokens: 800,
+        total_completion_tokens: 400,
+        active_conversations: 2,
+        total_conversations: 10,
+        chatbot_stats: [],
+        provider_stats: [],
+        error_rate: 0.02,
+        avg_response_time_ms: 350,
+      };
+      vi.mocked(mockFetch.get).mockResolvedValue(metrics);
+
+      const { data, error } = await ai.getMetrics();
+
+      expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/metrics");
+      expect(error).toBeNull();
+      expect(data!.total_requests).toBe(42);
+      expect(data!.error_rate).toBeCloseTo(0.02);
+    });
+
+    it("should handle error", async () => {
+      vi.mocked(mockFetch.get).mockRejectedValue(new Error("forbidden"));
+
+      const { data, error } = await ai.getMetrics();
+
+      expect(data).toBeNull();
+      expect(error).toBeDefined();
+    });
+  });
+
+  describe("listConversations()", () => {
+    it("should list conversations without filters", async () => {
+      const response = { conversations: [], total: 0, total_count: 0 };
+      vi.mocked(mockFetch.get).mockResolvedValue(response);
+
+      const { data, error } = await ai.listConversations();
+
+      expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/conversations");
+      expect(error).toBeNull();
+      expect(data!.total_count).toBe(0);
+    });
+
+    it("should pass query filters as query params", async () => {
+      const response = { conversations: [], total: 0, total_count: 0 };
+      vi.mocked(mockFetch.get).mockResolvedValue(response);
+
+      await ai.listConversations({ chatbot_id: "bot-1", limit: 25, offset: 50 });
+
+      const calledPath = vi.mocked(mockFetch.get).mock.calls[0][0] as string;
+      expect(calledPath.startsWith("/api/v1/admin/ai/conversations?")).toBe(true);
+      expect(calledPath).toContain("chatbot_id=bot-1");
+      expect(calledPath).toContain("limit=25");
+      expect(calledPath).toContain("offset=50");
+    });
+  });
+
+  describe("getConversationMessages()", () => {
+    it("should fetch conversation messages", async () => {
+      const response = {
+        messages: [{ id: "m-1", conversation_id: "c-1", role: "user", content: "hi" }],
+        total: 1,
+      };
+      vi.mocked(mockFetch.get).mockResolvedValue(response);
+
+      const { data, error } = await ai.getConversationMessages("c-1");
+
+      expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/conversations/c-1/messages");
+      expect(error).toBeNull();
+      expect(data!.messages).toHaveLength(1);
+    });
+  });
+
+  describe("getAuditLog()", () => {
+    it("should fetch the audit log with filters", async () => {
+      const response = { entries: [], total: 0 };
+      vi.mocked(mockFetch.get).mockResolvedValue(response);
+
+      const { error } = await ai.getAuditLog({ chatbot_id: "bot-1", success: false, limit: 10 });
+
+      expect(error).toBeNull();
+      const calledPath = vi.mocked(mockFetch.get).mock.calls[0][0] as string;
+      expect(calledPath).toContain("/api/v1/admin/ai/audit?");
+      expect(calledPath).toContain("chatbot_id=bot-1");
+      expect(calledPath).toContain("success=false");
+    });
+  });
+
+  describe("listTables()", () => {
+    it("should unwrap the tables array", async () => {
+      vi.mocked(mockFetch.get).mockResolvedValue({
+        tables: [{ schema: "public", table: "trips" }],
+      });
+
+      const { data, error } = await ai.listTables();
+
+      expect(mockFetch.get).toHaveBeenCalledWith("/api/v1/admin/ai/tables");
+      expect(error).toBeNull();
+      expect(data).toEqual([{ schema: "public", table: "trips" }]);
+    });
+  });
+
+  describe("exportTableToKB()", () => {
+    it("should POST to the table export route", async () => {
+      vi.mocked(mockFetch.post).mockResolvedValue({ document_id: "doc-1" });
+
+      const { data, error } = await ai.exportTableToKB("public", "trips", {
+        knowledge_base_id: "kb-1",
+        include_sample_rows: true,
+      });
+
+      expect(mockFetch.post).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/tables/public/trips/export",
+        { knowledge_base_id: "kb-1", include_sample_rows: true },
+      );
+      expect(error).toBeNull();
+      expect(data!.document_id).toBe("doc-1");
+    });
+  });
+
+  describe("sync configs", () => {
+    it("should create a sync config", async () => {
+      const config = { id: "sync-1", knowledge_base_id: "kb-1", schema_name: "public", table_name: "trips" };
+      vi.mocked(mockFetch.post).mockResolvedValue(config);
+
+      const { data, error } = await ai.createSyncConfig("kb-1", {
+        schema_name: "public",
+        table_name: "trips",
+        sync_mode: "automatic",
+      });
+
+      expect(mockFetch.post).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/sync-configs",
+        { schema_name: "public", table_name: "trips", sync_mode: "automatic" },
+      );
+      expect(error).toBeNull();
+      expect(data!.id).toBe("sync-1");
+    });
+
+    it("should list sync configs", async () => {
+      vi.mocked(mockFetch.get).mockResolvedValue([]);
+
+      const { data, error } = await ai.listSyncConfigs("kb-1");
+
+      expect(mockFetch.get).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/sync-configs",
+      );
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it("should update a sync config with PATCH", async () => {
+      vi.mocked(mockFetch.patch).mockResolvedValue({ id: "sync-1" });
+
+      const { error } = await ai.updateSyncConfig("kb-1", "sync-1", { sync_mode: "manual" });
+
+      expect(mockFetch.patch).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/sync-configs/sync-1",
+        { sync_mode: "manual" },
+      );
+      expect(error).toBeNull();
+    });
+
+    it("should delete a sync config", async () => {
+      vi.mocked(mockFetch.delete).mockResolvedValue(undefined);
+
+      const { error } = await ai.deleteSyncConfig("kb-1", "sync-1");
+
+      expect(mockFetch.delete).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/sync-configs/sync-1",
+      );
+      expect(error).toBeNull();
+    });
+
+    it("should trigger a sync", async () => {
+      vi.mocked(mockFetch.post).mockResolvedValue({ document_id: "doc-9" });
+
+      const { data, error } = await ai.triggerSync("kb-1", "sync-1");
+
+      expect(mockFetch.post).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/sync-configs/sync-1/trigger",
+        {},
+      );
+      expect(error).toBeNull();
+      expect(data!.document_id).toBe("doc-9");
+    });
+  });
+
+  describe("document permissions", () => {
+    it("should grant, list, and revoke document permissions", async () => {
+      const grant = { id: "perm-1", document_id: "doc-1", user_id: "u-1", permission: "viewer" };
+      vi.mocked(mockFetch.post).mockResolvedValue(grant);
+      vi.mocked(mockFetch.get).mockResolvedValue([grant]);
+      vi.mocked(mockFetch.delete).mockResolvedValue(undefined);
+
+      const granted = await ai.grantDocumentPermission("kb-1", "doc-1", {
+        user_id: "u-1",
+        permission: "viewer",
+      });
+      expect(mockFetch.post).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/documents/doc-1/permissions",
+        { user_id: "u-1", permission: "viewer" },
+      );
+      expect(granted.data!.id).toBe("perm-1");
+
+      const listed = await ai.listDocumentPermissions("kb-1", "doc-1");
+      expect(mockFetch.get).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/documents/doc-1/permissions",
+      );
+      expect(listed.data).toHaveLength(1);
+
+      const revoked = await ai.revokeDocumentPermission("kb-1", "doc-1", "u-1");
+      expect(mockFetch.delete).toHaveBeenCalledWith(
+        "/api/v1/admin/ai/knowledge-bases/kb-1/documents/doc-1/permissions/u-1",
+      );
+      expect(revoked.error).toBeNull();
     });
   });
 });

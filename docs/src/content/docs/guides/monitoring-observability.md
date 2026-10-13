@@ -70,6 +70,30 @@ Fluxbase exposes Prometheus-compatible metrics at `/metrics` endpoint.
 | **Rate Limiting** | `fluxbase_rate_limit_hits_total` | Counter | `limiter_type`, `identifier` | Rate limit hits |
 | **System** | `fluxbase_system_uptime_seconds` | Gauge | - | System uptime |
 
+### AI Metrics
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `fluxbase_ai_chat_requests_total` | Counter | `chatbot`, `status` | Chat requests (`success`, `error`, `rate_limited`) |
+| `fluxbase_ai_chat_request_duration_seconds` | Histogram | `chatbot` | End-to-end chat turn latency |
+| `fluxbase_ai_tokens_total` | Counter | `chatbot`, `token_type` | Tokens consumed (`prompt`, `completion`) |
+| `fluxbase_ai_sql_queries_total` | Counter | `chatbot`, `status` | AI-generated SQL (`executed`, `rejected`, `error`) |
+| `fluxbase_ai_sql_query_duration_seconds` | Histogram | `chatbot` | AI-generated SQL execution time |
+| `fluxbase_ai_active_conversations` | Gauge | - | Active conversations |
+| `fluxbase_ai_websocket_connections` | Gauge | - | Connected `/ai/ws` clients |
+| `fluxbase_ai_provider_requests_total` | Counter | `provider`, `status` | LLM provider requests |
+| `fluxbase_ai_provider_latency_seconds` | Histogram | `provider` | LLM provider latency |
+| `fluxbase_ai_rerank_requests_total` | Counter | `provider`, `status` | RAG rerank operations (`success`, `error`) |
+| `fluxbase_ai_rerank_duration_seconds` | Histogram | `provider` | Rerank latency |
+| `fluxbase_ai_response_cache_hits_total` | Counter | `chatbot` | Answers served from the semantic response cache |
+| `fluxbase_ai_response_cache_misses_total` | Counter | `chatbot` | Cache misses |
+
+Application-level AI stats are also available via
+`GET /api/v1/admin/ai/metrics` (per-chatbot/per-provider aggregates) and
+`GET /api/v1/ai/usage/{chatbotId}` (per-user daily quota snapshot). See the
+[AI Operations runbook section](/guides/operational-runbook/#ai-operations)
+for alerting suggestions.
+
 ---
 
 ## Configuring Prometheus

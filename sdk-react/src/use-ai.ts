@@ -8,8 +8,56 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFluxbaseClient } from "./context";
 import type {
   ListConversationsOptions,
+  UpdateConversationOptions,
   AIChatEvent,
 } from "@nimbleflux/fluxbase-sdk";
+
+/**
+ * Hook to get the current user's usage for a chatbot
+ * (requests, tokens, daily limits)
+ */
+export function useUsage(chatbotId: string | null) {
+  const client = useFluxbaseClient();
+
+  return useQuery({
+    queryKey: ["fluxbase", "ai", "usage", chatbotId],
+    queryFn: async () => {
+      if (!chatbotId) return null;
+      const { data, error } = await client.ai.getUsage(chatbotId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!chatbotId,
+  });
+}
+
+/**
+ * Hook to update a conversation (e.g. rename by title)
+ */
+export function useUpdateConversation() {
+  const client = useFluxbaseClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      conversationId,
+      updates,
+    }: {
+      conversationId: string;
+      updates: UpdateConversationOptions;
+    }) => {
+      const { data, error } = await client.ai.updateConversation(conversationId, updates);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["fluxbase", "ai", "conversations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["fluxbase", "ai", "conversation", variables.conversationId],
+      });
+    },
+  });
+}
 
 /**
  * Hook to list all public/enabled chatbots

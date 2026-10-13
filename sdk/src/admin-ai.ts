@@ -4,7 +4,38 @@
  */
 
 import type { FluxbaseFetch } from "./fetch";
-import type { AIChatbot, AIChatbotSummary, AIProvider, ChatbotKnowledgeBaseLink, CreateToolIntegrationRequest, FluxbaseError, IntegrationType, LinkKnowledgeBaseRequest, SyncChatbotsOptions, SyncChatbotsResult, TableDetails, TestToolIntegrationResult, ToolIntegration, UpdateChatbotKnowledgeBaseRequest, UpdateToolIntegrationRequest } from "./types";
+import type {
+  AIMetrics,
+  AdminConversationListResponse,
+  AdminConversationQuery,
+  AdminMessagesResponse,
+  AIChatbot,
+  AIChatbotSummary,
+  AIProvider,
+  AuditLogQuery,
+  AuditLogResponse,
+  ChatbotKnowledgeBaseLink,
+  CreateSyncConfigRequest,
+  CreateToolIntegrationRequest,
+  DocumentPermissionGrant,
+  ExportTableToKBRequest,
+  ExportTableToKBResponse,
+  ExportableTable,
+  ExportableTablesResponse,
+  FluxbaseError,
+  GrantDocumentPermissionRequest,
+  IntegrationType,
+  LinkKnowledgeBaseRequest,
+  SyncChatbotsOptions,
+  SyncChatbotsResult,
+  TableDetails,
+  TableExportSyncConfig,
+  TestToolIntegrationResult,
+  ToolIntegration,
+  UpdateChatbotKnowledgeBaseRequest,
+  UpdateSyncConfigRequest,
+  UpdateToolIntegrationRequest,
+} from "./types";
 
 /**
  * Admin AI manager for managing AI chatbots and providers
@@ -96,7 +127,7 @@ export class FluxbaseAdminAI {
     enabled: boolean,
   ): Promise<{ data: AIChatbot | null; error: FluxbaseError | null }> {
     try {
-      const data = await this.fetch.put<AIChatbot>(
+      const data = await this.fetch.post<AIChatbot>(
         `/api/v1/admin/ai/chatbots/${id}/toggle`,
         { enabled },
       );
@@ -737,6 +768,281 @@ export class FluxbaseAdminAI {
         {},
       );
       return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  // ===========================================================================
+  // METRICS
+  // ===========================================================================
+
+  /**
+   * Get aggregated AI metrics (requests, tokens, per-chatbot/provider stats)
+   *
+   * @example
+   * ```typescript
+   * const { data } = await client.admin.ai.getMetrics()
+   * ```
+   */
+  async getMetrics(): Promise<{ data: AIMetrics | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.get<AIMetrics>("/api/v1/admin/ai/metrics");
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  // ===========================================================================
+  // ADMIN CONVERSATIONS & AUDIT
+  // ===========================================================================
+
+  /**
+   * List AI conversations across all chatbots (admin)
+   */
+  async listConversations(
+    query: AdminConversationQuery = {},
+  ): Promise<{ data: AdminConversationListResponse | null; error: FluxbaseError | null }> {
+    try {
+      const params = new URLSearchParams();
+      if (query.chatbot_id) params.set("chatbot_id", query.chatbot_id);
+      if (query.user_id) params.set("user_id", query.user_id);
+      if (query.status) params.set("status", query.status);
+      if (query.limit !== undefined) params.set("limit", String(query.limit));
+      if (query.offset !== undefined) params.set("offset", String(query.offset));
+      const qs = params.toString();
+      const data = await this.fetch.get<AdminConversationListResponse>(
+        `/api/v1/admin/ai/conversations${qs ? `?${qs}` : ""}`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Get all messages of a conversation (admin)
+   */
+  async getConversationMessages(
+    conversationId: string,
+    query: { limit?: number; offset?: number } = {},
+  ): Promise<{ data: AdminMessagesResponse | null; error: FluxbaseError | null }> {
+    try {
+      const params = new URLSearchParams();
+      if (query.limit !== undefined) params.set("limit", String(query.limit));
+      if (query.offset !== undefined) params.set("offset", String(query.offset));
+      const qs = params.toString();
+      const data = await this.fetch.get<AdminMessagesResponse>(
+        `/api/v1/admin/ai/conversations/${conversationId}/messages${qs ? `?${qs}` : ""}`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Get the AI SQL audit log (admin)
+   */
+  async getAuditLog(
+    query: AuditLogQuery = {},
+  ): Promise<{ data: AuditLogResponse | null; error: FluxbaseError | null }> {
+    try {
+      const params = new URLSearchParams();
+      if (query.chatbot_id) params.set("chatbot_id", query.chatbot_id);
+      if (query.user_id) params.set("user_id", query.user_id);
+      if (query.success !== undefined) params.set("success", String(query.success));
+      if (query.limit !== undefined) params.set("limit", String(query.limit));
+      if (query.offset !== undefined) params.set("offset", String(query.offset));
+      const qs = params.toString();
+      const data = await this.fetch.get<AuditLogResponse>(
+        `/api/v1/admin/ai/audit${qs ? `?${qs}` : ""}`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  // ===========================================================================
+  // TABLE EXPORT
+  // ===========================================================================
+
+  /**
+   * List tables available for knowledge base export
+   */
+  async listTables(): Promise<{ data: ExportableTable[] | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.get<ExportableTablesResponse>("/api/v1/admin/ai/tables");
+      return { data: data.tables, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Export a database table into a knowledge base as a document
+   */
+  async exportTableToKB(
+    schema: string,
+    table: string,
+    request: ExportTableToKBRequest,
+  ): Promise<{ data: ExportTableToKBResponse | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.post<ExportTableToKBResponse>(
+        `/api/v1/admin/ai/tables/${schema}/${table}/export`,
+        request,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  // ===========================================================================
+  // TABLE EXPORT SYNC CONFIGS
+  // ===========================================================================
+
+  /**
+   * Create a table export sync configuration for a knowledge base
+   */
+  async createSyncConfig(
+    kbId: string,
+    request: CreateSyncConfigRequest,
+  ): Promise<{ data: TableExportSyncConfig | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.post<TableExportSyncConfig>(
+        `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs`,
+        request,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * List table export sync configurations for a knowledge base
+   */
+  async listSyncConfigs(
+    kbId: string,
+  ): Promise<{ data: TableExportSyncConfig[] | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.get<TableExportSyncConfig[]>(
+        `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Update a table export sync configuration
+   */
+  async updateSyncConfig(
+    kbId: string,
+    syncId: string,
+    request: UpdateSyncConfigRequest,
+  ): Promise<{ data: TableExportSyncConfig | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.patch<TableExportSyncConfig>(
+        `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}`,
+        request,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Delete a table export sync configuration
+   */
+  async deleteSyncConfig(
+    kbId: string,
+    syncId: string,
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
+    try {
+      await this.fetch.delete(`/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}`);
+      return { data: null, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Trigger a table export sync immediately
+   */
+  async triggerSync(
+    kbId: string,
+    syncId: string,
+  ): Promise<{ data: ExportTableToKBResponse | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.post<ExportTableToKBResponse>(
+        `/api/v1/admin/ai/knowledge-bases/${kbId}/sync-configs/${syncId}/trigger`,
+        {},
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  // ===========================================================================
+  // DOCUMENT PERMISSIONS
+  // ===========================================================================
+
+  /**
+   * Grant a user permission on a document (admin)
+   */
+  async grantDocumentPermission(
+    kbId: string,
+    documentId: string,
+    request: GrantDocumentPermissionRequest,
+  ): Promise<{ data: DocumentPermissionGrant | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.post<DocumentPermissionGrant>(
+        `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${documentId}/permissions`,
+        request,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * List permissions granted on a document (admin)
+   */
+  async listDocumentPermissions(
+    kbId: string,
+    documentId: string,
+  ): Promise<{ data: DocumentPermissionGrant[] | null; error: FluxbaseError | null }> {
+    try {
+      const data = await this.fetch.get<DocumentPermissionGrant[]>(
+        `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${documentId}/permissions`,
+      );
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as FluxbaseError };
+    }
+  }
+
+  /**
+   * Revoke a document permission (admin)
+   */
+  async revokeDocumentPermission(
+    kbId: string,
+    documentId: string,
+    userId: string,
+  ): Promise<{ data: null; error: FluxbaseError | null }> {
+    try {
+      await this.fetch.delete(
+        `/api/v1/admin/ai/knowledge-bases/${kbId}/documents/${documentId}/permissions/${userId}`,
+      );
+      return { data: null, error: null };
     } catch (error) {
       return { data: null, error: error as FluxbaseError };
     }

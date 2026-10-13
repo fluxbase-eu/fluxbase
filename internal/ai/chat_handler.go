@@ -36,6 +36,12 @@ type ChatHandler struct {
 	providers       map[string]Provider
 	providersMu     sync.RWMutex
 	limiter         *ChatbotLimiter
+	// embeddingService is retained for the response cache question
+	// embeddings; may be nil when vector search is not configured.
+	embeddingService *EmbeddingService
+	// responseCache is the optional semantic response cache store. nil when
+	// the cache is not configured.
+	responseCache *ResponseCacheStore
 	// MCP integration
 	mcpExecutor *MCPToolExecutor
 	// Tool integrations (Web Agent). nil when AI is disabled or no
@@ -58,31 +64,54 @@ func NewChatHandler(
 	var ragService *RAGService
 	if embeddingService != nil {
 		kbStorage := NewKnowledgeBaseStorage(db)
-		// Initialize knowledge graph and entity extractor for graph-boosted search
+		// Initialize knowledge graph and entity extractor for graph-boosted
+		// search. The extractor defaults to rules; SetEntityExtractor upgrades
+		// it to the strategy-aware dispatcher.
 		knowledgeGraph := NewKnowledgeGraph(kbStorage)
-		entityExtractor := NewRuleBasedExtractor()
-		ragService = NewRAGService(kbStorage, embeddingService, knowledgeGraph, entityExtractor)
+		ragService = NewRAGService(kbStorage, embeddingService, knowledgeGraph, NewRuleBasedExtractor())
 	}
 
 	return &ChatHandler{
-		storage:         storage,
-		conversations:   conversations,
-		schemaBuilder:   NewSchemaBuilder(db),
-		executor:        NewExecutor(db, metrics, cfg.MaxRowsPerQuery, cfg.QueryTimeout),
-		auditLogger:     NewAuditLogger(db),
-		toolAuditLogger: NewToolAuditLogger(db),
-		ragService:      ragService,
-		loggingService:  loggingService,
-		metrics:         metrics,
-		config:          cfg,
-		providers:       make(map[string]Provider),
-		limiter:         NewChatbotLimiter(),
+		storage:          storage,
+		conversations:    conversations,
+		schemaBuilder:    NewSchemaBuilder(db),
+		executor:         NewExecutor(db, metrics, cfg.MaxRowsPerQuery, cfg.QueryTimeout),
+		auditLogger:      NewAuditLogger(db),
+		toolAuditLogger:  NewToolAuditLogger(db),
+		ragService:       ragService,
+		loggingService:   loggingService,
+		metrics:          metrics,
+		config:           cfg,
+		providers:        make(map[string]Provider),
+		limiter:          NewChatbotLimiter(),
+		embeddingService: embeddingService,
 	}
 }
 
 // SetSettingsResolver sets the settings resolver for template variable resolution in system prompts
 func (h *ChatHandler) SetSettingsResolver(resolver *SettingsResolver) {
 	h.schemaBuilder.SetSettingsResolver(resolver)
+}
+
+// SetReranker wires an optional reranker into the chat RAG path.
+func (h *ChatHandler) SetReranker(reranker Reranker, topN int) {
+	if h.ragService != nil {
+		h.ragService.SetReranker(reranker, topN)
+	}
+}
+
+// SetResponseCache wires the optional semantic response cache store. nil
+// (the default) disables response caching regardless of chatbot opt-in.
+func (h *ChatHandler) SetResponseCache(store *ResponseCacheStore) {
+	h.responseCache = store
+}
+
+// SetEntityExtractor upgrades the RAG path's entity extractor (used for
+// query-time graph-boost extraction) to a strategy-aware implementation.
+func (h *ChatHandler) SetEntityExtractor(extractor EntityExtractor) {
+	if h.ragService != nil && extractor != nil {
+		h.ragService.entityExtractor = extractor
+	}
 }
 
 // SetIntegrationsStorage wires the tool integrations storage (Tavily,
@@ -194,6 +223,9 @@ type ServerMessage struct {
 	RowCount       int              `json:"row_count,omitempty"`
 	Data           []map[string]any `json:"data,omitempty"`
 	Usage          *UsageStats      `json:"usage,omitempty"`
+	// Cached is true on done events whose answer was served from the
+	// semantic response cache (@fluxbase:response-cache chatbots).
+	Cached bool `json:"cached,omitempty"`
 	// MatchedIntentRules surfaces the intent rules that fired for this turn
 	// (Add 5). Empty/omitted when no rules match or no rules are configured.
 	MatchedIntentRules []MatchedIntentRule `json:"matched_intent_rules,omitempty"`

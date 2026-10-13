@@ -972,7 +972,7 @@ jobs:
           FLUXBASE_TEST_DATABASE: fluxbase_go_e2e
           SKIP_MIGRATIONS: "true"
         run: |
-          go test -v -race -timeout=25m ./internal/middleware/... ./internal/api/...
+          go test -v -race -timeout=25m ./internal/middleware/... ./internal/api/... ./internal/ai/...
 
 
   # ===========================================================================
