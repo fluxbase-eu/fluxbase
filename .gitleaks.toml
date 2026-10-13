@@ -13,3 +13,15 @@ useDefault = true
 description = "Contract-drift CI fixture secrets (high-entropy by boot-guard requirement, CI-only)"
 rules = ["generic-api-key", "stripe-access-token"]
 paths = ['''^\.github/workflows/ci\.yml$''']
+
+[[allowlists]]
+# The docs are, by definition, full of curl examples whose Authorization
+# headers carry placeholders like YOUR_SERVICE_ROLE_KEY. Whether they trip
+# the default curl-auth-header rule depends on placeholder entropy, which
+# makes the scan flap on unrelated docs PRs (it flagged the knowledge-bases
+# guide in #435). Only curl-auth-header is exempted for docs paths: every
+# other rule (generic-api-key, jwt, ...) still scans docs, so a real
+# credential pasted into an example is still caught.
+description = "Docs curl examples with placeholder Authorization headers"
+rules = ["curl-auth-header"]
+paths = ['''^docs/''']
