@@ -1644,12 +1644,25 @@ jobs:
           VERSION: ${{ needs.get-version.outputs.version }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          # Idempotent on re-run: GitHub Packages rejects a duplicate Maven
-          # version, so check for the POM first and skip if it exists.
-          POM_URL="https://maven.pkg.github.com/${{ github.repository }}/io/github/nimbleflux/fluxbase-kotlin/${VERSION}/fluxbase-kotlin-${VERSION}.pom"
-          if [ "$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$POM_URL")" = "200" ]; then
+          # Idempotent on re-run, and loud about half-published versions.
+          # GitHub Packages registers a version on the first artifact PUT and
+          # rejects all later ones with 409, so a publish that died mid-flight
+          # (e.g. a cancelled run) leaves a version that can neither be
+          # skipped (incomplete artifacts are unresolvable for consumers) nor
+          # re-published. Both the POM and the JAR must exist to skip; if only
+          # some exist, the version must be deleted before re-releasing.
+          BASE_URL="https://maven.pkg.github.com/${{ github.repository }}/io/github/nimbleflux/fluxbase-kotlin/${VERSION}"
+          POM_CODE=$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$BASE_URL/fluxbase-kotlin-${VERSION}.pom")
+          JAR_CODE=$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$BASE_URL/fluxbase-kotlin-${VERSION}.jar")
+          if [ "$POM_CODE" = "200" ] && [ "$JAR_CODE" = "200" ]; then
             echo "fluxbase-kotlin ${VERSION} already published — skipping (idempotent re-run)"
             exit 0
+          fi
+          if [ "$POM_CODE" != "404" ] || [ "$JAR_CODE" != "404" ]; then
+            echo "::error::fluxbase-kotlin ${VERSION} is partially published in GitHub Packages (pom HTTP $POM_CODE, jar HTTP $JAR_CODE)."
+            echo "::error::Delete the version, then re-run this job:"
+            echo "::error::  gh api -X DELETE /orgs/${{ github.repository_owner }}/packages/maven/io.github.nimbleflux.fluxbase-kotlin/versions/<version-id>"
+            exit 1
           fi
           if [ "$DRY_RUN" = "true" ]; then
             echo "[dry-run] detekt/test/build passed; would publish fluxbase-kotlin ${VERSION} to GitHub Packages"
