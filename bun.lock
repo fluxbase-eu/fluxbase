@@ -113,7 +113,7 @@
     },
     "sdk": {
       "name": "@nimbleflux/fluxbase-sdk",
-      "version": "2026.9.10",
+      "version": "2026.10.1",
       "dependencies": {
         "cross-fetch": "^4.1.0",
       },
@@ -144,7 +144,7 @@
     },
     "sdk-next": {
       "name": "@nimbleflux/fluxbase-sdk-next",
-      "version": "2026.9.10",
+      "version": "2026.10.1",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@nimbleflux/fluxbase-sdk": "workspace:*",
@@ -165,7 +165,7 @@
     },
     "sdk-react": {
       "name": "@nimbleflux/fluxbase-sdk-react",
-      "version": "2026.9.10",
+      "version": "2026.10.1",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@nimbleflux/fluxbase-sdk": "workspace:*",
@@ -193,7 +193,7 @@
     },
     "sdk-svelte": {
       "name": "@nimbleflux/fluxbase-sdk-svelte",
-      "version": "2026.9.10",
+      "version": "2026.10.1",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@nimbleflux/fluxbase-sdk": "workspace:*",
@@ -221,7 +221,7 @@
     },
     "sdk-vue": {
       "name": "@nimbleflux/fluxbase-sdk-vue",
-      "version": "2026.9.10",
+      "version": "2026.10.1",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@nimbleflux/fluxbase-sdk": "workspace:*",
