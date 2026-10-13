@@ -2680,6 +2680,15 @@ export interface FunctionInvokeOptions {
    * If not provided, the first function with the given name is used (alphabetically by namespace)
    */
   namespace?: string;
+
+  /**
+   * AbortSignal for caller-requested cancellation (e.g. TanStack Query's
+   * queryFn signal). Composed with the per-request timeout: whichever fires
+   * first cancels the request. A caller abort rejects with a distinguishable
+   * error (the signal's Error reason rethrown as-is, or name "AbortError")
+   * instead of the 408 "Request timeout" FluxbaseError the timeout produces.
+   */
+  signal?: AbortSignal | null;
 }
 
 /**
