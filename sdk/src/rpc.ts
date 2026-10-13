@@ -14,6 +14,14 @@ export interface RPCInvokeOptions {
   async?: boolean;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
+  /**
+   * AbortSignal for caller-requested cancellation (e.g. TanStack Query's
+   * queryFn signal). Composed with the per-request timeout: whichever fires
+   * first cancels the request. A caller abort rejects with a distinguishable
+   * error (the signal's Error reason rethrown as-is, or name "AbortError")
+   * instead of the 408 "Request timeout" FluxbaseError the timeout produces.
+   */
+  signal?: AbortSignal | null;
 }
 
 /**
@@ -24,7 +32,7 @@ interface RPCFetch {
   post: <T>(
     path: string,
     body?: unknown,
-    options?: { timeout?: number },
+    options?: { timeout?: number; signal?: AbortSignal | null },
   ) => Promise<T>;
 }
 
@@ -84,7 +92,10 @@ export class FluxbaseRPC {
    *
    * @param name - Procedure name
    * @param params - Optional parameters to pass to the procedure
-   * @param options - Optional invocation options
+   * @param options - Optional invocation options. `signal` allows
+   *   caller-requested cancellation (e.g. TanStack Query's queryFn signal);
+   *   when aborted, the error is a distinguishable "AbortError" instead of
+   *   the SDK's 408 timeout error.
    * @returns Promise resolving to { data, error } tuple with invocation response
    *
    * @example
@@ -101,6 +112,15 @@ export class FluxbaseRPC {
    *   year: 2024
    * }, { async: true });
    * console.log(asyncData.execution_id); // Use to poll status
+   *
+   * // Cancellable invocation (e.g. search-as-you-type)
+   * const controller = new AbortController();
+   * const { data: result, error: abortErr } = await fluxbase.rpc.invoke(
+   *   'search-journal-entries',
+   *   { query: 'trip' },
+   *   { signal: controller.signal }
+   * );
+   * controller.abort(); // The pending request rejects with an "AbortError"
    * ```
    */
   async invoke<T = unknown>(
@@ -116,7 +136,7 @@ export class FluxbaseRPC {
           params,
           async: options?.async,
         },
-        { timeout: options?.timeout },
+        { timeout: options?.timeout, signal: options?.signal },
       );
       return { data: response, error: null };
     } catch (error) {

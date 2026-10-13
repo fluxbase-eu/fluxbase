@@ -148,6 +148,21 @@ class RealtimeChannelTest {
     }
 
     @Test
+    fun `broadcast payload encodes non-primitives as real JSON`() = runBlocking {
+        val transport = FakeWebSocketTransport()
+        val channel = RealtimeChannel("http://localhost:8080", "ch", "tok", transport, Dispatchers.Unconfined)
+
+        channel.broadcast("position", mapOf("waypoints" to listOf("a", "b"), "note" to null))
+        delay(100)
+
+        val sent = Json.parseToJsonElement(transport.sentMessages.last()).jsonObject
+        val payload = sent["payload"]!!.jsonObject
+        // Lists encode as JSON arrays (previously the string "[a, b]"); nulls as JSON null
+        assertEquals("""["a","b"]""", payload["waypoints"].toString())
+        assertTrue(payload["note"].toString() == "null")
+    }
+
+    @Test
     fun `unsubscribe sends unsubscribe message`() = runBlocking {
         val transport = FakeWebSocketTransport()
         val channel = RealtimeChannel("http://localhost:8080", "ch", "tok", transport, Dispatchers.Unconfined)

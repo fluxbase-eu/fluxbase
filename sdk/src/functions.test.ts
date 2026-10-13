@@ -12,43 +12,49 @@ class MockFetch implements Partial<FluxbaseFetch> {
   public lastMethod: string = ''
   public lastBody: unknown = null
   public lastHeaders: Record<string, string> = {}
+  public lastSignal: AbortSignal | null | undefined = undefined
   public mockResponse: any = null
 
-  async get<T>(path: string, options?: { headers?: Record<string, string> }): Promise<T> {
+  async get<T>(path: string, options?: { headers?: Record<string, string>; signal?: AbortSignal | null }): Promise<T> {
     this.lastUrl = path
     this.lastMethod = 'GET'
     this.lastHeaders = options?.headers || {}
+    this.lastSignal = options?.signal
     return this.mockResponse as T
   }
 
-  async post<T>(path: string, body?: unknown, options?: { headers?: Record<string, string> }): Promise<T> {
+  async post<T>(path: string, body?: unknown, options?: { headers?: Record<string, string>; signal?: AbortSignal | null }): Promise<T> {
     this.lastUrl = path
     this.lastMethod = 'POST'
     this.lastBody = body
     this.lastHeaders = options?.headers || {}
+    this.lastSignal = options?.signal
     return this.mockResponse as T
   }
 
-  async put<T>(path: string, body?: unknown, options?: { headers?: Record<string, string> }): Promise<T> {
+  async put<T>(path: string, body?: unknown, options?: { headers?: Record<string, string>; signal?: AbortSignal | null }): Promise<T> {
     this.lastUrl = path
     this.lastMethod = 'PUT'
     this.lastBody = body
     this.lastHeaders = options?.headers || {}
+    this.lastSignal = options?.signal
     return this.mockResponse as T
   }
 
-  async patch<T>(path: string, body?: unknown, options?: { headers?: Record<string, string> }): Promise<T> {
+  async patch<T>(path: string, body?: unknown, options?: { headers?: Record<string, string>; signal?: AbortSignal | null }): Promise<T> {
     this.lastUrl = path
     this.lastMethod = 'PATCH'
     this.lastBody = body
     this.lastHeaders = options?.headers || {}
+    this.lastSignal = options?.signal
     return this.mockResponse as T
   }
 
-  async delete<T>(path: string, options?: { headers?: Record<string, string> }): Promise<T> {
+  async delete<T>(path: string, options?: { headers?: Record<string, string>; signal?: AbortSignal | null }): Promise<T> {
     this.lastUrl = path
     this.lastMethod = 'DELETE'
     this.lastHeaders = options?.headers || {}
+    this.lastSignal = options?.signal
     return this.mockResponse as T
   }
 
@@ -139,6 +145,35 @@ describe('FluxbaseFunctions', () => {
 
       expect(mockFetch.lastUrl).toContain('namespace=my-app')
       expect(error).toBeNull()
+    })
+
+    it('should pass abort signal through for every HTTP method', async () => {
+      mockFetch.mockResponse = { ok: true }
+      const controller = new AbortController()
+
+      const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
+
+      for (const method of methods) {
+        await functions.invoke('test', { method, body: {}, signal: controller.signal })
+        expect(mockFetch.lastMethod).toBe(method)
+        expect(mockFetch.lastSignal).toBe(controller.signal)
+      }
+    })
+
+    it('should return the abort error from fetch when the signal fires', async () => {
+      const controller = new AbortController()
+      controller.abort()
+      const abortError = new Error('Request aborted')
+      abortError.name = 'AbortError'
+      mockFetch.post = async () => {
+        throw abortError
+      }
+
+      const { data, error } = await functions.invoke('test', { signal: controller.signal })
+
+      expect(data).toBeNull()
+      expect(error).toBe(abortError)
+      expect(error?.name).toBe('AbortError')
     })
   })
 

@@ -3,6 +3,7 @@ package io.github.nimbleflux.fluxbase.rpc
 import io.github.nimbleflux.fluxbase.FluxbaseError
 import io.github.nimbleflux.fluxbase.FluxbaseResponse
 import io.github.nimbleflux.fluxbase.core.FluxbaseHttpClient
+import io.github.nimbleflux.fluxbase.core.encodeToJsonElement
 import io.github.nimbleflux.fluxbase.fluxbaseResponse
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -123,6 +124,10 @@ class FluxbaseRpc(@PublishedApi internal val http: FluxbaseHttpClient) {
      * Invoke an RPC procedure. POSTs `/api/v1/rpc/{namespace}/{name}`.
      * Port of `invoke()` in `rpc.ts:111`.
      *
+     * Params encode as real JSON — lists as arrays, maps as objects,
+     * `@Serializable` dataclasses via their generated serializer — matching
+     * the TypeScript SDK's `JSON.stringify` of the whole params object.
+     *
      * @param name the procedure name.
      * @param params parameters to pass to the procedure.
      * @param options namespace (default "default"), async, per-request timeout
@@ -137,13 +142,7 @@ class FluxbaseRpc(@PublishedApi internal val http: FluxbaseHttpClient) {
             if (params != null) {
                 put("params", buildJsonObject {
                     params.forEach { (k, v) ->
-                        when (v) {
-                            null -> put(k, kotlinx.serialization.json.JsonNull)
-                            is String -> put(k, v)
-                            is Number -> put(k, v)
-                            is Boolean -> put(k, v)
-                            else -> put(k, v.toString())
-                        }
+                        put(k, encodeToJsonElement(http.jsonInstance, v))
                     }
                 })
             }

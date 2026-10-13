@@ -46,7 +46,7 @@ export class FluxbaseFunctions {
    * This method is fully compatible with Supabase's functions.invoke() API.
    *
    * @param functionName - The name of the function to invoke
-   * @param options - Invocation options including body, headers, HTTP method, and namespace
+   * @param options - Invocation options including body, headers, HTTP method, namespace, and signal
    * @returns Promise resolving to { data, error } tuple
    *
    * @example
@@ -73,6 +73,11 @@ export class FluxbaseFunctions {
    *   headers: { 'Authorization': 'Bearer token' },
    *   method: 'POST'
    * })
+   *
+   * // Cancellable invocation
+   * const controller = new AbortController()
+   * const promise = client.functions.invoke('long-task', { signal: controller.signal })
+   * controller.abort() // The pending request rejects with an "AbortError"
    * ```
    */
   async invoke<T = unknown>(
@@ -84,6 +89,7 @@ export class FluxbaseFunctions {
       const headers = options?.headers || {}
       const body = options?.body
       const namespace = options?.namespace
+      const signal = options?.signal
 
       // Use the Fluxbase backend endpoint
       // If namespace is provided, add it as a query parameter
@@ -96,20 +102,20 @@ export class FluxbaseFunctions {
       // Route to appropriate HTTP method
       switch (method) {
         case 'GET':
-          response = await this.fetch.get<T>(endpoint, { headers })
+          response = await this.fetch.get<T>(endpoint, { headers, signal })
           break
         case 'DELETE':
-          response = await this.fetch.delete<T>(endpoint, { headers })
+          response = await this.fetch.delete<T>(endpoint, { headers, signal })
           break
         case 'PUT':
-          response = await this.fetch.put<T>(endpoint, body, { headers })
+          response = await this.fetch.put<T>(endpoint, body, { headers, signal })
           break
         case 'PATCH':
-          response = await this.fetch.patch<T>(endpoint, body, { headers })
+          response = await this.fetch.patch<T>(endpoint, body, { headers, signal })
           break
         case 'POST':
         default:
-          response = await this.fetch.post<T>(endpoint, body, { headers })
+          response = await this.fetch.post<T>(endpoint, body, { headers, signal })
           break
       }
 

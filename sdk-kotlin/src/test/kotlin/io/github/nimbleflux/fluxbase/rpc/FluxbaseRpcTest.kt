@@ -156,6 +156,45 @@ class FluxbaseRpcTest {
         )
 
     @Test
+    fun `invoke encodes non-primitive params as real JSON`() = runTest {
+        val recording = RecordingHttp(mockResponseBody = """{"status":"completed"}""")
+        val c = client(recording)
+
+        c.rpc.invoke(
+            "search-visits",
+            mapOf(
+                "tags" to listOf("restaurant", "cafe"),
+                "range" to DateRange(from = "2026-01-01", to = "2026-02-01"),
+                "filters" to mapOf("min_days" to 3, "public" to true),
+                "cursor" to null,
+            ),
+            RpcInvokeOptions(namespace = "wayli"),
+        )
+
+        val params = (recording.lastBody as JsonObject)["params"] as JsonObject
+        // Lists encode as JSON arrays (previously the string "[restaurant, cafe]")
+        assertEquals("""["restaurant","cafe"]""", params["tags"].toString())
+        // @Serializable dataclasses encode via their generated serializer
+        assertEquals("""{"from":"2026-01-01","to":"2026-02-01"}""", params["range"].toString())
+        // Nested maps encode as JSON objects
+        assertEquals("""{"min_days":3,"public":true}""", params["filters"].toString())
+        assertTrue(params["cursor"] is JsonNull)
+    }
+
+    @Test
+    fun `invoke still encodes primitives without wrapping`() = runTest {
+        val recording = RecordingHttp(mockResponseBody = """{"status":"completed"}""")
+        val c = client(recording)
+
+        c.rpc.invoke("get-trip-summary", mapOf("trip_id" to "abc", "limit" to 10, "verbose" to false))
+
+        val params = (recording.lastBody as JsonObject)["params"] as JsonObject
+        assertEquals("\"abc\"", params["trip_id"].toString())
+        assertEquals("10", params["limit"].toString())
+        assertEquals("false", params["verbose"].toString())
+    }
+
+    @Test
     fun `waitForCompletion returns on terminal status`() = runTest {
         val recording = RecordingHttp(mockResponseBody = """{"id":"exec-1","status":"completed","result":{"ok":true}}""")
         val c = client(recording)
@@ -171,3 +210,9 @@ private typealias JsonObject = kotlinx.serialization.json.JsonObject
 
 private typealias HttpResponse = io.github.nimbleflux.fluxbase.core.HttpResponse
 private typealias HttpTransport = io.github.nimbleflux.fluxbase.core.HttpTransport
+
+private typealias JsonNull = kotlinx.serialization.json.JsonNull
+
+/** A test param dataclass — mirrors the issue's `DateRange(from, to)` example. */
+@kotlinx.serialization.Serializable
+private data class DateRange(val from: String, val to: String)

@@ -11,7 +11,7 @@ class MockFetch {
   public lastUrl: string = ''
   public lastMethod: string = ''
   public lastBody: unknown = null
-  public lastOptions: { timeout?: number } = {}
+  public lastOptions: { timeout?: number; signal?: AbortSignal | null } = {}
   public mockResponse: any = null
   public shouldThrow: boolean = false
   public errorMessage: string = 'Test error'
@@ -31,7 +31,11 @@ class MockFetch {
     return this.mockResponse as T
   }
 
-  async post<T>(path: string, body?: unknown, options?: { timeout?: number }): Promise<T> {
+  async post<T>(
+    path: string,
+    body?: unknown,
+    options?: { timeout?: number; signal?: AbortSignal | null },
+  ): Promise<T> {
     this.lastUrl = path
     this.lastMethod = 'POST'
     this.lastBody = body
@@ -171,6 +175,38 @@ describe('FluxbaseRPC', () => {
       await rpc.invoke('quick_proc', {}, { timeout: 5000 })
 
       expect(mockFetch.lastOptions.timeout).toBe(5000)
+    })
+
+    it('should pass abort signal through to fetch', async () => {
+      mockFetch.mockResponse = { status: 'completed' }
+      const controller = new AbortController()
+
+      await rpc.invoke('search_proc', { query: 'trip' }, { signal: controller.signal })
+
+      expect(mockFetch.lastOptions.signal).toBe(controller.signal)
+    })
+
+    it('should return the abort error from fetch when the signal fires', async () => {
+      const controller = new AbortController()
+      controller.abort()
+      mockFetch.shouldThrow = true
+      mockFetch.errorMessage = 'Request aborted'
+      const abortError = new Error('Request aborted')
+      abortError.name = 'AbortError'
+      const postSpy = vi
+        .spyOn(mockFetch, 'post')
+        .mockRejectedValue(abortError)
+
+      const { data, error } = await rpc.invoke('search_proc', {}, { signal: controller.signal })
+
+      expect(postSpy).toHaveBeenCalledWith(
+        '/api/v1/rpc/default/search_proc',
+        { params: {}, async: undefined },
+        { timeout: undefined, signal: controller.signal },
+      )
+      expect(data).toBeNull()
+      expect(error).toBe(abortError)
+      expect(error?.name).toBe('AbortError')
     })
 
     it('should encode procedure name in URL', async () => {
