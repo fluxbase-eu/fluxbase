@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/nimbleflux/fluxbase/internal/buildinfo"
 	"github.com/nimbleflux/fluxbase/internal/config"
 )
 
@@ -24,9 +25,12 @@ func TestMCPVersion(t *testing.T) {
 }
 
 func TestFluxbaseVersion(t *testing.T) {
-	t.Run("default value is unknown", func(t *testing.T) {
-		// FluxbaseVersion is set at build time, so in tests it's "unknown"
-		assert.NotEmpty(t, FluxbaseVersion)
+	t.Run("reports the stamped or fallback version", func(t *testing.T) {
+		// buildinfo.Version() resolves the ldflags stamp, the embedded
+		// module version, or "dev" — never empty or "unknown" (which would
+		// mean the MCP handshake reported no version at all).
+		assert.NotEmpty(t, buildinfo.Version())
+		assert.NotEqual(t, "unknown", buildinfo.Version())
 	})
 }
 

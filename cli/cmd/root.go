@@ -11,11 +11,6 @@ import (
 )
 
 var (
-	// Version information (set via ldflags during build)
-	Version   = "dev"
-	Commit    = "unknown"
-	BuildDate = "unknown"
-
 	// Global flags
 	cfgFile     string
 	profileName string

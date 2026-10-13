@@ -16,6 +16,7 @@ import (
 
 	"github.com/nimbleflux/fluxbase/internal/api"
 	"github.com/nimbleflux/fluxbase/internal/auth"
+	"github.com/nimbleflux/fluxbase/internal/buildinfo"
 	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/database"
 	"github.com/nimbleflux/fluxbase/internal/database/bootstrap"
@@ -27,11 +28,6 @@ import (
 )
 
 var (
-	// Version information (set via ldflags during build)
-	Version   = "dev"
-	Commit    = "unknown"
-	BuildDate = "unknown"
-
 	// CLI flags
 	showVersion    = flag.Bool("version", false, "Show version information")
 	validateConfig = flag.Bool("validate", false, "Validate configuration and exit")
@@ -51,9 +47,9 @@ func main() {
 
 	// Show version and exit
 	if *showVersion {
-		fmt.Printf("Fluxbase %s\n", Version)
-		fmt.Printf("Commit: %s\n", Commit)
-		fmt.Printf("Build Date: %s\n", BuildDate)
+		fmt.Printf("Fluxbase %s\n", buildinfo.Version())
+		fmt.Printf("Commit: %s\n", buildinfo.Commit())
+		fmt.Printf("Build Date: %s\n", buildinfo.BuildDate())
 		os.Exit(0)
 	}
 
@@ -62,9 +58,9 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	log.Info().
-		Str("version", Version).
-		Str("commit", Commit).
-		Str("build_date", BuildDate).
+		Str("version", buildinfo.Version()).
+		Str("commit", buildinfo.Commit()).
+		Str("build_date", buildinfo.BuildDate()).
 		Msg("Starting Fluxbase")
 
 	// Load configuration
@@ -368,7 +364,7 @@ func main() {
 		Msg("Tenant configuration loader initialized")
 
 	// Initialize API server
-	server := api.NewServer(cfg, db, Version)
+	server := api.NewServer(cfg, db, buildinfo.Version())
 
 	// Set tenant config loader for multi-tenant config overrides
 	server.SetTenantConfigLoader(tenantConfigLoader)

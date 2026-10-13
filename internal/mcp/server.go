@@ -8,15 +8,13 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/nimbleflux/fluxbase/internal/buildinfo"
 	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
 // MCPVersion is the MCP protocol version supported by this server
 const MCPVersion = "2025-06-18"
-
-// FluxbaseVersion should be set at build time
-var FluxbaseVersion = "unknown"
 
 // Server handles MCP protocol operations
 type Server struct {
@@ -115,7 +113,7 @@ func (s *Server) handleInitialize(ctx context.Context, req *Request) *Response {
 		ProtocolVersion: MCPVersion,
 		ServerInfo: ServerInfo{
 			Name:            "Fluxbase MCP Server",
-			Version:         FluxbaseVersion,
+			Version:         buildinfo.Version(),
 			ProtocolVersion: MCPVersion,
 		},
 		Capabilities: ServerCapabilities{
