@@ -4,7 +4,9 @@ import io.github.nimbleflux.fluxbase.FluxbaseError
 import io.github.nimbleflux.fluxbase.FluxbaseResponse
 import io.github.nimbleflux.fluxbase.core.FluxbaseHttpClient
 import io.github.nimbleflux.fluxbase.fluxbaseResponse
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -65,6 +67,12 @@ data class RpcExecutionLog(
 data class RpcInvokeOptions(
     val namespace: String = "default",
     val async: Boolean = false,
+    /**
+     * Per-request timeout in milliseconds. When it elapses, invoke fails with a
+     * 408 "Request timeout" error. The client-wide `FluxbaseClientOptions.timeout`
+     * still applies at the transport level, so a value larger than that is
+     * capped by it.
+     */
     val timeout: Long? = null,
 )
 
@@ -117,7 +125,8 @@ class FluxbaseRpc(@PublishedApi internal val http: FluxbaseHttpClient) {
      *
      * @param name the procedure name.
      * @param params parameters to pass to the procedure.
-     * @param options namespace (default "default"), async, timeout.
+     * @param options namespace (default "default"), async, per-request timeout
+     *   (fails with a 408 "Request timeout" error when it elapses).
      */
     suspend fun invoke(
         name: String,
@@ -140,7 +149,22 @@ class FluxbaseRpc(@PublishedApi internal val http: FluxbaseHttpClient) {
             }
             put("async", options.async)
         }
-        http.post("/api/v1/rpc/${encode(options.namespace)}/${encode(name)}", body)
+        val doInvoke: suspend () -> RpcInvokeResponse = {
+            http.post("/api/v1/rpc/${encode(options.namespace)}/${encode(name)}", body)
+        }
+        val timeout = options.timeout
+        if (timeout == null) {
+            doInvoke()
+        } else {
+            try {
+                withTimeout(timeout) { doInvoke() }
+            } catch (e: TimeoutCancellationException) {
+                // Our timeout, not caller cancellation (which is a plain
+                // CancellationException and must keep propagating) — surface
+                // the TS-parity 408 error.
+                throw FluxbaseError(status = 408, message = "Request timeout")
+            }
+        }
     }
 
     /**

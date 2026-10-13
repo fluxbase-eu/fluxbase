@@ -105,6 +105,57 @@ class FluxbaseRpcTest {
     }
 
     @Test
+    fun `invoke fails with 408 when per-request timeout elapses`() = runTest {
+        val c = delayedClient(responseDelayMs = 10_000)
+
+        val (data, error) = c.rpc.invoke("slow-proc", options = RpcInvokeOptions(timeout = 200))
+
+        assertNull(data)
+        assertEquals(408, error?.status)
+        assertEquals("Request timeout", error?.message)
+    }
+
+    @Test
+    fun `invoke succeeds when timeout exceeds request duration`() = runTest {
+        val c = delayedClient(responseDelayMs = 50)
+
+        val (data, error) = c.rpc.invoke("quick-proc", options = RpcInvokeOptions(timeout = 5_000))
+
+        assertNull(error)
+        assertEquals("completed", data?.status)
+    }
+
+    /** Fake transport that stalls each request for [responseDelayMs] (virtual time under runTest). */
+    private class DelayedTransport(private val responseDelayMs: Long) : HttpTransport {
+        override suspend fun request(
+            method: io.github.nimbleflux.fluxbase.core.HttpMethod,
+            path: String,
+            body: Any?,
+            headers: Map<String, String>,
+        ): HttpResponse {
+            kotlinx.coroutines.delay(responseDelayMs)
+            return HttpResponse("""{"status":"completed"}""", 200, emptyMap())
+        }
+
+        override suspend fun requestBytes(
+            method: io.github.nimbleflux.fluxbase.core.HttpMethod,
+            path: String,
+            headers: Map<String, String>,
+        ): ByteArray {
+            kotlinx.coroutines.delay(responseDelayMs)
+            return ByteArray(0)
+        }
+    }
+
+    private fun delayedClient(responseDelayMs: Long): FluxbaseClient =
+        FluxbaseClient.create(
+            "http://localhost:8080",
+            "anon-key",
+            FluxbaseClientOptions(autoRefresh = false),
+            DelayedTransport(responseDelayMs),
+        )
+
+    @Test
     fun `waitForCompletion returns on terminal status`() = runTest {
         val recording = RecordingHttp(mockResponseBody = """{"id":"exec-1","status":"completed","result":{"ok":true}}""")
         val c = client(recording)
@@ -117,3 +168,6 @@ class FluxbaseRpcTest {
 }
 
 private typealias JsonObject = kotlinx.serialization.json.JsonObject
+
+private typealias HttpResponse = io.github.nimbleflux.fluxbase.core.HttpResponse
+private typealias HttpTransport = io.github.nimbleflux.fluxbase.core.HttpTransport

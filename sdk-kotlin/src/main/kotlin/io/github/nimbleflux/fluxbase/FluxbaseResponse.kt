@@ -1,5 +1,7 @@
 package io.github.nimbleflux.fluxbase
 
+import kotlin.coroutines.cancellation.CancellationException
+
 /**
  * The result type for all Fluxbase SDK operations — the Kotlin equivalent of the
  * TS SDK's `{ data: T; error: null } | { data: null; error: Error }` union
@@ -81,6 +83,12 @@ fun <T> FluxbaseResponse<T>.getOrThrow(): T =
  * Wraps a suspending block, catching exceptions and converting them to
  * [FluxbaseResponse.Error]. The TS SDK uses `wrapAsync` for the same purpose
  * (`sdk/src/utils/error-handling.ts`).
+ *
+ * `CancellationException` is rethrown, not wrapped: it is the caller cancelling
+ * (or a timeout already converted by its own layer — the transport maps Ktor's
+ * request timeout to `FluxbaseException`, per-request timeouts to
+ * [FluxbaseError]), and swallowing it would leave the coroutine running after
+ * its job was cancelled.
  */
 suspend fun <T> fluxbaseResponse(block: suspend () -> T): FluxbaseResponse<T> =
     try {
@@ -96,6 +104,8 @@ suspend fun <T> fluxbaseResponse(block: suspend () -> T): FluxbaseResponse<T> =
                 message = e.message ?: "Unknown error",
             ),
         )
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         FluxbaseResponse.Error(FluxbaseError(message = e.message ?: "Unknown error"))
     }
