@@ -11,7 +11,7 @@
     },
     "admin": {
       "name": "shadcn-admin",
-      "version": "2026.9.10",
+      "version": "2026.10.1",
       "dependencies": {
         "@hookform/resolvers": "^5.9.1",
         "@monaco-editor/react": "^4.7.0",
@@ -158,7 +158,7 @@
         "vitest": "^5.0.0",
       },
       "peerDependencies": {
-        "@nimbleflux/fluxbase-sdk": "^2026.9.10",
+        "@nimbleflux/fluxbase-sdk": "^2026.10.1",
         "next": "^14.0.0 || ^15.0.0 || ^16.0.0",
         "react": "^18.0.0 || ^19.0.0",
       },
@@ -186,7 +186,7 @@
         "vitest": "^5.0.0",
       },
       "peerDependencies": {
-        "@nimbleflux/fluxbase-sdk": "^2026.9.10",
+        "@nimbleflux/fluxbase-sdk": "^2026.10.1",
         "@tanstack/react-query": "^5.102.8",
         "react": "^18.0.0 || ^19.0.0",
       },
@@ -214,7 +214,7 @@
         "vitest": "^5.0.0",
       },
       "peerDependencies": {
-        "@nimbleflux/fluxbase-sdk": "^2026.9.10",
+        "@nimbleflux/fluxbase-sdk": "^2026.10.1",
         "@tanstack/svelte-query": "^6.1.48",
         "svelte": "^4.0.0 || ^5.0.0",
       },
@@ -234,7 +234,7 @@
         "vitest": "^5.0.0",
       },
       "peerDependencies": {
-        "@nimbleflux/fluxbase-sdk": "^2026.9.10",
+        "@nimbleflux/fluxbase-sdk": "^2026.10.1",
         "vue": "^3.5.42",
       },
     },

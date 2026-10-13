@@ -47,14 +47,17 @@ if git rev-parse --verify origin/main >/dev/null 2>&1; then
 fi
 
 # 4. Version files consistent — same invariant CI's version-drift job checks.
+#    Anchored on the NEWEST of VERSION and the latest release tag: in a
+#    release window the tree is legitimately one step ahead of the tag.
 git fetch --quiet --tags origin 2>/dev/null || warn "could not fetch tags (offline?)"
 LATEST_TAG_VERSION=$(git tag -l 'v*' | sort -V | tail -n1 | sed 's/^v//')
 LATEST_TAG_VERSION=${LATEST_TAG_VERSION:-$(cat VERSION)}
-if bash scripts/set-version.sh "$LATEST_TAG_VERSION" --check >/dev/null 2>&1; then
-  pass "version files consistent with v${LATEST_TAG_VERSION}"
+TARGET=$(printf '%s\n%s\n' "$(cat VERSION)" "$LATEST_TAG_VERSION" | sort -V | tail -n1)
+if bash scripts/set-version.sh "$TARGET" --check >/dev/null 2>&1; then
+  pass "version files consistent with v${TARGET}"
 else
   fail "version-file drift detected (CI version-drift would fail):"
-  bash scripts/set-version.sh "$LATEST_TAG_VERSION" --check || true
+  bash scripts/set-version.sh "$TARGET" --check || true
 fi
 
 # 5. CI green on this exact commit.

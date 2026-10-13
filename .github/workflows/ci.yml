@@ -1232,16 +1232,17 @@ jobs:
 
       - name: Check version-file consistency
         run: |
-          # Fresh tags: a release's bump commit lands right after its tag, and
-          # the expected tree state is "matches the latest release tag".
+          # The expected tree state is "self-consistent at the NEWEST of the
+          # VERSION file and the latest release tag": normally they are equal,
+          # but in a release window the bump commit lands before (or, if a
+          # release is re-cut, after) the tag, so the tree is legitimately one
+          # step ahead. A tree that lags the tag, or mixed copies, still fail.
           git fetch --tags --force
           LATEST_TAG_VERSION=$(git tag -l 'v*' | sort -V | tail -n1 | sed 's/^v//')
-          if [ -z "$LATEST_TAG_VERSION" ]; then
-            # Fresh repo without tags: consistency is defined against VERSION.
-            LATEST_TAG_VERSION=$(cat VERSION)
-          fi
-          echo "Re-applying version ${LATEST_TAG_VERSION} (latest release tag) to a clean tree"
-          scripts/set-version.sh "$LATEST_TAG_VERSION" --check
+          [ -n "$LATEST_TAG_VERSION" ] || LATEST_TAG_VERSION=$(cat VERSION)
+          TARGET=$(printf '%s\n%s\n' "$(cat VERSION)" "$LATEST_TAG_VERSION" | sort -V | tail -n1)
+          echo "Re-applying version ${TARGET} to a clean tree"
+          scripts/set-version.sh "$TARGET" --check
 
   test-e2e-ui:
     name: Test E2E UI
