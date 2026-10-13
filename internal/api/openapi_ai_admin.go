@@ -13,25 +13,25 @@ func (h *OpenAPIHandler) addAIAdminEndpoints(spec *OpenAPISpec) {
 	spec.Components.Schemas["KnowledgeBase"] = map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"id":                          map[string]string{"type": "string", "format": "uuid"},
-			"name":                        map[string]string{"type": "string"},
-			"namespace":                   map[string]string{"type": "string"},
-			"description":                 map[string]string{"type": "string"},
-			"embedding_model":             map[string]string{"type": "string"},
-			"embedding_dimensions":        map[string]string{"type": "integer"},
-			"chunk_size":                  map[string]string{"type": "integer"},
-			"chunk_overlap":               map[string]string{"type": "integer"},
-			"chunk_strategy":              map[string]string{"type": "string"},
-			"enabled":                     map[string]string{"type": "boolean"},
-			"document_count":              map[string]string{"type": "integer"},
-			"total_chunks":                map[string]string{"type": "integer"},
-			"visibility":                  map[string]string{"type": "string", "enum": "private,shared,public"},
-			"entity_extraction_enabled":   map[string]string{"type": "boolean"},
-			"entity_extraction_strategy":  map[string]string{"type": "string", "enum": ",rules,llm,hybrid"},
-			"rerank_enabled":              map[string]string{"type": "boolean"},
-			"owner_id":                    map[string]string{"type": "string", "format": "uuid"},
-			"created_at":                  map[string]string{"type": "string", "format": "date-time"},
-			"updated_at":                  map[string]string{"type": "string", "format": "date-time"},
+			"id":                         map[string]string{"type": "string", "format": "uuid"},
+			"name":                       map[string]string{"type": "string"},
+			"namespace":                  map[string]string{"type": "string"},
+			"description":                map[string]string{"type": "string"},
+			"embedding_model":            map[string]string{"type": "string"},
+			"embedding_dimensions":       map[string]string{"type": "integer"},
+			"chunk_size":                 map[string]string{"type": "integer"},
+			"chunk_overlap":              map[string]string{"type": "integer"},
+			"chunk_strategy":             map[string]string{"type": "string"},
+			"enabled":                    map[string]string{"type": "boolean"},
+			"document_count":             map[string]string{"type": "integer"},
+			"total_chunks":               map[string]string{"type": "integer"},
+			"visibility":                 map[string]string{"type": "string", "enum": "private,shared,public"},
+			"entity_extraction_enabled":  map[string]string{"type": "boolean"},
+			"entity_extraction_strategy": map[string]string{"type": "string", "enum": ",rules,llm,hybrid"},
+			"rerank_enabled":             map[string]string{"type": "boolean"},
+			"owner_id":                   map[string]string{"type": "string", "format": "uuid"},
+			"created_at":                 map[string]string{"type": "string", "format": "date-time"},
+			"updated_at":                 map[string]string{"type": "string", "format": "date-time"},
 		},
 	}
 
@@ -51,7 +51,7 @@ func (h *OpenAPIHandler) addAIAdminEndpoints(spec *OpenAPISpec) {
 	}
 
 	spec.Components.Schemas["KBSearchRequest"] = map[string]interface{}{
-		"type": "object",
+		"type":     "object",
 		"required": []string{"query"},
 		"properties": map[string]interface{}{
 			"query":           map[string]string{"type": "string"},
@@ -66,12 +66,12 @@ func (h *OpenAPIHandler) addAIAdminEndpoints(spec *OpenAPISpec) {
 	spec.Components.Schemas["KBSearchResult"] = map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"chunk_id":           map[string]string{"type": "string"},
-			"document_id":        map[string]string{"type": "string"},
-			"document_title":     map[string]string{"type": "string"},
+			"chunk_id":            map[string]string{"type": "string"},
+			"document_id":         map[string]string{"type": "string"},
+			"document_title":      map[string]string{"type": "string"},
 			"knowledge_base_name": map[string]string{"type": "string"},
-			"content":            map[string]string{"type": "string"},
-			"similarity":         map[string]string{"type": "number"},
+			"content":             map[string]string{"type": "string"},
+			"similarity":          map[string]string{"type": "number"},
 		},
 	}
 
@@ -135,16 +135,16 @@ func (h *OpenAPIHandler) addAIAdminEndpoints(spec *OpenAPISpec) {
 				Content: jsonContent(map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"name":                        map[string]string{"type": "string"},
-						"description":                 map[string]string{"type": "string"},
-						"visibility":                  map[string]string{"type": "string", "enum": "private,shared,public"},
-						"chunk_size":                  map[string]string{"type": "integer"},
-						"chunk_overlap":               map[string]string{"type": "integer"},
-						"chunk_strategy":              map[string]string{"type": "string"},
-						"enabled":                     map[string]string{"type": "boolean"},
-						"entity_extraction_enabled":   map[string]string{"type": "boolean"},
-						"entity_extraction_strategy":  map[string]string{"type": "string", "enum": ",rules,llm,hybrid"},
-						"rerank_enabled":              map[string]string{"type": "boolean"},
+						"name":                       map[string]string{"type": "string"},
+						"description":                map[string]string{"type": "string"},
+						"visibility":                 map[string]string{"type": "string", "enum": "private,shared,public"},
+						"chunk_size":                 map[string]string{"type": "integer"},
+						"chunk_overlap":              map[string]string{"type": "integer"},
+						"chunk_strategy":             map[string]string{"type": "string"},
+						"enabled":                    map[string]string{"type": "boolean"},
+						"entity_extraction_enabled":  map[string]string{"type": "boolean"},
+						"entity_extraction_strategy": map[string]string{"type": "string", "enum": ",rules,llm,hybrid"},
+						"rerank_enabled":             map[string]string{"type": "boolean"},
 					},
 				}),
 			},
@@ -284,16 +284,16 @@ func (h *OpenAPIHandler) addAIAdminEndpoints(spec *OpenAPISpec) {
 			RequestBody: &OpenAPIRequestBody{
 				Required: true,
 				Content: jsonContent(map[string]interface{}{
-					"type": "object",
+					"type":     "object",
 					"required": []string{"knowledge_base_id"},
 					"properties": map[string]interface{}{
-						"knowledge_base_id": map[string]string{"type": "string", "format": "uuid"},
-						"columns":           map[string]interface{}{"type": "array", "items": map[string]string{"type": "string"}},
-						"include_sample_rows": map[string]string{"type": "boolean"},
-						"sample_row_count":  map[string]string{"type": "integer"},
+						"knowledge_base_id":    map[string]string{"type": "string", "format": "uuid"},
+						"columns":              map[string]interface{}{"type": "array", "items": map[string]string{"type": "string"}},
+						"include_sample_rows":  map[string]string{"type": "boolean"},
+						"sample_row_count":     map[string]string{"type": "integer"},
 						"include_foreign_keys": map[string]string{"type": "boolean"},
-						"include_indexes":   map[string]string{"type": "boolean"},
-						"user_id_column":    map[string]string{"type": "string"},
+						"include_indexes":      map[string]string{"type": "boolean"},
+						"user_id_column":       map[string]string{"type": "string"},
 					},
 				}),
 			},
@@ -402,7 +402,7 @@ func (h *OpenAPIHandler) addAIAdminEndpoints(spec *OpenAPISpec) {
 			RequestBody: &OpenAPIRequestBody{
 				Required: true,
 				Content: jsonContent(map[string]interface{}{
-					"type": "object",
+					"type":     "object",
 					"required": []string{"user_id", "permission"},
 					"properties": map[string]interface{}{
 						"user_id":    map[string]string{"type": "string", "format": "uuid"},
