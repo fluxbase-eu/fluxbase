@@ -7,6 +7,33 @@ This file is generated from the conventional-commit history by
 [git-cliff](https://github.com/orhun/git-cliff) at release time — do not
 hand-edit release sections. See RELEASING.md for the release process.
 
+## v2026.10.2 (2026-10-13)
+
+
+### Bug fixes
+
+
+- **sdk-kotlin:** Encode non-primitive JSON values via generated serializers — fixes #440 (#442) @bartcode
+
+- **sdk-kotlin:** Wire per-request RpcInvokeOptions.timeout — was silently ignored (#443) @bartcode
+
+
+### Features
+
+
+- **sdk:** AbortSignal support on rpc.invoke and functions.invoke — fixes #439 (#441) @bartcode
+
+
+### Miscellaneous
+
+
+- Update version to 2026.10.1 in deployment files @github-actions[bot]
+
+- **postgres:** Rebuild image for latest patches (18.4-v2) @bartcode
+
+- **postgres:** Pin Helm values to fluxbase-postgres 18.4-v2 @bartcode
+
+
 ## v2026.10.1 (2026-10-13)
 
 
