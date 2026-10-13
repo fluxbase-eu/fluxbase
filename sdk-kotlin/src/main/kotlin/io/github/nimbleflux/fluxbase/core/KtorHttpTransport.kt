@@ -2,6 +2,7 @@ package io.github.nimbleflux.fluxbase.core
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.header
@@ -104,31 +105,38 @@ class KtorHttpTransport(
      * Build and send the request, returning the raw Ktor response. Body handling:
      * [ByteArray] → sent verbatim (binary upload); anything else → JSON-encoded.
      * Callers ([request]/[requestBytes]) read the response body in the form they
-     * need and apply the status→exception mapping.
+     * need and apply the status→exception mapping. Ktor's engine-level request
+     * timeout ([HttpRequestTimeoutException], a CancellationException subtype) is
+     * converted to [FluxbaseException] so it surfaces as an error rather than as
+     * caller cancellation.
      */
     private suspend fun rawRequest(
         method: HttpMethod,
         path: String,
         body: Any?,
         headers: Map<String, String>,
-    ): KtorHttpResponse = client.request(baseUrl.trimEnd('/') + path) {
-        this.method = when (method) {
-            HttpMethod.GET -> io.ktor.http.HttpMethod.Get
-            HttpMethod.POST -> io.ktor.http.HttpMethod.Post
-            HttpMethod.PUT -> io.ktor.http.HttpMethod.Put
-            HttpMethod.PATCH -> io.ktor.http.HttpMethod.Patch
-            HttpMethod.DELETE -> io.ktor.http.HttpMethod.Delete
-            HttpMethod.HEAD -> io.ktor.http.HttpMethod.Head
-        }
-        headers.forEach { (k, v) -> header(k, v) }
-        when (body) {
-            null -> Unit
-            is ByteArray -> setBody(body) // binary-safe (e.g. storage upload)
-            else -> {
-                val jsonElement = encodeToJsonElement(body)
-                setBody(json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), jsonElement))
+    ): KtorHttpResponse = try {
+        client.request(baseUrl.trimEnd('/') + path) {
+            this.method = when (method) {
+                HttpMethod.GET -> io.ktor.http.HttpMethod.Get
+                HttpMethod.POST -> io.ktor.http.HttpMethod.Post
+                HttpMethod.PUT -> io.ktor.http.HttpMethod.Put
+                HttpMethod.PATCH -> io.ktor.http.HttpMethod.Patch
+                HttpMethod.DELETE -> io.ktor.http.HttpMethod.Delete
+                HttpMethod.HEAD -> io.ktor.http.HttpMethod.Head
+            }
+            headers.forEach { (k, v) -> header(k, v) }
+            when (body) {
+                null -> Unit
+                is ByteArray -> setBody(body) // binary-safe (e.g. storage upload)
+                else -> {
+                    val jsonElement = encodeToJsonElement(body)
+                    setBody(json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), jsonElement))
+                }
             }
         }
+    } catch (e: HttpRequestTimeoutException) {
+        throw FluxbaseException(status = 408, message = "Request timeout")
     }
 
     /** Parse the `error` field from a JSON error body, falling back to the raw text/status. */
