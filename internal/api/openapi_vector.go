@@ -33,7 +33,7 @@ func (h *OpenAPIHandler) addVectorEndpoints(spec *OpenAPISpec) {
 		},
 	}
 
-	// Mirrors VectorSearchRequest (vector_handler.go): either query or vector
+	// Mirrors vector.SearchRequest (internal/api/vector/handler.go): either query or vector
 	// must be provided to build the query embedding.
 	spec.Components.Schemas["VectorSearchRequest"] = map[string]interface{}{
 		"type":     "object",
@@ -63,7 +63,7 @@ func (h *OpenAPIHandler) addVectorEndpoints(spec *OpenAPISpec) {
 		},
 	}
 
-	// Mirrors VectorSearchResponse (vector_handler.go)
+	// Mirrors vector.SearchResponse (internal/api/vector/handler.go)
 	spec.Components.Schemas["VectorSearchResult"] = map[string]interface{}{
 		"type":     "object",
 		"required": []string{"data"},

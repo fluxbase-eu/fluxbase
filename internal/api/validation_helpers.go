@@ -1,13 +1,14 @@
 package api
 
-import "github.com/gofiber/fiber/v3"
+import (
+	"github.com/gofiber/fiber/v3"
+
+	"github.com/nimbleflux/fluxbase/internal/api/apiutil"
+)
 
 // ParseBody binds the request body to req and returns a fiber.Error on failure.
 func ParseBody(c fiber.Ctx, req any) error {
-	if err := c.Bind().Body(req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
-	}
-	return nil
+	return apiutil.ParseBody(c, req)
 }
 
 // NormalizePaginationParams validates and normalizes limit/offset pagination parameters.
