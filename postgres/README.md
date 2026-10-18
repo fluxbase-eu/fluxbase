@@ -126,3 +126,17 @@ The following extensions are preloaded at startup (configured in `init-scripts/0
 - `pg_stat_statements` - Query statistics
 - `pg_cron` - Job scheduling
 - `pgaudit` - Audit logging (disabled by default, enable via SQL)
+
+## Security Refreshes
+
+The Dockerfile upgrades base packages on every build (`apt-get upgrade` right
+after `FROM`), so a rebuild always carries the current Debian security point
+releases — the base image alone freezes whatever was current when it was last
+pushed.
+
+To ship a patched image, bump `imageVersion` in
+[`postgres/versions.json`](versions.json) and cut a release: the Release
+workflow rebuilds every version from the current base and apt repos and
+stamps a new immutable `<version>-v<N>` tag, and the Helm chart pin follows
+via `scripts/set-version.sh`. Never rebuild an existing `<version>-v<N>` tag
+in place — consumers pin those for immutability.
