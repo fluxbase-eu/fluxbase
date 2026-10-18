@@ -17,6 +17,16 @@ LABEL org.opencontainers.image.source="https://github.com/nimbleflux/fluxbase"
 LABEL org.opencontainers.image.description="PostgreSQL ${POSTGRES_MAJOR} with extensions for Fluxbase"
 LABEL org.opencontainers.image.licenses="MIT"
 
+# Upgrade base packages before anything else. FROM freezes one Debian
+# snapshot, and the installs below only ADD packages — without this, a
+# rebuild bakes in whatever base packages were current when the official
+# base image was last pushed, and Debian security point releases
+# (xxx+debNNuN) never land until upstream happens to rebuild the tag.
+# Runs on every build, release and CI alike.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Add PGDG repo for latest extension packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \

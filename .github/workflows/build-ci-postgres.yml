@@ -8,14 +8,12 @@ on:
         required: true
         type: string
       postgres_version:
-        description: "PostgreSQL version"
+        description: "PostgreSQL version (default: latest in postgres/versions.json)"
         required: false
-        default: "18.1"
         type: string
       postgres_major:
-        description: "PostgreSQL major version"
+        description: "PostgreSQL major version (default: latest major in postgres/versions.json)"
         required: false
-        default: "18"
         type: string
 
 permissions:
@@ -27,6 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Resolve default versions from versions.json
+        id: versions
+        run: |
+          latest=$(jq -c '.versions[] | select(.latest == true)' postgres/versions.json)
+          echo "version=$(jq -r '.version' <<<"$latest")" >> "$GITHUB_OUTPUT"
+          echo "major=$(jq -r '.major' <<<"$latest")" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -47,8 +52,8 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/fluxbase-postgres:${{ inputs.tag }}
           build-args: |
-            POSTGRES_VERSION=${{ inputs.postgres_version }}
-            POSTGRES_MAJOR=${{ inputs.postgres_major }}
+            POSTGRES_VERSION=${{ inputs.postgres_version || steps.versions.outputs.version }}
+            POSTGRES_MAJOR=${{ inputs.postgres_major || steps.versions.outputs.major }}
           cache-from: type=gha,scope=postgres-ci
           cache-to: type=gha,mode=max,scope=postgres-ci
 
