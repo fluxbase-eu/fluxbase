@@ -1,4 +1,4 @@
-package api
+package vector
 
 import (
 	"encoding/json"
@@ -167,14 +167,14 @@ func TestEmbedUsage_Struct(t *testing.T) {
 }
 
 // =============================================================================
-// VectorSearchRequest Struct Tests
+// SearchRequest Struct Tests
 // =============================================================================
 
-func TestVectorSearchRequest_Struct(t *testing.T) {
+func TestSearchRequest_Struct(t *testing.T) {
 	t.Run("query-based search", func(t *testing.T) {
 		threshold := 0.8
 		count := 10
-		req := VectorSearchRequest{
+		req := SearchRequest{
 			Table:          "documents",
 			Column:         "embedding",
 			Query:          "Find similar documents",
@@ -194,7 +194,7 @@ func TestVectorSearchRequest_Struct(t *testing.T) {
 	})
 
 	t.Run("vector-based search", func(t *testing.T) {
-		req := VectorSearchRequest{
+		req := SearchRequest{
 			Table:  "products",
 			Column: "embedding",
 			Vector: []float64{0.1, 0.2, 0.3, 0.4, 0.5},
@@ -207,11 +207,11 @@ func TestVectorSearchRequest_Struct(t *testing.T) {
 	})
 
 	t.Run("with filters", func(t *testing.T) {
-		req := VectorSearchRequest{
+		req := SearchRequest{
 			Table:  "documents",
 			Column: "embedding",
 			Query:  "test query",
-			Filters: []VectorQueryFilter{
+			Filters: []QueryFilter{
 				{Column: "category", Operator: "eq", Value: "technology"},
 				{Column: "published", Operator: "eq", Value: true},
 			},
@@ -234,7 +234,7 @@ func TestVectorSearchRequest_Struct(t *testing.T) {
 			]
 		}`
 
-		var req VectorSearchRequest
+		var req SearchRequest
 		err := json.Unmarshal([]byte(jsonData), &req)
 		require.NoError(t, err)
 
@@ -248,12 +248,12 @@ func TestVectorSearchRequest_Struct(t *testing.T) {
 }
 
 // =============================================================================
-// VectorQueryFilter Struct Tests
+// QueryFilter Struct Tests
 // =============================================================================
 
-func TestVectorQueryFilter_Struct(t *testing.T) {
+func TestQueryFilter_Struct(t *testing.T) {
 	t.Run("string value filter", func(t *testing.T) {
-		filter := VectorQueryFilter{
+		filter := QueryFilter{
 			Column:   "category",
 			Operator: "eq",
 			Value:    "sports",
@@ -265,7 +265,7 @@ func TestVectorQueryFilter_Struct(t *testing.T) {
 	})
 
 	t.Run("numeric value filter", func(t *testing.T) {
-		filter := VectorQueryFilter{
+		filter := QueryFilter{
 			Column:   "score",
 			Operator: "gte",
 			Value:    75.5,
@@ -275,7 +275,7 @@ func TestVectorQueryFilter_Struct(t *testing.T) {
 	})
 
 	t.Run("boolean value filter", func(t *testing.T) {
-		filter := VectorQueryFilter{
+		filter := QueryFilter{
 			Column:   "is_active",
 			Operator: "eq",
 			Value:    true,
@@ -285,7 +285,7 @@ func TestVectorQueryFilter_Struct(t *testing.T) {
 	})
 
 	t.Run("JSON serialization", func(t *testing.T) {
-		filter := VectorQueryFilter{
+		filter := QueryFilter{
 			Column:   "type",
 			Operator: "in",
 			Value:    []string{"a", "b"},
@@ -301,12 +301,12 @@ func TestVectorQueryFilter_Struct(t *testing.T) {
 }
 
 // =============================================================================
-// VectorSearchResponse Struct Tests
+// SearchResponse Struct Tests
 // =============================================================================
 
-func TestVectorSearchResponse_Struct(t *testing.T) {
+func TestSearchResponse_Struct(t *testing.T) {
 	t.Run("all fields accessible", func(t *testing.T) {
-		resp := VectorSearchResponse{
+		resp := SearchResponse{
 			Data: []map[string]interface{}{
 				{"id": 1, "title": "Document 1"},
 				{"id": 2, "title": "Document 2"},
@@ -321,7 +321,7 @@ func TestVectorSearchResponse_Struct(t *testing.T) {
 	})
 
 	t.Run("empty results", func(t *testing.T) {
-		resp := VectorSearchResponse{
+		resp := SearchResponse{
 			Data:      []map[string]interface{}{},
 			Distances: []float64{},
 			Model:     "nomic-embed-text",
@@ -332,7 +332,7 @@ func TestVectorSearchResponse_Struct(t *testing.T) {
 	})
 
 	t.Run("JSON serialization", func(t *testing.T) {
-		resp := VectorSearchResponse{
+		resp := SearchResponse{
 			Data: []map[string]interface{}{
 				{"id": 1},
 			},
@@ -348,12 +348,12 @@ func TestVectorSearchResponse_Struct(t *testing.T) {
 }
 
 // =============================================================================
-// VectorCapabilities Struct Tests
+// Capabilities Struct Tests
 // =============================================================================
 
-func TestVectorCapabilities_Struct(t *testing.T) {
+func TestCapabilities_Struct(t *testing.T) {
 	t.Run("all fields accessible", func(t *testing.T) {
-		caps := VectorCapabilities{
+		caps := Capabilities{
 			Enabled:           true,
 			PgVectorInstalled: true,
 			PgVectorVersion:   "0.7.0",
@@ -371,7 +371,7 @@ func TestVectorCapabilities_Struct(t *testing.T) {
 	})
 
 	t.Run("disabled capabilities", func(t *testing.T) {
-		caps := VectorCapabilities{
+		caps := Capabilities{
 			Enabled:           false,
 			PgVectorInstalled: false,
 			EmbeddingEnabled:  false,
@@ -385,7 +385,7 @@ func TestVectorCapabilities_Struct(t *testing.T) {
 	})
 
 	t.Run("JSON serialization", func(t *testing.T) {
-		caps := VectorCapabilities{
+		caps := Capabilities{
 			Enabled:           true,
 			PgVectorInstalled: true,
 			PgVectorVersion:   "0.6.0",
@@ -406,7 +406,7 @@ func TestVectorCapabilities_Struct(t *testing.T) {
 	})
 
 	t.Run("JSON omits empty optional fields", func(t *testing.T) {
-		caps := VectorCapabilities{
+		caps := Capabilities{
 			Enabled:           false,
 			PgVectorInstalled: false,
 			EmbeddingEnabled:  false,
@@ -430,7 +430,7 @@ func TestHandleEmbed_Validation(t *testing.T) {
 	t.Run("no text provided", func(t *testing.T) {
 		app := newTestApp(t)
 
-		// We can't easily test the full handler without mocking VectorManager
+		// We can't easily test the full handler without mocking Manager
 		// but we can test the request validation behavior
 
 		// This is a simple test that verifies the struct is parsed correctly
@@ -464,7 +464,7 @@ func TestHandleEmbed_Validation(t *testing.T) {
 func TestHandleSearch_Validation(t *testing.T) {
 	t.Run("missing table and column", func(t *testing.T) {
 		body := `{"query":"test"}`
-		var req VectorSearchRequest
+		var req SearchRequest
 		err := json.Unmarshal([]byte(body), &req)
 		require.NoError(t, err)
 
@@ -474,7 +474,7 @@ func TestHandleSearch_Validation(t *testing.T) {
 
 	t.Run("neither query nor vector provided", func(t *testing.T) {
 		body := `{"table":"docs","column":"embedding"}`
-		var req VectorSearchRequest
+		var req SearchRequest
 		err := json.Unmarshal([]byte(body), &req)
 		require.NoError(t, err)
 
@@ -616,7 +616,7 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 				})
 			}
 
-			return c.JSON(VectorCapabilities{
+			return c.JSON(Capabilities{
 				Enabled:           true,
 				PgVectorInstalled: true,
 				PgVectorVersion:   "0.7.0",
@@ -636,7 +636,7 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 		respBody, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 
-		var result VectorCapabilities
+		var result Capabilities
 		err = json.Unmarshal(respBody, &result)
 		require.NoError(t, err)
 
@@ -666,7 +666,7 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 				})
 			}
 
-			return c.JSON(VectorCapabilities{})
+			return c.JSON(Capabilities{})
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/capabilities/vector", nil)
@@ -694,7 +694,7 @@ func TestHandleGetCapabilities_RoleBasedResponse(t *testing.T) {
 // Admin Role Verification Tests
 // =============================================================================
 
-func TestVectorAdminRoles(t *testing.T) {
+func TestAdminRoles(t *testing.T) {
 	adminRoles := []string{"admin", "instance_admin", "service_role"}
 	nonAdminRoles := []string{"user", "authenticated", "anon", ""}
 
@@ -719,7 +719,7 @@ func TestVectorAdminRoles(t *testing.T) {
 
 func TestMatchCountLimits(t *testing.T) {
 	t.Run("default match count", func(t *testing.T) {
-		req := VectorSearchRequest{
+		req := SearchRequest{
 			Table:      "docs",
 			Column:     "embedding",
 			Query:      "test",
@@ -731,7 +731,7 @@ func TestMatchCountLimits(t *testing.T) {
 
 	t.Run("custom match count", func(t *testing.T) {
 		count := 50
-		req := VectorSearchRequest{
+		req := SearchRequest{
 			Table:      "docs",
 			Column:     "embedding",
 			Query:      "test",

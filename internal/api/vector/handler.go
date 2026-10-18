@@ -1,4 +1,7 @@
-package api
+// Package vector holds the vector-search HTTP handler (pgvector embeddings
+// and similarity search) and the embedding-service manager behind it.
+// Extracted from internal/api as part of the per-domain decomposition (#380).
+package vector
 
 import (
 	"context"
@@ -9,22 +12,24 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/nimbleflux/fluxbase/internal/ai"
+	"github.com/nimbleflux/fluxbase/internal/api/apiutil"
 	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/nimbleflux/fluxbase/internal/config"
 	"github.com/nimbleflux/fluxbase/internal/database"
+	apperrors "github.com/nimbleflux/fluxbase/internal/errors"
 	"github.com/nimbleflux/fluxbase/internal/middleware"
 )
 
-type VectorHandler struct {
-	vectorManager   *VectorManager
+type Handler struct {
+	vectorManager   *Manager
 	config          *config.AIConfig
 	baseConfig      *config.Config
 	schemaInspector *database.SchemaInspector
 	db              *database.Connection
 }
 
-func NewVectorHandler(vectorManager *VectorManager, schemaInspector *database.SchemaInspector, db *database.Connection, baseConfig *config.Config) (*VectorHandler, error) {
-	handler := &VectorHandler{
+func NewHandler(vectorManager *Manager, schemaInspector *database.SchemaInspector, db *database.Connection, baseConfig *config.Config) (*Handler, error) {
+	handler := &Handler{
 		vectorManager:   vectorManager,
 		config:          vectorManager.envConfig,
 		baseConfig:      baseConfig,
@@ -35,7 +40,7 @@ func NewVectorHandler(vectorManager *VectorManager, schemaInspector *database.Sc
 	return handler, nil
 }
 
-func (h *VectorHandler) getConfig(c fiber.Ctx) *config.AIConfig {
+func (h *Handler) getConfig(c fiber.Ctx) *config.AIConfig {
 	if tc, ok := c.Locals("tenant_config").(*config.Config); ok && tc != nil {
 		return &tc.AI
 	}
@@ -204,33 +209,33 @@ type EmbedUsage struct {
 	TotalTokens  int `json:"total_tokens"`
 }
 
-type VectorSearchRequest struct {
-	Table          string              `json:"table"`
-	Column         string              `json:"column"`
-	Query          string              `json:"query,omitempty"`
-	Vector         []float64           `json:"vector,omitempty"`
-	Metric         string              `json:"metric,omitempty"`
-	MatchThreshold *float64            `json:"match_threshold,omitempty"`
-	MatchCount     *int                `json:"match_count,omitempty"`
-	Select         string              `json:"select,omitempty"`
-	Filters        []VectorQueryFilter `json:"filters,omitempty"`
+type SearchRequest struct {
+	Table          string        `json:"table"`
+	Column         string        `json:"column"`
+	Query          string        `json:"query,omitempty"`
+	Vector         []float64     `json:"vector,omitempty"`
+	Metric         string        `json:"metric,omitempty"`
+	MatchThreshold *float64      `json:"match_threshold,omitempty"`
+	MatchCount     *int          `json:"match_count,omitempty"`
+	Select         string        `json:"select,omitempty"`
+	Filters        []QueryFilter `json:"filters,omitempty"`
 }
 
-type VectorQueryFilter struct {
+type QueryFilter struct {
 	Column   string      `json:"column"`
 	Operator string      `json:"operator"`
 	Value    interface{} `json:"value"`
 }
 
-type VectorSearchResponse struct {
+type SearchResponse struct {
 	Data      []map[string]interface{} `json:"data"`
 	Distances []float64                `json:"distances,omitempty"`
 	Model     string                   `json:"model,omitempty"`
 }
 
-func (h *VectorHandler) HandleEmbed(c fiber.Ctx) error {
+func (h *Handler) HandleEmbed(c fiber.Ctx) error {
 	var req EmbedRequest
-	if err := ParseBody(c, &req); err != nil {
+	if err := apiutil.ParseBody(c, &req); err != nil {
 		return err
 	}
 
@@ -242,19 +247,19 @@ func (h *VectorHandler) HandleEmbed(c fiber.Ctx) error {
 		isAdmin := role == "admin" || role == "instance_admin" || role == "service_role" || role == "tenant_service"
 
 		if !isAdmin {
-			return SendForbidden(c, "Provider selection requires admin privileges", ErrCodeAccessDenied)
+			return apperrors.SendForbidden(c, "Provider selection requires admin privileges", apperrors.ErrCodeAccessDenied)
 		}
 
 		embeddingService, err = h.vectorManager.GetEmbeddingServiceForProvider(c.RequestCtx(), req.Provider)
 		if err != nil {
-			return SendBadRequest(c, "Invalid embedding provider", ErrCodeInvalidInput)
+			return apperrors.SendBadRequest(c, "Invalid embedding provider", apperrors.ErrCodeInvalidInput)
 		}
 	} else {
 		embeddingService = h.vectorManager.GetEmbeddingService()
 	}
 
 	if embeddingService == nil {
-		return SendFeatureDisabled(c, "Vector search")
+		return apperrors.SendFeatureDisabled(c, "Vector search")
 	}
 
 	var texts []string
@@ -264,13 +269,13 @@ func (h *VectorHandler) HandleEmbed(c fiber.Ctx) error {
 	texts = append(texts, req.Texts...)
 
 	if len(texts) == 0 {
-		return SendBadRequest(c, "No text provided for embedding", ErrCodeInvalidInput)
+		return apperrors.SendBadRequest(c, "No text provided for embedding", apperrors.ErrCodeInvalidInput)
 	}
 
 	resp, err := embeddingService.Embed(c.RequestCtx(), texts, req.Model)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate embeddings")
-		return SendInternalError(c, "Failed to generate embeddings")
+		return apperrors.SendInternalError(c, "Failed to generate embeddings")
 	}
 
 	result := EmbedResponse{
@@ -289,22 +294,22 @@ func (h *VectorHandler) HandleEmbed(c fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
+func (h *Handler) HandleSearch(c fiber.Ctx) error {
 	if h.db == nil {
-		return SendNotInitialized(c, "Database")
+		return apperrors.SendNotInitialized(c, "Database")
 	}
 
-	var req VectorSearchRequest
-	if err := ParseBody(c, &req); err != nil {
+	var req SearchRequest
+	if err := apiutil.ParseBody(c, &req); err != nil {
 		return err
 	}
 
 	if req.Table == "" || req.Column == "" {
-		return SendBadRequest(c, "table and column are required", ErrCodeMissingField)
+		return apperrors.SendBadRequest(c, "table and column are required", apperrors.ErrCodeMissingField)
 	}
 
-	if !isValidIdentifier(req.Table) || !isValidIdentifier(req.Column) {
-		return SendBadRequest(c, "Invalid table or column name", ErrCodeInvalidInput)
+	if !database.ValidIdentifier(req.Table) || !database.ValidIdentifier(req.Column) {
+		return apperrors.SendBadRequest(c, "Invalid table or column name", apperrors.ErrCodeInvalidInput)
 	}
 
 	var queryVector []float64
@@ -314,13 +319,13 @@ func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
 	if req.Query != "" {
 		embeddingService := h.vectorManager.GetEmbeddingService()
 		if embeddingService == nil {
-			return SendFeatureDisabled(c, "Vector search")
+			return apperrors.SendFeatureDisabled(c, "Vector search")
 		}
 
 		embedding, err := embeddingService.EmbedSingle(c.RequestCtx(), req.Query, "")
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to embed query")
-			return SendInternalError(c, "Failed to embed query")
+			return apperrors.SendInternalError(c, "Failed to embed query")
 		}
 
 		queryVector = make([]float64, len(embedding))
@@ -331,7 +336,7 @@ func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
 	} else if len(req.Vector) > 0 {
 		queryVector = req.Vector
 	} else {
-		return SendBadRequest(c, "Either query or vector must be provided", ErrCodeMissingField)
+		return apperrors.SendBadRequest(c, "Either query or vector must be provided", apperrors.ErrCodeMissingField)
 	}
 
 	metric := strings.ToLower(req.Metric)
@@ -348,7 +353,7 @@ func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
 	case "inner_product", "ip":
 		distanceOp = "<#>"
 	default:
-		return SendBadRequest(c, "Invalid metric; use l2, cosine, or inner_product", ErrCodeInvalidInput)
+		return apperrors.SendBadRequest(c, "Invalid metric; use l2, cosine, or inner_product", apperrors.ErrCodeInvalidInput)
 	}
 
 	selectCols := "*"
@@ -357,7 +362,7 @@ func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
 		validCols := make([]string, 0, len(cols))
 		for _, col := range cols {
 			col = strings.TrimSpace(col)
-			if isValidIdentifier(col) {
+			if database.ValidIdentifier(col) {
 				validCols = append(validCols, col)
 			}
 		}
@@ -411,10 +416,10 @@ func (h *VectorHandler) HandleSearch(c fiber.Ctx) error {
 			Str("table", req.Table).
 			Str("column", req.Column).
 			Msg("Vector search failed")
-		return SendInternalError(c, "Vector search failed")
+		return apperrors.SendInternalError(c, "Vector search failed")
 	}
 
-	result := VectorSearchResponse{
+	result := SearchResponse{
 		Data:      data,
 		Distances: distances,
 		Model:     embeddingModel,
@@ -438,13 +443,13 @@ type vectorSearchParams struct {
 	distanceOp     string
 	matchThreshold *float64
 	matchCount     int
-	filters        []VectorQueryFilter
+	filters        []QueryFilter
 	userID         string
 	userRole       string
 	claims         *auth.TokenClaims
 }
 
-func (h *VectorHandler) executeVectorSearch(ctx context.Context, params vectorSearchParams) ([]map[string]interface{}, []float64, error) {
+func (h *Handler) executeVectorSearch(ctx context.Context, params vectorSearchParams) ([]map[string]interface{}, []float64, error) {
 	vectorStr := formatVectorLiteral(params.queryVector)
 
 	// Qualify the table with the public schema so the query does not depend
@@ -465,7 +470,7 @@ func (h *VectorHandler) executeVectorSearch(ctx context.Context, params vectorSe
 	filterClauses := make([]string, 0, len(params.filters))
 	filterValues := make([]interface{}, 0, len(params.filters))
 	for _, filter := range params.filters {
-		if !isValidIdentifier(filter.Column) {
+		if !database.ValidIdentifier(filter.Column) {
 			continue
 		}
 		op := normalizeOperator(filter.Operator)
@@ -569,15 +574,15 @@ func normalizeOperator(op string) string {
 	}
 }
 
-func (h *VectorHandler) IsEmbeddingConfigured() bool {
+func (h *Handler) IsEmbeddingConfigured() bool {
 	return h.vectorManager.GetEmbeddingService() != nil
 }
 
-func (h *VectorHandler) GetEmbeddingService() *ai.EmbeddingService {
+func (h *Handler) GetEmbeddingService() *ai.EmbeddingService {
 	return h.vectorManager.GetEmbeddingService()
 }
 
-type VectorCapabilities struct {
+type Capabilities struct {
 	Enabled           bool   `json:"enabled"`
 	PgVectorInstalled bool   `json:"pgvector_installed"`
 	PgVectorVersion   string `json:"pgvector_version,omitempty"`
@@ -586,7 +591,7 @@ type VectorCapabilities struct {
 	EmbeddingModel    string `json:"embedding_model,omitempty"`
 }
 
-func (h *VectorHandler) HandleGetCapabilities(c fiber.Ctx) error {
+func (h *Handler) HandleGetCapabilities(c fiber.Ctx) error {
 	embeddingAvailable := h.vectorManager.GetEmbeddingService() != nil
 
 	pgVectorInstalled := false
@@ -610,7 +615,7 @@ func (h *VectorHandler) HandleGetCapabilities(c fiber.Ctx) error {
 		})
 	}
 
-	caps := VectorCapabilities{
+	caps := Capabilities{
 		Enabled:           pgVectorInstalled && embeddingAvailable,
 		PgVectorInstalled: pgVectorInstalled,
 		PgVectorVersion:   pgVectorVersion,
@@ -637,7 +642,7 @@ func (h *VectorHandler) HandleGetCapabilities(c fiber.Ctx) error {
 	return c.JSON(caps)
 }
 
-func (h *VectorHandler) IsPgVectorInstalled(c fiber.Ctx) bool {
+func (h *Handler) IsPgVectorInstalled(c fiber.Ctx) bool {
 	if h.schemaInspector == nil {
 		return false
 	}

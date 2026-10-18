@@ -87,6 +87,8 @@ Server initialization uses a module-based dependency injection system:
 
 **Remaining Server methods (8, down from 37):** `Start`/`Shutdown`/`App` (lifecycle), `handleHealth` (uses `s.db`), `createMCPAuthMiddleware` (cross-group middleware factory), `SetTenantConfigLoader` (public API from main.go), `GetStorageService`/`GetAuthService` (unexported handler field accessors).
 
+**Per-domain subpackage extraction (#380):** `internal/api` is being decomposed one domain per PR into subpackages (`internal/api/routes/`, `internal/api/vector/`, ...). Pattern: move the handlers plus their tests with `git mv`, rename the `XxxHandler`/`XxxManager` types to `Handler`/`Manager` in the new package, swap api-package helpers for their canonical homes (`apperrors` for `Send*`/`ErrCode*`, `apiutil.ParseBody`, `database.ValidIdentifier`), keep the JSON/OpenAPI wire contracts and handler-group field names untouched, and let the owning module do all wiring via the `ServiceRegistry`. `internal/api/apiutil` holds HTTP helpers shared by extracted domains. `buildAllRouteDeps()` in `routes_adapter.go` is the single `routes.AllDeps` builder (used by both registration and route auditing).
+
 **Key files:** `module.go` (interface + registry), `module_*.go` (one per module), `server.go` (wiring + Shutdown), `server_init.go` (initCore), `server_middlewares.go` (middleware setup), `server_routes.go` (route setup), `routes_*.go` (per-domain route deps), `schema_admin_handler.go` (schema inspection), `schema_handler.go` (schema graph), `policy_handler.go` (RLS policies)
 
 ## Database Schemas

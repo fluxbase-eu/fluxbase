@@ -1,4 +1,4 @@
-package api
+package vector
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 	"github.com/nimbleflux/fluxbase/internal/database"
 )
 
-// VectorManager manages the embedding service with support for dynamic configuration refresh
+// Manager manages the embedding service with support for dynamic configuration refresh
 // from database-stored AI providers. It follows the pattern established by email.Manager.
-type VectorManager struct {
+type Manager struct {
 	mu               sync.RWMutex
 	embeddingService *ai.EmbeddingService
 	aiStorage        *ai.Storage
@@ -23,9 +23,9 @@ type VectorManager struct {
 	db               *database.Connection
 }
 
-// NewVectorManager creates a new vector manager with hot-reload capability
-func NewVectorManager(envConfig *config.AIConfig, aiStorage *ai.Storage, schemaInspector *database.SchemaInspector, db *database.Connection) *VectorManager {
-	m := &VectorManager{
+// NewManager creates a new vector manager with hot-reload capability
+func NewManager(envConfig *config.AIConfig, aiStorage *ai.Storage, schemaInspector *database.SchemaInspector, db *database.Connection) *Manager {
+	m := &Manager{
 		aiStorage:       aiStorage,
 		envConfig:       envConfig,
 		schemaInspector: schemaInspector,
@@ -33,7 +33,7 @@ func NewVectorManager(envConfig *config.AIConfig, aiStorage *ai.Storage, schemaI
 	}
 
 	// Try to initialize embedding service from env config first
-	// This follows the same initialization logic as the original NewVectorHandler
+	// This follows the same initialization logic as the original NewHandler
 	m.initializeFromEnvConfig()
 
 	// If no service from env config, try database providers
@@ -48,7 +48,7 @@ func NewVectorManager(envConfig *config.AIConfig, aiStorage *ai.Storage, schemaI
 }
 
 // GetEmbeddingService returns the current embedding service (thread-safe)
-func (m *VectorManager) GetEmbeddingService() *ai.EmbeddingService {
+func (m *Manager) GetEmbeddingService() *ai.EmbeddingService {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.embeddingService
@@ -56,7 +56,7 @@ func (m *VectorManager) GetEmbeddingService() *ai.EmbeddingService {
 
 // GetEmbeddingServiceForProvider creates an embedding service for a specific provider by ID
 // This is used when admins want to use a different provider than the default
-func (m *VectorManager) GetEmbeddingServiceForProvider(ctx context.Context, providerID string) (*ai.EmbeddingService, error) {
+func (m *Manager) GetEmbeddingServiceForProvider(ctx context.Context, providerID string) (*ai.EmbeddingService, error) {
 	// Look up the provider
 	provider, err := m.aiStorage.GetProvider(ctx, providerID)
 	if err != nil {
@@ -84,7 +84,7 @@ func (m *VectorManager) GetEmbeddingServiceForProvider(ctx context.Context, prov
 }
 
 // initializeFromEnvConfig attempts to initialize embedding service from YAML/env configuration
-func (m *VectorManager) initializeFromEnvConfig() {
+func (m *Manager) initializeFromEnvConfig() {
 	cfg := m.envConfig
 
 	// Priority 1: Explicit embedding configuration
@@ -140,7 +140,7 @@ func (m *VectorManager) initializeFromEnvConfig() {
 }
 
 // RefreshFromDatabase rebuilds the embedding service from database-stored AI providers
-func (m *VectorManager) RefreshFromDatabase(ctx context.Context) error {
+func (m *Manager) RefreshFromDatabase(ctx context.Context) error {
 	// Priority 1: If explicit embedding config exists in YAML/env, don't reload from database
 	if m.envConfig.EmbeddingEnabled || m.envConfig.EmbeddingProvider != "" {
 		log.Debug().Msg("Explicit embedding config set, skipping database provider reload")
@@ -236,7 +236,7 @@ func (m *VectorManager) RefreshFromDatabase(ctx context.Context) error {
 }
 
 // buildEmbeddingConfigFromProvider converts a database ProviderRecord to EmbeddingServiceConfig
-func (m *VectorManager) buildEmbeddingConfigFromProvider(provider *ai.ProviderRecord) (ai.EmbeddingServiceConfig, error) {
+func (m *Manager) buildEmbeddingConfigFromProvider(provider *ai.ProviderRecord) (ai.EmbeddingServiceConfig, error) {
 	if provider == nil {
 		return ai.EmbeddingServiceConfig{}, fmt.Errorf("provider is nil")
 	}

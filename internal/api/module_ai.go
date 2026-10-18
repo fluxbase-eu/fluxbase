@@ -9,6 +9,7 @@ import (
 
 	"github.com/nimbleflux/fluxbase/internal/ai"
 	"github.com/nimbleflux/fluxbase/internal/ai/integrations"
+	"github.com/nimbleflux/fluxbase/internal/api/vector"
 	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/nimbleflux/fluxbase/internal/logging"
 	"github.com/nimbleflux/fluxbase/internal/observability"
@@ -37,7 +38,7 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 	// rest. May be nil — encryption stays off in that case (legacy behavior).
 	aiStorage.SetEncryptionKey(cfg.EncryptionKeyBytes)
 
-	vectorManager := NewVectorManager(&cfg.AI, aiStorage, db.Inspector(), db)
+	vectorManager := vector.NewManager(&cfg.AI, aiStorage, db.Inspector(), db)
 
 	// Tool integrations (Web Agent specialist). Construct the EnvConfig
 	// from YAML/env vars so instance-level Tavily config produces a
@@ -50,8 +51,8 @@ func (m *AIModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 	integrationsStorage := integrations.NewStorage(db, cfg.EncryptionKeyBytes, integrationsEnvConfig)
 	integrationsHandler := integrations.NewHandler(integrationsStorage)
 
-	var vectorHandler *VectorHandler
-	vectorHandler, err := NewVectorHandler(vectorManager, db.Inspector(), db, cfg)
+	var vectorHandler *vector.Handler
+	vectorHandler, err := vector.NewHandler(vectorManager, db.Inspector(), db, cfg)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to initialize vector handler")
 	} else if vectorHandler.IsEmbeddingConfigured() {

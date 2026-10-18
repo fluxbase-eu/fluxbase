@@ -7,6 +7,7 @@ import (
 
 	"github.com/nimbleflux/fluxbase/internal/ai"
 	"github.com/nimbleflux/fluxbase/internal/ai/integrations"
+	"github.com/nimbleflux/fluxbase/internal/api/vector"
 	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/nimbleflux/fluxbase/internal/branching"
 	"github.com/nimbleflux/fluxbase/internal/database"
@@ -62,8 +63,8 @@ type AIHandlers struct {
 	KnowledgeGraph  *ai.KnowledgeGraph
 	DocProcessor    *ai.DocumentProcessor
 	TableExportSync *ai.TableExportSyncService
-	VectorManager   *VectorManager
-	VectorHandler   *VectorHandler
+	VectorManager   *vector.Manager
+	VectorHandler   *vector.Handler
 	Internal        *InternalAIHandler
 	// IntegrationsHandler exposes CRUD + test endpoints for non-LLM tool
 	// integrations (Web Search via Tavily, URL fetch). May be nil when

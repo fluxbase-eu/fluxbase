@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/nimbleflux/fluxbase/internal/ai"
+	"github.com/nimbleflux/fluxbase/internal/api/vector"
 	"github.com/nimbleflux/fluxbase/internal/auth"
 	"github.com/nimbleflux/fluxbase/internal/branching"
 	"github.com/nimbleflux/fluxbase/internal/database"
@@ -47,8 +48,8 @@ func (m *MCPModule) Init(ctx context.Context, registry *ServiceRegistry) error {
 	rpcHandler := GetService[*rpc.Handler](registry)
 	jobsManager := GetService[*jobs.Manager](registry)
 
-	var vectorHandler *VectorHandler
-	if vh := GetService[*VectorHandler](registry); vh != nil {
+	var vectorHandler *vector.Handler
+	if vh := GetService[*vector.Handler](registry); vh != nil {
 		vectorHandler = vh
 	}
 

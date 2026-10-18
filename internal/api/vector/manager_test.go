@@ -1,4 +1,4 @@
-package api
+package vector
 
 import (
 	"context"
@@ -12,13 +12,13 @@ import (
 )
 
 // =============================================================================
-// VectorManager Construction Tests
+// Manager Construction Tests
 // =============================================================================
 
-func TestNewVectorManager(t *testing.T) {
+func TestNewManager(t *testing.T) {
 	t.Run("creates manager with nil dependencies", func(t *testing.T) {
 		cfg := &config.AIConfig{}
-		manager := NewVectorManager(cfg, nil, nil, nil)
+		manager := NewManager(cfg, nil, nil, nil)
 
 		require.NotNil(t, manager)
 		assert.Nil(t, manager.GetEmbeddingService())
@@ -28,7 +28,7 @@ func TestNewVectorManager(t *testing.T) {
 		cfg := &config.AIConfig{
 			EmbeddingEnabled: false,
 		}
-		manager := NewVectorManager(cfg, nil, nil, nil)
+		manager := NewManager(cfg, nil, nil, nil)
 
 		require.NotNil(t, manager)
 		assert.Equal(t, cfg, manager.envConfig)
@@ -39,10 +39,10 @@ func TestNewVectorManager(t *testing.T) {
 // GetEmbeddingService Tests
 // =============================================================================
 
-func TestVectorManager_GetEmbeddingService(t *testing.T) {
+func TestManager_GetEmbeddingService(t *testing.T) {
 	t.Run("returns nil when no service configured", func(t *testing.T) {
 		cfg := &config.AIConfig{}
-		manager := NewVectorManager(cfg, nil, nil, nil)
+		manager := NewManager(cfg, nil, nil, nil)
 
 		service := manager.GetEmbeddingService()
 
@@ -51,7 +51,7 @@ func TestVectorManager_GetEmbeddingService(t *testing.T) {
 
 	t.Run("is thread-safe", func(t *testing.T) {
 		cfg := &config.AIConfig{}
-		manager := NewVectorManager(cfg, nil, nil, nil)
+		manager := NewManager(cfg, nil, nil, nil)
 
 		// Call from multiple goroutines to verify no race condition
 		done := make(chan bool)
@@ -72,9 +72,9 @@ func TestVectorManager_GetEmbeddingService(t *testing.T) {
 // buildEmbeddingConfigFromProvider Tests
 // =============================================================================
 
-func TestVectorManager_buildEmbeddingConfigFromProvider(t *testing.T) {
+func TestManager_buildEmbeddingConfigFromProvider(t *testing.T) {
 	cfg := &config.AIConfig{}
-	manager := NewVectorManager(cfg, nil, nil, nil)
+	manager := NewManager(cfg, nil, nil, nil)
 
 	t.Run("returns error for nil provider", func(t *testing.T) {
 		_, err := manager.buildEmbeddingConfigFromProvider(nil)
@@ -334,12 +334,12 @@ func TestVectorManager_buildEmbeddingConfigFromProvider(t *testing.T) {
 // RefreshFromDatabase Tests
 // =============================================================================
 
-func TestVectorManager_RefreshFromDatabase_SkipsWithEnvConfig(t *testing.T) {
+func TestManager_RefreshFromDatabase_SkipsWithEnvConfig(t *testing.T) {
 	t.Run("skips refresh when embedding enabled in env config", func(t *testing.T) {
 		cfg := &config.AIConfig{
 			EmbeddingEnabled: true,
 		}
-		manager := NewVectorManager(cfg, nil, nil, nil)
+		manager := NewManager(cfg, nil, nil, nil)
 
 		// This should return nil without error because env config takes priority
 		err := manager.RefreshFromDatabase(context.TODO())
@@ -351,7 +351,7 @@ func TestVectorManager_RefreshFromDatabase_SkipsWithEnvConfig(t *testing.T) {
 		cfg := &config.AIConfig{
 			EmbeddingProvider: "openai",
 		}
-		manager := NewVectorManager(cfg, nil, nil, nil)
+		manager := NewManager(cfg, nil, nil, nil)
 
 		// This should return nil without error because env config takes priority
 		err := manager.RefreshFromDatabase(context.TODO())
@@ -361,13 +361,13 @@ func TestVectorManager_RefreshFromDatabase_SkipsWithEnvConfig(t *testing.T) {
 }
 
 // =============================================================================
-// VectorManager Struct Field Tests
+// Manager Struct Field Tests
 // =============================================================================
 
-func TestVectorManager_Struct(t *testing.T) {
+func TestManager_Struct(t *testing.T) {
 	t.Run("has all expected fields", func(t *testing.T) {
 		cfg := &config.AIConfig{}
-		manager := NewVectorManager(cfg, nil, nil, nil)
+		manager := NewManager(cfg, nil, nil, nil)
 
 		// Verify struct fields are accessible
 		assert.NotNil(t, manager.envConfig)
@@ -384,7 +384,7 @@ func TestVectorManager_Struct(t *testing.T) {
 
 func TestBuildEmbeddingConfigFromProvider_ModelPriority(t *testing.T) {
 	cfg := &config.AIConfig{}
-	manager := NewVectorManager(cfg, nil, nil, nil)
+	manager := NewManager(cfg, nil, nil, nil)
 
 	testCases := []struct {
 		name            string
@@ -500,18 +500,18 @@ func strPtr(s string) *string {
 // Benchmarks
 // =============================================================================
 
-func BenchmarkNewVectorManager(b *testing.B) {
+func BenchmarkNewManager(b *testing.B) {
 	cfg := &config.AIConfig{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = NewVectorManager(cfg, nil, nil, nil)
+		_ = NewManager(cfg, nil, nil, nil)
 	}
 }
 
-func BenchmarkVectorManager_GetEmbeddingService(b *testing.B) {
+func BenchmarkManager_GetEmbeddingService(b *testing.B) {
 	cfg := &config.AIConfig{}
-	manager := NewVectorManager(cfg, nil, nil, nil)
+	manager := NewManager(cfg, nil, nil, nil)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -519,9 +519,9 @@ func BenchmarkVectorManager_GetEmbeddingService(b *testing.B) {
 	}
 }
 
-func BenchmarkVectorManager_buildEmbeddingConfigFromProvider(b *testing.B) {
+func BenchmarkManager_buildEmbeddingConfigFromProvider(b *testing.B) {
 	cfg := &config.AIConfig{}
-	manager := NewVectorManager(cfg, nil, nil, nil)
+	manager := NewManager(cfg, nil, nil, nil)
 	provider := &ai.ProviderRecord{
 		ProviderType: "openai",
 		Config: map[string]string{
